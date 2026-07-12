@@ -228,6 +228,8 @@ $signingThumbprint = ([string]$env:ARCANE_SIGNING_CERT_THUMBPRINT).Replace(' ', 
 $expectedPublisherThumbprint = ([string]$env:ARCANE_EXPECTED_PUBLISHER_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
 if ($expectedPublisherThumbprint -and $expectedPublisherThumbprint -cnotmatch '^[A-F0-9]{40,128}$') { throw 'ARCANE_EXPECTED_PUBLISHER_THUMBPRINT must be a 40-128 character hexadecimal certificate thumbprint.' }
 $certificate = $null
+$signTool = $null
+$certificateMachineStore = $false
 
 $targetFlavor = if ($requireSignedRelease) { 'PRODUCTION SIGNED' } else { 'UNSIGNED LOCAL-TEST ALLOWED' }
 
@@ -341,9 +343,13 @@ $replaceReproducibleTarget = {
 
 function Sign-ArcaneFile([string]$fileName) {
   if (-not $certificate) { return }
-  $arguments = @{FilePath=(Join-Path $stage $fileName);Certificate=$certificate;HashAlgorithm='SHA256'}
-  if ($timestampServer) { $arguments.TimestampServer=$timestampServer }
-  $signature = Set-AuthenticodeSignature @arguments
+  $target = Join-Path $stage $fileName
+  $signArguments = @('sign','/sha1',$signingThumbprint,'/fd','SHA256','/tr',$timestampServer,'/td','SHA256','/v')
+  if ($certificateMachineStore) { $signArguments += '/sm' }
+  $signArguments += $target
+  & $signTool @signArguments
+  if ($LASTEXITCODE -ne 0) { throw "RFC3161 Authenticode signing failed for ${fileName}." }
+  $signature = Get-AuthenticodeSignature -LiteralPath $target
   if ($signature.Status -ne 'Valid') { throw "Authenticode signing failed for ${fileName}: $($signature.StatusMessage)" }
   if (-not $signature.TimeStamperCertificate) { throw "Authenticode timestamping failed for ${fileName}." }
 }
@@ -365,6 +371,23 @@ try {
     if (-not $certificate -or -not $certificate.HasPrivateKey) { throw 'The configured code-signing certificate is unavailable.' }
     if (-not $expectedPublisherThumbprint) { throw 'Signed Arcane builds require the independent ARCANE_EXPECTED_PUBLISHER_THUMBPRINT trust anchor.' }
     if (([string]$certificate.Thumbprint).Replace(' ', '').ToUpperInvariant() -cne $expectedPublisherThumbprint) { throw 'The Arcane signing certificate does not match ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.' }
+    $certificateMachineStore = [string]$certificate.PSPath -like '*LocalMachine*'
+    $configuredSignTool = ([string]$env:ARCANE_SIGNTOOL_PATH).Trim()
+    if ($configuredSignTool) {
+      if (-not (Test-Path -LiteralPath $configuredSignTool -PathType Leaf)) { throw 'ARCANE_SIGNTOOL_PATH does not identify signtool.exe.' }
+      $signTool = [IO.Path]::GetFullPath($configuredSignTool)
+    } else {
+      $command = Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+      if ($command) { $signTool = $command.Source }
+      if (-not $signTool) {
+        $kitsRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
+        if (Test-Path -LiteralPath $kitsRoot) {
+          $signTool = Get-ChildItem -Path (Join-Path $kitsRoot '*\x64\signtool.exe') -File -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -ExpandProperty FullName -First 1
+        }
+      }
+      if (-not $signTool) { throw 'A production signed build requires Windows SDK SignTool. Set ARCANE_SIGNTOOL_PATH or install the Windows SDK.' }
+    }
   } elseif ($requireSignedRelease) {
     throw 'A production-signed target app is required by default, but ARCANE_SIGNING_CERT_THUMBPRINT was not provided.'
   } elseif ($expectedPublisherThumbprint) {
@@ -396,14 +419,31 @@ try {
   $allowedNavigationPaths = @($appManifest.app.security.navigationEntries)
   if ($allowedNavigationPaths.Count -eq 0) { throw 'The isolated app manifest has no secured navigation entries.' }
   $navigationSeen = @{}
-  $navigationPattern = '^/' + [Regex]::Escape($AppId) + '/[a-zA-Z0-9._-]+\.html$'
+  $navigationPrefix = "/$AppId/"
   foreach ($navigationPathValue in $allowedNavigationPaths) {
     if ($null -eq $navigationPathValue) { throw 'The isolated app manifest contains an invalid navigation entry.' }
     $navigationPath = [string]$navigationPathValue
-    if ($navigationPath -cnotmatch $navigationPattern) { throw "Unsafe target navigation entry: $navigationPath" }
+    if ($navigationPath.Length -gt 512 -or -not $navigationPath.StartsWith($navigationPrefix, [StringComparison]::Ordinal)) { throw "Unsafe target navigation entry: $navigationPath" }
+    $navigationRelative = $navigationPath.Substring(1)
+    $navigationSegments = @($navigationRelative.Split([char]'/'))
+    if ($navigationSegments.Count -lt 2 -or $navigationSegments[0] -cne $AppId) { throw "Unsafe target navigation entry: $navigationPath" }
+    foreach ($segment in $navigationSegments) {
+      if (
+        -not $segment -or
+        $segment -ceq '.' -or
+        $segment -ceq '..' -or
+        $segment.EndsWith('.') -or
+        $segment.EndsWith(' ') -or
+        $segment -cnotmatch '^[A-Za-z0-9._~-]+$' -or
+        $segment -match '^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$'
+      ) {
+        throw "Unsafe target navigation entry: $navigationPath"
+      }
+    }
+    if ([IO.Path]::GetExtension($navigationSegments[-1]) -ine '.html') { throw "Unsafe target navigation entry: $navigationPath" }
     if ($navigationSeen.ContainsKey($navigationPath)) { throw "Duplicate target navigation entry: $navigationPath" }
     $navigationSeen[$navigationPath] = $true
-    $navigationFile = Join-Path (Join-Path $stage 'app') $navigationPath.Substring(1).Replace('/', '\')
+    $navigationFile = Join-Path (Join-Path $stage 'app') $navigationRelative.Replace('/', '\')
     if (-not (Test-Path -LiteralPath $navigationFile -PathType Leaf)) { throw "Target navigation entry is missing: $navigationPath" }
   }
   if (-not $navigationSeen.ContainsKey("/$AppId/index.html")) { throw 'The target navigation allowlist omits its launch entry.' }

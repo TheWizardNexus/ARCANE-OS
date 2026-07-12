@@ -8,14 +8,17 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Web.Script.Serialization;
+using Microsoft.Win32;
 using Microsoft.Win32.SafeHandles;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -49,6 +52,8 @@ namespace ArcaneOS
         [STAThread]
         private static void Main(string[] args)
         {
+            if (AuthenticodeProbe.TryRun(args)) return;
+            if (PublisherAttestationProbe.TryRun(args)) return;
             if (ShellWatchdog.TryRun(args)) return;
 
             bool created;
@@ -58,8 +63,9 @@ namespace ArcaneOS
             ReleaseSecurityResult releaseSecurity = null;
             try
             {
-                releaseSecurity = ReleaseSecurityVerifier.Verify(args);
                 if (AppMode == "shell") ShellWatchdog.Start();
+                releaseSecurity = ReleaseSecurityVerifier.Verify(args);
+                if (AppMode == "shell") ShellWatchdog.MarkVerifierHeartbeat();
                 try { SetCurrentProcessExplicitAppUserModelID(AppId); } catch { }
                 Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
                 Application.ThreadException += delegate(object sender, ThreadExceptionEventArgs eventArgs)
@@ -89,11 +95,49 @@ namespace ArcaneOS
         }
     }
 
+    internal static class PublisherAttestationProbe
+    {
+        private const string ProbeArgument = "--arcane-publisher-attestation-probe";
+        internal static bool TryRun(string[] args)
+        {
+            if (args == null || args.Length == 0 || !String.Equals(args[0], ProbeArgument, StringComparison.Ordinal)) return false;
+            try
+            {
+                if (Program.AppMode != "provisioner" || args.Length != 2 || String.IsNullOrWhiteSpace(args[1]))
+                    throw new ArgumentException("Arcane rejected a malformed publisher-attestation probe request.");
+                using (ReleaseSecurityResult probeSecurity = ReleaseSecurityVerifier.Verify(new string[0]))
+                {
+                    if (!String.Equals(probeSecurity.SecurityMode, "publisher-verified", StringComparison.Ordinal)
+                        || !String.Equals(probeSecurity.RevocationStatus, "online-good", StringComparison.Ordinal)
+                        || !probeSecurity.TimestampVerified)
+                        throw new InvalidDataException("Arcane publisher-attestation probe did not pass strict online self-verification.");
+                    if (String.Equals(probeSecurity.PublisherTrustSource, "fresh-unpinned", StringComparison.Ordinal))
+                    {
+                        WindowsPrincipal principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
+                        if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
+                            throw new InvalidDataException("An unpinned first-use publisher probe requires an administrator-approved transaction.");
+                    }
+                    string attestation = ReleaseSecurityVerifier.CreateStrictPublisherAttestation(args[1], probeSecurity);
+                    Console.Out.Write(attestation);
+                }
+                Environment.ExitCode = 0;
+            }
+            catch (Exception error)
+            {
+                Console.Error.Write(error.ToString());
+                Environment.ExitCode = 1;
+            }
+            return true;
+        }
+    }
+
     internal static class ShellWatchdog
     {
         private const string WatchdogArgument = "--arcane-shell-watchdog";
         private const string EventPrefix = "Local\\Arcane.OS.Shell.Watchdog.";
         private static EventWaitHandle disarmEvent;
+        private static EventWaitHandle heartbeatEvent;
+        private static EventWaitHandle uiReadyEvent;
         private static Process watchdogProcess;
         private static int disarmed;
 
@@ -114,10 +158,16 @@ namespace ArcaneOS
             string token = Guid.NewGuid().ToString("N");
             string disarmName = EventPrefix + token + ".Disarm";
             string readyName = EventPrefix + token + ".Ready";
+            string heartbeatName = EventPrefix + token + ".Heartbeat";
+            string uiReadyName = EventPrefix + token + ".UiReady";
             bool disarmCreated;
             bool readyCreated;
+            bool heartbeatCreated;
+            bool uiReadyCreated;
             EventWaitHandle localDisarm = null;
             EventWaitHandle ready = null;
+            EventWaitHandle heartbeat = null;
+            EventWaitHandle uiReady = null;
             Process child = null;
             try
             {
@@ -125,14 +175,16 @@ namespace ArcaneOS
                 {
                     localDisarm = new EventWaitHandle(false, EventResetMode.ManualReset, disarmName, out disarmCreated);
                     ready = new EventWaitHandle(false, EventResetMode.ManualReset, readyName, out readyCreated);
-                    if (!disarmCreated || !readyCreated) throw new InvalidOperationException("Arcane could not create private shell-watchdog synchronization events.");
+                    heartbeat = new EventWaitHandle(false, EventResetMode.AutoReset, heartbeatName, out heartbeatCreated);
+                    uiReady = new EventWaitHandle(false, EventResetMode.ManualReset, uiReadyName, out uiReadyCreated);
+                    if (!disarmCreated || !readyCreated || !heartbeatCreated || !uiReadyCreated) throw new InvalidOperationException("Arcane could not create private shell-watchdog synchronization events.");
 
                     ProcessStartInfo start = new ProcessStartInfo(Application.ExecutablePath)
                     {
                         Arguments = WatchdogArgument + " "
                             + current.Id.ToString(CultureInfo.InvariantCulture) + " "
                             + current.StartTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture) + " "
-                            + disarmName + " " + readyName,
+                            + disarmName + " " + readyName + " " + heartbeatName + " " + uiReadyName,
                         UseShellExecute = false,
                         CreateNoWindow = true,
                         WindowStyle = ProcessWindowStyle.Hidden,
@@ -144,8 +196,12 @@ namespace ArcaneOS
                         throw new InvalidOperationException("The Arcane shell watchdog did not confirm that it is monitoring this shell.");
 
                     disarmEvent = localDisarm;
+                    heartbeatEvent = heartbeat;
+                    uiReadyEvent = uiReady;
                     watchdogProcess = child;
                     localDisarm = null;
+                    heartbeat = null;
+                    uiReady = null;
                     child = null;
                     watchdogProcess.EnableRaisingEvents = true;
                     watchdogProcess.Exited += delegate
@@ -165,7 +221,25 @@ namespace ArcaneOS
                 }
                 if (localDisarm != null) localDisarm.Dispose();
                 if (ready != null) ready.Dispose();
+                if (heartbeat != null) heartbeat.Dispose();
+                if (uiReady != null) uiReady.Dispose();
             }
+        }
+
+        internal static void MarkVerifierHeartbeat()
+        {
+            try { if (heartbeatEvent != null) heartbeatEvent.Set(); } catch { }
+        }
+
+        internal static void MarkUiReady()
+        {
+            try { if (uiReadyEvent != null) uiReadyEvent.Set(); } catch { }
+            MarkVerifierHeartbeat();
+        }
+
+        internal static void MarkUiHeartbeat()
+        {
+            try { if (heartbeatEvent != null) heartbeatEvent.Set(); } catch { }
         }
 
         internal static void Disarm()
@@ -173,14 +247,18 @@ namespace ArcaneOS
             if (Interlocked.Exchange(ref disarmed, 1) != 0) return;
             try { if (disarmEvent != null) disarmEvent.Set(); } catch { }
             try { if (disarmEvent != null) disarmEvent.Dispose(); } catch { }
+            try { if (heartbeatEvent != null) heartbeatEvent.Dispose(); } catch { }
+            try { if (uiReadyEvent != null) uiReadyEvent.Dispose(); } catch { }
             try { if (watchdogProcess != null) watchdogProcess.Dispose(); } catch { }
             disarmEvent = null;
+            heartbeatEvent = null;
+            uiReadyEvent = null;
             watchdogProcess = null;
         }
 
         private static void Run(string[] args)
         {
-            if (args.Length != 5) throw new ArgumentException("Invalid Arcane shell watchdog arguments.");
+            if (args.Length != 7) throw new ArgumentException("Invalid Arcane shell watchdog arguments.");
             int parentId;
             long expectedStartTicks;
             if (!Int32.TryParse(args[1], NumberStyles.None, CultureInfo.InvariantCulture, out parentId) || parentId <= 0)
@@ -189,20 +267,45 @@ namespace ArcaneOS
                 throw new ArgumentException("Invalid Arcane shell watchdog process identity.");
             ValidateEventName(args[3]);
             ValidateEventName(args[4]);
+            ValidateEventName(args[5]);
+            ValidateEventName(args[6]);
 
             using (EventWaitHandle disarm = EventWaitHandle.OpenExisting(args[3]))
             using (EventWaitHandle ready = EventWaitHandle.OpenExisting(args[4]))
+            using (EventWaitHandle heartbeat = EventWaitHandle.OpenExisting(args[5]))
+            using (EventWaitHandle uiReady = EventWaitHandle.OpenExisting(args[6]))
             using (Process parent = Process.GetProcessById(parentId))
             {
                 if (parent.StartTime.ToUniversalTime().Ticks != expectedStartTicks)
                     throw new InvalidOperationException("Arcane shell watchdog rejected a reused process identifier.");
                 ready.Set();
+                Stopwatch heartbeatClock = Stopwatch.StartNew();
+                TimeSpan heartbeatLimit = TimeSpan.FromSeconds(30);
+                bool uiPhase = false;
                 while (true)
                 {
                     if (disarm.WaitOne(250)) return;
-                    if (!parent.WaitForExit(0)) continue;
-                    if (!disarm.WaitOne(0)) EmergencyDesktop.TryStart();
-                    return;
+                    if (!uiPhase && uiReady.WaitOne(0))
+                    {
+                        uiPhase = true;
+                        heartbeatLimit = TimeSpan.FromSeconds(15);
+                        heartbeatClock.Restart();
+                    }
+                    if (heartbeat.WaitOne(0))
+                    {
+                        heartbeatLimit = TimeSpan.FromSeconds(uiPhase ? 15 : 30);
+                        heartbeatClock.Restart();
+                    }
+                    if (heartbeatClock.Elapsed > heartbeatLimit)
+                    {
+                        RecoverAndTerminate(parent, disarm);
+                        return;
+                    }
+                    if (parent.WaitForExit(0))
+                    {
+                        if (!disarm.WaitOne(0)) EmergencyDesktop.TryStart();
+                        return;
+                    }
                 }
             }
         }
@@ -210,8 +313,27 @@ namespace ArcaneOS
         private static void ValidateEventName(string value)
         {
             if (String.IsNullOrWhiteSpace(value) || !value.StartsWith(EventPrefix, StringComparison.Ordinal)
-                || value.Length > 160 || !Regex.IsMatch(value, @"^Local\\Arcane[.]OS[.]Shell[.]Watchdog[.][a-f0-9]{32}[.](Disarm|Ready)$", RegexOptions.CultureInvariant))
+                || value.Length > 160 || !Regex.IsMatch(value, @"^Local\\Arcane[.]OS[.]Shell[.]Watchdog[.][a-f0-9]{32}[.](Disarm|Ready|Heartbeat|UiReady)$", RegexOptions.CultureInvariant))
                 throw new ArgumentException("Invalid Arcane shell watchdog event name.");
+        }
+
+        private static void RecoverAndTerminate(Process parent, EventWaitHandle disarm)
+        {
+            bool desktopStarted = false;
+            while (!parent.WaitForExit(0))
+            {
+                if (disarm.WaitOne(0)) return;
+                if (!desktopStarted) desktopStarted = EmergencyDesktop.TryStart();
+                if (desktopStarted)
+                {
+                    if (disarm.WaitOne(0)) return;
+                    try { parent.Kill(); }
+                    catch { }
+                    try { if (parent.WaitForExit(5000)) return; }
+                    catch { }
+                }
+                if (disarm.WaitOne(2000)) return;
+            }
         }
     }
 
@@ -219,15 +341,15 @@ namespace ArcaneOS
     {
         private static int started;
 
-        internal static void TryStart()
+        internal static bool TryStart()
         {
-            if (Program.AppMode != "shell" || Interlocked.Exchange(ref started, 1) != 0) return;
+            if (Program.AppMode != "shell" || Interlocked.Exchange(ref started, 1) != 0) return false;
             bool launched = false;
             try
             {
                 string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
                 string explorer = Path.Combine(windows, "explorer.exe");
-                if (!Path.IsPathRooted(explorer) || !File.Exists(explorer)) return;
+                if (!Path.IsPathRooted(explorer) || !File.Exists(explorer)) return false;
                 Process.Start(new ProcessStartInfo(explorer)
                 {
                     UseShellExecute = false,
@@ -240,7 +362,9 @@ namespace ArcaneOS
             finally
             {
                 if (launched) ShellWatchdog.Disarm();
+                else Interlocked.Exchange(ref started, 0);
             }
+            return launched;
         }
     }
 
@@ -248,13 +372,30 @@ namespace ArcaneOS
     {
         private readonly List<FileStream> retainedFiles;
         private readonly List<RetainedDirectoryHandle> retainedDirectories;
+        private readonly List<string> verifiedExecutables;
+        private readonly Stopwatch degradedLifetimeClock;
+        private readonly TimeSpan degradedLifetimeAtVerification;
         internal string ReleaseRoot { get; private set; }
         internal string SecurityMode { get; private set; }
+        internal string ContentBinding { get; private set; }
+        internal string SignerThumbprint { get; private set; }
+        internal string VerifiedAtUtc { get; private set; }
+        internal string RevocationStatus { get; private set; }
+        internal string PublisherTrustSource { get; private set; }
+        internal bool TimestampVerified { get; private set; }
+        internal string[] VerifiedExecutables { get { return verifiedExecutables.ToArray(); } }
         internal bool IsUnsignedLocalTest { get { return String.Equals(SecurityMode, "unsigned-local-test", StringComparison.Ordinal); } }
 
         internal ReleaseSecurityResult(
             string releaseRoot,
             string securityMode,
+            string contentBinding,
+            string signerThumbprint,
+            string verifiedAtUtc,
+            string revocationStatus,
+            string publisherTrustSource,
+            bool timestampVerified,
+            List<string> executables,
             List<FileStream> verifiedFiles,
             List<RetainedDirectoryHandle> verifiedDirectories)
         {
@@ -262,8 +403,42 @@ namespace ArcaneOS
             if (securityMode != "publisher-verified" && securityMode != "unsigned-local-test") throw new ArgumentException("Invalid Arcane release security mode.", "securityMode");
             ReleaseRoot = releaseRoot;
             SecurityMode = securityMode;
+            ContentBinding = contentBinding;
+            SignerThumbprint = signerThumbprint;
+            VerifiedAtUtc = verifiedAtUtc;
+            RevocationStatus = revocationStatus;
+            PublisherTrustSource = publisherTrustSource;
+            TimestampVerified = timestampVerified;
+            verifiedExecutables = executables == null ? new List<string>() : new List<string>(executables);
+            if (securityMode == "publisher-verified")
+            {
+                if (String.IsNullOrWhiteSpace(contentBinding) || String.IsNullOrWhiteSpace(signerThumbprint)
+                    || String.IsNullOrWhiteSpace(verifiedAtUtc) || String.IsNullOrWhiteSpace(revocationStatus)
+                    || String.IsNullOrWhiteSpace(publisherTrustSource) || !timestampVerified)
+                    throw new ArgumentException("Publisher verification must include complete trusted evidence.", "securityMode");
+                if (String.Equals(revocationStatus, "attested-degraded", StringComparison.Ordinal))
+                {
+                    DateTimeOffset now = DateTimeOffset.UtcNow;
+                    degradedLifetimeAtVerification = ReleaseSecurityVerifier.ValidateDegradedVerificationTime(verifiedAtUtc, now) - now;
+                    degradedLifetimeClock = Stopwatch.StartNew();
+                }
+            }
+            else if (!String.IsNullOrEmpty(signerThumbprint) || !String.IsNullOrEmpty(verifiedAtUtc)
+                || !String.IsNullOrEmpty(revocationStatus) || !String.IsNullOrEmpty(publisherTrustSource) || timestampVerified)
+                throw new ArgumentException("Unsigned local-test verification cannot carry publisher evidence.", "securityMode");
             retainedFiles = verifiedFiles ?? new List<FileStream>();
             retainedDirectories = verifiedDirectories ?? new List<RetainedDirectoryHandle>();
+        }
+
+        internal TimeSpan RemainingDegradedLifetime(DateTimeOffset nowUtc)
+        {
+            DateTimeOffset expiresAt = ReleaseSecurityVerifier.ValidateDegradedVerificationTime(VerifiedAtUtc, nowUtc);
+            TimeSpan wallRemaining = expiresAt - nowUtc;
+            if (degradedLifetimeClock == null) return wallRemaining;
+            TimeSpan monotonicRemaining = degradedLifetimeAtVerification - degradedLifetimeClock.Elapsed;
+            if (monotonicRemaining <= TimeSpan.Zero)
+                throw new InvalidDataException("Arcane publisher attestation expired according to the monotonic runtime deadline.");
+            return wallRemaining <= monotonicRemaining ? wallRemaining : monotonicRemaining;
         }
 
         public void Dispose()
@@ -316,6 +491,7 @@ namespace ArcaneOS
         private static readonly Regex HashPattern = new Regex("^[a-f0-9]{64}$", RegexOptions.CultureInvariant);
         private static readonly Regex AppIdPattern = new Regex("^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", RegexOptions.CultureInvariant);
         private static readonly Regex ReservedNamePattern = new Regex("^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:[.].*)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        private static readonly TimeSpan PublisherAttestationMaximumAge = TimeSpan.FromDays(30);
         private const uint FileReadAttributes = 0x00000080;
         private const uint FileListDirectory = 0x00000001;
         private const uint FileShareRead = 0x00000001;
@@ -377,6 +553,7 @@ namespace ArcaneOS
 #endif
             root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             AssertRegularDirectory(root, "release root");
+            ShellWatchdog.MarkVerifierHeartbeat();
             string marker = ReadOwnMetadataMarker(BindingMetadataKey, expectedPrefix, "content binding");
             string publisherMarker = ReadOwnMetadataMarker(PublisherMetadataKey, PublisherMarkerPrefix, "publisher binding");
             string[] markerParts = marker.Split('|');
@@ -401,6 +578,7 @@ namespace ArcaneOS
             try
             {
                 RetainDirectoryTree(root, root, retainedDirectoriesByPath, retainedDirectories);
+                ShellWatchdog.MarkVerifierHeartbeat();
                 FileStream retainedManifest = RetainFile(manifestPath, retainedByPath, retained);
                 string manifestHash = HashStream(retainedManifest);
                 if (!FixedTimeEquals(markerParts[3], manifestHash)) throw new InvalidDataException("Arcane rejected a content manifest that is not bound to this native host.");
@@ -427,15 +605,38 @@ namespace ArcaneOS
                 executables.Add(shellPath);
                 List<string> excludedHosts = new List<string> { provisionerPath, shellPath };
 #endif
+                ShellWatchdog.MarkVerifierHeartbeat();
                 RetainAndRecheck(root, files, excludedHosts, retainedByPath, retained);
                 VerifyRetainedDirectoryIdentities(retainedDirectories);
+                ShellWatchdog.MarkVerifierHeartbeat();
 #if !ARCANE_TARGET_APP
                 RequireEmbeddedMarker(retainedByPath[Path.GetFullPath(otherHostPath)], marker);
                 RequireEmbeddedMarker(retainedByPath[Path.GetFullPath(otherHostPath)], publisherMarker);
 #endif
                 bool allowUnsigned = HasExactArgument(args, "--allow-unsigned-local-release");
-                string securityMode = VerifyExecutableSignatures(executables, allowUnsigned, publisherMarker);
-                return new ReleaseSecurityResult(root, securityMode, retained, retainedDirectories);
+                bool canonicalInstalled = IsCanonicalInstalledRelease(root);
+                ExecutableSecurityResult security = VerifyExecutableSignatures(
+                    executables,
+                    allowUnsigned,
+                    publisherMarker,
+                    marker,
+                    root,
+                    canonicalInstalled,
+                    retainedByPath,
+                    retained);
+                ShellWatchdog.MarkVerifierHeartbeat();
+                return new ReleaseSecurityResult(
+                    root,
+                    security.SecurityMode,
+                    marker,
+                    security.SignerThumbprint,
+                    security.VerifiedAtUtc,
+                    security.RevocationStatus,
+                    security.PublisherTrustSource,
+                    security.TimestampVerified,
+                    executables,
+                    retained,
+                    retainedDirectories);
             }
             catch
             {
@@ -443,6 +644,145 @@ namespace ArcaneOS
                 foreach (RetainedDirectoryHandle directory in retainedDirectories) directory.Dispose();
                 throw;
             }
+        }
+
+        internal static bool RefreshOnline(ReleaseSecurityResult security)
+        {
+            if (security == null || !String.Equals(security.SecurityMode, "publisher-verified", StringComparison.Ordinal)
+                || !String.Equals(security.RevocationStatus, "attested-degraded", StringComparison.Ordinal)) return true;
+            security.RemainingDegradedLifetime(DateTimeOffset.UtcNow);
+            string[] executables = security.VerifiedExecutables;
+            if (executables.Length == 0) throw new InvalidDataException("Arcane cannot refresh an empty publisher verification set.");
+            bool unavailable = false;
+            foreach (string executable in executables)
+            {
+                AssertRegularFile(executable, "Arcane executable");
+                SignatureEvidence evidence = Authenticode.Verify(executable, AuthenticodePurpose.StrictOnline);
+                if (evidence.Status == SignatureStatus.RevocationUnavailable || evidence.Status == SignatureStatus.TimedOut) { unavailable = true; continue; }
+                if (evidence.Status == SignatureStatus.Revoked)
+                    throw new InvalidDataException("Arcane online refresh found an explicitly revoked signature on " + Path.GetFileName(executable) + ".");
+                if (evidence.Status != SignatureStatus.Valid || !evidence.TimestampVerified
+                    || !String.Equals(evidence.SignerThumbprint, security.SignerThumbprint, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Arcane online refresh rejected " + Path.GetFileName(executable) + ": " + evidence.Details);
+            }
+            return !unavailable;
+        }
+
+        internal static DateTimeOffset ValidateDegradedVerificationTime(string verifiedAtUtc, DateTimeOffset nowUtc)
+        {
+            DateTimeOffset verifiedTime;
+            if (String.IsNullOrWhiteSpace(verifiedAtUtc) || !verifiedAtUtc.EndsWith("Z", StringComparison.Ordinal)
+                || !DateTimeOffset.TryParse(verifiedAtUtc, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out verifiedTime)
+                || verifiedTime > nowUtc.AddMinutes(5))
+                throw new InvalidDataException("Arcane publisher attestation has an invalid verification time.");
+            DateTimeOffset expiresAt = verifiedTime.Add(PublisherAttestationMaximumAge);
+            if (expiresAt <= nowUtc) throw new InvalidDataException("Arcane publisher attestation has expired during degraded verification.");
+            return expiresAt;
+        }
+
+        internal static TimeSpan CapDegradedRetryDelay(string verifiedAtUtc, DateTimeOffset nowUtc, TimeSpan proposedDelay)
+        {
+            if (proposedDelay <= TimeSpan.Zero) throw new ArgumentOutOfRangeException("proposedDelay");
+            TimeSpan remaining = ValidateDegradedVerificationTime(verifiedAtUtc, nowUtc) - nowUtc;
+            return proposedDelay <= remaining ? proposedDelay : remaining;
+        }
+
+        internal static string CreateStrictPublisherAttestation(string requestedRoot, ReleaseSecurityResult probeSecurity)
+        {
+            if (probeSecurity == null) throw new ArgumentNullException("probeSecurity");
+            string root = Path.GetFullPath(requestedRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            AssertRegularDirectory(root, "publisher-attestation stage");
+            string version = InformationalVersion();
+            string manifestPath = Path.Combine(root, MachineManifestName);
+            Dictionary<string, FileStream> retainedByPath = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
+            List<FileStream> retained = new List<FileStream>();
+            Dictionary<string, RetainedDirectoryHandle> retainedDirectoriesByPath = new Dictionary<string, RetainedDirectoryHandle>(StringComparer.OrdinalIgnoreCase);
+            List<RetainedDirectoryHandle> retainedDirectories = new List<RetainedDirectoryHandle>();
+            try
+            {
+                RetainDirectoryTree(root, root, retainedDirectoriesByPath, retainedDirectories);
+                FileStream retainedManifest = RetainFile(manifestPath, retainedByPath, retained);
+                string manifestHash = HashStream(retainedManifest);
+                string machineBinding = "ARCANE-MACHINE-BINDING|1|" + version + "|" + manifestHash;
+                Dictionary<string, object> manifest = ParseObject(ReadRetainedFile(retainedManifest, 64 * 1024 * 1024, MachineManifestName), MachineManifestName);
+                List<ManifestFile> files = VerifyMachineManifest(root, manifest, version);
+                string provisionerPath = Path.Combine(root, "bin", "ArcaneProvisioner.exe");
+                string shellPath = Path.Combine(root, "bin", "ArcaneShell.exe");
+                RequireCanonicalFile(root, "bin/ArcaneProvisioner.exe");
+                RequireCanonicalFile(root, "bin/ArcaneShell.exe");
+                List<string> executables = ExecutableFiles(files, root);
+                executables.Add(provisionerPath);
+                executables.Add(shellPath);
+                RetainAndRecheck(root, files, new List<string> { provisionerPath, shellPath }, retainedByPath, retained);
+                VerifyRetainedDirectoryIdentities(retainedDirectories);
+                RequireEmbeddedMarker(retainedByPath[Path.GetFullPath(provisionerPath)], machineBinding);
+                RequireEmbeddedMarker(retainedByPath[Path.GetFullPath(shellPath)], machineBinding);
+
+                List<object> bindings = new List<object>();
+                bindings.Add(new Dictionary<string, object> { { "kind", "machine" }, { "id", "machine" }, { "binding", machineBinding } });
+                string appsRoot = Path.Combine(root, "apps");
+                DirectoryInfo[] appDirectories = new DirectoryInfo(appsRoot).GetDirectories();
+                if (appDirectories.Length < 1 || appDirectories.Length > 64) throw new InvalidDataException("Arcane publisher-attestation stage has an invalid application count.");
+                Array.Sort(appDirectories, delegate(DirectoryInfo left, DirectoryInfo right) { return StringComparer.Ordinal.Compare(left.Name, right.Name); });
+                foreach (DirectoryInfo appDirectory in appDirectories)
+                {
+                    string id = appDirectory.Name;
+                    if (!AppIdPattern.IsMatch(id) || id == "shell" || id == "provisioner") throw new InvalidDataException("Arcane publisher-attestation stage has an invalid application identity.");
+                    string contentPath = Path.Combine(appDirectory.FullName, TargetManifestName);
+                    FileStream contentFile;
+                    if (!retainedByPath.TryGetValue(Path.GetFullPath(contentPath), out contentFile)) throw new InvalidDataException("Arcane publisher-attestation stage did not retain an application content manifest.");
+                    string contentHash = HashStream(contentFile);
+                    Dictionary<string, object> content = ParseObject(ReadRetainedFile(contentFile, 64 * 1024 * 1024, id + " content manifest"), id + " content manifest");
+                    VerifyTargetManifest(appDirectory.FullName, content, id, version);
+                    string targetBinding = "ARCANE-TARGET-BINDING|1|" + id + "|" + contentHash;
+                    string wrapperPath = Path.Combine(appDirectory.FullName, "ArcaneApp-" + id + ".exe");
+                    FileStream wrapper;
+                    if (!retainedByPath.TryGetValue(Path.GetFullPath(wrapperPath), out wrapper)) throw new InvalidDataException("Arcane publisher-attestation stage did not retain an application wrapper.");
+                    RequireEmbeddedMarker(wrapper, targetBinding);
+                    bindings.Add(new Dictionary<string, object> { { "kind", "app" }, { "id", id }, { "binding", targetBinding } });
+                }
+
+                string signer = VerifyStrictPublisherSet(executables);
+                if (!String.Equals(machineBinding, probeSecurity.ContentBinding, StringComparison.Ordinal)
+                    || !String.Equals(signer, probeSecurity.SignerThumbprint, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Arcane publisher-attestation stage does not match the strictly verified probe release binding and signer.");
+                string trustSource = ResolvePublisherContinuity(signer, true);
+                Dictionary<string, object> attestation = new Dictionary<string, object>
+                {
+                    { "schemaVersion", 1 },
+                    { "verification", "wintrust-online-chain-exclude-root-timestamp-v1" },
+                    { "signerThumbprint", signer },
+                    { "verifiedAt", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture) },
+                    { "trustSource", trustSource },
+                    { "bindings", bindings.ToArray() }
+                };
+                return new JavaScriptSerializer().Serialize(attestation);
+            }
+            finally
+            {
+                foreach (FileStream file in retained) try { file.Dispose(); } catch { }
+                foreach (RetainedDirectoryHandle directory in retainedDirectories) try { directory.Dispose(); } catch { }
+            }
+        }
+
+        private static string VerifyStrictPublisherSet(List<string> executables)
+        {
+            if (executables == null || executables.Count == 0) throw new InvalidDataException("Arcane publisher-attestation stage contains no executables.");
+            HashSet<string> unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string signer = null;
+            foreach (string executable in executables)
+            {
+                string fullPath = Path.GetFullPath(executable);
+                if (!unique.Add(fullPath)) continue;
+                SignatureEvidence evidence = Authenticode.Verify(fullPath, AuthenticodePurpose.StrictOnline);
+                if (evidence.Status != SignatureStatus.Valid || !evidence.TimestampVerified || String.IsNullOrWhiteSpace(evidence.SignerThumbprint))
+                    throw new InvalidDataException("Arcane strict publisher-attestation verification rejected " + Path.GetFileName(fullPath) + ": " + evidence.Details);
+                if (signer == null) signer = NormalizePublisherThumbprint(evidence.SignerThumbprint, "strict publisher signer");
+                else if (!String.Equals(signer, evidence.SignerThumbprint, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Arcane publisher-attestation stage contains executables from different publishers.");
+            }
+            if (signer == null) throw new InvalidDataException("Arcane publisher-attestation stage has no verified signer.");
+            return signer;
         }
 
         private static void RetainDirectoryTree(
@@ -799,26 +1139,75 @@ namespace ArcaneOS
             return result;
         }
 
-        private static string VerifyExecutableSignatures(List<string> executables, bool allowUnsigned, string publisherMarker)
+        private static bool IsCanonicalInstalledRelease(string root)
+        {
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (String.IsNullOrWhiteSpace(programFiles)) return false;
+            string machineRoot = Path.GetFullPath(Path.Combine(programFiles, "Arcane OS")).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+#if ARCANE_TARGET_APP
+            string expected = Path.Combine(machineRoot, "apps", Program.AppMode);
+#else
+            string expected = machineRoot;
+#endif
+            expected = Path.GetFullPath(expected).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return String.Equals(root, expected, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static ExecutableSecurityResult VerifyExecutableSignatures(
+            List<string> executables,
+            bool allowUnsigned,
+            string publisherMarker,
+            string contentBinding,
+            string releaseRoot,
+            bool canonicalInstalled,
+            Dictionary<string, FileStream> retainedByPath,
+            List<FileStream> retained)
         {
             if (executables == null || executables.Count == 0) throw new InvalidDataException("Arcane release contains no native executables to authenticate.");
             HashSet<string> unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             string signer = null;
             bool sawValid = false;
             bool sawUnsigned = false;
+            bool sawUnavailableRevocation = false;
+            bool offlineInstalledPolicy = canonicalInstalled && Program.AppMode != "provisioner";
             foreach (string executable in executables)
             {
                 string fullPath = Path.GetFullPath(executable);
                 if (!unique.Add(fullPath)) continue;
                 AssertRegularFile(fullPath, "Arcane executable");
-                SignatureEvidence evidence = Authenticode.Verify(fullPath);
-                if (evidence.Status == SignatureStatus.Invalid) throw new InvalidDataException("Arcane rejected an invalid Authenticode signature on " + Path.GetFileName(fullPath) + ": " + evidence.Details);
+                SignatureEvidence evidence;
+                if (offlineInstalledPolicy)
+                {
+                    evidence = Authenticode.Verify(fullPath, AuthenticodePurpose.OfflineBaseline);
+                    if (evidence.Status == SignatureStatus.Valid)
+                    {
+                        SignatureEvidence revocation = Authenticode.Verify(fullPath, AuthenticodePurpose.OfflineRevocation);
+                        if (revocation.Status == SignatureStatus.Revoked)
+                            throw new InvalidDataException("Arcane rejected an explicitly revoked Authenticode signature on " + Path.GetFileName(fullPath) + ".");
+                        if (revocation.Status == SignatureStatus.RevocationUnavailable || revocation.Status == SignatureStatus.TimedOut)
+                            sawUnavailableRevocation = true;
+                        else if (revocation.Status != SignatureStatus.Valid)
+                            throw new InvalidDataException("Arcane rejected an invalid cache-only Authenticode result on " + Path.GetFileName(fullPath) + ": " + revocation.Details);
+                    }
+                }
+                else evidence = Authenticode.Verify(fullPath, AuthenticodePurpose.StrictOnline);
+
+                if (evidence.Status == SignatureStatus.Revoked)
+                    throw new InvalidDataException("Arcane rejected an explicitly revoked Authenticode signature on " + Path.GetFileName(fullPath) + ".");
+                if (evidence.Status == SignatureStatus.RevocationUnavailable)
+                    throw new InvalidDataException("Arcane could not complete strict online revocation verification for " + Path.GetFileName(fullPath) + ": " + evidence.Details);
+                if (evidence.Status == SignatureStatus.TimedOut)
+                    throw new InvalidDataException("Arcane timed out while authenticating " + Path.GetFileName(fullPath) + ": " + evidence.Details);
+                if (evidence.Status == SignatureStatus.Invalid)
+                    throw new InvalidDataException("Arcane rejected an invalid Authenticode signature on " + Path.GetFileName(fullPath) + ": " + evidence.Details);
                 if (evidence.Status == SignatureStatus.NotSigned)
                 {
                     sawUnsigned = true;
                     continue;
                 }
                 sawValid = true;
+                if (!evidence.TimestampVerified)
+                    throw new InvalidDataException("Arcane requires a verified Authenticode timestamp on " + Path.GetFileName(fullPath) + ".");
                 if (String.IsNullOrWhiteSpace(evidence.SignerThumbprint)) throw new InvalidDataException("Arcane could not identify the trusted signer for " + Path.GetFileName(fullPath) + ".");
                 if (signer == null) signer = evidence.SignerThumbprint;
                 else if (!String.Equals(signer, evidence.SignerThumbprint, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Arcane rejected a release containing executables from different publishers.");
@@ -833,15 +1222,451 @@ namespace ArcaneOS
                 if (!Regex.IsMatch(expectedSigner, "^[A-Fa-f0-9]{40,128}$", RegexOptions.CultureInvariant)
                     || !String.Equals(expectedSigner, signer, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException("Arcane rejected a release that is not signed by its configured publisher certificate.");
-                return "publisher-verified";
+                string publisherTrustSource = ResolvePublisherContinuity(signer, false);
+                string verifiedAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+                string revocationStatus = offlineInstalledPolicy ? "cache-good" : "online-good";
+                if (sawUnavailableRevocation)
+                {
+                    verifiedAt = ValidatePublisherAttestation(releaseRoot, contentBinding, signer, retainedByPath, retained);
+                    revocationStatus = "attested-degraded";
+                }
+                return new ExecutableSecurityResult("publisher-verified", signer, verifiedAt, revocationStatus, publisherTrustSource, true);
             }
             if (sawUnsigned && allowUnsigned)
             {
                 if (!String.Equals(publisherMarker, UnsignedPublisherMarker, StringComparison.Ordinal))
                     throw new InvalidDataException("Arcane rejected an unsigned release without its explicit local-test publisher binding.");
-                return "unsigned-local-test";
+                AssertUnsignedLocalReleaseAllowed();
+                return new ExecutableSecurityResult("unsigned-local-test", null, null, null, null, false);
             }
             throw new InvalidDataException("Arcane requires a publisher-signed release. The unsigned local override must be passed explicitly for controlled testing.");
+        }
+
+        private static string ValidatePublisherAttestation(
+            string releaseRoot,
+            string contentBinding,
+            string signerThumbprint,
+            Dictionary<string, FileStream> retainedByPath,
+            List<FileStream> retained)
+        {
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string machineRoot = Path.GetFullPath(Path.Combine(programFiles, "Arcane OS")).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+#if ARCANE_TARGET_APP
+            string expectedRoot = Path.GetFullPath(Path.Combine(machineRoot, "apps", Program.AppMode)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string expectedKind = "app";
+            string expectedId = Program.AppMode;
+#else
+            string expectedRoot = machineRoot;
+            string expectedKind = "machine";
+            string expectedId = "machine";
+#endif
+            if (!String.Equals(releaseRoot, expectedRoot, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Arcane refuses degraded revocation verification outside its canonical installed location.");
+            AssertRegularDirectory(machineRoot, "installed machine root");
+            AssertAdminProtectedTree(machineRoot);
+            string manifestPath = Path.Combine(machineRoot, "arcane-install.json");
+            AssertRegularFile(manifestPath, "publisher attestation");
+            AssertAdminProtected(File.GetAccessControl(manifestPath, AccessControlSections.Owner | AccessControlSections.Access), "publisher attestation");
+            FileStream manifestFile = RetainFile(manifestPath, retainedByPath, retained);
+            Dictionary<string, object> install = ParseObject(ReadRetainedFile(manifestFile, 1024 * 1024, "publisher attestation"), "publisher attestation");
+            Dictionary<string, object> attestation = RequireObject(install, "publisherAttestation", "install manifest");
+            RequireOnlyKeys(attestation, "publisher attestation", "schemaVersion", "verification", "signerThumbprint", "verifiedAt", "trustSource", "bindings");
+            RequireInteger(attestation, "schemaVersion", 1, "publisher attestation");
+            RequireString(attestation, "verification", "wintrust-online-chain-exclude-root-timestamp-v1", "publisher attestation");
+            string attestedSigner = RequireNonEmptyString(attestation, "signerThumbprint", "publisher attestation");
+            if (!Regex.IsMatch(attestedSigner, "^[A-Fa-f0-9]{40,128}$", RegexOptions.CultureInvariant)
+                || !String.Equals(attestedSigner, signerThumbprint, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Arcane publisher attestation signer does not match the verified release signer.");
+            string verifiedAt = RequireNonEmptyString(attestation, "verifiedAt", "publisher attestation");
+            string trustSource = RequireNonEmptyString(attestation, "trustSource", "publisher attestation");
+            if (trustSource != "administrator-policy" && trustSource != "administrator-policy-rotation"
+                && trustSource != "installed-continuity" && trustSource != "uac-approved-tofu")
+                throw new InvalidDataException("Arcane publisher attestation trust source is invalid.");
+            ValidateDegradedVerificationTime(verifiedAt, DateTimeOffset.UtcNow);
+
+            object rawBindings;
+            if (!attestation.TryGetValue("bindings", out rawBindings) || !(rawBindings is object[]))
+                throw new InvalidDataException("Arcane publisher attestation bindings must be an array.");
+            object[] bindings = (object[])rawBindings;
+            if (bindings.Length < 1 || bindings.Length > 128) throw new InvalidDataException("Arcane publisher attestation has an invalid binding count.");
+            HashSet<string> identities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            bool matched = false;
+            foreach (object rawBinding in bindings)
+            {
+                Dictionary<string, object> binding = rawBinding as Dictionary<string, object>;
+                if (binding == null) throw new InvalidDataException("Arcane publisher attestation contains a non-object binding.");
+                RequireOnlyKeys(binding, "publisher attestation binding", "kind", "id", "binding");
+                string kind = RequireNonEmptyString(binding, "kind", "publisher attestation binding");
+                string id = RequireNonEmptyString(binding, "id", "publisher attestation binding");
+                string value = RequireNonEmptyString(binding, "binding", "publisher attestation binding");
+                if (!identities.Add(kind + "|" + id)) throw new InvalidDataException("Arcane publisher attestation contains a duplicate binding identity.");
+                string[] parts = value.Split('|');
+                bool validMachine = kind == "machine" && id == "machine" && parts.Length == 4 && parts[0] == "ARCANE-MACHINE-BINDING" && parts[1] == "1" && HashPattern.IsMatch(parts[3]);
+                bool validApp = kind == "app" && AppIdPattern.IsMatch(id) && parts.Length == 4 && parts[0] == "ARCANE-TARGET-BINDING" && parts[1] == "1" && parts[2] == id && HashPattern.IsMatch(parts[3]);
+                if (!validMachine && !validApp) throw new InvalidDataException("Arcane publisher attestation contains a malformed content binding.");
+                if (kind == expectedKind && id == expectedId)
+                {
+                    if (!String.Equals(value, contentBinding, StringComparison.Ordinal)) throw new InvalidDataException("Arcane publisher attestation does not match the compiled content binding.");
+                    matched = true;
+                }
+            }
+            if (!matched) throw new InvalidDataException("Arcane publisher attestation does not cover this installed content binding.");
+            return verifiedAt;
+        }
+
+        private static string ResolvePublisherContinuity(string signerThumbprint, bool administratorApprovedTofu)
+        {
+            string signer = NormalizePublisherThumbprint(signerThumbprint, "verified publisher signer");
+            PublisherPolicy policy = ReadAdministratorPublisherPolicy();
+            string installedSigner = ReadInstalledPublisherPin();
+            WindowsPrincipal principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
+            return EvaluatePublisherContinuityPolicy(
+                signer,
+                installedSigner,
+                policy == null ? null : policy.CurrentSigner,
+                policy == null ? null : policy.PreviousSigner,
+                policy == null ? 1 : policy.Version,
+                administratorApprovedTofu,
+                principal.IsInRole(WindowsBuiltInRole.Administrator));
+        }
+
+        private static PublisherPolicy ReadAdministratorPublisherPolicy()
+        {
+            using (RegistryKey machine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            using (RegistryKey key = machine.OpenSubKey(
+                @"SOFTWARE\Arcane OS\Security",
+                RegistryKeyPermissionCheck.ReadSubTree,
+                RegistryRights.ReadKey | RegistryRights.ReadPermissions))
+            {
+                if (key == null) return null;
+                AssertAdminControlledRegistry(key.GetAccessControl(AccessControlSections.Owner | AccessControlSections.Access), "administrator publisher policy");
+                HashSet<string> names = new HashSet<string>(key.GetValueNames(), StringComparer.OrdinalIgnoreCase);
+                foreach (string name in names)
+                    if (name != "PublisherThumbprint" && name != "PreviousPublisherThumbprint" && name != "PublisherPolicyVersion")
+                        throw new InvalidDataException("Arcane administrator publisher policy contains an unknown value.");
+                bool hasCurrent = names.Contains("PublisherThumbprint");
+                bool hasPrevious = names.Contains("PreviousPublisherThumbprint");
+                bool hasVersion = names.Contains("PublisherPolicyVersion");
+                if (!hasCurrent)
+                {
+                    if (hasPrevious || hasVersion) throw new InvalidDataException("Arcane administrator publisher rotation policy has no new publisher thumbprint.");
+                    return null;
+                }
+                if (key.GetValueKind("PublisherThumbprint") != RegistryValueKind.String)
+                    throw new InvalidDataException("Arcane administrator publisher policy value type is invalid.");
+                if (hasPrevious && key.GetValueKind("PreviousPublisherThumbprint") != RegistryValueKind.String)
+                    throw new InvalidDataException("Arcane administrator previous publisher policy value type is invalid.");
+                if (hasVersion && key.GetValueKind("PublisherPolicyVersion") != RegistryValueKind.DWord)
+                    throw new InvalidDataException("Arcane administrator publisher policy version type is invalid.");
+                if (hasPrevious && !hasVersion)
+                    throw new InvalidDataException("Arcane administrator publisher rotation policy has no explicit version.");
+                string current = key.GetValue("PublisherThumbprint", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
+                string previous = hasPrevious ? key.GetValue("PreviousPublisherThumbprint", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string : null;
+                int version = hasVersion ? (int)key.GetValue("PublisherPolicyVersion", null, RegistryValueOptions.DoNotExpandEnvironmentNames) : 1;
+                if (version != 1) throw new InvalidDataException("Arcane administrator publisher policy version is unsupported.");
+                return new PublisherPolicy(
+                    NormalizePublisherThumbprint(current, "administrator publisher policy"),
+                    previous == null ? null : NormalizePublisherThumbprint(previous, "administrator previous publisher policy"),
+                    version);
+            }
+        }
+
+        private static void AssertUnsignedLocalReleaseAllowed()
+        {
+            if (ReadAdministratorPublisherPolicy() != null)
+                throw new InvalidDataException("Arcane rejected an unsigned local release because an administrator publisher policy is installed.");
+            if (ReadInstalledPublisherPin() != null)
+                throw new InvalidDataException("Arcane rejected an unsigned local release because signed installed publisher continuity exists.");
+        }
+
+        internal static void AssertAdminControlledRegistry(RegistrySecurity security, string label)
+        {
+            if (security == null) throw new ArgumentNullException("security");
+            SecurityIdentifier system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            SecurityIdentifier administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            SecurityIdentifier creatorOwner = new SecurityIdentifier(WellKnownSidType.CreatorOwnerSid, null);
+            SecurityIdentifier owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+            RawSecurityDescriptor descriptor = new RawSecurityDescriptor(security.GetSecurityDescriptorBinaryForm(), 0);
+            if (owner == null || (!owner.Equals(system) && !owner.Equals(administrators)) || descriptor.DiscretionaryAcl == null)
+                throw new InvalidDataException("Arcane " + label + " registry ownership or DACL is invalid.");
+            RegistryRights unsafeRights = RegistryRights.SetValue | RegistryRights.CreateSubKey
+                | RegistryRights.CreateLink | RegistryRights.Delete | RegistryRights.ChangePermissions | RegistryRights.TakeOwnership;
+            AuthorizationRuleCollection rules = security.GetAccessRules(true, true, typeof(SecurityIdentifier));
+            foreach (RegistryAccessRule rule in rules)
+            {
+                SecurityIdentifier identity = rule.IdentityReference as SecurityIdentifier;
+                bool trustedCreatorOwnerInheritance = identity != null && identity.Equals(creatorOwner)
+                    && (rule.PropagationFlags & PropagationFlags.InheritOnly) != 0;
+                if (identity != null && rule.AccessControlType == AccessControlType.Allow
+                    && (rule.RegistryRights & unsafeRights) != 0 && !identity.Equals(system)
+                    && !identity.Equals(administrators) && !trustedCreatorOwnerInheritance)
+                    throw new InvalidDataException("Arcane " + label + " registry grants write access to an untrusted identity.");
+            }
+        }
+
+        internal static string EvaluatePublisherContinuityPolicy(
+            string signer,
+            string installedSigner,
+            string policySigner,
+            string previousPolicySigner,
+            int policyVersion,
+            bool administratorApprovedTofu,
+            bool isAdministrator)
+        {
+            bool rotation = false;
+            if (policySigner != null && installedSigner != null && !String.Equals(policySigner, installedSigner, StringComparison.OrdinalIgnoreCase))
+            {
+                if (policyVersion != 1 || previousPolicySigner == null
+                    || !String.Equals(previousPolicySigner, installedSigner, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Arcane administrator publisher policy conflicts with the protected installed pin and has no valid rotation authorization.");
+                rotation = true;
+            }
+            else if (policySigner != null && previousPolicySigner != null && installedSigner != null
+                && !String.Equals(previousPolicySigner, installedSigner, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Arcane administrator publisher rotation predecessor does not match the protected installed pin.");
+            string expected = policySigner ?? installedSigner;
+            if (expected != null)
+            {
+                if (!String.Equals(expected, signer, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Arcane rejected a publisher that does not match its protected continuity policy.");
+                return rotation ? "administrator-policy-rotation" : policySigner != null ? "administrator-policy" : "installed-continuity";
+            }
+            if (!administratorApprovedTofu) return "fresh-unpinned";
+            if (!isAdministrator)
+                throw new InvalidDataException("Arcane can establish a first-use publisher pin only inside an administrator-approved installation transaction.");
+            return "uac-approved-tofu";
+        }
+
+        private sealed class PublisherPolicy
+        {
+            internal string CurrentSigner { get; private set; }
+            internal string PreviousSigner { get; private set; }
+            internal int Version { get; private set; }
+            internal PublisherPolicy(string currentSigner, string previousSigner, int version)
+            {
+                CurrentSigner = currentSigner;
+                PreviousSigner = previousSigner;
+                Version = version;
+            }
+        }
+
+        private static string ReadInstalledPublisherPin()
+        {
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (String.IsNullOrWhiteSpace(programFiles)) return null;
+            string machineRoot = Path.GetFullPath(Path.Combine(programFiles, "Arcane OS"));
+            if (!Directory.Exists(machineRoot)) return null;
+            string manifestPath = Path.Combine(machineRoot, "arcane-install.json");
+            if (!File.Exists(manifestPath)) throw new InvalidDataException("Arcane found an installed machine root without its continuity manifest.");
+            AssertRegularDirectory(machineRoot, "installed machine root");
+            AssertRegularFile(manifestPath, "installed publisher continuity manifest");
+            byte[] data;
+            using (FileStream stream = new FileStream(manifestPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                if (stream.Length < 1 || stream.Length > 1024 * 1024) throw new InvalidDataException("Arcane installed publisher continuity manifest has an invalid size.");
+                data = new byte[(int)stream.Length];
+                int offset = 0;
+                while (offset < data.Length)
+                {
+                    int read = stream.Read(data, offset, data.Length - offset);
+                    if (read == 0) throw new EndOfStreamException("Arcane installed publisher continuity manifest changed while it was retained.");
+                    offset += read;
+                }
+            }
+            Dictionary<string, object> install = ParseObject(data, "installed publisher continuity manifest");
+            object rawAttestation;
+            if (!install.TryGetValue("publisherAttestation", out rawAttestation))
+            {
+                bool preIntegrityLegacy = !install.ContainsKey("integrity") && !install.ContainsKey("securityMode");
+                List<string> installedExecutables = preIntegrityLegacy
+                    ? InspectLegacyAdminControlledTree(machineRoot)
+                    : InspectAdminProtectedTree(machineRoot);
+                return ReadLegacyInstalledPublisherPin(machineRoot, installedExecutables);
+            }
+            InspectAdminProtectedTree(machineRoot);
+            Dictionary<string, object> attestation = rawAttestation as Dictionary<string, object>;
+            if (attestation == null) throw new InvalidDataException("Arcane installed publisher continuity attestation is malformed.");
+            return NormalizePublisherThumbprint(RequireNonEmptyString(attestation, "signerThumbprint", "installed publisher continuity attestation"), "installed publisher continuity pin");
+        }
+
+        private static string ReadLegacyInstalledPublisherPin(string machineRoot, List<string> executables)
+        {
+            if (executables == null || executables.Count == 0) throw new InvalidDataException("Arcane legacy installation contains no executable continuity set.");
+            string provisioner = Path.GetFullPath(Path.Combine(machineRoot, "bin", "ArcaneProvisioner.exe"));
+            string shell = Path.GetFullPath(Path.Combine(machineRoot, "bin", "ArcaneShell.exe"));
+            HashSet<string> executableSet = new HashSet<string>(executables, StringComparer.OrdinalIgnoreCase);
+            if (!executableSet.Contains(provisioner) || !executableSet.Contains(shell))
+                throw new InvalidDataException("Arcane legacy installation is missing its canonical native hosts.");
+            SignatureStatus[] statuses = new SignatureStatus[executables.Count];
+            string[] signers = new string[executables.Count];
+            bool[] timestamps = new bool[executables.Count];
+            for (int index = 0; index < executables.Count; index++)
+            {
+                string executable = executables[index];
+                AssertRegularFile(executable, "legacy installed executable");
+                SignatureEvidence evidence = Authenticode.Verify(executable, AuthenticodePurpose.OfflineBaseline);
+                statuses[index] = evidence.Status;
+                signers[index] = evidence.SignerThumbprint;
+                timestamps[index] = evidence.TimestampVerified;
+            }
+            return EvaluateLegacyInstalledPublisherEvidence(statuses, signers, timestamps);
+        }
+
+        internal static string EvaluateLegacyInstalledPublisherEvidence(SignatureStatus[] statuses, string[] signerThumbprints, bool[] timestampVerified)
+        {
+            if (statuses == null || signerThumbprints == null || timestampVerified == null || statuses.Length == 0
+                || statuses.Length != signerThumbprints.Length || statuses.Length != timestampVerified.Length)
+                throw new InvalidDataException("Arcane legacy publisher evidence has inconsistent dimensions.");
+            bool sawValid = false;
+            bool sawUnsigned = false;
+            string signer = null;
+            for (int index = 0; index < statuses.Length; index++)
+            {
+                if (statuses[index] == SignatureStatus.Valid)
+                {
+                    if (!timestampVerified[index]) throw new InvalidDataException("Arcane legacy publisher evidence contains an untimestamped signature.");
+                    string current = NormalizePublisherThumbprint(signerThumbprints[index], "legacy installed publisher signer");
+                    if (signer == null) signer = current;
+                    else if (!String.Equals(signer, current, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("Arcane legacy installation contains executables from different publishers.");
+                    sawValid = true;
+                    continue;
+                }
+                if (statuses[index] == SignatureStatus.NotSigned)
+                {
+                    if (!String.IsNullOrEmpty(signerThumbprints[index]) || timestampVerified[index])
+                        throw new InvalidDataException("Arcane legacy unsigned evidence contains unexpected signer material.");
+                    sawUnsigned = true;
+                    continue;
+                }
+                throw new InvalidDataException("Arcane could not establish legacy installed publisher continuity from " + statuses[index].ToString() + " evidence.");
+            }
+            if (sawValid && sawUnsigned) throw new InvalidDataException("Arcane legacy installation mixes signed and unsigned executables.");
+            return sawValid ? signer : null;
+        }
+
+        private static string NormalizePublisherThumbprint(string value, string label)
+        {
+            string normalized = String.IsNullOrWhiteSpace(value) ? "" : Regex.Replace(value, "\\s", "").ToUpperInvariant();
+            if (!Regex.IsMatch(normalized, "^[A-F0-9]{40,128}$", RegexOptions.CultureInvariant))
+                throw new InvalidDataException("Arcane " + label + " is invalid.");
+            return normalized;
+        }
+
+        private static void AssertAdminProtected(FileSystemSecurity security, string label)
+        {
+            SecurityIdentifier system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            SecurityIdentifier administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            SecurityIdentifier owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+            if (owner == null || (!owner.Equals(system) && !owner.Equals(administrators)) || !security.AreAccessRulesProtected)
+                throw new InvalidDataException("Arcane " + label + " ownership or ACL protection is invalid.");
+            FileSystemRights unsafeRights = FileSystemRights.WriteData | FileSystemRights.AppendData
+                | FileSystemRights.WriteExtendedAttributes | FileSystemRights.WriteAttributes | FileSystemRights.Delete
+                | FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+            AuthorizationRuleCollection rules = security.GetAccessRules(true, true, typeof(SecurityIdentifier));
+            foreach (FileSystemAccessRule rule in rules)
+            {
+                SecurityIdentifier identity = rule.IdentityReference as SecurityIdentifier;
+                if (identity != null && rule.AccessControlType == AccessControlType.Allow
+                    && (rule.FileSystemRights & unsafeRights) != 0 && !identity.Equals(system) && !identity.Equals(administrators))
+                    throw new InvalidDataException("Arcane " + label + " grants write access to an untrusted identity.");
+            }
+        }
+
+        private static void AssertAdminProtectedTree(string root)
+        {
+            InspectAdminProtectedTree(root);
+        }
+
+        private static List<string> InspectAdminProtectedTree(string root)
+        {
+            return InspectInstalledTree(root, true);
+        }
+
+        private static List<string> InspectLegacyAdminControlledTree(string root)
+        {
+            return InspectInstalledTree(root, false);
+        }
+
+        private static void AssertLegacyAdminControlled(FileSystemSecurity security, string label)
+        {
+            if (security == null) throw new ArgumentNullException("security");
+            SecurityIdentifier system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            SecurityIdentifier administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            SecurityIdentifier creatorOwner = new SecurityIdentifier(WellKnownSidType.CreatorOwnerSid, null);
+            SecurityIdentifier trustedInstaller = new SecurityIdentifier("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464");
+            SecurityIdentifier owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+            RawSecurityDescriptor descriptor = new RawSecurityDescriptor(security.GetSecurityDescriptorBinaryForm(), 0);
+            if (owner == null || (!owner.Equals(system) && !owner.Equals(administrators) && !owner.Equals(trustedInstaller))
+                || descriptor.DiscretionaryAcl == null)
+                throw new InvalidDataException("Arcane " + label + " legacy ownership or DACL is invalid.");
+            FileSystemRights unsafeRights = FileSystemRights.WriteData | FileSystemRights.AppendData
+                | FileSystemRights.WriteExtendedAttributes | FileSystemRights.WriteAttributes | FileSystemRights.Delete
+                | FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+            AuthorizationRuleCollection rules = security.GetAccessRules(true, true, typeof(SecurityIdentifier));
+            foreach (FileSystemAccessRule rule in rules)
+            {
+                SecurityIdentifier identity = rule.IdentityReference as SecurityIdentifier;
+                bool trustedCreatorOwnerInheritance = identity != null && identity.Equals(creatorOwner)
+                    && (rule.PropagationFlags & PropagationFlags.InheritOnly) != 0;
+                if (identity != null && rule.AccessControlType == AccessControlType.Allow
+                    && (rule.FileSystemRights & unsafeRights) != 0 && !identity.Equals(system)
+                    && !identity.Equals(administrators) && !identity.Equals(trustedInstaller)
+                    && !trustedCreatorOwnerInheritance)
+                    throw new InvalidDataException("Arcane " + label + " legacy ACL grants mutation rights to an untrusted identity.");
+            }
+        }
+
+        private static List<string> InspectInstalledTree(string root, bool requireProtected)
+        {
+            Stack<FileSystemInfo> pending = new Stack<FileSystemInfo>();
+            pending.Push(new DirectoryInfo(root));
+            List<string> executables = new List<string>();
+            int count = 0;
+            while (pending.Count > 0)
+            {
+                FileSystemInfo item = pending.Pop();
+                if (++count > 50000) throw new InvalidDataException("Arcane installed protection tree exceeds its safety bound.");
+                if ((item.Attributes & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Arcane installed protection tree contains a reparse point.");
+                DirectoryInfo directory = item as DirectoryInfo;
+                FileInfo file = item as FileInfo;
+                if (directory != null)
+                {
+                    DirectorySecurity security = Directory.GetAccessControl(directory.FullName, AccessControlSections.Owner | AccessControlSections.Access);
+                    if (requireProtected) AssertAdminProtected(security, "installed directory");
+                    else AssertLegacyAdminControlled(security, "installed directory");
+                    foreach (FileSystemInfo child in directory.GetFileSystemInfos()) pending.Push(child);
+                }
+                else if (file != null)
+                {
+                    FileSecurity security = File.GetAccessControl(file.FullName, AccessControlSections.Owner | AccessControlSections.Access);
+                    if (requireProtected) AssertAdminProtected(security, "installed file");
+                    else AssertLegacyAdminControlled(security, "installed file");
+                    if (file.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) executables.Add(Path.GetFullPath(file.FullName));
+                }
+                else throw new InvalidDataException("Arcane installed protection tree contains an unsupported entry.");
+            }
+            executables.Sort(StringComparer.OrdinalIgnoreCase);
+            return executables;
+        }
+
+        private sealed class ExecutableSecurityResult
+        {
+            internal string SecurityMode { get; private set; }
+            internal string SignerThumbprint { get; private set; }
+            internal string VerifiedAtUtc { get; private set; }
+            internal string RevocationStatus { get; private set; }
+            internal string PublisherTrustSource { get; private set; }
+            internal bool TimestampVerified { get; private set; }
+            internal ExecutableSecurityResult(string mode, string signer, string verifiedAt, string revocationStatus, string publisherTrustSource, bool timestampVerified)
+            {
+                SecurityMode = mode;
+                SignerThumbprint = signer;
+                VerifiedAtUtc = verifiedAt;
+                RevocationStatus = revocationStatus;
+                PublisherTrustSource = publisherTrustSource;
+                TimestampVerified = timestampVerified;
+            }
         }
 
         private static string ReadOwnMetadataMarker(string metadataKey, string expectedPrefix, string label)
@@ -1051,14 +1876,241 @@ namespace ArcaneOS
         }
     }
 
-    internal enum SignatureStatus { Valid, NotSigned, Invalid }
+    internal static class AuthenticodeProbe
+    {
+        private const string ProbeArgument = "--arcane-authenticode-probe";
+        private const int MaximumProbeOutput = 64 * 1024;
+        private static readonly object ProbeLock = new object();
+
+        internal static bool TryRun(string[] args)
+        {
+            if (args == null || args.Length == 0 || !String.Equals(args[0], ProbeArgument, StringComparison.Ordinal)) return false;
+            try
+            {
+                if (args.Length != 3 || args[1].Length > 32 || args[2].Length > 48 * 1024)
+                    throw new ArgumentException("Arcane rejected malformed Authenticode-probe arguments.");
+                AuthenticodePurpose purpose = (AuthenticodePurpose)Enum.Parse(typeof(AuthenticodePurpose), args[1], false);
+                if (!Enum.IsDefined(typeof(AuthenticodePurpose), purpose)) throw new ArgumentException("Arcane rejected an unknown Authenticode-probe purpose.");
+                byte[] encodedPath = Convert.FromBase64String(args[2]);
+                if (encodedPath.Length < 1 || encodedPath.Length > 32767 * 4) throw new ArgumentException("Arcane rejected an invalid Authenticode-probe path.");
+                string requestedPath = Encoding.UTF8.GetString(encodedPath);
+                string fullPath = Path.GetFullPath(requestedPath);
+                if (!Path.IsPathRooted(requestedPath) || !String.Equals(requestedPath, fullPath, StringComparison.OrdinalIgnoreCase)
+                    || !File.Exists(fullPath) || (File.GetAttributes(fullPath) & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
+                    throw new InvalidDataException("Arcane Authenticode probe requires an exact regular file path.");
+                SignatureEvidence evidence = Authenticode.VerifyCore(fullPath, purpose);
+                Dictionary<string, object> response = new Dictionary<string, object>
+                {
+                    { "schemaVersion", 1 },
+                    { "status", evidence.Status.ToString() },
+                    { "signerThumbprint", evidence.SignerThumbprint },
+                    { "details", evidence.Details },
+                    { "timestampVerified", evidence.TimestampVerified },
+                    { "verificationSource", evidence.VerificationSource }
+                };
+                Console.Out.Write(new JavaScriptSerializer().Serialize(response));
+                Environment.ExitCode = 0;
+            }
+            catch (Exception error)
+            {
+                Console.Error.Write(error.ToString());
+                Environment.ExitCode = 1;
+            }
+            return true;
+        }
+
+        internal static SignatureEvidence Verify(string file, AuthenticodePurpose purpose, TimeSpan timeout)
+        {
+            lock (ProbeLock) return VerifyLocked(file, purpose, timeout);
+        }
+
+        private static SignatureEvidence VerifyLocked(string file, AuthenticodePurpose purpose, TimeSpan timeout)
+        {
+            string fullPath = Path.GetFullPath(file);
+            string encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(fullPath));
+            string workerPath = Path.GetFullPath(Application.ExecutablePath);
+            if (!File.Exists(workerPath) || (File.GetAttributes(workerPath) & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
+                return new SignatureEvidence(SignatureStatus.Invalid, null, "Arcane Authenticode worker path is not an exact regular file.", false, "wintrust-probe-error");
+            ProcessStartInfo start = new ProcessStartInfo(workerPath)
+            {
+                Arguments = ProbeArgument + " " + purpose.ToString() + " " + encodedPath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            start.EnvironmentVariables.Clear();
+            if (!String.IsNullOrWhiteSpace(windows))
+            {
+                start.EnvironmentVariables["SystemRoot"] = windows;
+                start.EnvironmentVariables["WINDIR"] = windows;
+            }
+            BoundedProcessResult result;
+            try { result = RunBoundedProcess(start, timeout); }
+            catch (Exception error)
+            {
+                return new SignatureEvidence(SignatureStatus.Invalid, null, "Arcane Authenticode probe failed: " + error.Message, false, "wintrust-probe-error");
+            }
+            if (result.TimedOut)
+                return new SignatureEvidence(SignatureStatus.TimedOut, null, "WinVerifyTrust worker exceeded Arcane's bounded verification time and was terminated.", false, "wintrust-timeout");
+            if (result.ExitCode != 0)
+                return new SignatureEvidence(SignatureStatus.Invalid, null, "Arcane Authenticode probe rejected the file: " + Truncate(result.StandardError, 4096), false, "wintrust-probe-error");
+            try { return ParseEvidence(result.StandardOutput); }
+            catch (Exception error)
+            {
+                return new SignatureEvidence(SignatureStatus.Invalid, null, "Arcane Authenticode probe returned invalid evidence: " + error.Message, false, "wintrust-probe-error");
+            }
+        }
+
+        internal static BoundedProcessResult RunBoundedProcess(ProcessStartInfo start, TimeSpan timeout)
+        {
+            if (start == null || start.UseShellExecute || !start.RedirectStandardOutput || !start.RedirectStandardError)
+                throw new ArgumentException("Arcane bounded process probes require redirected, non-shell execution.", "start");
+            if (timeout <= TimeSpan.Zero || timeout > TimeSpan.FromMinutes(5)) throw new ArgumentOutOfRangeException("timeout");
+            Process child = null;
+            try
+            {
+                child = Process.Start(start);
+                if (child == null) throw new InvalidOperationException("Windows did not start the Arcane Authenticode worker.");
+                int processId = child.Id;
+                Task<string> output = Task.Factory.StartNew(
+                    delegate { return ReadBounded(child.StandardOutput, MaximumProbeOutput); },
+                    CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                Task<string> error = Task.Factory.StartNew(
+                    delegate { return ReadBounded(child.StandardError, MaximumProbeOutput); },
+                    CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                Stopwatch clock = Stopwatch.StartNew();
+                bool timedOut = false;
+                while (!child.WaitForExit(0))
+                {
+                    if (output.IsFaulted || error.IsFaulted) break;
+                    TimeSpan remaining = timeout - clock.Elapsed;
+                    if (remaining <= TimeSpan.Zero) { timedOut = true; break; }
+                    int wait = (int)Math.Min(1000, Math.Max(1, remaining.TotalMilliseconds));
+                    if (child.WaitForExit(wait)) break;
+                    ShellWatchdog.MarkVerifierHeartbeat();
+                }
+                if ((timedOut || output.IsFaulted || error.IsFaulted) && !child.HasExited)
+                {
+                    child.Kill();
+                    if (!child.WaitForExit(5000)) throw new InvalidOperationException("Windows did not reap the timed-out Arcane Authenticode worker.");
+                }
+                child.WaitForExit();
+                if (!Task.WaitAll(new Task[] { output, error }, 5000))
+                    throw new InvalidDataException("Arcane could not drain Authenticode worker output.");
+                string standardOutput = output.Result ?? "";
+                string standardError = error.Result ?? "";
+                if (standardOutput.Length > MaximumProbeOutput || standardError.Length > MaximumProbeOutput)
+                    throw new InvalidDataException("Arcane Authenticode worker output exceeded its bound.");
+                return new BoundedProcessResult(processId, timedOut, timedOut ? -1 : child.ExitCode, standardOutput, standardError);
+            }
+            finally
+            {
+                if (child != null)
+                {
+                    try
+                    {
+                        if (!child.HasExited)
+                        {
+                            child.Kill();
+                            child.WaitForExit(5000);
+                        }
+                    }
+                    catch { }
+                    child.Dispose();
+                }
+            }
+        }
+
+        private static string ReadBounded(TextReader reader, int maximumCharacters)
+        {
+            char[] buffer = new char[4096];
+            StringBuilder result = new StringBuilder();
+            int read;
+            while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                if (result.Length + read > maximumCharacters)
+                    throw new InvalidDataException("Arcane Authenticode worker output exceeded its bound.");
+                result.Append(buffer, 0, read);
+            }
+            return result.ToString();
+        }
+
+        private static SignatureEvidence ParseEvidence(string json)
+        {
+            if (String.IsNullOrWhiteSpace(json) || json.Length > MaximumProbeOutput) throw new InvalidDataException("The Authenticode evidence payload is empty or oversized.");
+            Dictionary<string, object> value = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>;
+            if (value == null || value.Count != 6) throw new InvalidDataException("The Authenticode evidence payload is not an exact object.");
+            foreach (string key in new[] { "schemaVersion", "status", "signerThumbprint", "details", "timestampVerified", "verificationSource" })
+                if (!value.ContainsKey(key)) throw new InvalidDataException("The Authenticode evidence payload is missing " + key + ".");
+            if (!(value["schemaVersion"] is int) || (int)value["schemaVersion"] != 1) throw new InvalidDataException("The Authenticode evidence schema is invalid.");
+            string rawStatus = value["status"] as string;
+            SignatureStatus status;
+            try { status = (SignatureStatus)Enum.Parse(typeof(SignatureStatus), rawStatus, false); }
+            catch (Exception error) { throw new InvalidDataException("The Authenticode evidence status is invalid.", error); }
+            if (!Enum.IsDefined(typeof(SignatureStatus), status) || status == SignatureStatus.TimedOut)
+                throw new InvalidDataException("The Authenticode worker returned an impossible status.");
+            string signer = value["signerThumbprint"] as string;
+            string details = value["details"] as string;
+            string source = value["verificationSource"] as string;
+            if (!(value["timestampVerified"] is bool) || String.IsNullOrWhiteSpace(details) || details.Length > 8192
+                || String.IsNullOrWhiteSpace(source) || source.Length > 128)
+                throw new InvalidDataException("The Authenticode evidence fields are invalid.");
+            bool timestamp = (bool)value["timestampVerified"];
+            if (status == SignatureStatus.Valid)
+            {
+                if (String.IsNullOrWhiteSpace(signer) || !Regex.IsMatch(signer, "^[A-Fa-f0-9]{40,128}$", RegexOptions.CultureInvariant) || !timestamp)
+                    throw new InvalidDataException("Valid Authenticode evidence has no verified signer and timestamp.");
+            }
+            else if (signer != null || timestamp) throw new InvalidDataException("Failed Authenticode evidence unexpectedly contains signer material.");
+            return new SignatureEvidence(status, signer, details, timestamp, source);
+        }
+
+        private static string Truncate(string value, int maximum)
+        {
+            string text = value ?? "";
+            return text.Length <= maximum ? text : text.Substring(0, maximum);
+        }
+    }
+
+    internal sealed class BoundedProcessResult
+    {
+        internal int ProcessId { get; private set; }
+        internal bool TimedOut { get; private set; }
+        internal int ExitCode { get; private set; }
+        internal string StandardOutput { get; private set; }
+        internal string StandardError { get; private set; }
+        internal BoundedProcessResult(int processId, bool timedOut, int exitCode, string standardOutput, string standardError)
+        {
+            ProcessId = processId;
+            TimedOut = timedOut;
+            ExitCode = exitCode;
+            StandardOutput = standardOutput;
+            StandardError = standardError;
+        }
+    }
+
+    internal enum SignatureStatus { Valid, NotSigned, Revoked, RevocationUnavailable, TimedOut, Invalid }
+    internal enum AuthenticodePurpose { StrictOnline, OfflineBaseline, OfflineRevocation }
 
     internal sealed class SignatureEvidence
     {
         internal SignatureStatus Status { get; private set; }
         internal string SignerThumbprint { get; private set; }
         internal string Details { get; private set; }
-        internal SignatureEvidence(SignatureStatus status, string signerThumbprint, string details) { Status = status; SignerThumbprint = signerThumbprint; Details = details; }
+        internal bool TimestampVerified { get; private set; }
+        internal string VerificationSource { get; private set; }
+        internal SignatureEvidence(SignatureStatus status, string signerThumbprint, string details, bool timestampVerified, string verificationSource)
+        {
+            Status = status;
+            SignerThumbprint = signerThumbprint;
+            Details = details;
+            TimestampVerified = timestampVerified;
+            VerificationSource = verificationSource;
+        }
     }
 
     internal static class Authenticode
@@ -1067,32 +2119,322 @@ namespace ArcaneOS
         private const int TrustENoSignature = unchecked((int)0x800B0100);
         private const int TrustESubjectFormUnknown = unchecked((int)0x800B0003);
         private const int TrustEProviderUnknown = unchecked((int)0x800B0001);
+        private const int CryptERevoked = unchecked((int)0x80092010);
+        private const int CertERevoked = unchecked((int)0x800B010C);
+        private const int CryptENoRevocationDll = unchecked((int)0x80092011);
+        private const int CryptENoRevocationCheck = unchecked((int)0x80092012);
+        private const int CryptERevocationOffline = unchecked((int)0x80092013);
+        private const int CryptENotInRevocationDatabase = unchecked((int)0x80092014);
+        private const int CertERevocationFailure = unchecked((int)0x800B010E);
+        private const uint RevocationCheckNone = 0x00000010;
+        private const uint RevocationCheckChainExcludeRoot = 0x00000080;
+        private const uint CacheOnlyUrlRetrieval = 0x00001000;
+        private const uint DisableMd2Md4 = 0x00002000;
+        private const uint SignerTypeTimestamp = 0x00000010;
 
         [DllImport("wintrust.dll", ExactSpelling = true, SetLastError = true, PreserveSig = true)]
-        private static extern int WinVerifyTrust(IntPtr window, ref Guid action, [In] WinTrustData data);
+        private static extern int WinVerifyTrust(IntPtr window, ref Guid action, [In, Out] WinTrustData data);
 
-        internal static SignatureEvidence Verify(string file)
+        [DllImport("wintrust.dll", ExactSpelling = true, PreserveSig = true)]
+        private static extern IntPtr WTHelperProvDataFromStateData(IntPtr stateData);
+
+        [DllImport("wintrust.dll", ExactSpelling = true, PreserveSig = true)]
+        private static extern IntPtr WTHelperGetProvSignerFromChain(IntPtr providerData, uint signerIndex, [MarshalAs(UnmanagedType.Bool)] bool counterSigner, uint counterSignerIndex);
+
+        [DllImport("crypt32.dll", ExactSpelling = true, SetLastError = true, PreserveSig = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool CertVerifyCertificateChainPolicy(IntPtr policy, IntPtr chainContext, ref CertChainPolicyParameters parameters, ref CertChainPolicyStatus status);
+
+        internal static uint ProviderFlagsForPurpose(AuthenticodePurpose purpose)
+        {
+            if (purpose == AuthenticodePurpose.StrictOnline) return RevocationCheckChainExcludeRoot | DisableMd2Md4;
+            if (purpose == AuthenticodePurpose.OfflineBaseline) return RevocationCheckNone | CacheOnlyUrlRetrieval | DisableMd2Md4;
+            if (purpose == AuthenticodePurpose.OfflineRevocation) return RevocationCheckChainExcludeRoot | CacheOnlyUrlRetrieval | DisableMd2Md4;
+            throw new ArgumentOutOfRangeException("purpose");
+        }
+
+        internal static SignatureStatus ClassifyTrustResult(int result)
+        {
+            if (result == 0) return SignatureStatus.Valid;
+            if (result == TrustENoSignature) return SignatureStatus.NotSigned;
+            if (result == CryptERevoked || result == CertERevoked) return SignatureStatus.Revoked;
+            if (result == CryptENoRevocationDll || result == CryptENoRevocationCheck || result == CryptERevocationOffline
+                || result == CryptENotInRevocationDatabase || result == CertERevocationFailure) return SignatureStatus.RevocationUnavailable;
+            return SignatureStatus.Invalid;
+        }
+
+        internal static SignatureEvidence Verify(string file, AuthenticodePurpose purpose)
+        {
+            TimeSpan timeout = purpose == AuthenticodePurpose.StrictOnline ? TimeSpan.FromSeconds(20) : TimeSpan.FromSeconds(10);
+            return AuthenticodeProbe.Verify(file, purpose, timeout);
+        }
+
+        internal static SignatureEvidence VerifyCore(string file, AuthenticodePurpose purpose)
         {
             using (WinTrustFileInfo fileInfo = new WinTrustFileInfo(file))
-            using (WinTrustData trustData = new WinTrustData(fileInfo))
+            using (WinTrustData trustData = new WinTrustData(fileInfo, ProviderFlagsForPurpose(purpose)))
             {
                 Guid action = GenericVerifyV2;
-                int result = WinVerifyTrust(new IntPtr(-1), ref action, trustData);
-                if (result == 0)
+                int result;
+                ProviderEvidence providerEvidence = null;
+                string providerError = null;
+                try
                 {
-                    try
+                    result = WinVerifyTrust(new IntPtr(-1), ref action, trustData);
+                    if (result == 0)
                     {
-                        using (X509Certificate2 certificate = new X509Certificate2(X509Certificate.CreateFromSignedFile(file)))
-                        {
-                            return new SignatureEvidence(SignatureStatus.Valid, certificate.Thumbprint, "WinVerifyTrust validated the Authenticode publisher.");
-                        }
+                        try { providerEvidence = ReadProviderEvidence(trustData.StateData); }
+                        catch (Exception error) { providerError = error.Message; }
                     }
-                    catch (Exception error) { return new SignatureEvidence(SignatureStatus.Invalid, null, "WinVerifyTrust did not yield a signer certificate: " + error.Message); }
                 }
-                if (result == TrustENoSignature || result == TrustESubjectFormUnknown || result == TrustEProviderUnknown)
-                    return new SignatureEvidence(SignatureStatus.NotSigned, null, "The file has no Authenticode signature.");
-                return new SignatureEvidence(SignatureStatus.Invalid, null, "WinVerifyTrust returned 0x" + result.ToString("X8", CultureInfo.InvariantCulture) + ".");
+                finally
+                {
+                    trustData.PrepareToClose();
+                    WinVerifyTrust(new IntPtr(-1), ref action, trustData);
+                }
+                SignatureStatus status = ClassifyTrustResult(result);
+                string source = purpose == AuthenticodePurpose.StrictOnline ? "wintrust-online"
+                    : purpose == AuthenticodePurpose.OfflineBaseline ? "wintrust-offline-baseline" : "wintrust-cache-revocation";
+                if (status == SignatureStatus.Valid)
+                {
+                    if (providerEvidence == null)
+                        return new SignatureEvidence(SignatureStatus.Invalid, null, "WinTrust provider evidence was incomplete: " + (providerError ?? "unknown provider-state error"), false, source);
+                    return new SignatureEvidence(SignatureStatus.Valid, providerEvidence.SignerThumbprint,
+                        "WinVerifyTrust validated the provider-selected Authenticode signer and timestamp chain.", true, source);
+                }
+                if (status == SignatureStatus.NotSigned)
+                {
+                    if (!HasEmptyPeCertificateTable(file))
+                        return new SignatureEvidence(SignatureStatus.Invalid, null, "WinVerifyTrust reported no signature, but the PE certificate table was present or malformed.", false, source);
+                    return new SignatureEvidence(status, null, "The PE file has no Authenticode certificate table.", false, source);
+                }
+                return new SignatureEvidence(status, null, "WinVerifyTrust returned 0x" + result.ToString("X8", CultureInfo.InvariantCulture) + ".", false, source);
             }
+        }
+
+        private static ProviderEvidence ReadProviderEvidence(IntPtr stateData)
+        {
+            if (stateData == IntPtr.Zero) throw new InvalidDataException("WinTrust returned no provider state.");
+            IntPtr providerData = WTHelperProvDataFromStateData(stateData);
+            if (providerData == IntPtr.Zero) throw new InvalidDataException("WinTrust returned no provider data.");
+            CryptProviderData provider = (CryptProviderData)Marshal.PtrToStructure(providerData, typeof(CryptProviderData));
+            if (provider.Error != 0 || provider.SignerCount != 1)
+                throw new InvalidDataException("WinTrust provider data did not select exactly one error-free signer.");
+            IntPtr signerPointer = WTHelperGetProvSignerFromChain(providerData, 0, false, 0);
+            if (signerPointer == IntPtr.Zero) throw new InvalidDataException("WinTrust returned no selected primary signer.");
+            CryptProviderSigner signer = ValidateProviderSigner(signerPointer, false);
+            if (signer.CounterSignerCount != 1)
+                throw new InvalidDataException("Arcane requires exactly one provider-selected Authenticode timestamp.");
+            IntPtr timestampPointer = WTHelperGetProvSignerFromChain(providerData, 0, true, 0);
+            if (timestampPointer == IntPtr.Zero) throw new InvalidDataException("WinTrust did not expose the Authenticode timestamp signer.");
+            CryptProviderSigner timestamp = ValidateProviderSigner(timestampPointer, true);
+            if (timestamp.CounterSignerCount != 0) throw new InvalidDataException("Arcane rejected a nested timestamp signer chain.");
+            DateTime timestampTime = FileTimeUtc(timestamp.VerifyAsOf);
+            if (timestampTime < new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc) || timestampTime > DateTime.UtcNow.AddDays(1))
+                throw new InvalidDataException("WinTrust returned an implausible timestamp verification time.");
+            string thumbprint = ProviderLeafThumbprint(signer.CertificateChain);
+            return new ProviderEvidence(thumbprint, timestampTime);
+        }
+
+        private static CryptProviderSigner ValidateProviderSigner(IntPtr pointer, bool timestamp)
+        {
+            CryptProviderSigner signer = (CryptProviderSigner)Marshal.PtrToStructure(pointer, typeof(CryptProviderSigner));
+            if (signer.StructureSize < (uint)Marshal.SizeOf(typeof(CryptProviderSigner)) || signer.Error != 0
+                || signer.CertificateCount < 1 || signer.CertificateCount > 64 || signer.CertificateChain == IntPtr.Zero || signer.ChainContext == IntPtr.Zero)
+                throw new InvalidDataException("WinTrust returned an incomplete or failed provider signer chain.");
+            if (timestamp && signer.SignerType != SignerTypeTimestamp)
+                throw new InvalidDataException("WinTrust countersigner is not an Authenticode timestamp signer.");
+            CertChainContext chain = (CertChainContext)Marshal.PtrToStructure(signer.ChainContext, typeof(CertChainContext));
+            if (chain.TrustStatus.ErrorStatus != 0) throw new InvalidDataException("WinTrust provider signer chain contains a trust error.");
+            ValidateChainPolicy(signer.ChainContext, timestamp ? new IntPtr(3) : new IntPtr(2));
+            int certificateSize = Marshal.SizeOf(typeof(CryptProviderCertificate));
+            for (uint index = 0; index < signer.CertificateCount; index++)
+            {
+                IntPtr certificatePointer = new IntPtr(signer.CertificateChain.ToInt64() + (long)certificateSize * index);
+                CryptProviderCertificate certificate = (CryptProviderCertificate)Marshal.PtrToStructure(certificatePointer, typeof(CryptProviderCertificate));
+                if (certificate.StructureSize < (uint)certificateSize || certificate.CertificateContext == IntPtr.Zero
+                    || certificate.Error != 0 || certificate.RevokedReason != 0)
+                    throw new InvalidDataException("WinTrust provider certificate chain contains an invalid element.");
+            }
+            return signer;
+        }
+
+        private static void ValidateChainPolicy(IntPtr chainContext, IntPtr policy)
+        {
+            CertChainPolicyParameters parameters = new CertChainPolicyParameters();
+            parameters.StructureSize = (uint)Marshal.SizeOf(typeof(CertChainPolicyParameters));
+            CertChainPolicyStatus status = new CertChainPolicyStatus();
+            status.StructureSize = (uint)Marshal.SizeOf(typeof(CertChainPolicyStatus));
+            if (!CertVerifyCertificateChainPolicy(policy, chainContext, ref parameters, ref status) || status.Error != 0)
+                throw new InvalidDataException("Windows certificate-chain policy rejected the provider signer.");
+        }
+
+        private static string ProviderLeafThumbprint(IntPtr certificateChain)
+        {
+            CryptProviderCertificate providerCertificate = (CryptProviderCertificate)Marshal.PtrToStructure(certificateChain, typeof(CryptProviderCertificate));
+            CertContext context = (CertContext)Marshal.PtrToStructure(providerCertificate.CertificateContext, typeof(CertContext));
+            if (context.EncodedCertificate == IntPtr.Zero || context.EncodedCertificateSize < 1 || context.EncodedCertificateSize > 1024 * 1024)
+                throw new InvalidDataException("WinTrust provider signer certificate is malformed.");
+            byte[] encoded = new byte[context.EncodedCertificateSize];
+            Marshal.Copy(context.EncodedCertificate, encoded, 0, encoded.Length);
+            using (X509Certificate2 certificate = new X509Certificate2(encoded))
+            {
+                if (String.IsNullOrWhiteSpace(certificate.Thumbprint)) throw new InvalidDataException("WinTrust provider signer certificate has no thumbprint.");
+                return certificate.Thumbprint;
+            }
+        }
+
+        private static DateTime FileTimeUtc(System.Runtime.InteropServices.ComTypes.FILETIME value)
+        {
+            long fileTime = ((long)(uint)value.dwHighDateTime << 32) | (uint)value.dwLowDateTime;
+            try { return DateTime.FromFileTimeUtc(fileTime); }
+            catch (ArgumentOutOfRangeException error) { throw new InvalidDataException("WinTrust returned an invalid signer verification time.", error); }
+        }
+
+        private static bool HasEmptyPeCertificateTable(string file)
+        {
+            try
+            {
+                using (FileStream stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (BinaryReader reader = new BinaryReader(stream, Encoding.UTF8))
+                {
+                    if (stream.Length < 64 || reader.ReadUInt16() != 0x5A4D) return false;
+                    stream.Position = 0x3C;
+                    int peOffset = reader.ReadInt32();
+                    if (peOffset < 64 || peOffset > stream.Length - 24) return false;
+                    stream.Position = peOffset;
+                    if (reader.ReadUInt32() != 0x00004550) return false;
+                    stream.Position = peOffset + 20;
+                    ushort optionalSize = reader.ReadUInt16();
+                    long optionalOffset = peOffset + 24;
+                    if (optionalSize < 2 || optionalOffset + optionalSize > stream.Length) return false;
+                    stream.Position = optionalOffset;
+                    ushort magic = reader.ReadUInt16();
+                    int dataDirectoryOffset = magic == 0x10B ? 96 : magic == 0x20B ? 112 : -1;
+                    int securityDirectoryEnd = dataDirectoryOffset + (5 * 8);
+                    if (dataDirectoryOffset < 0 || optionalSize < securityDirectoryEnd) return false;
+                    stream.Position = optionalOffset + dataDirectoryOffset + (4 * 8);
+                    uint certificateOffset = reader.ReadUInt32();
+                    uint certificateSize = reader.ReadUInt32();
+                    return certificateOffset == 0 && certificateSize == 0;
+                }
+            }
+            catch { return false; }
+        }
+
+        private sealed class ProviderEvidence
+        {
+            internal string SignerThumbprint { get; private set; }
+            internal DateTime TimestampUtc { get; private set; }
+            internal ProviderEvidence(string signerThumbprint, DateTime timestampUtc) { SignerThumbprint = signerThumbprint; TimestampUtc = timestampUtc; }
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CryptProviderData
+        {
+            internal uint StructureSize;
+            internal IntPtr WinTrustData;
+            internal int OpenedFile;
+            internal IntPtr ParentWindow;
+            internal IntPtr ActionId;
+            internal IntPtr Provider;
+            internal uint Error;
+            internal uint RegistrySecuritySettings;
+            internal uint RegistryPolicySettings;
+            internal IntPtr ProviderFunctions;
+            internal uint TrustStepErrorCount;
+            internal IntPtr TrustStepErrors;
+            internal uint StoreCount;
+            internal IntPtr Stores;
+            internal uint Encoding;
+            internal IntPtr Message;
+            internal uint SignerCount;
+            internal IntPtr Signers;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CryptProviderSigner
+        {
+            internal uint StructureSize;
+            internal System.Runtime.InteropServices.ComTypes.FILETIME VerifyAsOf;
+            internal uint CertificateCount;
+            internal IntPtr CertificateChain;
+            internal uint SignerType;
+            internal IntPtr SignerInfo;
+            internal uint Error;
+            internal uint CounterSignerCount;
+            internal IntPtr CounterSigners;
+            internal IntPtr ChainContext;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CryptProviderCertificate
+        {
+            internal uint StructureSize;
+            internal IntPtr CertificateContext;
+            internal int Commercial;
+            internal int TrustedRoot;
+            internal int SelfSigned;
+            internal int TestCertificate;
+            internal uint RevokedReason;
+            internal uint Confidence;
+            internal uint Error;
+            internal IntPtr TrustListContext;
+            internal int TrustListSignerCertificate;
+            internal IntPtr CtlContext;
+            internal uint CtlError;
+            internal int Cyclic;
+            internal IntPtr ChainElement;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CertContext
+        {
+            internal uint EncodingType;
+            internal IntPtr EncodedCertificate;
+            internal uint EncodedCertificateSize;
+            internal IntPtr CertificateInfo;
+            internal IntPtr CertificateStore;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CertTrustStatus
+        {
+            internal uint ErrorStatus;
+            internal uint InfoStatus;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CertChainContext
+        {
+            internal uint StructureSize;
+            internal CertTrustStatus TrustStatus;
+            internal uint ChainCount;
+            internal IntPtr Chains;
+            internal uint LowerQualityChainCount;
+            internal IntPtr LowerQualityChains;
+            internal int HasRevocationFreshnessTime;
+            internal uint RevocationFreshnessTime;
+            internal uint CreateFlags;
+            internal Guid ChainId;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CertChainPolicyParameters
+        {
+            internal uint StructureSize;
+            internal uint Flags;
+            internal IntPtr ExtraPolicyParameters;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CertChainPolicyStatus
+        {
+            internal uint StructureSize;
+            internal uint Error;
+            internal int ChainIndex;
+            internal int ElementIndex;
+            internal IntPtr ExtraPolicyStatus;
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -1116,16 +2458,19 @@ namespace ArcaneOS
             private uint revocationChecks = 0;
             private uint unionChoice = 1;
             private IntPtr fileInfo;
-            private uint stateAction = 0;
+            private uint stateAction = 1;
             private IntPtr stateData = IntPtr.Zero;
             private IntPtr urlReference = IntPtr.Zero;
             private uint providerFlags = 0;
             private uint uiContext = 0;
-            internal WinTrustData(WinTrustFileInfo info)
+            internal IntPtr StateData { get { return stateData; } }
+            internal WinTrustData(WinTrustFileInfo info, uint flags)
             {
+                providerFlags = flags;
                 fileInfo = Marshal.AllocCoTaskMem(Marshal.SizeOf(typeof(WinTrustFileInfo)));
                 Marshal.StructureToPtr(info, fileInfo, false);
             }
+            internal void PrepareToClose() { stateAction = 2; }
             public void Dispose()
             {
                 if (fileInfo != IntPtr.Zero) { Marshal.DestroyStructure(fileInfo, typeof(WinTrustFileInfo)); Marshal.FreeCoTaskMem(fileInfo); fileInfo = IntPtr.Zero; }
@@ -1167,6 +2512,9 @@ namespace ArcaneOS
         private ArcaneCoreProcess core;
         private readonly ConcurrentQueue<string> pendingMessages = new ConcurrentQueue<string>();
         private bool webReady;
+        private int onlineRefreshStarted;
+        private readonly CancellationTokenSource onlineRefreshCancellation = new CancellationTokenSource();
+        private readonly System.Windows.Forms.Timer watchdogHeartbeatTimer;
 
         public ArcaneForm(string[] args, ReleaseSecurityResult verifiedRelease)
         {
@@ -1182,12 +2530,18 @@ namespace ArcaneOS
                 FormBorderStyle = FormBorderStyle.None;
                 WindowState = FormWindowState.Maximized;
                 TopMost = false;
+                watchdogHeartbeatTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+                watchdogHeartbeatTimer.Tick += delegate { ShellWatchdog.MarkUiHeartbeat(); };
             }
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
             webView = new WebView2 { Dock = DockStyle.Fill };
             Controls.Add(webView);
-            Shown += async delegate { await InitializeAsync(); };
+            Shown += async delegate
+            {
+                StartOnlineSecurityRefresh();
+                await InitializeAsync();
+            };
             FormClosing += OnFormClosing;
         }
 
@@ -1241,11 +2595,21 @@ namespace ArcaneOS
                 {
                     BeginInvoke(new Action(delegate { ShowFatal("Arcane renderer stopped", eventArgs.ProcessFailedKind.ToString()); }));
                 };
-                webView.CoreWebView2.NavigationCompleted += delegate
+                webView.CoreWebView2.NavigationCompleted += delegate(object sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
                 {
+                    if (!eventArgs.IsSuccess)
+                    {
+                        ShowFatal("Arcane application navigation failed", eventArgs.WebErrorStatus.ToString());
+                        return;
+                    }
                     webReady = true;
                     string message;
                     while (pendingMessages.TryDequeue(out message)) PostMessage(message);
+                    if (Program.AppMode == "shell")
+                    {
+                        ShellWatchdog.MarkUiReady();
+                        watchdogHeartbeatTimer.Start();
+                    }
                 };
                 webView.Source = new Uri("https://arcane.local" + navigationPath);
             }
@@ -1259,6 +2623,40 @@ namespace ArcaneOS
         {
             foreach (string value in launchArgs) if (String.Equals(value, name, StringComparison.OrdinalIgnoreCase)) return true;
             return false;
+        }
+
+        private void StartOnlineSecurityRefresh()
+        {
+            if (!String.Equals(releaseSecurity.RevocationStatus, "attested-degraded", StringComparison.Ordinal)
+                || Interlocked.Exchange(ref onlineRefreshStarted, 1) != 0) return;
+            RefreshOnlineSecurityAsync();
+        }
+
+        private async void RefreshOnlineSecurityAsync()
+        {
+            try
+            {
+                int delaySeconds = 30;
+                while (!onlineRefreshCancellation.IsCancellationRequested)
+                {
+                    releaseSecurity.RemainingDegradedLifetime(DateTimeOffset.UtcNow);
+                    bool refreshed = await Task.Run((Func<bool>)delegate { return ReleaseSecurityVerifier.RefreshOnline(releaseSecurity); });
+                    if (refreshed) return;
+                    TimeSpan delay = ReleaseSecurityVerifier.CapDegradedRetryDelay(
+                        releaseSecurity.VerifiedAtUtc,
+                        DateTimeOffset.UtcNow,
+                        TimeSpan.FromSeconds(delaySeconds));
+                    TimeSpan monotonicRemaining = releaseSecurity.RemainingDegradedLifetime(DateTimeOffset.UtcNow);
+                    if (delay > monotonicRemaining) delay = monotonicRemaining;
+                    await Task.Delay(delay, onlineRefreshCancellation.Token);
+                    delaySeconds = Math.Min(delaySeconds * 4, 1800);
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception error)
+            {
+                if (!IsDisposed) ShowFatal("Arcane publisher verification failed", error.ToString());
+            }
         }
 
         private static bool IsAllowedAppUri(string value)
@@ -1319,6 +2717,8 @@ namespace ArcaneOS
 
         private void OnFormClosing(object sender, FormClosingEventArgs eventArgs)
         {
+            try { onlineRefreshCancellation.Cancel(); } catch { }
+            try { if (watchdogHeartbeatTimer != null) { watchdogHeartbeatTimer.Stop(); watchdogHeartbeatTimer.Dispose(); } } catch { }
             if (core != null) core.Dispose();
             if (Program.AppMode != "shell") return;
             if (eventArgs.CloseReason == CloseReason.WindowsShutDown) ShellWatchdog.Disarm();
@@ -1402,6 +2802,15 @@ namespace ArcaneOS
             start.EnvironmentVariables["ComSpec"] = Path.Combine(system32, "cmd.exe");
             start.EnvironmentVariables["PSModulePath"] = Path.Combine(powerShell, "Modules");
             start.EnvironmentVariables["ARCANE_RELEASE_SECURITY_MODE"] = releaseSecurity.SecurityMode;
+            if (!releaseSecurity.IsUnsignedLocalTest)
+            {
+                start.EnvironmentVariables["ARCANE_RELEASE_CONTENT_BINDING"] = releaseSecurity.ContentBinding;
+                start.EnvironmentVariables["ARCANE_RELEASE_SIGNER_THUMBPRINT"] = releaseSecurity.SignerThumbprint;
+                start.EnvironmentVariables["ARCANE_RELEASE_VERIFIED_AT"] = releaseSecurity.VerifiedAtUtc;
+                start.EnvironmentVariables["ARCANE_RELEASE_REVOCATION_STATUS"] = releaseSecurity.RevocationStatus;
+                start.EnvironmentVariables["ARCANE_RELEASE_TRUST_SOURCE"] = releaseSecurity.PublisherTrustSource;
+                start.EnvironmentVariables["ARCANE_RELEASE_TIMESTAMP_VERIFIED"] = releaseSecurity.TimestampVerified ? "1" : "0";
+            }
             Process child = Process.Start(start);
             if (child == null) throw new InvalidOperationException("Windows did not start Arcane Core.");
             return new ArcaneCoreProcess(child);

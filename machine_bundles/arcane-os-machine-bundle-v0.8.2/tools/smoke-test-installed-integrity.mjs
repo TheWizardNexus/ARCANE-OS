@@ -11,6 +11,8 @@ const installRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-installed-in
 const stateRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-installed-state-'));
 const payloadPath = path.join(installRoot, 'bin', 'ArcaneShell.exe');
 const originalPayload = Buffer.from('ARCANE-INTEGRITY-FIXTURE');
+const bundlePayload = Buffer.from(JSON.stringify({ name:'Arcane OS',version:'0.8.2' }, null, 2));
+const releasePayload = Buffer.from(JSON.stringify({ name:'Arcane OS',version:'0.8.2' }, null, 2));
 
 function digest(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -24,12 +26,18 @@ const manifest = {
     schemaVersion: 2,
     hashAlgorithm: 'sha256',
     scope: 'installed-tree',
-    files: [{ path: 'bin/ArcaneShell.exe', size: originalPayload.length, sha256: digest(originalPayload) }],
+    files: [
+      { path: 'arcane-bundle.json', size: bundlePayload.length, sha256: digest(bundlePayload) },
+      { path: 'arcane-release.json', size: releasePayload.length, sha256: digest(releasePayload) },
+      { path: 'bin/ArcaneShell.exe', size: originalPayload.length, sha256: digest(originalPayload) },
+    ],
   },
 };
 
 await fs.mkdir(path.dirname(payloadPath), { recursive: true });
 await fs.writeFile(payloadPath, originalPayload);
+await fs.writeFile(path.join(installRoot, 'arcane-bundle.json'), bundlePayload);
+await fs.writeFile(path.join(installRoot, 'arcane-release.json'), releasePayload);
 await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
 
 const child = spawn(process.execPath, [
@@ -83,7 +91,77 @@ function call(method) {
 try {
   const clean = await call('installation.status');
   assert.equal(clean.installedIntegrity.ok, true);
-  assert.equal(clean.installedIntegrity.checkedFiles, 1);
+  assert.equal(clean.installedIntegrity.checkedFiles, 3);
+  assert.equal(clean.installedIdentity.ok, true);
+
+  for (const scope of [undefined, 'simulation', 'release-tree']) {
+    const wrongScope = structuredClone(manifest);
+    if (scope === undefined) delete wrongScope.integrity.scope;
+    else wrongScope.integrity.scope = scope;
+    await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify(wrongScope, null, 2));
+    const rejectedScope = await call('installation.status');
+    assert.equal(rejectedScope.installedIntegrity.ok, false);
+    assert.match(rejectedScope.installedIntegrity.reason, /scope must be installed-tree/i);
+  }
+  await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
+
+  await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify({ ...manifest, version:'0.7.0' }, null, 2));
+  const mismatchedVersion = await call('installation.status');
+  assert.equal(mismatchedVersion.installedIntegrity.ok, true, 'the install manifest is intentionally outside its own integrity inventory');
+  assert.equal(mismatchedVersion.installedIdentity.ok, false);
+  assert.equal(mismatchedVersion.blocked, true);
+  assert.equal(mismatchedVersion.action, 'blocked');
+  assert.match(mismatchedVersion.installedIdentity.reason, /versions do not match/i);
+  await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
+
+  const legacyManifest = {
+    ...manifest,
+    name: 'Arcane OS',
+    version: '0.7.0',
+    nativeAdapter: 'windows',
+    payloadMode: 'windows-executable',
+    platform: { platform: 'windows' },
+  };
+  delete legacyManifest.integrity;
+  await fs.rm(path.join(installRoot, 'arcane-bundle.json'));
+  await fs.rm(path.join(installRoot, 'arcane-release.json'));
+  await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify(legacyManifest, null, 2));
+  const olderLegacy = await call('installation.status');
+  assert.equal(olderLegacy.installedIdentity.ok, true);
+  assert.equal(olderLegacy.installedIdentity.legacy, true);
+  assert.equal(olderLegacy.blocked, false);
+  assert.equal(olderLegacy.action, 'update');
+
+  for (const legacyVersion of ['0.8.2', '0.9.0']) {
+    await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify({ ...legacyManifest, version:legacyVersion }, null, 2));
+    const blockedLegacy = await call('installation.status');
+    assert.equal(blockedLegacy.installedIdentity.ok, false);
+    assert.equal(blockedLegacy.blocked, true);
+    assert.equal(blockedLegacy.action, 'blocked');
+  }
+
+  for (const invalidVersion of ['garbage', 'v0.7.0', '0.7.0-extra', '0.7.0.1', '00.7.0']) {
+    await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify({ ...legacyManifest, version:invalidVersion }, null, 2));
+    const blockedLegacy = await call('installation.status');
+    assert.equal(blockedLegacy.installedIdentity.ok, false);
+    assert.equal(blockedLegacy.blocked, true);
+    assert.match(blockedLegacy.installedIdentity.reason, /canonical release version/i);
+  }
+
+  await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify({ ...legacyManifest, name:'Not Arcane OS' }, null, 2));
+  const wrongLegacyProduct = await call('installation.status');
+  assert.equal(wrongLegacyProduct.installedIdentity.ok, false);
+  assert.equal(wrongLegacyProduct.blocked, true);
+  assert.match(wrongLegacyProduct.installedIdentity.reason, /canonical Arcane product identity/i);
+
+  await fs.writeFile(path.join(installRoot, 'arcane-bundle.json'), bundlePayload);
+  await fs.writeFile(path.join(installRoot, 'arcane-release.json'), releasePayload);
+  await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify(legacyManifest, null, 2));
+  const mismatchedLegacy = await call('installation.status');
+  assert.equal(mismatchedLegacy.installedIdentity.ok, false);
+  assert.match(mismatchedLegacy.installedIdentity.reason, /versions do not match/i);
+
+  await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
 
   const changed = Buffer.from(originalPayload);
   changed[0] ^= 1;

@@ -6,14 +6,38 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   buildTargetApp,
+  normalizeNavigationEntry,
   normalizeRelativePath,
   validateAppRegistry,
 } from './app-packager-lib.mjs';
 import { verifyPackagedAppLinks } from './app-package-links.mjs';
+import { replaceTemplateTokenExactlyOnce } from './exact-template-replacement.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const bundleRoot = path.resolve(here, '..');
 const componentScriptSuffix = "}).call((()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const host=registry instanceof Map&&token?registry.get(token):null;if(!host)throw new Error('HTML import host binding is unavailable.');return host;})())";
+
+test('template replacement preserves JavaScript replacement metacharacters byte-for-byte', () => {
+  const injected = ['$&', '$`', "$'", '$1', String.raw`C:\\Arcane\\$&\\$1`].join('|');
+  assert.equal(
+    replaceTemplateTokenExactlyOnce('before __ARCANE_TEST_TOKEN__ after', '__ARCANE_TEST_TOKEN__', injected),
+    `before ${injected} after`,
+  );
+  assert.throws(
+    () => replaceTemplateTokenExactlyOnce('missing', '__ARCANE_TEST_TOKEN__', injected),
+    /exactly once/,
+  );
+  assert.throws(
+    () => replaceTemplateTokenExactlyOnce('__ARCANE_TEST_TOKEN____ARCANE_TEST_TOKEN__', '__ARCANE_TEST_TOKEN__', injected),
+    /exactly once/,
+  );
+});
+
+test('Core build requires one exact CSP placeholder replacement', async () => {
+  const builder = await fs.readFile(path.join(bundleRoot, 'tools', 'build-core.mjs'), 'utf8');
+  assert.match(builder, /replaceTemplateTokenExactlyOnce\(html, '__ARCANE_SCRIPT_HASHES__', cspScripts\)/);
+  assert.doesNotMatch(builder, /html[.]replace\('__ARCANE_SCRIPT_HASHES__'/);
+});
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -25,21 +49,34 @@ function sha256Source(source) {
 
 async function assertSecurityMetadata(target, appId, microphone) {
   const appRoot = path.join(target, 'app', appId);
-  const entries = await fs.readdir(appRoot, { withFileTypes: true });
-  const documents = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.html'));
+  const documents = [];
+  async function visit(directory, relativeDirectory = '') {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const relative = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) await visit(absolute, relative);
+      else if (entry.isFile() && entry.name.toLowerCase().endsWith('.html')) {
+        const html = await fs.readFile(absolute, 'utf8');
+        if (/<head\b/i.test(html)) documents.push(relative);
+      }
+    }
+  }
+  await visit(appRoot);
+  documents.sort();
   assert(documents.length > 0, `${appId} must contain secured HTML documents`);
   const manifest = JSON.parse(await fs.readFile(path.join(target, 'arcane-app-package.json'), 'utf8'));
   assert.deepEqual(
     manifest.app.security.navigationEntries,
-    documents.map((entry) => `/${appId}/${entry.name}`).sort(),
-    `${appId} top-level navigation allowlist must contain only full secured documents`,
+    documents.map((entry) => `/${appId}/${entry}`),
+    `${appId} navigation allowlist must contain every full secured document`,
   );
   for (const document of documents) {
-    const html = await fs.readFile(path.join(appRoot, document.name), 'utf8');
+    const html = await fs.readFile(path.join(appRoot, ...document.split('/')), 'utf8');
     const policies = [...html.matchAll(/<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/gi)];
     const permissions = [...html.matchAll(/<meta\s+http-equiv="Permissions-Policy"\s+content="([^"]+)"/gi)];
-    assert.equal(policies.length, 1, `${appId}/${document.name} must contain one generated CSP`);
-    assert.equal(permissions.length, 1, `${appId}/${document.name} must contain one generated Permissions-Policy`);
+    assert.equal(policies.length, 1, `${appId}/${document} must contain one generated CSP`);
+    assert.equal(permissions.length, 1, `${appId}/${document} must contain one generated Permissions-Policy`);
     const policy = policies[0][1];
     assert.equal(policy, manifest.app.security.contentSecurityPolicy);
     assert.match(policy, /default-src 'none'/);
@@ -53,9 +90,9 @@ async function assertSecurityMetadata(target, appId, microphone) {
     assert(!scriptPolicy.includes("'unsafe-eval'"), `${appId} script policy allows eval`);
     assert(!/https?:/.test(scriptPolicy), `${appId} script policy allows remote code`);
     assert.match(html, /<base\b[^>]*href="\/"/i);
-    assert(html.indexOf('http-equiv="Content-Security-Policy"') < html.indexOf('<base href="/">'), `${appId}/${document.name} base precedes its CSP`);
+    assert(html.indexOf('http-equiv="Content-Security-Policy"') < html.indexOf('<base href="/">'), `${appId}/${document} base precedes its CSP`);
     for (const script of html.matchAll(/<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
-      assert(scriptPolicy.includes(sha256Source(script[1])), `${appId}/${document.name} has an unhashed inline script`);
+      assert(scriptPolicy.includes(sha256Source(script[1])), `${appId}/${document} has an unhashed inline script`);
     }
     assert.equal(permissions[0][1].includes('microphone=(self)'), microphone);
     assert.equal(permissions[0][1].includes('microphone=()'), !microphone);
@@ -72,6 +109,34 @@ test('relative path validation rejects traversal and platform-specific escapes',
   assert.equal(normalizeRelativePath('apps/precrisis', 'fixture'), 'apps/precrisis');
   for (const candidate of ['../secret', 'apps/../secret', '/absolute', 'C:/Windows', 'apps\\boss', 'apps//boss', 'apps/con']) {
     assert.throws(() => normalizeRelativePath(candidate, 'fixture'), /Invalid Arcane app package configuration/);
+  }
+});
+
+test('nested application navigation paths are canonical, URL-safe, and traversal-resistant', async () => {
+  const valid = JSON.parse(await fs.readFile(path.join(bundleRoot, 'arcane-apps.json'), 'utf8'));
+  valid.apps.boss.entry = 'components/nav.html';
+  const nested = validateAppRegistry(valid);
+  assert.equal(nested.apps.boss.entry, 'components/nav.html');
+  assert.equal(
+    normalizeNavigationEntry('/boss/components/nav.html', 'boss'),
+    '/boss/components/nav.html',
+  );
+  for (const unsafe of [
+    '/boss/../escape.html',
+    '/boss/pages/./escape.html',
+    '/boss/pages//escape.html',
+    '/boss/pages\\escape.html',
+    '/boss/%2e%2e/escape.html',
+    '/boss/pages/escape.html?mode=unsafe',
+    '/other/pages/escape.html',
+    '/boss/pages/not-html.txt',
+    `/boss/${'a'.repeat(507)}.html`,
+  ]) {
+    assert.throws(
+      () => normalizeNavigationEntry(unsafe, 'boss'),
+      /Invalid Arcane app package configuration/,
+      unsafe,
+    );
   }
 });
 
@@ -294,6 +359,9 @@ test('Windows target generator embeds the validated navigation allowlist', async
   assert.match(source, /\$AppId\.Length -gt 64/);
   assert.match(source, /\[a-z0-9\]\*\(\?:-\[a-z0-9\]\+\)\*/);
   assert.match(source, /app\.security\.navigationEntries/);
+  assert.match(source, /navigationRelative\.Split\(\[char\]'\/'\)/);
+  assert.match(source, /navigationSegments\.Count -lt 2/);
+  assert.match(source, /\^\[A-Za-z0-9\._~-\]\+\$/);
   assert.match(source, /Unsafe target navigation entry/);
   assert.match(source, /navigation allowlist omits its launch entry/);
   assert.match(source, /internal static readonly string\[\] AllowedNavigationPaths = new string\[\]/);

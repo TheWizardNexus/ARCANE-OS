@@ -72,6 +72,37 @@ const ipcBrokerPublicKey = argValue('--broker-public-key=') || '';
 const simulateBrokerFirstClient = simulate && !process.pkg && args.has('--simulate-broker-first-client');
 const allowUnsignedLocalRelease = !simulate && args.has('--allow-unsigned-local-release');
 const elevationProtectedUsername = argValue('--protected-user=') || process.env.ARCANE_PROTECTED_USERNAME || null;
+function validatedHostReleaseClaims() {
+  const mode = String(process.env.ARCANE_RELEASE_SECURITY_MODE || '');
+  const contentBinding = String(process.env.ARCANE_RELEASE_CONTENT_BINDING || '');
+  const signerThumbprint = String(process.env.ARCANE_RELEASE_SIGNER_THUMBPRINT || '').toUpperCase();
+  const verifiedAt = String(process.env.ARCANE_RELEASE_VERIFIED_AT || '');
+  const revocationStatus = String(process.env.ARCANE_RELEASE_REVOCATION_STATUS || '');
+  const trustSource = String(process.env.ARCANE_RELEASE_TRUST_SOURCE || '');
+  const timestampVerified = String(process.env.ARCANE_RELEASE_TIMESTAMP_VERIFIED || '');
+  const hasPublisherEvidence = Boolean(contentBinding || signerThumbprint || verifiedAt || revocationStatus || trustSource || timestampVerified);
+  if (mode === 'publisher-verified') {
+    const bindingValid = /^ARCANE-(?:MACHINE|TARGET)-BINDING\|1\|[^|\r\n]{1,128}\|[a-f0-9]{64}$/.test(contentBinding);
+    const time = new Date(verifiedAt);
+    if (!bindingValid || !/^[A-F0-9]{40,128}$/.test(signerThumbprint)
+      || !verifiedAt.endsWith('Z') || !Number.isFinite(time.getTime()) || time.getTime() > Date.now() + 300000
+      || !['online-good', 'cache-good', 'attested-degraded'].includes(revocationStatus)
+      || !['administrator-policy', 'administrator-policy-rotation', 'installed-continuity', 'uac-approved-tofu', 'fresh-unpinned'].includes(trustSource)
+      || timestampVerified !== '1') {
+      throw new Error('Arcane Core rejected incomplete or malformed publisher verification claims from its native host.');
+    }
+    return Object.freeze({ mode, contentBinding, signerThumbprint, verifiedAt, revocationStatus, trustSource, timestampVerified: true });
+  }
+  if (mode === 'unsigned-local-test') {
+    if (!allowUnsignedLocalRelease || hasPublisherEvidence) throw new Error('Arcane Core rejected inconsistent unsigned local-test host claims.');
+    return Object.freeze({ mode, contentBinding: '', signerThumbprint: '', verifiedAt: '', revocationStatus: '', trustSource: '', timestampVerified: false });
+  }
+  if (hasPublisherEvidence || (productionPackaged && platform === 'win32')) {
+    throw new Error('Arcane Core requires a complete release-security claim from its native Windows host.');
+  }
+  return Object.freeze({ mode: '', contentBinding: '', signerThumbprint: '', verifiedAt: '', revocationStatus: '', trustSource: '', timestampVerified: false });
+}
+const hostReleaseClaims = validatedHostReleaseClaims();
 let simulatedInstallationManifest = null;
 let simulatedArcaneUsersState = { schemaVersion: 1, users: {} };
 let simulatedAppStorage = Object.create(null);
@@ -80,6 +111,7 @@ const recentErrors = [];
 const bridgeToken = '';
 const nativeContext = {
   platform,
+  appMode,
   simulate,
   simulatedPlatform,
   simulatedUserFailure,
@@ -89,7 +121,13 @@ const nativeContext = {
   processPkg: Boolean(process.pkg),
   production:productionPackaged,
   allowUnsignedLocalRelease,
-  releaseSecurityModeClaim:String(process.env.ARCANE_RELEASE_SECURITY_MODE || ''),
+  releaseSecurityModeClaim:hostReleaseClaims.mode,
+  releaseContentBindingClaim:hostReleaseClaims.contentBinding,
+  releaseSignerThumbprintClaim:hostReleaseClaims.signerThumbprint,
+  releaseVerifiedAtClaim:hostReleaseClaims.verifiedAt,
+  releaseRevocationStatusClaim:hostReleaseClaims.revocationStatus,
+  releaseTrustSourceClaim:hostReleaseClaims.trustSource,
+  releaseTimestampVerifiedClaim:hostReleaseClaims.timestampVerified,
   os,
   fs,
   fsp,
@@ -99,6 +137,8 @@ const nativeContext = {
   bundleManifest: BUNDLE_MANIFEST,
   spawn,
   spawnSync,
+  compareVersions,
+  parseCanonicalReleaseVersion,
 };
 const simulatedWindowsSeedUsers = [...new Set([...simulatedExistingUsers, ...simulatedLegacyArcaneUsers, ...simulatedLegacyDriftUsers, ...simulatedUnsignedArcaneUsers])];
 if (platform === 'win32' && simulatedWindowsSeedUsers.length) {
@@ -400,6 +440,13 @@ function parseVersion(value) {
   const match = String(value || '').match(/v?(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
   return match ? [Number(match[1] || 0), Number(match[2] || 0), Number(match[3] || 0)] : null;
 }
+function parseCanonicalReleaseVersion(value) {
+  if (typeof value !== 'string') return null;
+  const match = /^(0|[1-9]\d*)[.](0|[1-9]\d*)[.](0|[1-9]\d*)$/.exec(value);
+  if (!match) return null;
+  const parts = match.slice(1).map(Number);
+  return parts.every(Number.isSafeInteger) ? parts : null;
+}
 function compareVersions(a, b) {
   const av = parseVersion(a);
   const bv = parseVersion(b);
@@ -541,10 +588,63 @@ function verifyInstalledIntegrityAt(root, manifest) {
     if (!integrity || integrity.schemaVersion !== 2 || integrity.hashAlgorithm !== 'sha256') {
       throw new Error('Installed integrity metadata is missing or obsolete.');
     }
+    if (integrity.scope !== 'installed-tree') throw new Error('Installed integrity scope must be installed-tree.');
     if (!fs.existsSync(root)) throw new Error('The Arcane installation directory is missing.');
     return verifyIntegrityEntries(root, integrity.files, true);
   } catch (error) {
     return { ok: false, checkedFiles: 0, reason: error.message };
+  }
+}
+function verifyInstalledVersionIdentity(manifest, integrityResult) {
+  const manifestVersion = manifest && typeof manifest.version === 'string' ? manifest.version : '';
+  if (!manifestVersion) return { ok:false,version:null,reason:'Installed Arcane version metadata is missing.' };
+  if (!parseCanonicalReleaseVersion(manifestVersion)) {
+    return { ok:false,version:manifestVersion,reason:'Installed Arcane version metadata is not a canonical release version.' };
+  }
+  if (simulate) return { ok:true,version:manifestVersion,reason:null,simulated:true };
+  if (!integrityResult || !integrityResult.ok) {
+    try {
+      if (manifest.integrity !== undefined || manifest.publisherAttestation !== undefined || manifest.securityMode !== undefined
+        || compareVersions(VERSION, manifestVersion) <= 0) {
+        throw new Error('Only an older pre-integrity Arcane installation can use the legacy migration path.');
+      }
+      if (manifest.name !== 'Arcane OS' || manifest.nativeAdapter !== native.id
+        || manifest.payloadMode !== `${native.id}-executable` || !manifest.platform
+        || manifest.platform.platform !== native.id) {
+        throw new Error('The pre-integrity installation does not match the canonical Arcane product identity.');
+      }
+      const bundlePath = path.join(PATHS.installRoot, 'arcane-bundle.json');
+      const releasePath = path.join(PATHS.installRoot, 'arcane-release.json');
+      const bundlePresent = fs.existsSync(bundlePath);
+      const releasePresent = fs.existsSync(releasePath);
+      if (bundlePresent !== releasePresent) throw new Error('Legacy Arcane bundle and release identities are incomplete.');
+      if (bundlePresent) {
+        const bundle = readJsonFile(bundlePath);
+        const release = readJsonFile(releasePath);
+        if (!bundle || !release || bundle.version !== manifestVersion || release.version !== manifestVersion) {
+          throw new Error('Legacy Arcane manifest, bundle, and release versions do not match.');
+        }
+      }
+      return { ok:true,version:manifestVersion,reason:null,legacy:true };
+    } catch (error) {
+      return { ok:false,version:manifestVersion,reason:error.message };
+    }
+  }
+  try {
+    const paths = new Set((manifest.integrity.files || []).map((entry) => normalizeIntegrityPath(entry && entry.path)));
+    if (!paths.has('arcane-bundle.json') || !paths.has('arcane-release.json')) {
+      throw new Error('Installed integrity does not bind the Arcane bundle and release identities.');
+    }
+    const bundle = readJsonFile(path.join(PATHS.installRoot, 'arcane-bundle.json'));
+    const release = readJsonFile(path.join(PATHS.installRoot, 'arcane-release.json'));
+    if (!bundle || !release || typeof bundle.version !== 'string' || typeof release.version !== 'string'
+      || bundle.version !== manifestVersion || release.version !== manifestVersion) {
+      throw new Error('Installed Arcane manifest, bundle, and release versions do not match.');
+    }
+    parseVersion(bundle.version);
+    return { ok:true,version:manifestVersion,reason:null };
+  } catch (error) {
+    return { ok:false,version:manifestVersion,reason:error.message };
   }
 }
 async function recoverInterruptedInstallation(action) {
@@ -879,23 +979,40 @@ function backupAlreadyUsesArcane(backup) {
   }
   return Boolean(backup && backup.previousShellPresent && backup.previousShell === expected);
 }
+function arcaneUserRestoreStatus(user, record) {
+  const preparedExistingRecovery = Boolean(
+    record
+    && record.previousShellCaptured
+    && record.accountExistedBefore === true
+    && record.shellMutationPhase === 'prepared'
+  );
+  const incompleteNewAccount = Boolean(
+    record
+    && record.accountExistedBefore === false
+    && ['prepared', 'activation-pending', 'cleanup-required'].includes(record.accountMutationPhase)
+  );
+  const restoreRequiresElevatedVerification = Boolean(
+    record
+    && record.previousShellCaptured
+    && user.verification === 'recorded-only'
+    && (preparedExistingRecovery || (
+      record.shellMutationPhase === 'assigned'
+      && ['active', 'existing-account'].includes(record.accountMutationPhase)
+    ))
+  );
+  return {
+    canRestoreShell: Boolean(record && record.previousShellCaptured && !incompleteNewAccount
+      && (user.shellAssigned || preparedExistingRecovery || restoreRequiresElevatedVerification)),
+    restoreRequiresElevatedVerification,
+  };
+}
 async function listArcaneUsers() {
   const state = readArcaneUsersState();
   const records = Object.values(state.users || {});
   const nativeUsers = await native.listArcaneUsers(records.map((item) => item.username));
   return nativeUsers.map((user) => {
     const record = state.users[String(user.username || '').toLowerCase()] || null;
-    const preparedExistingRecovery = Boolean(
-      record
-      && record.previousShellCaptured
-      && record.accountExistedBefore === true
-      && record.shellMutationPhase === 'prepared'
-    );
-    const incompleteNewAccount = Boolean(
-      record
-      && record.accountExistedBefore === false
-      && ['prepared', 'activation-pending', 'cleanup-required'].includes(record.accountMutationPhase)
-    );
+    const restoreStatus = arcaneUserRestoreStatus(user, record);
     return {
       ...user,
       managedByArcane: Boolean(record),
@@ -912,7 +1029,8 @@ async function listArcaneUsers() {
       recordedShellBindingVersion: record ? Number(record.shellBindingVersion) || 1 : null,
       recordedAssignmentMode: record && record.assignmentMode ? record.assignmentMode : null,
       recordedSecurityMode: record && record.securityMode ? record.securityMode : null,
-      canRestoreShell: Boolean(record && record.previousShellCaptured && !incompleteNewAccount && (user.shellAssigned || preparedExistingRecovery)),
+      canRestoreShell: restoreStatus.canRestoreShell,
+      restoreRequiresElevatedVerification: restoreStatus.restoreRequiresElevatedVerification,
       shellMutationPhase: record && record.shellMutationPhase ? record.shellMutationPhase : null,
       shellRecoveryPrepared: Boolean(record && record.previousShellCaptured),
       accountMutationPhase: record && record.accountMutationPhase ? record.accountMutationPhase : null,
@@ -926,7 +1044,6 @@ function installationState() {
     : readJsonFile(installManifestPath())
       || readJsonFile(path.join(PATHS.stateRoot, 'install.json'));
   const installedVersion = manifest && manifest.version ? String(manifest.version) : null;
-  const comparison = installedVersion ? compareVersions(VERSION, installedVersion) : 1;
   const payload = native.installPayload(bundleRoot());
   const payloadStatus = {
     mode: payload.mode,
@@ -939,8 +1056,14 @@ function installationState() {
   const installedIntegrity = installedVersion
     ? verifyInstalledIntegrity(manifest)
     : { ok: false, checkedFiles: 0, reason: 'Arcane is not installed.' };
+  const installedIdentity = installedVersion
+    ? verifyInstalledVersionIdentity(manifest, installedIntegrity)
+    : { ok:false,version:null,reason:'Arcane is not installed.' };
+  const comparison = installedVersion && installedIdentity.ok ? compareVersions(VERSION, installedIdentity.version) : 1;
+  const identityBlocked = Boolean(installedVersion && !installedIdentity.ok);
   const payloadRepairRequired = Boolean(
     installedVersion
+    && installedIdentity.ok
     && comparison === 0
     && payload.releaseReady
     && (installedPayloadMode !== payload.mode || !installedIntegrity.ok)
@@ -949,19 +1072,29 @@ function installationState() {
     present: Boolean(installedVersion),
     installedVersion,
     packageVersion: VERSION,
-    blocked: Boolean(installedVersion && comparison < 0),
-    action: !installedVersion ? 'install' : comparison > 0 ? 'update' : comparison === 0 ? 'repair' : 'blocked',
+    blocked: Boolean(identityBlocked || (installedVersion && comparison < 0)),
+    action: !installedVersion ? 'install' : identityBlocked ? 'blocked' : comparison > 0 ? 'update' : comparison === 0 ? 'repair' : 'blocked',
     installRoot: PATHS.installRoot,
     stateRoot: PATHS.stateRoot,
     manifest,
     installedPayloadMode,
     installedIntegrity,
+    installedIdentity,
     payloadRepairRequired,
     payload: payloadStatus,
   };
 }
 function assertChangesAllowed() {
   const state = installationState();
+  if (state.present && !state.installedIdentity.ok) {
+    throw arcaneError(
+      'INSTALL_IDENTITY_INVALID',
+      'Arcane cannot trust the installed release identity.',
+      'Preserve the installation for administrator review, then repair it from a complete verified release before making changes.',
+      409,
+      { reason:state.installedIdentity.reason }
+    );
+  }
   if (state.blocked) {
     throw arcaneError(
       'DOWNGRADE_BLOCKED',
@@ -1363,6 +1496,8 @@ async function ensureRequirements(action, ids) {
 async function installArcaneGlobally(action) {
   let lease = null;
   let primaryError = null;
+  let stage = null;
+  let stageOwnership = null;
   try {
     if (native.acquireInstallLease) lease = await native.acquireInstallLease(action);
     const root = bundleRoot();
@@ -1391,10 +1526,14 @@ async function installArcaneGlobally(action) {
     if (!simulate && native.assertNoRunningInstalledApplications) native.assertNoRunningInstalledApplications();
     await recoverInterruptedInstallation(action);
     actionLog(action, 'info', `Installing Arcane ${VERSION} globally from ${root}.`, { payloadMode: payload.mode });
-    const stage = `${PATHS.installRoot}.stage-${process.pid}-${Date.now()}`;
+    stage = `${PATHS.installRoot}.stage-${process.pid}-${simulate ? Date.now() : crypto.randomBytes(24).toString('hex')}`;
     if (!simulate) {
-      await fsp.rm(stage, { recursive: true, force: true });
       await fsp.mkdir(stage, { recursive: false });
+      if (typeof native.captureInstallStageOwnership === 'function') {
+        stageOwnership = native.captureInstallStageOwnership(stage);
+      } else if (platform === 'win32') {
+        throw new Error('The native adapter cannot bind an installation stage to its filesystem identity.');
+      }
       for (const file of payload.files) {
         const installPath = normalizeIntegrityPath(file.installPath || `bin/${file.destinationName}`);
         const sourceStat = fs.lstatSync(file.source);
@@ -1415,6 +1554,18 @@ async function installArcaneGlobally(action) {
       verifyIntegrityEntries(stage, payload.integrity.files, true);
       if (native.verifyStagedInstallation) native.verifyStagedInstallation(stage, false);
     }
+    let publisherAttestation = null;
+    if (!simulate && payload.integrity) {
+      if (typeof native.createPublisherAttestation !== 'function') throw new Error('The native adapter cannot bind publisher verification to the installation transaction.');
+      publisherAttestation = native.createPublisherAttestation(stage);
+    }
+    const installationSecurityMode = activeReleaseSecurityMode();
+    if (!simulate && !['publisher-verified','unsigned-local-test'].includes(installationSecurityMode)) {
+      throw new Error('Arcane cannot persist an installation without a verified release-security mode.');
+    }
+    if (payload.securityMode && payload.securityMode !== installationSecurityMode) {
+      throw new Error('The verified installation payload security mode does not match the active native host proof.');
+    }
     const manifest = {
       name: 'Arcane OS',
       version: VERSION,
@@ -1423,8 +1574,10 @@ async function installArcaneGlobally(action) {
       platform: osInfo(),
       nativeAdapter: native.id,
       payloadMode: payload.mode,
+      securityMode: installationSecurityMode,
       sourceBundle: root,
       requirements: BUNDLE_MANIFEST.requirements,
+      ...(publisherAttestation ? { publisherAttestation } : {}),
       integrity: simulate ? { schemaVersion: 2, hashAlgorithm: 'sha256', scope: 'simulation', files: [] } : createInstalledIntegrity(stage),
     };
     await writeFile(path.join(stage, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
@@ -1448,7 +1601,22 @@ async function installArcaneGlobally(action) {
       }
       let activated = false;
       try {
-        try { await fsp.rename(stage, PATHS.installRoot); activated = true; }
+        try {
+          await fsp.rename(stage, PATHS.installRoot);
+          activated = true;
+          const activatedOwnership = stageOwnership && typeof native.installStageOwnershipStatus === 'function'
+            ? native.installStageOwnershipStatus(stageOwnership, PATHS.installRoot)
+            : null;
+          if (platform === 'win32' && (!activatedOwnership || activatedOwnership.state !== 'owned')) {
+            throw arcaneError(
+              'INSTALL_STAGE_IDENTITY_LOST',
+              'Arcane could not prove that the activated installation is the exact verified stage it created.',
+              'Arcane will preserve the uncertain installation tree and restore the previous installation when possible.',
+              409,
+              { reason: activatedOwnership && activatedOwnership.reason || 'identity-unavailable' }
+            );
+          }
+        }
         catch (error) {
           if (['EBUSY', 'EPERM', 'EACCES'].includes(error && error.code)) {
             throw arcaneError('APPLICATIONS_BUSY', 'Arcane could not activate the update while an application is using its files.', 'Close all Arcane applications, then retry.', 409, { retryable: true });
@@ -1485,9 +1653,24 @@ async function installArcaneGlobally(action) {
       } catch (error) {
         const failed = `${PATHS.installRoot}.failed-${Date.now()}`;
         try {
-          if (activated && fs.existsSync(PATHS.installRoot)) await fsp.rename(PATHS.installRoot, failed);
+          let failedOwnershipVerified = false;
+          if (activated && fs.existsSync(PATHS.installRoot)) {
+            await fsp.rename(PATHS.installRoot, failed);
+            const failedOwnership = stageOwnership && typeof native.installStageOwnershipStatus === 'function'
+              ? native.installStageOwnershipStatus(stageOwnership, failed)
+              : null;
+            failedOwnershipVerified = Boolean(failedOwnership && failedOwnership.state === 'owned');
+            if (stageOwnership && !failedOwnershipVerified) {
+              actionLog(action, 'warn', 'Arcane preserved the failed activated tree because its original stage identity could not be proven.', {
+                failed,
+                reason: failedOwnership && failedOwnership.reason || 'identity-unavailable',
+              });
+            }
+          }
           if (movedExisting && fs.existsSync(backup)) await fsp.rename(backup, PATHS.installRoot);
-          if (fs.existsSync(failed)) await fsp.rm(failed, { recursive: true, force: true });
+          if (failedOwnershipVerified && fs.existsSync(failed) && typeof native.cleanupInstallStage === 'function') {
+            await native.cleanupInstallStage(stageOwnership, failed, action);
+          }
         } catch (rollbackError) {
           throw arcaneError(
             'INSTALL_ROLLBACK_FAILED',
@@ -1507,6 +1690,15 @@ async function installArcaneGlobally(action) {
     primaryError = error;
     throw error;
   } finally {
+    if (primaryError && stage && stageOwnership && typeof native.cleanupInstallStage === 'function') {
+      try { await native.cleanupInstallStage(stageOwnership, stage, action); }
+      catch (cleanupError) {
+        actionLog(action, 'warn', 'Arcane preserved its installation stage because cleanup could not be completed safely.', {
+          stage,
+          code: cleanupError && cleanupError.code || null,
+        });
+      }
+    }
     if (lease && native.releaseInstallLease) {
       try { await native.releaseInstallLease(lease); }
       catch (leaseError) {
@@ -2383,22 +2575,33 @@ const METHOD_POLICIES = Object.freeze({
 });
 
 function publicAppDescriptor() {
+  const security=activeReleaseSecurityEvidence();
   return {
     id:appMode,
     displayName:String(APP_DESCRIPTOR.displayName || appMode),
     type:String(APP_DESCRIPTOR.type || 'app'),
     entry:APP_DESCRIPTOR.entry ? String(APP_DESCRIPTOR.entry):null,
     version:VERSION,
-    securityMode:activeReleaseSecurityMode(),
+    securityMode:security.securityMode,
+    publisherTrustSource:security.publisherTrustSource,
+    revocationStatus:security.revocationStatus,
   };
 }
 
-function activeReleaseSecurityMode() {
-  if(typeof native.hostReleaseSecurityMode==='function'){
-    const mode=native.hostReleaseSecurityMode();
-    if(mode==='publisher-verified'||mode==='unsigned-local-test')return mode;
+function activeReleaseSecurityEvidence() {
+  if(typeof native.hostReleaseSecurityEvidence==='function'){
+    const evidence=native.hostReleaseSecurityEvidence();
+    if(evidence&&evidence.securityMode==='publisher-verified'
+      &&['administrator-policy','administrator-policy-rotation','installed-continuity','uac-approved-tofu','fresh-unpinned'].includes(evidence.publisherTrustSource)
+      &&['online-good','cache-good','attested-degraded'].includes(evidence.revocationStatus))return evidence;
+    if(evidence&&evidence.securityMode==='unsigned-local-test'
+      &&evidence.publisherTrustSource===null&&evidence.revocationStatus===null)return evidence;
   }
-  return 'unverified';
+  return { securityMode:'unverified',publisherTrustSource:null,revocationStatus:null };
+}
+
+function activeReleaseSecurityMode() {
+  return activeReleaseSecurityEvidence().securityMode;
 }
 
 let corroboratedInstalledReleaseSecurityMode=null;
@@ -2595,9 +2798,12 @@ async function listInstalledApplications(request) {
     !result
     ||typeof result!=='object'
     ||Array.isArray(result)
-    ||Object.keys(result).sort().join(',')!=='applications,securityMode,verified'
+    ||Object.keys(result).sort().join(',')!=='applications,publisherTrustSource,revocationStatus,securityMode,verified'
     ||result.verified!==true
     ||!['publisher-verified','unsigned-local-test'].includes(result.securityMode)
+    ||(result.securityMode==='publisher-verified'&&!['administrator-policy','administrator-policy-rotation','installed-continuity','uac-approved-tofu','fresh-unpinned'].includes(result.publisherTrustSource))
+    ||(result.securityMode==='publisher-verified'&&!['online-good','cache-good','attested-degraded'].includes(result.revocationStatus))
+    ||(result.securityMode==='unsigned-local-test'&&(result.publisherTrustSource!==null||result.revocationStatus!==null))
     ||!Array.isArray(result.applications)
     ||result.applications.length>APPLICATION_CATALOG_MAX_RECORDS
   ){
@@ -2619,6 +2825,8 @@ async function listInstalledApplications(request) {
   return Object.freeze({
     verified:true,
     securityMode:result.securityMode,
+    publisherTrustSource:result.publisherTrustSource||null,
+    revocationStatus:result.revocationStatus||null,
     applications:Object.freeze(applications),
   });
 }
@@ -2696,6 +2904,7 @@ function networkStatus() {
 
 function machineStatus() {
   const installation = installationState();
+  const releaseSecurity=activeReleaseSecurityEvidence();
   return {
     version: VERSION,
     protocol: PROTOCOL,
@@ -2710,7 +2919,9 @@ function machineStatus() {
     requirements: checkRequirements(),
     permissions: permissionStatus(true),
     renderer: rendererStatus(),
-    securityMode: activeReleaseSecurityMode(),
+    securityMode: releaseSecurity.securityMode,
+    publisherTrustSource: releaseSecurity.publisherTrustSource,
+    revocationStatus: releaseSecurity.revocationStatus,
     installedSecurityMode: installation.present ? installedReleaseSecurityMode() : 'not-installed',
     paths: PATHS,
     simulation: simulate,

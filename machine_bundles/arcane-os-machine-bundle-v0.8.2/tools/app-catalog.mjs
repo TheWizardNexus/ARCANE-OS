@@ -311,26 +311,124 @@ async function replaceDirectoryAtomically(staging, target, parent) {
   }
 }
 
-export async function publishWindowsAppProjection({ bundleRoot, appIds }) {
+async function verifiedExistingProjectionAppIds({ bundleRoot, registry, bundle, excludedAppIds }) {
+  const projection = path.join(bundleRoot, 'dist', 'apps');
+  if (!await exists(projection)) return [];
+  const projectionStat = await fs.lstat(projection);
+  if (!projectionStat.isDirectory() || projectionStat.isSymbolicLink()) {
+    fail('the existing runtime projection is not a regular directory.');
+  }
+  const catalogPath = path.join(projection, APP_CATALOG);
+  const catalogStat = await fs.lstat(catalogPath);
+  if (!catalogStat.isFile() || catalogStat.isSymbolicLink() || catalogStat.size > 1024 * 1024) {
+    fail('the existing runtime projection catalog is invalid.');
+  }
+  let catalog;
+  try {
+    catalog = JSON.parse(await fs.readFile(catalogPath, 'utf8'));
+  } catch {
+    fail('the existing runtime projection catalog is not valid JSON.');
+  }
+  assertOnlyKeys(catalog, new Set(['schemaVersion', 'protocolVersion', 'bundleVersion', 'apps']), 'existing runtime projection catalog');
+  if (catalog.schemaVersion !== 1 || catalog.protocolVersion !== bundle.protocolVersion || catalog.bundleVersion !== bundle.version) {
+    fail('the existing runtime projection catalog does not match the active machine bundle.');
+  }
+  if (!isPlainObject(catalog) || !Array.isArray(catalog.apps) || catalog.apps.length === 0 || catalog.apps.length > 64) {
+    fail('the existing runtime projection catalog has an invalid application list.');
+  }
+  const catalogAppIds = catalog.apps.map((entry, index) => {
+    if (!isPlainObject(entry)) fail(`the existing runtime projection catalog app ${index} is invalid.`);
+    return validateAppId(entry.id, `existing runtime projection app ${index}`);
+  });
+  if (new Set(catalogAppIds).size !== catalogAppIds.length) fail('the existing runtime projection repeats an application id.');
+  const topLevel = await fs.readdir(projection, { withFileTypes: true });
+  const expectedNames = [APP_CATALOG, ...catalogAppIds].sort(compareText);
+  const actualNames = topLevel.map((entry) => entry.name).sort(compareText);
+  if (actualNames.length !== expectedNames.length || actualNames.some((entry, index) => entry !== expectedNames[index])) {
+    fail('the existing runtime projection contains missing or unexpected top-level entries.');
+  }
+  for (const entry of topLevel) {
+    const stat = await fs.lstat(path.join(projection, entry.name));
+    if (stat.isSymbolicLink()) fail(`the existing runtime projection contains symbolic link "${entry.name}".`);
+    if (entry.name === APP_CATALOG ? !(entry.isFile() && stat.isFile()) : !(entry.isDirectory() && stat.isDirectory())) {
+      fail(`the existing runtime projection contains invalid entry "${entry.name}".`);
+    }
+  }
+
+  const preserved = [];
+  for (let index = 0; index < catalogAppIds.length; index += 1) {
+    const appId = catalogAppIds[index];
+    if (excludedAppIds.has(appId) || !registry.apps[appId]) continue;
+    const target = path.join(projection, appId);
+    const packageManifestData = await fs.readFile(path.join(target, APP_PACKAGE_MANIFEST));
+    const packageManifest = JSON.parse(packageManifestData.toString('utf8'));
+    const outer = await verifyOuterPackage(target, packageManifest, packageManifestData);
+    const content = await verifyAppContentManifest({
+      target,
+      appId,
+      launcher: expectedLauncher(appId),
+      version: bundle.version,
+    });
+    const expected = createInstalledAppCatalog({
+      bundle,
+      registry,
+      packages: [{
+        appId,
+        packageManifest: outer.manifest,
+        packageManifestData: outer.data,
+        contentManifestData: content.data,
+      }],
+    }).apps[0];
+    if (canonicalJson(catalog.apps[index]) !== canonicalJson(expected)) {
+      fail(`the existing runtime projection catalog entry for ${appId} is not canonical.`);
+    }
+    preserved.push(appId);
+  }
+  const canonicalOrder = [...preserved].sort((left, right) => (
+    registry.apps[left].order - registry.apps[right].order || compareText(left, right)
+  ));
+  if (preserved.some((appId, index) => appId !== canonicalOrder[index])) {
+    fail('the existing runtime projection catalog is not ordered canonically.');
+  }
+  return preserved;
+}
+
+export async function publishWindowsAppProjection({ bundleRoot, appIds, preserveExistingApps = false }) {
   const absoluteBundleRoot = path.resolve(bundleRoot);
   const registry = await loadAppRegistry(absoluteBundleRoot);
   const bundle = JSON.parse(await fs.readFile(path.join(absoluteBundleRoot, 'arcane-bundle.json'), 'utf8'));
   if (!Array.isArray(appIds) || appIds.length === 0 || new Set(appIds).size !== appIds.length) {
     fail('runtime projection app ids must be a non-empty unique array.');
   }
+  if (typeof preserveExistingApps !== 'boolean') fail('runtime projection preservation policy must be boolean.');
+  const requestedAppIds = appIds.map((appId) => {
+    const validated = validateAppId(appId);
+    if (!registry.apps[validated]) fail(`runtime projection contains unregistered app "${validated}".`);
+    return validated;
+  });
   const dist = path.join(absoluteBundleRoot, 'dist');
   const targetsRoot = path.join(dist, 'targets');
   const projection = path.join(dist, 'apps');
+  const requestedSet = new Set(requestedAppIds);
+  const existingAppIds = preserveExistingApps
+    ? await verifiedExistingProjectionAppIds({
+      bundleRoot: absoluteBundleRoot,
+      registry,
+      bundle,
+      excludedAppIds: requestedSet,
+    })
+    : [];
+  const existingSet = new Set(existingAppIds);
+  const projectionAppIds = [...new Set([...existingAppIds, ...requestedAppIds])].sort(compareText);
   const staging = path.join(dist, `.apps-stage-${process.pid}`);
   await fs.rm(staging, { recursive: true, force: true });
   await fs.mkdir(staging, { recursive: false });
   try {
     const packages = [];
-    for (const appId of appIds) {
-      validateAppId(appId);
-      if (!registry.apps[appId]) fail(`runtime projection contains unregistered app "${appId}".`);
-      const target = path.join(targetsRoot, appId);
-      if (!isInside(targetsRoot, target)) fail('target path escapes dist/targets.');
+    for (const appId of projectionAppIds) {
+      const sourceRoot = existingSet.has(appId) && !requestedSet.has(appId) ? projection : targetsRoot;
+      const target = path.join(sourceRoot, appId);
+      if (!isInside(sourceRoot, target)) fail('app projection source path escapes its root.');
       const packageManifestData = await fs.readFile(path.join(target, APP_PACKAGE_MANIFEST));
       const packageManifest = JSON.parse(packageManifestData.toString('utf8'));
       const outer = await verifyOuterPackage(target, packageManifest, packageManifestData);

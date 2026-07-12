@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +10,11 @@ import { spawnSync as spawnProcessSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = await fs.readFile(path.join(root, 'src/native/windows.cjs'), 'utf8');
+const coreSource = await fs.readFile(path.join(root, 'src/core/arcane-core.template.cjs'), 'utf8');
+assert.match(coreSource,/stage = `\$\{PATHS\.installRoot\}\.stage-\$\{process\.pid\}-\$\{simulate \? Date\.now\(\) : crypto\.randomBytes\(24\)\.toString\('hex'\)\}`/,
+  'real install stages must use an unpredictable 192-bit name');
+assert.doesNotMatch(coreSource,/fsp\.rm\(stage, \{ recursive: true, force: true \}\)/,
+  'installation must never pre-delete an unowned path before atomic stage creation');
 const sandbox = {
   process:{ env:{ SystemRoot:'C:\\Windows' },arch:'x64' },
 };
@@ -14,6 +22,14 @@ sandbox.globalThis = sandbox;
 vm.runInNewContext(`${source}\nglobalThis.createAdapter=createWindowsNativeAdapter;`,sandbox,{
   filename:'windows.cjs',
 });
+
+function coreFunctionSource(start,end){
+  const from=coreSource.indexOf(start);
+  const to=coreSource.indexOf(end,from);
+  assert.notEqual(from,-1,`Missing Core ${start}`);
+  assert.notEqual(to,-1,`Missing Core boundary ${end}`);
+  return coreSource.slice(from,to);
+}
 
 const queries=[];
 const adapter=sandbox.createAdapter({
@@ -40,6 +56,168 @@ assert.equal(
 );
 
 {
+  const fixture=await fs.mkdtemp(path.join(os.tmpdir(),'arcane-install-stage-'));
+  const installRoot=path.join(fixture,'Arcane OS');
+  const priorInstallRoot=sandbox.process.env.ARCANE_INSTALL_ROOT;
+  sandbox.process.env.ARCANE_INSTALL_ROOT=installRoot;
+  const cleanupLogs=[];
+  try {
+    const stageAdapter=sandbox.createAdapter({
+      simulate:false,
+      production:false,
+      path,
+      fs:fsSync,
+      fsp:fs,
+      actionLog(action,level,message,details){cleanupLogs.push({level,message,details});},
+    });
+    const stage=`${installRoot}.stage-123-${'a'.repeat(48)}`;
+    await fs.mkdir(stage);
+    await fs.writeFile(path.join(stage,'owned.txt'),'owned');
+    const ownership=stageAdapter.captureInstallStageOwnership(stage);
+    assert.equal(stageAdapter.installStageOwnershipStatus(ownership,stage).state,'owned');
+    const cleaned=await stageAdapter.cleanupInstallStage(ownership,stage,{});
+    assert.equal(cleaned.removed,true,'the exact owned install stage must be cleaned after failure');
+    await assert.rejects(fs.access(stage));
+
+    const replacedStage=`${installRoot}.stage-124-${'b'.repeat(48)}`;
+    const displaced=path.join(fixture,'displaced-owned-stage');
+    await fs.mkdir(replacedStage);
+    const replacedOwnership=stageAdapter.captureInstallStageOwnership(replacedStage);
+    await fs.rename(replacedStage,displaced);
+    await fs.mkdir(replacedStage);
+    await fs.writeFile(path.join(replacedStage,'do-not-delete.txt'),'replacement');
+    const preservedReplacement=await stageAdapter.cleanupInstallStage(replacedOwnership,replacedStage,{});
+    assert.equal(preservedReplacement.preserved,true,'a replacement at the old stage path must be preserved');
+    assert.equal(await fs.readFile(path.join(replacedStage,'do-not-delete.txt'),'utf8'),'replacement');
+
+    const outside=path.join(fixture,'outside-recovery-tree');
+    await fs.mkdir(outside);
+    await fs.writeFile(path.join(outside,'do-not-delete.txt'),'outside');
+    const preservedOutside=await stageAdapter.cleanupInstallStage(replacedOwnership,outside,{});
+    assert.equal(preservedOutside.preserved,true,'cleanup must reject a candidate outside the exact install stage/recovery paths');
+    assert.equal(await fs.readFile(path.join(outside,'do-not-delete.txt'),'utf8'),'outside');
+
+    const activatedStage=`${installRoot}.stage-125-${'c'.repeat(48)}`;
+    const failedTree=`${installRoot}.failed-125`;
+    await fs.mkdir(activatedStage);
+    await fs.writeFile(path.join(activatedStage,'activated.txt'),'failed-activation');
+    const activatedOwnership=stageAdapter.captureInstallStageOwnership(activatedStage);
+    await fs.rename(activatedStage,installRoot);
+    assert.equal(stageAdapter.installStageOwnershipStatus(activatedOwnership,installRoot).state,'owned');
+    await fs.rename(installRoot,failedTree);
+    assert.equal(stageAdapter.installStageOwnershipStatus(activatedOwnership,failedTree).state,'owned');
+    const cleanedFailure=await stageAdapter.cleanupInstallStage(activatedOwnership,failedTree,{});
+    assert.equal(cleanedFailure.removed,true,'the same owned stage may be cleaned after an activation rollback rename');
+    assert(cleanupLogs.some((entry)=>entry.message.includes('filesystem identity could not be proven')),'uncertain cleanup must be visibly preserved');
+  } finally {
+    if(priorInstallRoot===undefined)delete sandbox.process.env.ARCANE_INSTALL_ROOT;
+    else sandbox.process.env.ARCANE_INSTALL_ROOT=priorInstallRoot;
+    await fs.rm(fixture,{recursive:true,force:true});
+  }
+}
+
+async function runInstallStageFailure(failurePoint){
+  const fixture=await fs.mkdtemp(path.join(os.tmpdir(),`arcane-install-${failurePoint}-`));
+  const installRoot=path.join(fixture,'Arcane OS');
+  const stateRoot=path.join(fixture,'state');
+  const sourceFile=path.join(fixture,'verified-payload.txt');
+  const outside=path.join(fixture,'outside-recovery-tree');
+  await fs.writeFile(sourceFile,'verified payload');
+  await fs.mkdir(outside);
+  await fs.writeFile(path.join(outside,'preserve.txt'),'preserve');
+  const priorInstallRoot=sandbox.process.env.ARCANE_INSTALL_ROOT;
+  sandbox.process.env.ARCANE_INSTALL_ROOT=installRoot;
+  try {
+    const logs=[];
+    let capturedInstallManifest=null;
+    const stageAdapter=sandbox.createAdapter({
+      simulate:false,
+      production:false,
+      path,
+      fs:fsSync,
+      fsp:fs,
+      actionLog(action,level,message,details){logs.push({level,message,details});},
+    });
+    const native={
+      ...stageAdapter,
+      async acquireInstallLease(){return {test:true};},
+      async releaseInstallLease(){},
+      installPayload(){
+        return {
+          mode:'windows-webview2',
+          releaseReady:true,
+          selfHosted:false,
+          files:[{source:sourceFile,installPath:'payload.txt'}],
+          directories:[],
+        };
+      },
+      assertNoRunningInstalledApplications(){},
+      async writeLaunchers(){
+        if(failurePoint==='pre-activation')throw new Error('synthetic pre-activation failure');
+      },
+      verifyStagedInstallation(){return {verified:true};},
+      async applyInstallPermissions(){
+        if(failurePoint==='activation')throw new Error('synthetic activation failure');
+      },
+      async applyStatePermissions(){},
+    };
+    const context=vm.createContext({
+      native,
+      simulate:false,
+      platform:'win32',
+      allowSourceInstall:false,
+      PATHS:{installRoot,stateRoot},
+      VERSION:'0.8.2',
+      BUNDLE_MANIFEST:{requirements:{}},
+      process:{pid:8123},
+      crypto,
+      fsp:fs,
+      fs:fsSync,
+      path,
+      bundleRoot(){return fixture;},
+      async recoverInterruptedInstallation(){return {recovered:false};},
+      actionLog(action,level,message,details){logs.push({level,message,details});},
+      normalizeIntegrityPath(value){return String(value);},
+      integrityFilePath(base,relative){return path.join(base,...String(relative).split('/'));},
+      async ensureDir(directory){await fs.mkdir(directory,{recursive:true});},
+      async copyTree(){throw new Error('copyTree must not run for the native fixture');},
+      verifyIntegrityEntries(){return {ok:true};},
+      createInstalledIntegrity(){return {schemaVersion:2,hashAlgorithm:'sha256',scope:'installed-tree',files:[]};},
+      currentIdentity(){return {username:'tester'};},
+      osInfo(){return {platform:'windows'};},
+      activeReleaseSecurityMode(){return 'unsigned-local-test';},
+      async writeFile(file,contents){
+        if(path.basename(file)==='arcane-install.json')capturedInstallManifest=JSON.parse(String(contents));
+        await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,contents);
+      },
+      verifyInstalledIntegrity(){return {ok:true};},
+      async durableWriteFile(file,contents){await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,contents);},
+      readJsonFile(){return null;},
+      verifyInstalledIntegrityAt(){return {ok:false,reason:'legacy'};},
+      async snapshotActiveInstallationForRollback(){return null;},
+      stamp(){return new Date(0).toISOString();},
+      arcaneError(code,message,resolution,status,details){return Object.assign(new Error(message),{code,resolution,status,details});},
+    });
+    vm.runInContext(coreFunctionSource('async function installArcaneGlobally(action)', 'async function ensureArcaneInstallation'),context);
+    await assert.rejects(
+      context.installArcaneGlobally({id:`failure-${failurePoint}`}),
+      new RegExp(`synthetic ${failurePoint} failure`),
+    );
+    if(failurePoint==='activation')assert.equal(capturedInstallManifest.securityMode,'unsigned-local-test','new installations must persist their verified security mode');
+    const leftovers=(await fs.readdir(fixture)).filter((name)=>name.startsWith('Arcane OS.stage-')||name.startsWith('Arcane OS.failed-'));
+    assert.deepEqual(leftovers,[],`${failurePoint} failure must clean the exact owned stage and failed activation tree`);
+    assert.equal(await fs.readFile(path.join(outside,'preserve.txt'),'utf8'),'preserve','install cleanup must not remove an unrelated recovery tree');
+  } finally {
+    if(priorInstallRoot===undefined)delete sandbox.process.env.ARCANE_INSTALL_ROOT;
+    else sandbox.process.env.ARCANE_INSTALL_ROOT=priorInstallRoot;
+    await fs.rm(fixture,{recursive:true,force:true});
+  }
+}
+
+await runInstallStageFailure('pre-activation');
+await runInstallStageFailure('activation');
+
+{
   const elevationScripts=[];
   const elevationAdapter=sandbox.createAdapter({
     simulate:false,
@@ -64,13 +242,45 @@ assert.equal(
 
   elevationScripts.length=0;
   await elevationAdapter.launchElevated('C:\\Arcane\\ArcaneCore.exe',['--privileged-worker'],{});
-  assert.match(elevationScripts[0].script,/Remove-Item -LiteralPath 'Env:ARCANE_RELEASE_SECURITY_MODE'/);
+  assert.match(elevationScripts[0].script,/ARCANE_RELEASE_TIMESTAMP_VERIFIED/);
+  assert.match(elevationScripts[0].script,/Remove-Item -LiteralPath \('Env:'\+\$name\)/);
+
+  const signedScripts=[];
+  const signedAdapter=sandbox.createAdapter({
+    simulate:false,
+    production:true,
+    processPkg:true,
+    allowUnsignedLocalRelease:false,
+    releaseSecurityModeClaim:'publisher-verified',
+    releaseContentBindingClaim:'ARCANE-MACHINE-BINDING|1|0.8.2|'+'a'.repeat(64),
+    releaseSignerThumbprintClaim:'A'.repeat(40),
+    releaseVerifiedAtClaim:new Date().toISOString(),
+    releaseRevocationStatusClaim:'online-good',
+    releaseTrustSourceClaim:'administrator-policy',
+    releaseTimestampVerifiedClaim:true,
+    path:path.win32,
+    psQuote(value){ return `'${String(value).replaceAll("'","''")}'`; },
+    powershell:async(script)=>{ signedScripts.push(script); return {stdout:'4243\n'}; },
+  });
+  await signedAdapter.launchElevated('C:\\Arcane\\ArcaneCore.exe',['--privileged-worker'],{});
+  assert.match(signedScripts[0],/\$env:ARCANE_RELEASE_SECURITY_MODE='publisher-verified'/);
+  assert.match(signedScripts[0],/\$env:ARCANE_RELEASE_CONTENT_BINDING='ARCANE-MACHINE-BINDING\|1\|0\.8\.2\|a{64}'/);
+  assert.match(signedScripts[0],/\$env:ARCANE_RELEASE_SIGNER_THUMBPRINT='A{40}'/);
+  assert.match(signedScripts[0],/\$env:ARCANE_RELEASE_REVOCATION_STATUS='online-good'/);
+  assert.match(signedScripts[0],/\$env:ARCANE_RELEASE_TIMESTAMP_VERIFIED='1'/);
 }
 
 const scripts=[];
 const hardened=sandbox.createAdapter({
   simulate:false,
   production:true,
+  releaseSecurityModeClaim:'publisher-verified',
+  releaseContentBindingClaim:'ARCANE-MACHINE-BINDING|1|0.8.2|'+'a'.repeat(64),
+  releaseSignerThumbprintClaim:'A'.repeat(40),
+  releaseVerifiedAtClaim:new Date().toISOString(),
+  releaseRevocationStatusClaim:'online-good',
+  releaseTrustSourceClaim:'administrator-policy',
+  releaseTimestampVerifiedClaim:true,
   path:path.win32,
   fs:{
     existsSync(candidate){ return String(candidate).endsWith('ArcaneShell.exe'); },
@@ -307,6 +517,13 @@ const signatureScripts=[];
 const signatureAdapter=sandbox.createAdapter({
   simulate:false,
   production:true,
+  releaseSecurityModeClaim:'publisher-verified',
+  releaseContentBindingClaim:'ARCANE-MACHINE-BINDING|1|0.8.2|'+'a'.repeat(64),
+  releaseSignerThumbprintClaim:'A'.repeat(40),
+  releaseVerifiedAtClaim:new Date().toISOString(),
+  releaseRevocationStatusClaim:'online-good',
+  releaseTrustSourceClaim:'administrator-policy',
+  releaseTimestampVerifiedClaim:true,
   path:path.win32,
   fs:{
     existsSync(){ return true; },
@@ -334,7 +551,19 @@ await assert.rejects(
   (error)=>error?.code==='PRIVILEGE_PIPE_GUARD_TRUST_FAILED',
 );
 signatureMode='unsigned';
-const unsignedTrust=await signatureAdapter.verifyPrivilegePipeGuardTrust(
+const unsignedSignatureAdapter=sandbox.createAdapter({
+  simulate:false,
+  production:true,
+  allowUnsignedLocalRelease:true,
+  releaseSecurityModeClaim:'unsigned-local-test',
+  path:path.win32,
+  fs:{ existsSync(){ return true; }, statSync(){ return {isFile:()=>true}; } },
+  psQuote(value){ return `'${String(value).replaceAll("'","''")}'`; },
+  arcaneError(code,message){ return Object.assign(new Error(message),{code}); },
+  actionLog(){},
+  powershell:async()=>({stdout:`${JSON.stringify([{status:'NotSigned',thumbprint:null,subject:null},{status:'NotSigned',thumbprint:null,subject:null}])}\n`}),
+});
+const unsignedTrust=await unsignedSignatureAdapter.verifyPrivilegePipeGuardTrust(
   'C:\\Arcane\\ArcanePipeGuard.exe','C:\\Arcane\\ArcaneCore.exe',{allowUnsignedLocalRelease:true},{}
 );
 assert.equal(unsignedTrust.unsignedLocal,true);

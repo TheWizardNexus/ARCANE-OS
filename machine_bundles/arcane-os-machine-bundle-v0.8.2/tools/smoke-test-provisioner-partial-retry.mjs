@@ -6,10 +6,15 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'src', 'frontend', 'provisioner', 'index.html'), 'utf8');
+const coreSource = fs.readFileSync(path.join(root, 'src', 'core', 'arcane-core.template.cjs'), 'utf8');
 assert.match(source,/id="securityBanner"/,'the Provisioner must reserve a visible release-trust warning');
 assert.match(source,/securityMode !== 'publisher-verified'/,'only publisher verification may hide the Provisioner warning');
 assert.match(source,/Unsigned local-test mode is active/);
 assert.doesNotMatch(source,/automatically install or update every required dependency|Repair Arcane requirements|installation and dependencies are ready/);
+assert.match(coreSource, /'users\.restoreShell': Object\.freeze\(\{ capability:'users\.manage', appTypes:\['provisioner'\], privileged:true/,
+  'deferred restore must still cross the privileged worker boundary');
+assert.match(coreSource, /if \(target && !target\.shellAssigned && !preparedRecovery\)[\s\S]*?SHELL_CHANGED_EXTERNALLY/,
+  'the elevated restore must fail closed when native discovery does not verify the assigned shell');
 
 function functionSource(start, end) {
   const from = source.indexOf(start);
@@ -17,6 +22,14 @@ function functionSource(start, end) {
   assert.notEqual(from, -1, `Missing ${start}`);
   assert.notEqual(to, -1, `Missing boundary ${end}`);
   return source.slice(from, to);
+}
+
+function coreFunctionSource(start, end) {
+  const from = coreSource.indexOf(start);
+  const to = coreSource.indexOf(end, from);
+  assert.notEqual(from, -1, `Missing Core ${start}`);
+  assert.notEqual(to, -1, `Missing Core boundary ${end}`);
+  return coreSource.slice(from, to);
 }
 
 const elements = new Map();
@@ -80,6 +93,7 @@ vm.runInContext([
   functionSource('function renderMachine(machine)', 'function renderControls'),
   functionSource('function renderControls()', 'function addUserRow'),
   functionSource('function renderCredentials(credentials)', 'function showUserSuccess'),
+  functionSource('function restoreShellPresentation(user)', 'function renderUsers'),
   functionSource('async function activatePendingAccounts()', 'async function resetPassword'),
   functionSource('async function applyPendingPasswords()', 'async function restoreShell'),
 ].join('\n'), context);
@@ -127,6 +141,38 @@ assert.equal(element('securityTitle').textContent, 'Simulation mode is active');
 assert.match(element('securityText').textContent, /cannot change Windows accounts/);
 assert.equal(element('installArcaneButton').disabled, false);
 assert.equal(element('createUsersButton').disabled, false);
+
+const deferredPresentation = context.restoreShellPresentation({
+  restoreRequiresElevatedVerification: true,
+  previousShellPresent: false,
+  previousShell: null,
+});
+assert.equal(deferredPresentation.deferredVerification, true);
+assert.equal(deferredPresentation.buttonText, 'Verify and restore previous shell');
+assert.match(deferredPresentation.note, /reload the signed-out profile and recheck both exact Windows shell bindings/);
+assert.match(source, /restoreButton\.disabled = state\.busy;/, 'a trusted deferred restore affordance must remain actionable');
+
+const recoveryContext = vm.createContext({});
+vm.runInContext(coreFunctionSource('function arcaneUserRestoreStatus(user, record)', 'async function listArcaneUsers'), recoveryContext);
+const activeOffline = recoveryContext.arcaneUserRestoreStatus(
+  { shellAssigned: false, verification: 'recorded-only' },
+  { previousShellCaptured: true, shellMutationPhase: 'assigned', accountMutationPhase: 'active', accountExistedBefore: false },
+);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(activeOffline)),
+  { canRestoreShell: true, restoreRequiresElevatedVerification: true },
+  'a signed-out active Arcane user must retain a restore affordance backed by the protected journal',
+);
+const stagedOffline = recoveryContext.arcaneUserRestoreStatus(
+  { shellAssigned: false, verification: 'recorded-only' },
+  { previousShellCaptured: true, shellMutationPhase: 'assigned', accountMutationPhase: 'activation-pending', accountExistedBefore: false },
+);
+assert.equal(stagedOffline.canRestoreShell, false, 'a disabled staged account must not expose shell-only recovery');
+const unverifiedWithoutJournal = recoveryContext.arcaneUserRestoreStatus(
+  { shellAssigned: false, verification: 'recorded-only' },
+  null,
+);
+assert.equal(unverifiedWithoutJournal.canRestoreShell, false, 'recorded-only discovery without a protected recovery record must remain fail closed');
 
 context.state.credentials = [
   { username: 'arcane-one', temporaryPassword: 'one', activationRequired: true },

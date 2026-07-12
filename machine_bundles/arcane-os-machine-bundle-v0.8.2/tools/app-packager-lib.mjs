@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 import { verifyPackagedAppLinks } from './app-package-links.mjs';
+import { replaceTemplateTokenExactlyOnce } from './exact-template-replacement.mjs';
 
 export const SAFE_APP_CAPABILITIES = Object.freeze([
   'diagnostics.read',
@@ -21,6 +22,7 @@ const SAFE_CAPABILITY_SET = new Set(SAFE_APP_CAPABILITIES);
 const APP_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const RESERVED_APP_IDS = new Set(['provisioner', 'shell']);
 const WINDOWS_RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+const URL_SAFE_PATH_SEGMENT = /^[A-Za-z0-9._~-]+$/;
 const SAFE_ICON_EXTENSION = new Set(['.ico', '.jpeg', '.jpg', '.png', '.webp']);
 const PRESENTATION_CONTROL_PATTERN = /[\p{Cc}\p{Cf}\p{Cs}\u2028\u2029]/u;
 const PRESENTATION_MARKUP_PATTERN = /[<>]|&(?:#(?:x[0-9a-f]+|[0-9]+)|[a-z][a-z0-9]+);/i;
@@ -94,6 +96,24 @@ export function normalizeRelativePath(value, label = 'path') {
     if (WINDOWS_RESERVED_NAME.test(segment)) fail(`${label} contains the reserved name “${segment}”.`);
   }
   return normalized;
+}
+
+export function normalizeNavigationEntry(value, appId, label = 'navigation entry') {
+  if (typeof appId !== 'string' || appId.length > 64 || !APP_ID_PATTERN.test(appId)
+    || RESERVED_APP_IDS.has(appId) || WINDOWS_RESERVED_NAME.test(appId)) {
+    fail(`${label} has an invalid application id.`);
+  }
+  if (typeof value !== 'string' || value.length > 512 || !value.startsWith(`/${appId}/`)) {
+    fail(`${label} must remain inside the selected application URL root.`);
+  }
+  const relative = normalizeRelativePath(value.slice(1), label);
+  const segments = relative.split('/');
+  if (segments.length < 2 || segments[0] !== appId
+    || segments.some((segment) => !URL_SAFE_PATH_SEGMENT.test(segment))
+    || !/\.html$/i.test(segments.at(-1))) {
+    fail(`${label} must be a URL-safe HTML path inside the selected application.`);
+  }
+  return `/${relative}`;
 }
 
 function normalizeWorkspaceRoot(value) {
@@ -278,6 +298,7 @@ export function validateAppRegistry(registry) {
     const source = normalizeRelativePath(app.source, `${label}.source`);
     const entry = normalizeRelativePath(app.entry, `${label}.entry`);
     if (path.posix.extname(entry).toLowerCase() !== '.html') fail(`${label}.entry must be an HTML file.`);
+    normalizeNavigationEntry(`/${id}/${entry}`, id, `${label}.entry`);
     const include = validateIncludeList(app.include, `${label}.include`);
     const icon = validatePresentationIcon(app.icon, include, `${label}.icon`);
     if (!include.some((allowed) => entry === allowed || entry.startsWith(`${allowed}/`))) {
@@ -532,9 +553,14 @@ async function securePackagedHtml(stagingRoot, app) {
     const secured = injectSecurityMetadata(html, contentSecurityPolicy, permissionsPolicy, file.relative);
     if (secured !== html) {
       securedDocuments += 1;
-      if (file.relative.startsWith(`${app.id}/`)) navigationEntries.push(`/${file.relative}`);
+      if (file.relative.startsWith(`${app.id}/`)) {
+        navigationEntries.push(normalizeNavigationEntry(`/${file.relative}`, app.id, `${file.relative} navigation entry`));
+      }
     }
     await fs.writeFile(file.source, secured, 'utf8');
+  }
+  if (new Set(navigationEntries.map((entry) => entry.toLowerCase())).size !== navigationEntries.length) {
+    fail(`apps.${app.id} contains navigation entries that collide on Windows.`);
   }
   if (securedDocuments === 0) fail(`apps.${app.id} does not contain a complete HTML document with a head element.`);
   navigationEntries.sort(compareText);
@@ -553,12 +579,9 @@ async function compileTargetCore(bundleRoot, bundleManifest) {
     fs.readFile(path.join(bundleRoot, 'src/native/windows.cjs'), 'utf8'),
     fs.readFile(path.join(bundleRoot, 'src/native/linux.cjs'), 'utf8'),
   ]);
-  let core = template.replace('__ARCANE_NATIVE_ADAPTERS__', `${windowsNative}\n\n${linuxNative}`);
-  core = core.replace('__VERSION_JSON__', JSON.stringify(bundleManifest.version));
-  core = core.replace('__BUNDLE_MANIFEST_JSON__', JSON.stringify(bundleManifest));
-  for (const token of ['__ARCANE_NATIVE_ADAPTERS__', '__VERSION_JSON__', '__BUNDLE_MANIFEST_JSON__']) {
-    if (core.includes(token)) fail(`core template replacement did not consume ${token}.`);
-  }
+  let core = replaceTemplateTokenExactlyOnce(template, '__ARCANE_NATIVE_ADAPTERS__', `${windowsNative}\n\n${linuxNative}`);
+  core = replaceTemplateTokenExactlyOnce(core, '__VERSION_JSON__', JSON.stringify(bundleManifest.version));
+  core = replaceTemplateTokenExactlyOnce(core, '__BUNDLE_MANIFEST_JSON__', JSON.stringify(bundleManifest));
   new vm.Script(core, { filename: 'arcane-app-core.generated.cjs' });
   return core;
 }

@@ -93,6 +93,8 @@ using System.Reflection;
   $expectedPublisherThumbprint = ([string]$env:ARCANE_EXPECTED_PUBLISHER_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
   if ($expectedPublisherThumbprint -and $expectedPublisherThumbprint -cnotmatch '^[A-F0-9]{40,128}$') { throw 'ARCANE_EXPECTED_PUBLISHER_THUMBPRINT must be a 40-128 character hexadecimal certificate thumbprint.' }
   $certificate = $null
+  $signTool = $null
+  $certificateMachineStore = $false
   if ($signingThumbprint) {
     if (-not $timestampServer) { throw 'ARCANE_TIMESTAMP_SERVER is required whenever an Arcane signing certificate is configured.' }
     $certificate = Get-ChildItem -Path Cert:\CurrentUser\My,Cert:\LocalMachine\My -CodeSigningCert |
@@ -100,6 +102,23 @@ using System.Reflection;
     if (-not $certificate -or -not $certificate.HasPrivateKey) { throw 'ARCANE_SIGNING_CERT_THUMBPRINT does not identify an available code-signing certificate with a private key.' }
     if (-not $expectedPublisherThumbprint) { throw 'Signed Arcane builds require the independent ARCANE_EXPECTED_PUBLISHER_THUMBPRINT trust anchor.' }
     if (([string]$certificate.Thumbprint).Replace(' ', '').ToUpperInvariant() -cne $expectedPublisherThumbprint) { throw 'The Arcane signing certificate does not match ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.' }
+    $certificateMachineStore = [string]$certificate.PSPath -like '*LocalMachine*'
+    $configuredSignTool = ([string]$env:ARCANE_SIGNTOOL_PATH).Trim()
+    if ($configuredSignTool) {
+      if (-not (Test-Path -LiteralPath $configuredSignTool -PathType Leaf)) { throw 'ARCANE_SIGNTOOL_PATH does not identify signtool.exe.' }
+      $signTool = [IO.Path]::GetFullPath($configuredSignTool)
+    } else {
+      $command = Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+      if ($command) { $signTool = $command.Source }
+      if (-not $signTool) {
+        $kitsRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
+        if (Test-Path -LiteralPath $kitsRoot) {
+          $signTool = Get-ChildItem -Path (Join-Path $kitsRoot '*\x64\signtool.exe') -File -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -ExpandProperty FullName -First 1
+        }
+      }
+      if (-not $signTool) { throw 'A production signed build requires Windows SDK SignTool. Set ARCANE_SIGNTOOL_PATH or install the Windows SDK.' }
+    }
   } elseif ($requireSignedRelease) {
     throw 'A signed release is required, but ARCANE_SIGNING_CERT_THUMBPRINT was not provided.'
   } elseif ($expectedPublisherThumbprint) {
@@ -112,9 +131,12 @@ using System.Reflection;
   }
   function Sign-ArcaneFile([string]$path) {
     if (-not $certificate) { return }
-    $arguments = @{FilePath=$path;Certificate=$certificate;HashAlgorithm='SHA256'}
-    if ($timestampServer) { $arguments.TimestampServer=$timestampServer }
-    $signature = Set-AuthenticodeSignature @arguments
+    $signArguments = @('sign','/sha1',$signingThumbprint,'/fd','SHA256','/tr',$timestampServer,'/td','SHA256','/v')
+    if ($certificateMachineStore) { $signArguments += '/sm' }
+    $signArguments += $path
+    & $signTool @signArguments
+    if ($LASTEXITCODE -ne 0) { throw "RFC3161 Authenticode signing failed for $([IO.Path]::GetFileName($path))." }
+    $signature = Get-AuthenticodeSignature -LiteralPath $path
     if ($signature.Status -ne 'Valid') { throw "Authenticode signing failed for $([IO.Path]::GetFileName($path)): $($signature.StatusMessage)" }
     if (-not $signature.TimeStamperCertificate) { throw "Authenticode timestamping failed for $([IO.Path]::GetFileName($path))." }
   }

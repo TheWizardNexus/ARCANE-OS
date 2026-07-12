@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { replaceTemplateTokenExactlyOnce } from './exact-template-replacement.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const required = [
@@ -17,6 +18,14 @@ for (const app of ['provisioner','shell']) {
   for (const [index, match] of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].entries()) new vm.Script(match[1], { filename:`${app}-${index}.js` });
 }
 const coreText = await fs.readFile(path.join(root,'runtime/arcane-core.cjs'),'utf8');
+const bundleManifest = JSON.parse(await fs.readFile(path.join(root, 'arcane-bundle.json'), 'utf8'));
+let expectedCore = await fs.readFile(path.join(root, 'src/core/arcane-core.template.cjs'), 'utf8');
+const windowsNative = await fs.readFile(path.join(root, 'src/native/windows.cjs'), 'utf8');
+const linuxNative = await fs.readFile(path.join(root, 'src/native/linux.cjs'), 'utf8');
+expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__ARCANE_NATIVE_ADAPTERS__', `${windowsNative}\n\n${linuxNative}`);
+expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__VERSION_JSON__', JSON.stringify(bundleManifest.version));
+expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__BUNDLE_MANIFEST_JSON__', JSON.stringify(bundleManifest));
+if (coreText !== expectedCore) throw new Error('Generated Arcane Core has drifted from its template, native adapters, or bundle manifest. Run npm run build.');
 if (!coreText.includes('Content-Length: ${body.length}\\r\\n\\r\\n')) throw new Error('Framed RPC encoder is missing.');
 if (!coreText.includes('arcane-privileged-')) throw new Error('Privileged pipe/socket broker is missing.');
 

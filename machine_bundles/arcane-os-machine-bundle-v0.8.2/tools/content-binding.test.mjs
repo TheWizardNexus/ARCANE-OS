@@ -95,7 +95,7 @@ test('native host parses the bound manifest from the same retained deny-write ha
   assert.match(source, /VerifyMachineContentLayout\(files\)/);
   assert.match(source, /VerifyTargetContentLayout\(files\)/);
   assert.match(source, /if \(entries\.Length == 0\) throw new InvalidDataException\("Arcane releases cannot contain empty directories/);
-  assert.match(source, /new ReleaseSecurityResult\(root, securityMode, retained, retainedDirectories\)/);
+  assert.match(source, /return new ReleaseSecurityResult\([\s\S]+?security\.PublisherTrustSource,[\s\S]+?retainedDirectories\);/);
   assert.doesNotMatch(source, /FileShareDelete/);
   assert.doesNotMatch(source, /File\.ReadAllBytes\(manifestPath\)/);
   assert.match(source, /RetainAndRecheck\(root, files, excludedHosts, retainedByPath, retained\)/);

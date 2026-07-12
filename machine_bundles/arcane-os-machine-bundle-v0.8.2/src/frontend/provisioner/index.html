@@ -264,8 +264,12 @@ function renderMachine(machine) {
   const requirements = machine.requirements || [];
   const permissions = machine.permissions || {};
   const securityMode = machine.securityMode || 'unverified';
+  const publisherTrustSource = machine.publisherTrustSource || null;
+  const revocationStatus = machine.revocationStatus || null;
+  const firstUsePinPending = securityMode === 'publisher-verified' && publisherTrustSource === 'fresh-unpinned';
+  const revocationDegraded = securityMode === 'publisher-verified' && revocationStatus === 'attested-degraded';
   const simulation = Boolean(machine.simulation);
-  $('#versionPill').textContent = `Package ${machine.version}${securityMode === 'unsigned-local-test' ? ' (local test)' : ''}`;
+  $('#versionPill').textContent = `Package ${machine.version}${securityMode === 'unsigned-local-test' ? ' (local test)' : firstUsePinPending ? ' (first-use pin pending)' : revocationDegraded ? ' (offline attestation)' : ''}`;
   $('#osSummary').textContent = `${machine.os.displayName} · ${machine.os.architecture}`;
   $('#modeSummary').textContent = permissions.elevated ? `${permissions.level} scope` : `Standard scope · ${permissions.mechanism || 'authorization'} on demand`;
   $('#modeSummary').className = 'value ' + (permissions.elevated ? 'ok' : 'warn');
@@ -276,12 +280,20 @@ function renderMachine(machine) {
   banner.classList.toggle('visible', installation.blocked);
   if (installation.blocked) $('#downgradeText').textContent = `Installed Arcane OS ${installation.installedVersion} is newer than package ${installation.packageVersion}. This package will not change the machine.`;
   const securityBanner = $('#securityBanner');
-  securityBanner.classList.toggle('visible', simulation || securityMode !== 'publisher-verified');
-  $('#securityTitle').textContent = simulation ? 'Simulation mode is active' : securityMode === 'unsigned-local-test' ? 'Unsigned local-test mode is active' : 'Release trust could not be verified';
+  securityBanner.classList.toggle('visible', simulation || securityMode !== 'publisher-verified' || firstUsePinPending || revocationDegraded);
+  $('#securityTitle').textContent = simulation ? 'Simulation mode is active'
+    : securityMode === 'unsigned-local-test' ? 'Unsigned local-test mode is active'
+    : firstUsePinPending ? 'Publisher continuity is not pinned yet'
+    : revocationDegraded ? 'Publisher revocation is temporarily offline'
+    : 'Release trust could not be verified';
   $('#securityText').textContent = simulation
     ? 'This session simulates provisioning and cannot change Windows accounts, passwords, shells, or the global Arcane installation.'
     : securityMode === 'unsigned-local-test'
     ? 'This release is content-bound and intended only for controlled local acceptance testing. It is not publisher-signed and must not be treated as a production installation.'
+    : firstUsePinPending
+    ? 'Windows validated this signature, but no administrator policy or prior installed signer pins its publisher. Installing requires administrator approval and will trust-on-first-use pin this exact signer for future updates.'
+    : revocationDegraded
+    ? 'Arcane started from its protected, recent installation attestation because online revocation data was unavailable. It will retry strict verification in the background and close on any revoked or invalid result.'
     : 'Arcane has not verified this release as publisher-signed. Machine-changing actions remain unavailable until release trust is restored.';
   $('#accessBanner').classList.toggle('visible', !permissions.elevated && !machine.simulation);
 
@@ -406,6 +418,19 @@ function showUserSuccess(message) {
   panel.classList.toggle('visible', Boolean(message));
 }
 
+function restoreShellPresentation(user) {
+  const deferredVerification = Boolean(user && user.restoreRequiresElevatedVerification);
+  return {
+    deferredVerification,
+    buttonText: deferredVerification ? 'Verify and restore previous shell' : 'Restore previous shell',
+    note: deferredVerification
+      ? 'Administrator approval will reload the signed-out profile and recheck both exact Windows shell bindings before any restore.'
+      : user && user.previousShellPresent && user.previousShell
+      ? `Restores ${user.previousShell}.`
+      : 'Removes the per-user override and returns to the Windows default shell.',
+  };
+}
+
 function renderUsers(payload) {
   state.users = payload && payload.users || [];
   const root = $('#arcaneUsersList');
@@ -426,7 +451,8 @@ function renderUsers(payload) {
     meta.textContent = [user.profile ? `Profile: ${user.profile}` : null, user.shell ? `Shell: ${user.shell}` : null, user.activationRequired ? 'Staged disabled. Activate only from the credentials panel; if those credentials were lost, re-add this username to recreate it safely.' : user.passwordStatus === 'existing-password-unchanged' ? 'Existing password unchanged; Arcane does not know it.' : user.passwordStatus === 'temporary-issued' ? 'Temporary password issued.' : 'Password not known to Arcane.'].filter(Boolean).join('\n');
     const badges = document.createElement('div');
     badges.className = 'machine-user-badges';
-    badges.innerHTML = `<span class="mini-badge ${user.shellAssigned ? 'ready' : 'bad'}">${user.shellAssigned ? 'Arcane shell assigned' : 'Shell not verified'}</span><span class="mini-badge ${user.activationRequired ? 'warn' : user.enabled === false ? 'bad' : 'ready'}">${user.activationRequired ? 'Awaiting activation' : user.enabled === false ? 'Disabled' : 'Enabled'}</span>`;
+    const restorePresentation = restoreShellPresentation(user);
+    badges.innerHTML = `<span class="mini-badge ${user.shellAssigned ? 'ready' : restorePresentation.deferredVerification ? 'warn' : 'bad'}">${user.shellAssigned ? 'Arcane shell assigned' : restorePresentation.deferredVerification ? 'Admin recheck required' : 'Shell not verified'}</span><span class="mini-badge ${user.activationRequired ? 'warn' : user.enabled === false ? 'bad' : 'ready'}">${user.activationRequired ? 'Awaiting activation' : user.enabled === false ? 'Disabled' : 'Enabled'}</span>`;
     left.append(name, meta, badges);
     const right = document.createElement('div');
     right.className = 'machine-user-actions';
@@ -447,14 +473,12 @@ function renderUsers(payload) {
       restoreAction.className = 'machine-user-action';
       const restoreButton = document.createElement('button');
       restoreButton.className = 'btn compact danger';
-      restoreButton.textContent = 'Restore previous shell';
-      restoreButton.disabled = state.busy || !user.shellAssigned;
+      restoreButton.textContent = restorePresentation.buttonText;
+      restoreButton.disabled = state.busy;
       restoreButton.addEventListener('click', () => restoreShell(user.username));
       const restoreNote = document.createElement('div');
       restoreNote.className = 'user-action-note';
-      restoreNote.textContent = user.previousShellPresent && user.previousShell
-        ? `Restores ${user.previousShell}.`
-        : 'Removes the per-user override and returns to the Windows default shell.';
+      restoreNote.textContent = restorePresentation.note;
       restoreAction.append(restoreButton, restoreNote);
       right.append(restoreAction);
     }

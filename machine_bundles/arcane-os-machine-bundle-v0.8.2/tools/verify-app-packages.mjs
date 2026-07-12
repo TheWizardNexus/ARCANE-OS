@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyPackagedAppLinks } from './app-package-links.mjs';
 import { verifyAppContentManifest } from './app-catalog.mjs';
-import { loadAppRegistry } from './app-packager-lib.mjs';
+import { loadAppRegistry, normalizeNavigationEntry } from './app-packager-lib.mjs';
 
 const bundleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const targetsRoot = path.join(bundleRoot, 'dist', 'targets');
@@ -43,8 +43,20 @@ for (const appId of Object.keys(registry.apps).sort()) {
     assert.equal(crypto.createHash('sha256').update(data).digest('hex'), entry.sha256, `${appId}/${relative} hash mismatch`);
   }
   assert(Array.isArray(manifest.app.security?.navigationEntries) && manifest.app.security.navigationEntries.length > 0, `${appId} has no secured navigation allowlist`);
-  for (const navigationEntry of manifest.app.security.navigationEntries) {
-    assert.match(navigationEntry, new RegExp(`^/${appId}/[a-zA-Z0-9._-]+\\.html$`), `${appId} has unsafe navigation entry ${navigationEntry}`);
+  const navigationEntries = manifest.app.security.navigationEntries.map((navigationEntry) => (
+    normalizeNavigationEntry(navigationEntry, appId, `${appId} navigation entry`)
+  ));
+  assert.deepEqual(
+    navigationEntries,
+    [...new Set(navigationEntries)].sort(),
+    `${appId} navigation allowlist must be unique and sorted`,
+  );
+  assert.equal(
+    new Set(navigationEntries.map((navigationEntry) => navigationEntry.toLowerCase())).size,
+    navigationEntries.length,
+    `${appId} navigation allowlist collides on Windows`,
+  );
+  for (const navigationEntry of navigationEntries) {
     const html = await fs.readFile(path.join(target, 'app', ...navigationEntry.slice(1).split('/')), 'utf8');
     assert(html.includes(`http-equiv="Content-Security-Policy" content="${manifest.app.security.contentSecurityPolicy}"`), `${navigationEntry} is missing its declared CSP`);
     assert(html.includes(`http-equiv="Permissions-Policy" content="${manifest.app.security.permissionsPolicy}"`), `${navigationEntry} is missing its declared Permissions-Policy`);

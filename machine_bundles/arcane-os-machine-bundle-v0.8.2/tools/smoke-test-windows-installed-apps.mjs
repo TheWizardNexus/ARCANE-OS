@@ -14,6 +14,8 @@ const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-windows-in
 const version = '0.8.2';
 const appId = 'boss';
 const launcherName = 'ArcaneApp-boss.exe';
+const signerThumbprint = 'A'.repeat(40);
+const verifiedAt = new Date().toISOString();
 const machineExclusions = new Set([
   'arcane-install.json',
   'arcane-machine-content.json',
@@ -21,6 +23,22 @@ const machineExclusions = new Set([
   'bin/ArcaneProvisioner.exe',
   'bin/ArcaneShell.exe',
 ]);
+
+function parseCanonicalFixtureVersion(value) {
+  if (typeof value !== 'string') return null;
+  const match = /^(0|[1-9]\d*)[.](0|[1-9]\d*)[.](0|[1-9]\d*)$/.exec(value);
+  if (!match) return null;
+  const parts = match.slice(1).map(Number);
+  return parts.every(Number.isSafeInteger) ? parts : null;
+}
+
+function compareFixtureVersions(left, right) {
+  const a = parseCanonicalFixtureVersion(left);
+  const b = parseCanonicalFixtureVersion(right);
+  if (!a || !b) throw new Error('invalid fixture version');
+  for (let index = 0; index < 3; index += 1) if (a[index] !== b[index]) return a[index] > b[index] ? 1 : -1;
+  return 0;
+}
 
 function canonicalJson(value) {
   return JSON.stringify(value, null, 2) + '\n';
@@ -71,6 +89,48 @@ function boundBinary(marker, count = 1) {
   return Buffer.concat(parts);
 }
 
+function unsignedPeFixture({ pe32Plus = false, certificateTable = false, malformed = false, directoryCount = 16 } = {}) {
+  if (malformed) {
+    const truncated = Buffer.alloc(64);
+    truncated.writeUInt16LE(0x5a4d, 0);
+    truncated.writeInt32LE(0x200, 0x3c);
+    return truncated;
+  }
+  const data = Buffer.alloc(0x240);
+  const peOffset = 0x80;
+  const optionalOffset = peOffset + 24;
+  const directoryOffset = pe32Plus ? 112 : 96;
+  data.writeUInt16LE(0x5a4d, 0);
+  data.writeInt32LE(peOffset, 0x3c);
+  data.writeUInt32LE(0x00004550, peOffset);
+  data.writeUInt16LE(0x8664, peOffset + 4);
+  data.writeUInt16LE(pe32Plus ? 240 : 224, peOffset + 20);
+  data.writeUInt16LE(pe32Plus ? 0x20b : 0x10b, optionalOffset);
+  data.writeUInt32LE(directoryCount, optionalOffset + directoryOffset - 4);
+  if (certificateTable) {
+    data.writeUInt32LE(0x220, optionalOffset + directoryOffset + (4 * 8));
+    data.writeUInt32LE(0x20, optionalOffset + directoryOffset + (4 * 8) + 4);
+  }
+  return data;
+}
+
+async function rewriteInstalledExecutablesAsPe(fixture, options = {}) {
+  const manifestPath = path.join(fixture.root, 'arcane-install.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  const executables = manifest.integrity.files.filter((entry) => /[.]exe$/i.test(entry.path));
+  for (let index = 0; index < executables.length; index += 1) {
+    const entry = executables[index];
+    await fs.writeFile(path.join(fixture.root, ...entry.path.split('/')), unsignedPeFixture({
+      pe32Plus: index % 2 === 1,
+      certificateTable: options.certificateTableIndex === index,
+      malformed: options.malformedIndex === index,
+      directoryCount: options.missingDirectoryTableIndex === index ? 0 : 16,
+    }));
+  }
+  manifest.integrity.files = await inventory(fixture.root, new Set(['arcane-install.json']));
+  await writeJson(fixture.root, 'arcane-install.json', manifest);
+}
+
 async function buildFixture(name, options = {}) {
   const root = path.join(temporaryRoot, name, 'install');
   const stateRoot = path.join(temporaryRoot, name, 'state');
@@ -98,6 +158,7 @@ async function buildFixture(name, options = {}) {
 
   const appRoot = path.join(root, 'apps', appId);
   const capabilities = ['system.read'];
+  const navigationEntries = options.navigationEntries || ['/boss/index.html'];
   const descriptor = {
     id: appId,
     displayName: 'BOSS',
@@ -111,8 +172,8 @@ async function buildFixture(name, options = {}) {
     security: {
       contentSecurityPolicy: "default-src 'self'",
       permissionsPolicy: 'camera=()',
-      securedDocuments: 1,
-      navigationEntries: ['/boss/index.html'],
+      securedDocuments: navigationEntries.length,
+      navigationEntries,
       verifiedDependencies: 1,
     },
     documentCatalog: null,
@@ -134,6 +195,12 @@ async function buildFixture(name, options = {}) {
     },
   });
   await write(appRoot, 'app/boss/index.html', '<!doctype html><title>BOSS</title>\n');
+  for (const navigationEntry of navigationEntries) {
+    if (navigationEntry === '/boss/index.html' || !navigationEntry.startsWith('/boss/')) continue;
+    const relative = navigationEntry.slice('/boss/'.length);
+    if (!relative || relative.includes('..') || relative.includes('\\') || relative.includes('%') || relative.includes('?') || relative.includes('#')) continue;
+    await write(appRoot, `app/boss/${relative}`, '<!doctype html><title>BOSS nested page</title>\n');
+  }
   await write(appRoot, 'app/boss/icon.png', Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   await write(appRoot, 'ArcaneCore.exe', 'app-core');
   await write(appRoot, 'ArcanePipeGuard.exe', 'app-guard');
@@ -216,9 +283,28 @@ async function buildFixture(name, options = {}) {
     files: await inventory(root, new Set(['arcane-release.json', 'arcane-install.json'])),
   };
   await writeJson(root, 'arcane-release.json', releaseManifest);
+  const publisherAttestation = {
+    schemaVersion: 1,
+    verification: 'wintrust-online-chain-exclude-root-timestamp-v1',
+    signerThumbprint,
+    verifiedAt,
+    trustSource: 'uac-approved-tofu',
+    bindings: [
+      { kind: 'machine', id: 'machine', binding: machineMarker },
+      { kind: 'app', id: appId, binding: targetMarker },
+    ],
+  };
   await writeJson(root, 'arcane-install.json', {
     name: 'Arcane OS',
     version,
+    nativeAdapter: 'windows',
+    payloadMode: 'windows-executable',
+    platform: { platform: 'windows' },
+    ...(options.omitSecurityMode ? {} : {
+      securityMode: options.installSecurityMode
+        || (options.signatureStatus === 'NotSigned' ? 'unsigned-local-test' : 'publisher-verified'),
+    }),
+    ...(options.signatureStatus === 'NotSigned' || options.omitAttestation ? {} : { publisherAttestation }),
     integrity: {
       schemaVersion: 2,
       hashAlgorithm: 'sha256',
@@ -226,7 +312,7 @@ async function buildFixture(name, options = {}) {
       files: await inventory(root, new Set(['arcane-install.json'])),
     },
   });
-  return { root, stateRoot, appRoot, contentHash, machineHash };
+  return { root, stateRoot, appRoot, contentHash, machineHash, machineMarker, targetMarker, publisherAttestation };
 }
 
 const sandbox = {
@@ -259,6 +345,15 @@ function signatureRecords(files, mode) {
 
 function createAdapter(fixture, options = {}) {
   const spawnCalls = [];
+  const claimedMode = options.claim || 'publisher-verified';
+  const publisherClaims = claimedMode === 'publisher-verified' ? {
+    releaseContentBindingClaim: options.contentBindingClaim || fixture.machineMarker,
+    releaseSignerThumbprintClaim: options.signerClaim || signerThumbprint,
+    releaseVerifiedAtClaim: options.verifiedAtClaim || verifiedAt,
+    releaseRevocationStatusClaim: options.revocationStatusClaim || 'online-good',
+    releaseTrustSourceClaim: options.trustSourceClaim || 'uac-approved-tofu',
+    releaseTimestampVerifiedClaim: options.timestampVerifiedClaim === undefined ? true : options.timestampVerifiedClaim,
+  } : {};
   sandbox.process.env = {
     SystemRoot: 'C:\\Windows',
     ProgramFiles: 'C:\\Program Files',
@@ -272,19 +367,38 @@ function createAdapter(fixture, options = {}) {
   const adapter = sandbox.createAdapter({
     simulate: false,
     production: false,
+    appMode: options.appMode || 'shell',
     path: path.win32,
     fs: fsSync,
     fsp: options.fsp || fs,
     crypto,
     os,
     bundleVersion: version,
+    compareVersions: compareFixtureVersions,
+    parseCanonicalReleaseVersion: parseCanonicalFixtureVersion,
     allowUnsignedLocalRelease: Boolean(options.allowUnsigned),
-    releaseSecurityModeClaim: options.claim || 'publisher-verified',
+    releaseSecurityModeClaim: claimedMode,
+    ...publisherClaims,
     reparsePointProbe: options.reparsePointProbe || (() => []),
     installLeaseProtectionProbe: options.installLeaseProtectionProbe || (() => true),
     processIdentityProbe: options.processIdentityProbe || (() => ({ state: 'not-found' })),
     runningInstalledProcesses: options.runningInstalledProcesses,
-    authenticodeInspector: (files) => signatureRecords(files, options.signatureMode || 'signed'),
+    authenticodeInspector: (files) => {
+      if (typeof options.onAuthenticodeInspect === 'function') options.onAuthenticodeInspect([...files]);
+      const mode = typeof options.signatureModeForFiles === 'function'
+        ? options.signatureModeForFiles([...files])
+        : options.signatureMode || 'signed';
+      return signatureRecords(files, mode);
+    },
+    ...(options.useRealPeCertificateTable ? {} : {
+      emptyPeCertificateTableProbe: options.emptyPeCertificateTableProbe || ((file) => {
+        const mode = typeof options.signatureModeForFiles === 'function'
+          ? options.signatureModeForFiles([file])
+          : options.signatureMode || 'signed';
+        return mode === 'unsigned';
+      }),
+    }),
+    publisherAttestationProbe: options.publisherAttestationProbe || (() => fixture.publisherAttestation),
     spawn(executable, args, spawnOptions) {
       const child = new EventEmitter();
       child.unrefCalled = false;
@@ -333,15 +447,38 @@ function validLease() {
   };
 }
 
+async function mutateInstallManifest(fixture, mutate) {
+  const target = path.join(fixture.root, 'arcane-install.json');
+  const manifest = JSON.parse(await fs.readFile(target, 'utf8'));
+  mutate(manifest);
+  await writeJson(fixture.root, 'arcane-install.json', manifest);
+}
+
+async function makePreIntegrityLegacy(fixture, legacyVersion, { removeBoundIdentity = true } = {}) {
+  await mutateInstallManifest(fixture, (manifest) => {
+    manifest.version = legacyVersion;
+    delete manifest.integrity;
+    delete manifest.securityMode;
+    delete manifest.publisherAttestation;
+  });
+  if (removeBoundIdentity) {
+    await fs.unlink(path.join(fixture.root, 'arcane-bundle.json'));
+    await fs.unlink(path.join(fixture.root, 'arcane-release.json'));
+  }
+}
+
 try {
   const signedFixture = await buildFixture('signed');
-  const signed = createAdapter(signedFixture);
+  let signedInstalledInspections = 0;
+  const signed = createAdapter(signedFixture, { onAuthenticodeInspect: () => { signedInstalledInspections += 1; } });
   assert.equal(signed.adapter.releaseSecurityMode(), 'publisher-verified');
   assert.equal(signed.adapter.installPayload(signedFixture.root).selfHosted, true);
   const listed = await signed.adapter.listInstalledApplications();
   assert.deepEqual(JSON.parse(JSON.stringify(listed)), {
     verified: true,
     securityMode: 'publisher-verified',
+    publisherTrustSource: 'uac-approved-tofu',
+    revocationStatus: 'online-good',
     applications: [{
       id: 'boss',
       displayName: 'BOSS',
@@ -354,6 +491,96 @@ try {
   const launched = await signed.adapter.launchInstalledApplication('boss');
   assert.deepEqual(JSON.parse(JSON.stringify(launched)), { id: 'boss', accepted: true });
   assert.equal(signed.spawnCalls.length, 1);
+  assert.equal(signedInstalledInspections, 0, 'signed installed verification must not perform an uncontrolled PowerShell trust check');
+
+  const transactionFixture = await buildFixture('attestation-transaction');
+  const transactionManifestPath = path.join(transactionFixture.root, 'arcane-install.json');
+  const transactionManifest = JSON.parse(await fs.readFile(transactionManifestPath, 'utf8'));
+  await fs.unlink(transactionManifestPath);
+  const transactionAdapter = createAdapter(transactionFixture).adapter;
+  const createdAttestation = transactionAdapter.createPublisherAttestation(transactionFixture.root);
+  assert.deepEqual(JSON.parse(JSON.stringify(createdAttestation)), transactionFixture.publisherAttestation);
+  for (const mode of ['mixed', 'different', 'invalid', 'untimestamped']) {
+    assert.throws(
+      () => createAdapter(transactionFixture, { signatureMode: mode }).adapter.createPublisherAttestation(transactionFixture.root),
+      (error) => Boolean(error && error.message),
+      mode + ' staged signature set must fail closed',
+    );
+  }
+  await writeJson(transactionFixture.root, 'arcane-install.json', { ...transactionManifest, publisherAttestation: createdAttestation });
+  assert.equal(transactionAdapter.verifyStagedInstallation(transactionFixture.root, true).securityMode, 'publisher-verified');
+
+  const forgedClaimFixture = await buildFixture('attestation-forged-claim-stage');
+  await fs.unlink(path.join(forgedClaimFixture.root, 'arcane-install.json'));
+  const forgedClaimAttestation = createAdapter(forgedClaimFixture, {
+    revocationStatusClaim: 'cache-good',
+    verifiedAtClaim: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+  }).adapter.createPublisherAttestation(forgedClaimFixture.root);
+  assert.deepEqual(JSON.parse(JSON.stringify(forgedClaimAttestation)), forgedClaimFixture.publisherAttestation,
+    'attestation authority must come from the fresh native probe, not ambient host claims');
+
+  const probeMismatchFixture = await buildFixture('attestation-probe-mismatch');
+  await fs.unlink(path.join(probeMismatchFixture.root, 'arcane-install.json'));
+  assert.throws(() => createAdapter(probeMismatchFixture, {
+    publisherAttestationProbe: () => ({
+      ...probeMismatchFixture.publisherAttestation,
+      bindings: probeMismatchFixture.publisherAttestation.bindings.map((binding, index) => (
+        index === 0 ? { ...binding, binding: 'ARCANE-MACHINE-BINDING|1|0.8.2|' + 'f'.repeat(64) } : binding
+      )),
+    }),
+  }).adapter.createPublisherAttestation(probeMismatchFixture.root), /exact content bindings/);
+
+  const missingAttestationFixture = await buildFixture('missing-attestation', { omitAttestation: true });
+  assert.throws(() => createAdapter(missingAttestationFixture).adapter.releaseSecurityMode(), /attestation is missing/);
+
+  const mismatchedBindingFixture = await buildFixture('mismatched-attestation-binding');
+  await mutateInstallManifest(mismatchedBindingFixture, (manifest) => {
+    manifest.publisherAttestation.bindings[1].binding = manifest.publisherAttestation.bindings[0].binding;
+  });
+  assert.throws(() => createAdapter(mismatchedBindingFixture).adapter.releaseSecurityMode(), /exact content bindings/);
+
+  const mismatchedSignerFixture = await buildFixture('mismatched-attestation-signer');
+  await mutateInstallManifest(mismatchedSignerFixture, (manifest) => {
+    manifest.publisherAttestation.signerThumbprint = 'B'.repeat(40);
+  });
+  assert.throws(() => createAdapter(mismatchedSignerFixture).adapter.releaseSecurityMode(), /identity is invalid/);
+
+  const malformedClaims = createAdapter(signedFixture, { timestampVerifiedClaim: false });
+  assert.throws(() => malformedClaims.adapter.releaseSecurityMode(), /malformed publisher verification claims/);
+
+  const staleAttestationFixture = await buildFixture('stale-attestation');
+  await mutateInstallManifest(staleAttestationFixture, (manifest) => {
+    manifest.publisherAttestation.verifiedAt = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+  });
+  assert.throws(
+    () => createAdapter(staleAttestationFixture, { revocationStatusClaim: 'attested-degraded' }).adapter.releaseSecurityMode(),
+    /attestation identity is invalid/,
+  );
+  assert.equal(createAdapter(staleAttestationFixture, { revocationStatusClaim: 'cache-good' }).adapter.releaseSecurityMode(), 'publisher-verified',
+    'attestation age limits degraded startup without invalidating a fresh cache-good WinTrust result');
+
+  const staleProbeFixture = await buildFixture('stale-probe-stage');
+  await fs.unlink(path.join(staleProbeFixture.root, 'arcane-install.json'));
+  assert.throws(() => createAdapter(staleProbeFixture, {
+    publisherAttestationProbe: () => ({
+      ...staleProbeFixture.publisherAttestation,
+      verifiedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    }),
+  }).adapter.createPublisherAttestation(staleProbeFixture.root), /attestation identity is invalid/);
+
+  const nestedNavigationFixture = await buildFixture('nested-navigation', {
+    navigationEntries: ['/boss/index.html', '/boss/pages/settings/profile.html'],
+  });
+  const nestedNavigation = await createAdapter(nestedNavigationFixture).adapter.listInstalledApplications();
+  assert.equal(nestedNavigation.verified, true);
+
+  const traversingNavigationFixture = await buildFixture('traversing-navigation', {
+    navigationEntries: ['/boss/index.html', '/boss/../escape.html'],
+  });
+  await assert.rejects(
+    createAdapter(traversingNavigationFixture).adapter.listInstalledApplications(),
+    /security navigation allowlist is invalid/,
+  );
 
   const busyHost = createAdapter(signedFixture, {
     runningInstalledProcesses: () => [{ processId: 412, relativePath: 'bin/ArcaneShell.exe' }],
@@ -387,21 +614,195 @@ try {
   });
   const unsignedList = await unsigned.adapter.listInstalledApplications();
   assert.equal(unsignedList.securityMode, 'unsigned-local-test');
+  assert.equal(unsignedList.publisherTrustSource, null);
+  assert.equal(unsignedList.revocationStatus, null);
+  const unsignedDowngradeFixture = await buildFixture('unsigned-downgrade-stage', { signatureStatus: 'NotSigned' });
+  await fs.unlink(path.join(unsignedDowngradeFixture.root, 'arcane-install.json'));
+  assert.throws(
+    () => createAdapter(signedFixture, {
+      signatureMode: 'unsigned',
+      allowUnsigned: true,
+      claim: 'unsigned-local-test',
+    }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root),
+    /refuses to replace a signed, publisher-pinned, or unverifiable installation/,
+  );
+  const unsignedExistingFixture = await buildFixture('unsigned-existing', { signatureStatus: 'NotSigned' });
+  assert.equal(createAdapter(unsignedExistingFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), null,
+  'a protected exact prior unsigned-local installation may accept another explicit unsigned-local build');
+
+  const legacySignedFixture = await buildFixture('legacy-signed-no-attestation', {
+    omitAttestation: true,
+    omitSecurityMode: true,
+  });
+  assert.throws(() => createAdapter(legacySignedFixture, {
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+    signatureModeForFiles: (files) => files.every((file) => file.startsWith(unsignedDowngradeFixture.root)) ? 'unsigned' : 'signed',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not provably unsigned|refuses to replace/,
+  'a signed legacy installation cannot be downgraded merely because it has no attestation or security-mode field');
+
+  const legacyUnsignedFixture = await buildFixture('legacy-unsigned-no-security-mode', {
+    signatureStatus: 'NotSigned',
+    omitSecurityMode: true,
+  });
+  assert.throws(() => createAdapter(legacyUnsignedFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not declared as unsigned local-test|refuses to replace/,
+  'an exact-integrity installation must carry the explicit persisted unsigned-local security mode');
+
+  const unknownSecurityModeFixture = await buildFixture('unknown-installed-security-mode', {
+    signatureStatus: 'NotSigned',
+    installSecurityMode: 'unknown-mode',
+  });
+  assert.throws(() => createAdapter(unknownSecurityModeFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.releaseSecurityMode(), /security-mode metadata is missing or invalid/);
+
+  const unsignedDeclaredPublisherFixture = await buildFixture('unsigned-declared-publisher-files', {
+    installSecurityMode: 'unsigned-local-test',
+  });
+  assert.throws(() => createAdapter(unsignedDeclaredPublisherFixture).adapter.releaseSecurityMode(),
+    /security-mode metadata does not match the native host proof/,
+    'an unsigned-local top-level declaration cannot be reinterpreted as a publisher-verified installation');
+
+  const preIntegrityLegacyFixture = await buildFixture('pre-integrity-legacy-unsigned', { signatureStatus: 'NotSigned' });
+  await makePreIntegrityLegacy(preIntegrityLegacyFixture, '0.7.0');
+  assert.equal(createAdapter(preIntegrityLegacyFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), null,
+  'an older pre-integrity installation may enter the bounded migration path only after every actual executable is proven unsigned');
+
+  const preIntegritySignedFixture = await buildFixture('pre-integrity-legacy-signed');
+  await makePreIntegrityLegacy(preIntegritySignedFixture, '0.7.0');
+  assert.throws(() => createAdapter(preIntegritySignedFixture, {
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+    signatureModeForFiles: (files) => files.every((file) => file.startsWith(unsignedDowngradeFixture.root)) ? 'unsigned' : 'signed',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not provably unsigned|refuses to replace/,
+  'an actually signed older pre-integrity installation cannot be downgraded to unsigned local-test');
+
+  for (const [name, legacyVersion] of [['equal', version], ['newer', '0.9.0']]) {
+    const fixture = await buildFixture(`pre-integrity-${name}`, { signatureStatus: 'NotSigned' });
+    await makePreIntegrityLegacy(fixture, legacyVersion);
+    assert.throws(() => createAdapter(fixture, {
+      signatureMode: 'unsigned',
+      allowUnsigned: true,
+      claim: 'unsigned-local-test',
+    }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /older pre-integrity|refuses to replace/);
+  }
+
+  for (const invalidVersion of ['garbage', 'v0.7.0', '0.7.0-extra', '0.7.0.1', '00.7.0']) {
+    const fixture = await buildFixture(`pre-integrity-invalid-${invalidVersion.replace(/[^a-z0-9]+/gi, '-')}`, { signatureStatus: 'NotSigned' });
+    await makePreIntegrityLegacy(fixture, invalidVersion);
+    assert.throws(() => createAdapter(fixture, {
+      signatureMode: 'unsigned',
+      allowUnsigned: true,
+      claim: 'unsigned-local-test',
+    }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /integrity metadata is missing or invalid|refuses to replace/,
+    `legacy version ${invalidVersion} must not enter the unsigned migration path`);
+  }
+
+  const wrongLegacyProductFixture = await buildFixture('pre-integrity-wrong-product', { signatureStatus: 'NotSigned' });
+  await makePreIntegrityLegacy(wrongLegacyProductFixture, '0.7.0');
+  await mutateInstallManifest(wrongLegacyProductFixture, (manifest) => { manifest.name = 'Not Arcane OS'; });
+  assert.throws(() => createAdapter(wrongLegacyProductFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /canonical Arcane product identity|refuses to replace/);
+
+  const mismatchedLegacyIdentityFixture = await buildFixture('pre-integrity-mismatched-bound-identity', { signatureStatus: 'NotSigned' });
+  await makePreIntegrityLegacy(mismatchedLegacyIdentityFixture, '0.7.0', { removeBoundIdentity: false });
+  assert.throws(() => createAdapter(mismatchedLegacyIdentityFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /versions do not match|refuses to replace/);
+
+  const malformedUnsignedFixture = await buildFixture('legacy-malformed-certificate-table', {
+    signatureStatus: 'NotSigned',
+    omitSecurityMode: true,
+  });
+  assert.throws(() => createAdapter(malformedUnsignedFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+    emptyPeCertificateTableProbe: () => false,
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not provably unsigned|refuses to replace/,
+  'NotSigned without an empty PE certificate table is not affirmative unsigned evidence');
+
+  const realPeUnsignedFixture = await buildFixture('real-pe-empty-certificate-tables', { signatureStatus: 'NotSigned' });
+  await rewriteInstalledExecutablesAsPe(realPeUnsignedFixture);
+  assert.equal(createAdapter(realPeUnsignedFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+    useRealPeCertificateTable: true,
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), null,
+  'the production PE32 and PE32+ parser must affirm genuinely empty certificate tables');
+
+  const realPeSignedTableFixture = await buildFixture('real-pe-present-certificate-table', { signatureStatus: 'NotSigned' });
+  await rewriteInstalledExecutablesAsPe(realPeSignedTableFixture, { certificateTableIndex: 0 });
+  assert.throws(() => createAdapter(realPeSignedTableFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+    useRealPeCertificateTable: true,
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not provably unsigned|refuses to replace/);
+
+  const realPeMalformedFixture = await buildFixture('real-pe-malformed-header', { signatureStatus: 'NotSigned' });
+  await rewriteInstalledExecutablesAsPe(realPeMalformedFixture, { malformedIndex: 0 });
+  assert.throws(() => createAdapter(realPeMalformedFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+    useRealPeCertificateTable: true,
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not provably unsigned|refuses to replace/);
+
+  const realPeMissingDirectoryFixture = await buildFixture('real-pe-missing-directory-table', { signatureStatus: 'NotSigned' });
+  await rewriteInstalledExecutablesAsPe(realPeMissingDirectoryFixture, { missingDirectoryTableIndex: 0 });
+  assert.throws(() => createAdapter(realPeMissingDirectoryFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+    useRealPeCertificateTable: true,
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not provably unsigned|refuses to replace/,
+  'a PE image that does not declare the security data-directory slot is not affirmative unsigned evidence');
+
+  const declaredSignedFixture = await buildFixture('declared-signed-without-attestation', { omitAttestation: true });
+  assert.throws(() => createAdapter(declaredSignedFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root), /not declared as unsigned local-test|refuses to replace/);
+
+  const missingManifestFixture = await buildFixture('unsigned-existing-missing-manifest', { signatureStatus: 'NotSigned' });
+  await fs.unlink(path.join(missingManifestFixture.root, 'arcane-install.json'));
+  assert.throws(() => createAdapter(missingManifestFixture, {
+    signatureMode: 'unsigned',
+    allowUnsigned: true,
+    claim: 'unsigned-local-test',
+  }).adapter.createPublisherAttestation(unsignedDowngradeFixture.root));
+
+  const mismatchedDeclaredModeFixture = await buildFixture('mismatched-declared-security-mode');
+  await mutateInstallManifest(mismatchedDeclaredModeFixture, (manifest) => { manifest.securityMode = 'unsigned-local-test'; });
+  assert.throws(() => createAdapter(mismatchedDeclaredModeFixture).adapter.releaseSecurityMode(), /security-mode metadata does not match/);
   await unsigned.adapter.launchInstalledApplication('boss');
   assert.deepEqual(unsigned.spawnCalls[0].args, ['--allow-unsigned-local-release']);
   await assert.rejects(
     createAdapter(unsignedFixture, { signatureMode: 'unsigned', claim: 'unsigned-local-test' }).adapter.listInstalledApplications(),
-    /explicit host-attested local-test mode/,
+    /unsigned local-test|host-attested local-test/,
   );
-
-  for (const mode of ['mixed', 'different', 'invalid', 'untimestamped']) {
-    const candidate = createAdapter(signedFixture, { signatureMode: mode });
-    await assert.rejects(
-      candidate.adapter.listInstalledApplications(),
-      (error) => Boolean(error && error.message),
-      mode + ' signature set must fail closed',
-    );
-  }
 
   for (const [name, fixtureOptions] of [
     ['missing-machine-binding', { machineBindingCount: 0 }],

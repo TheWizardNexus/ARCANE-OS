@@ -13,8 +13,10 @@ new vm.Script(scriptMatches[0][1],{filename:'shell.inline.js'});
 
 assert.match(shell,/id="securityWarning"[^>]*>Arcane has not yet verified/,'the trust warning must be visible before runtime verification');
 assert.match(shell,/Unsigned local test mode is active/);
-assert.match(shell,/warning\.hidden = mode === 'publisher-verified'/,'only affirmative publisher verification may hide the warning');
-assert.match(shell,/setSecurityMode\(application\.securityMode\)/,'the unsigned warning must be set before catalog loading can fail');
+assert.match(shell,/warning\.hidden = mode === 'publisher-verified' && !firstUsePinPending && !revocationDegraded/,'only pinned, non-degraded publisher verification may hide the warning');
+assert.match(shell,/setSecurityMode\(application\.securityMode, application\.publisherTrustSource, application\.revocationStatus\)/,'trust-source and revocation warnings must be set before catalog loading can fail');
+assert.match(shell,/Publisher continuity is not pinned|no administrator policy or prior installed signer pin/i);
+assert.match(shell,/recent protected offline publisher attestation/);
 assert.match(shell,/Arcane\.applications\.list\(\)/);
 assert.match(shell,/Arcane\.applications\.launch\(application\.id\)/,'the shell must pass the canonical catalog ID only');
 assert.match(shell,/id="lock"/,'the default shell must expose a lock control');

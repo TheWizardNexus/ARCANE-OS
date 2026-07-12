@@ -13,22 +13,23 @@ const runtimePath=path.join(temporaryRoot,'arcane-core.cjs');
 const marker='const PATHS = native.paths;';
 const injectedAdapter=`
 let applicationsListCallCount=0;
-native.hostReleaseSecurityMode=()=> 'publisher-verified';
+const publisherEvidence={securityMode:'publisher-verified',publisherTrustSource:'uac-approved-tofu',revocationStatus:'online-good'};
+native.hostReleaseSecurityEvidence=()=> publisherEvidence;
 native.releaseSecurityMode=()=> 'publisher-verified';
 native.listInstalledApplications=async function(){
   if(arguments.length!==0)throw new Error('list contract received arguments');
   applicationsListCallCount+=1;
-  if(applicationsListCallCount===2)return {verified:true,securityMode:'publisher-verified',applications:[{id:'boss',displayName:'BOSS',description:'Unsafe icon',iconUrl:'https://attacker.invalid/icon.png',version:'2.0.0',order:10}]};
-  if(applicationsListCallCount===3)return {verified:false,securityMode:'publisher-verified',applications:[]};
-  if(applicationsListCallCount===4)return {verified:true,securityMode:'publisher-verified',applications:[
+  if(applicationsListCallCount===2)return {verified:true,...publisherEvidence,applications:[{id:'boss',displayName:'BOSS',description:'Unsafe icon',iconUrl:'https://attacker.invalid/icon.png',version:'2.0.0',order:10}]};
+  if(applicationsListCallCount===3)return {verified:false,...publisherEvidence,applications:[]};
+  if(applicationsListCallCount===4)return {verified:true,...publisherEvidence,applications:[
     {id:'boss',displayName:'BOSS',description:'Duplicate one',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:10},
     {id:'boss',displayName:'BOSS again',description:'Duplicate two',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:20},
   ]};
-  if(applicationsListCallCount===5)return {verified:true,securityMode:'publisher-verified',applications:[{id:'boss',displayName:'BOSS',description:'Unexpected field',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:10,path:'C:\\\\secret.exe'}]};
+  if(applicationsListCallCount===5)return {verified:true,...publisherEvidence,applications:[{id:'boss',displayName:'BOSS',description:'Unexpected field',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:10,path:'C:\\\\secret.exe'}]};
   if(applicationsListCallCount===6)throw new Error('C:\\\\private\\catalog.json could not be read');
   return {
     verified:true,
-    securityMode:'publisher-verified',
+    ...publisherEvidence,
     applications:[
       {id:'precrisis',displayName:'PreCrisis AI',description:'Clinical operations workspace',iconUrl:'/apps/precrisis/app/precrisis/icon.png',version:'1.2.3',order:20},
       {id:'boss',displayName:'BOSS',description:'Business operations workspace',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:10},

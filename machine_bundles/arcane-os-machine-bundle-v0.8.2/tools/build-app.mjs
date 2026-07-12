@@ -89,6 +89,6 @@ for (const argument of args) {
 const result = await buildApp(appId);
 console.log(`Built isolated Arcane ${platform} app package for ${result.app} at ${path.relative(bundleRoot, result.target)}.`);
 if (platform === 'windows') {
-  const projection = await publishWindowsAppProjection({ bundleRoot, appIds: [appId] });
+  const projection = await publishWindowsAppProjection({ bundleRoot, appIds: [appId], preserveExistingApps: true });
   console.log(`Published verified Arcane app runtime projection at ${path.relative(bundleRoot, projection.target)}.`);
 }

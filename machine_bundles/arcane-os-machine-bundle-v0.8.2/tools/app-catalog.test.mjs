@@ -9,7 +9,9 @@ import {
   APP_CONTENT_MANIFEST,
   APP_PACKAGE_MANIFEST,
   createInstalledAppCatalog,
+  publishWindowsAppProjection,
   verifyAppContentManifest,
+  verifyWindowsAppProjection,
   writeAppContentManifest,
 } from './app-catalog.mjs';
 import { loadAppRegistry } from './app-packager-lib.mjs';
@@ -22,6 +24,10 @@ function canonical(value) {
 
 function hash(data) {
   return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+function compareText(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function clone(value) {
@@ -158,6 +164,89 @@ function packageFixture(configured, bundle) {
   };
 }
 
+async function nativeInventory(root) {
+  const files = [];
+  async function visit(directory, relativeDirectory = '') {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    entries.sort((left, right) => compareText(left.name, right.name));
+    for (const entry of entries) {
+      const relative = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) await visit(absolute, relative);
+      else if (entry.isFile() && relative !== APP_PACKAGE_MANIFEST) {
+        const data = await fs.readFile(absolute);
+        files.push({ path: relative, size: data.length, sha256: hash(data) });
+      }
+    }
+  }
+  await visit(root);
+  return files.sort((left, right) => compareText(left.path, right.path));
+}
+
+async function writeNativeTargetFixture({ fixtureRoot, registry, bundle, appId, marker }) {
+  const configured = registry.apps[appId];
+  const target = path.join(fixtureRoot, 'dist', 'targets', appId);
+  const launcher = `ArcaneApp-${appId}.exe`;
+  await fs.rm(target, { recursive: true, force: true });
+  await fs.mkdir(path.dirname(path.join(target, 'app', appId, configured.icon)), { recursive: true });
+  await fs.writeFile(path.join(target, 'app', appId, configured.icon), marker);
+  await fs.writeFile(path.join(target, 'app', appId, 'index.html'), `<html><head></head><body>${marker}</body></html>\n`);
+  await fs.writeFile(path.join(target, 'arcane-bundle.json'), canonical(bundle));
+  for (const name of [
+    'ArcaneCore.exe',
+    'ArcanePipeGuard.exe',
+    'Microsoft.Web.WebView2.Core.dll',
+    'Microsoft.Web.WebView2.WinForms.dll',
+    'WebView2Loader.dll',
+    launcher,
+  ]) {
+    await fs.writeFile(path.join(target, name), `${name}:${marker}\n`);
+  }
+  const manifest = {
+    schemaVersion: 1,
+    protocolVersion: bundle.protocolVersion,
+    bundleVersion: bundle.version,
+    app: {
+      id: appId,
+      displayName: configured.displayName,
+      description: configured.description,
+      icon: configured.icon,
+      order: configured.order,
+      type: 'app',
+      entry: `${appId}/index.html`,
+      launchEntry: `${appId}/index.html`,
+      capabilities: [...configured.capabilities],
+      security: {
+        contentSecurityPolicy: "default-src 'none'",
+        permissionsPolicy: 'microphone=()',
+        securedDocuments: 1,
+        navigationEntries: [`/${appId}/index.html`],
+        verifiedDependencies: 1,
+      },
+      documentCatalog: null,
+    },
+    files: [],
+  };
+  await fs.writeFile(path.join(target, APP_PACKAGE_MANIFEST), canonical(manifest));
+  await writeAppContentManifest({ target, appId, launcher });
+  const finalized = {
+    ...manifest,
+    platform: 'windows',
+    architecture: 'x64',
+    native: {
+      launcher,
+      core: 'ArcaneCore.exe',
+      pipeGuard: 'ArcanePipeGuard.exe',
+      renderer: 'WebView2',
+      signatureStatus: 'NotSigned',
+      signatureRequiredForDistribution: true,
+    },
+    files: await nativeInventory(target),
+  };
+  await fs.writeFile(path.join(target, APP_PACKAGE_MANIFEST), canonical(finalized));
+  return target;
+}
+
 test('installed catalog is deterministic, ID-addressable, and cannot expand capabilities', async () => {
   const [registry, bundle] = await Promise.all([
     loadAppRegistry(bundleRoot),
@@ -199,5 +288,66 @@ test('native content binding precedes finalization and Windows all-app builds pu
   assert.match(finalizer, /verifyAppContentManifest/);
   assert.doesNotMatch(finalizer, /writeAppContentManifest/);
   assert.match(builder, /publishWindowsAppProjection\(\{ bundleRoot, appIds: apps\.map/);
+  assert.match(builder, /appIds: \[appId\], preserveExistingApps: true/);
   assert.match(builder, /if \(platform === 'windows'\)/);
+});
+
+test('a targeted native rebuild preserves every other valid projected app', async () => {
+  const fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-targeted-projection-'));
+  try {
+    await fs.copyFile(path.join(bundleRoot, 'arcane-apps.json'), path.join(fixtureRoot, 'arcane-apps.json'));
+    await fs.copyFile(path.join(bundleRoot, 'arcane-bundle.json'), path.join(fixtureRoot, 'arcane-bundle.json'));
+    const [registry, bundle] = await Promise.all([
+      loadAppRegistry(fixtureRoot),
+      fs.readFile(path.join(fixtureRoot, 'arcane-bundle.json'), 'utf8').then(JSON.parse),
+    ]);
+    await writeNativeTargetFixture({ fixtureRoot, registry, bundle, appId: 'boss', marker: 'boss-v1' });
+    const precrisisTarget = await writeNativeTargetFixture({ fixtureRoot, registry, bundle, appId: 'precrisis', marker: 'precrisis-v1' });
+    await publishWindowsAppProjection({ bundleRoot: fixtureRoot, appIds: ['boss', 'precrisis'] });
+    await verifyWindowsAppProjection({ bundleRoot: fixtureRoot, appIds: ['boss', 'precrisis'] });
+
+    await fs.appendFile(
+      path.join(fixtureRoot, 'dist/apps/boss/app/boss', registry.apps.boss.icon),
+      '-stale-selected-app',
+    );
+    await fs.rm(precrisisTarget, { recursive: true, force: true });
+    await writeNativeTargetFixture({ fixtureRoot, registry, bundle, appId: 'boss', marker: 'boss-v2' });
+    const published = await publishWindowsAppProjection({
+      bundleRoot: fixtureRoot,
+      appIds: ['boss'],
+      preserveExistingApps: true,
+    });
+
+    assert.deepEqual(published.catalog.apps.map((app) => app.id), ['boss', 'precrisis']);
+    await verifyWindowsAppProjection({ bundleRoot: fixtureRoot, appIds: ['boss', 'precrisis'] });
+    assert.equal(
+      await fs.readFile(path.join(fixtureRoot, 'dist/apps/boss/app/boss', registry.apps.boss.icon), 'utf8'),
+      'boss-v2',
+    );
+    assert.equal(
+      await fs.readFile(path.join(fixtureRoot, 'dist/apps/precrisis/app/precrisis', registry.apps.precrisis.icon), 'utf8'),
+      'precrisis-v1',
+    );
+
+    await fs.appendFile(
+      path.join(fixtureRoot, 'dist/apps/precrisis/app/precrisis', registry.apps.precrisis.icon),
+      '-tampered',
+    );
+    await writeNativeTargetFixture({ fixtureRoot, registry, bundle, appId: 'boss', marker: 'boss-v3' });
+    await assert.rejects(
+      publishWindowsAppProjection({
+        bundleRoot: fixtureRoot,
+        appIds: ['boss'],
+        preserveExistingApps: true,
+      }),
+      /does not exactly match|inventory/i,
+    );
+    assert.equal(
+      await fs.readFile(path.join(fixtureRoot, 'dist/apps/boss/app/boss', registry.apps.boss.icon), 'utf8'),
+      'boss-v2',
+      'an invalid preserved projection must block replacement before the targeted app is published',
+    );
+  } finally {
+    await fs.rm(fixtureRoot, { recursive: true, force: true });
+  }
 });

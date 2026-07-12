@@ -136,11 +136,17 @@
       if (event && event.error) showError('Arcane operation failed', event.error);
     });
 
-    function setSecurityMode(mode) {
+    function setSecurityMode(mode, publisherTrustSource, revocationStatus) {
       const warning = $('#securityWarning');
-      warning.hidden = mode === 'publisher-verified';
+      const firstUsePinPending = mode === 'publisher-verified' && publisherTrustSource === 'fresh-unpinned';
+      const revocationDegraded = mode === 'publisher-verified' && revocationStatus === 'attested-degraded';
+      warning.hidden = mode === 'publisher-verified' && !firstUsePinPending && !revocationDegraded;
       warning.textContent = mode === 'unsigned-local-test'
         ? 'Unsigned local test mode is active. Application integrity is still checked, but this Arcane release is not publisher-signed and must not be treated as a production installation.'
+        : firstUsePinPending
+        ? 'Windows validated this signature, but Arcane has no administrator policy or prior installed signer pin. Use Provisioner with administrator approval to establish publisher continuity before treating this as production.'
+        : revocationDegraded
+        ? 'Arcane is using a recent protected offline publisher attestation and is retrying strict revocation verification. A revoked or invalid refresh will close this Shell and open the Windows desktop.'
         : 'Arcane has not verified this release as publisher-signed. Do not treat this session as a production installation.';
     }
 
@@ -265,7 +271,7 @@
       try {
         const catalog = await Arcane.applications.list();
         if (!catalog || catalog.verified !== true || !Array.isArray(catalog.applications)) throw new Error('Arcane returned an unverified application catalog.');
-        setSecurityMode(catalog.securityMode);
+        setSecurityMode(catalog.securityMode, catalog.publisherTrustSource, catalog.revocationStatus);
         installedApplications = catalog.applications.slice();
         if (!installedApplications.length) {
           setCatalogState('empty', 'No verified Arcane applications are installed. Use Arcane Provisioner to repair or install the application bundle.');
@@ -285,7 +291,7 @@
         const [version, user, platform, application] = await Promise.all([
           Arcane.version.current(), Arcane.user.current(), Arcane.platform.status(), Arcane.app.current()
         ]);
-        setSecurityMode(application.securityMode);
+        setSecurityMode(application.securityMode, application.publisherTrustSource, application.revocationStatus);
         $('#version').textContent = 'v' + (version.version || version);
         $('#identity').textContent = user.accountName || user.username;
         $('#userValue').textContent = user.displayName || user.username;
