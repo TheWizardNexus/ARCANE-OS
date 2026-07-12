@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildTargetApp, listTargetApps } from './app-packager-lib.mjs';
+import { publishWindowsAppProjection } from './app-catalog.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const bundleRoot = path.resolve(here, '..');
@@ -59,6 +60,10 @@ if (args.includes('--all')) {
     const result = await buildApp(app.id);
     console.log(`Built isolated Arcane ${platform} app package for ${result.app} at ${path.relative(bundleRoot, result.target)}.`);
   }
+  if (platform === 'windows') {
+    const projection = await publishWindowsAppProjection({ bundleRoot, appIds: apps.map((app) => app.id) });
+    console.log(`Published ${projection.catalog.apps.length} verified Arcane apps at ${path.relative(bundleRoot, projection.target)}.`);
+  }
   process.exit(0);
 }
 
@@ -71,3 +76,7 @@ for (const argument of args) {
 
 const result = await buildApp(appId);
 console.log(`Built isolated Arcane ${platform} app package for ${result.app} at ${path.relative(bundleRoot, result.target)}.`);
+if (platform === 'windows') {
+  const projection = await publishWindowsAppProjection({ bundleRoot, appIds: [appId] });
+  console.log(`Published verified Arcane app runtime projection at ${path.relative(bundleRoot, projection.target)}.`);
+}

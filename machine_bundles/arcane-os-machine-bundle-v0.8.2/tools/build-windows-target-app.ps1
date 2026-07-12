@@ -9,7 +9,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $targetsRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist\targets')).TrimEnd('\')
 $sourcePath = [IO.Path]::GetFullPath($Source)
 $targetPath = [IO.Path]::GetFullPath($Target)
-if ($AppId -notmatch '^[a-z][a-z0-9-]{1,31}$') { throw 'Invalid Arcane target app id.' }
+if ($AppId.Length -gt 64 -or $AppId -cnotmatch '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$') { throw 'Invalid Arcane target app id.' }
 foreach ($candidate in @($sourcePath, $targetPath)) {
   if (-not $candidate.StartsWith($targetsRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'Refusing to build an app outside dist\targets.'

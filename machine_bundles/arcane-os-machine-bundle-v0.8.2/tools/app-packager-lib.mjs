@@ -18,9 +18,12 @@ export const SAFE_APP_CAPABILITIES = Object.freeze([
 ]);
 
 const SAFE_CAPABILITY_SET = new Set(SAFE_APP_CAPABILITIES);
-const APP_ID_PATTERN = /^[a-z][a-z0-9-]{1,31}$/;
+const APP_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const RESERVED_APP_IDS = new Set(['provisioner', 'shell']);
 const WINDOWS_RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+const SAFE_ICON_EXTENSION = new Set(['.ico', '.jpeg', '.jpg', '.png', '.webp']);
+const PRESENTATION_CONTROL_PATTERN = /[\p{Cc}\p{Cf}\p{Cs}\u2028\u2029]/u;
+const PRESENTATION_MARKUP_PATTERN = /[<>]|&(?:#(?:x[0-9a-f]+|[0-9]+)|[a-z][a-z0-9]+);/i;
 const PACKAGE_ORIGIN = 'https://arcane.local';
 const RUNTIME_SCRIPT_TAG = '    <script src="/arcane-runtime/arcane-api.js" data-arcane-runtime="arcane/1"></script>';
 const COMPONENT_SCRIPT_PREFIX = '(async function(){';
@@ -148,6 +151,29 @@ function validateCapabilities(capabilities, label) {
   return [...normalized].sort();
 }
 
+function validatePresentationText(value, label, maximumLength) {
+  if (typeof value !== 'string' || !value.trim() || value.length > maximumLength) {
+    fail(`${label} must contain 1-${maximumLength} characters.`);
+  }
+  if (PRESENTATION_CONTROL_PATTERN.test(value)) fail(`${label} must not contain control or formatting characters.`);
+  if (PRESENTATION_MARKUP_PATTERN.test(value)) fail(`${label} must be plain text without markup.`);
+  return value.trim();
+}
+
+function validatePresentationIcon(value, include, label) {
+  if (typeof value !== 'string' || value.length > 160) fail(`${label} must contain 1-160 characters.`);
+  if (PRESENTATION_CONTROL_PATTERN.test(value)) fail(`${label} must not contain control or formatting characters.`);
+  if (PRESENTATION_MARKUP_PATTERN.test(value)) fail(`${label} must not contain markup.`);
+  const icon = normalizeRelativePath(value, label);
+  if (!SAFE_ICON_EXTENSION.has(path.posix.extname(icon).toLowerCase())) {
+    fail(`${label} must identify a safe raster image or icon file.`);
+  }
+  if (!include.some((allowed) => icon === allowed || icon.startsWith(`${allowed}/`))) {
+    fail(`${label} is not covered by the app include allowlist.`);
+  }
+  return icon;
+}
+
 function validateOrigins(origins, label, { allowLoopbackHttp = false } = {}) {
   if (!Array.isArray(origins)) fail(`${label} must be an array of exact origins.`);
   if (origins.length > 16) fail(`${label} contains too many origins.`);
@@ -233,19 +259,25 @@ export function validateAppRegistry(registry) {
   if (!isPlainObject(registry.apps) || Object.keys(registry.apps).length === 0) fail('apps must be a non-empty object.');
   if (Object.keys(registry.apps).length > 64) fail('apps contains too many targets.');
   const apps = {};
+  const presentationOrders = new Set();
   for (const [id, app] of Object.entries(registry.apps)) {
-    if (!APP_ID_PATTERN.test(id) || RESERVED_APP_IDS.has(id)) fail(`app id “${id}” is invalid or reserved.`);
+    if (id.length > 64 || !APP_ID_PATTERN.test(id) || RESERVED_APP_IDS.has(id)) fail(`app id “${id}” is invalid or reserved.`);
     const label = `apps.${id}`;
     if (!isPlainObject(app)) fail(`${label} must be an object.`);
-    assertOnlyKeys(app, new Set(['displayName', 'type', 'source', 'entry', 'capabilities', 'security', 'documentCatalog', 'include']), label);
-    if (typeof app.displayName !== 'string' || !app.displayName.trim() || app.displayName.length > 80) {
-      fail(`${label}.displayName must contain 1–80 characters.`);
+    assertOnlyKeys(app, new Set(['displayName', 'description', 'icon', 'order', 'type', 'source', 'entry', 'capabilities', 'security', 'documentCatalog', 'include']), label);
+    const displayName = validatePresentationText(app.displayName, `${label}.displayName`, 80);
+    const description = validatePresentationText(app.description, `${label}.description`, 240);
+    if (!Number.isSafeInteger(app.order) || app.order < 0 || app.order > 10_000) {
+      fail(`${label}.order must be an integer from 0 through 10000.`);
     }
+    if (presentationOrders.has(app.order)) fail(`${label}.order must be unique.`);
+    presentationOrders.add(app.order);
     if (app.type !== 'app') fail(`${label}.type must be “app”; privileged host types cannot be wrapped.`);
     const source = normalizeRelativePath(app.source, `${label}.source`);
     const entry = normalizeRelativePath(app.entry, `${label}.entry`);
     if (path.posix.extname(entry).toLowerCase() !== '.html') fail(`${label}.entry must be an HTML file.`);
     const include = validateIncludeList(app.include, `${label}.include`);
+    const icon = validatePresentationIcon(app.icon, include, `${label}.icon`);
     if (!include.some((allowed) => entry === allowed || entry.startsWith(`${allowed}/`))) {
       fail(`${label}.entry is not covered by its include allowlist.`);
     }
@@ -257,7 +289,10 @@ export function validateAppRegistry(registry) {
     ))) fail(`${label}.include must not copy the unpublished document catalog destination.`);
     apps[id] = Object.freeze({
       id,
-      displayName: app.displayName.trim(),
+      displayName,
+      description,
+      icon,
+      order: app.order,
       type: 'app',
       source,
       entry,
@@ -612,7 +647,9 @@ export async function loadAppRegistry(bundleRoot) {
 
 export async function listTargetApps(bundleRoot) {
   const registry = await loadAppRegistry(bundleRoot);
-  return Object.values(registry.apps).map(({ id, displayName, entry }) => ({ id, displayName, entry }));
+  return Object.values(registry.apps)
+    .sort((left, right) => left.order - right.order || compareText(left.id, right.id))
+    .map(({ id, displayName, description, icon, order, entry }) => ({ id, displayName, description, icon, order, entry }));
 }
 
 export async function buildTargetApp({ bundleRoot, appId, outputRoot: requestedOutputRoot }) {
@@ -644,6 +681,9 @@ export async function buildTargetApp({ bundleRoot, appId, outputRoot: requestedO
     const baseBundle = JSON.parse(await fs.readFile(path.join(absoluteBundleRoot, 'arcane-bundle.json'), 'utf8'));
     const descriptor = {
       displayName: app.displayName,
+      description: app.description,
+      icon: app.icon,
+      order: app.order,
       type: 'app',
       entry: `${app.id}/index.html`,
       capabilities: app.capabilities,
@@ -654,6 +694,7 @@ export async function buildTargetApp({ bundleRoot, appId, outputRoot: requestedO
     const appSource = resolveInside(repositoryRoot, app.source, `apps.${app.id}.source`);
     const appFiles = await enumerateAllowlist(repositoryRoot, appSource, app.include, `apps.${app.id}`);
     if (!appFiles.some((file) => file.relative === app.entry)) fail(`apps.${app.id}.entry is not a regular allowlisted file.`);
+    if (!appFiles.some((file) => file.relative === app.icon)) fail(`apps.${app.id}.icon is not a regular allowlisted file.`);
     await copyPayloadFiles({
       files: appFiles,
       destinationRoot: `app/${app.id}`,
@@ -691,6 +732,9 @@ export async function buildTargetApp({ bundleRoot, appId, outputRoot: requestedO
       app: {
         id: app.id,
         displayName: app.displayName,
+        description: app.description,
+        icon: app.icon,
+        order: app.order,
         type: 'app',
         entry: descriptor.entry,
         launchEntry: `${app.id}/index.html`,

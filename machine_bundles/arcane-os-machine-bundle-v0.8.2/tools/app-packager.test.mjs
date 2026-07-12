@@ -82,6 +82,11 @@ test('registry rejects privileged types, capabilities, and overlapping allowlist
   privileged.apps.boss.type = 'provisioner';
   assert.throws(() => validateAppRegistry(privileged), /privileged host types cannot be wrapped/);
 
+  const nonCanonicalId = clone(valid);
+  nonCanonicalId.apps['bad--id'] = nonCanonicalId.apps.boss;
+  delete nonCanonicalId.apps.boss;
+  assert.throws(() => validateAppRegistry(nonCanonicalId), /app id .* is invalid or reserved/);
+
   const capability = clone(valid);
   capability.apps.boss.capabilities.push('users.manage');
   assert.throws(() => validateAppRegistry(capability), /approved non-privileged app capability/);
@@ -103,6 +108,42 @@ test('registry rejects privileged types, capabilities, and overlapping allowlist
   assert.throws(() => validateAppRegistry(corpus), /must not copy the unpublished document catalog destination/);
 });
 
+test('presentation metadata is strict plain text with an included safe icon', async () => {
+  const valid = JSON.parse(await fs.readFile(path.join(bundleRoot, 'arcane-apps.json'), 'utf8'));
+  const normalized = validateAppRegistry(valid);
+  assert.equal(normalized.apps.boss.description, valid.apps.boss.description);
+  assert.equal(normalized.apps.boss.icon, 'img/boss-libraries-logo-stacked.png');
+  assert.equal(normalized.apps.boss.order, 10);
+
+  const unknown = clone(valid);
+  unknown.apps.boss.launchArguments = ['--unsafe'];
+  assert.throws(() => validateAppRegistry(unknown), /unknown field/);
+
+  const markup = clone(valid);
+  markup.apps.boss.description = '<strong>trusted</strong>';
+  assert.throws(() => validateAppRegistry(markup), /plain text without markup/);
+
+  const control = clone(valid);
+  control.apps.boss.description = 'trusted\u0007label';
+  assert.throws(() => validateAppRegistry(control), /control or formatting characters/);
+
+  const traversal = clone(valid);
+  traversal.apps.boss.icon = '../private.png';
+  assert.throws(() => validateAppRegistry(traversal), /must not traverse/);
+
+  const omitted = clone(valid);
+  omitted.apps.boss.icon = 'unpublished/icon.png';
+  assert.throws(() => validateAppRegistry(omitted), /not covered by the app include allowlist/);
+
+  const executable = clone(valid);
+  executable.apps.boss.icon = 'chat.html';
+  assert.throws(() => validateAppRegistry(executable), /safe raster image or icon file/);
+
+  const duplicateOrder = clone(valid);
+  duplicateOrder.apps.precrisis.order = duplicateOrder.apps.boss.order;
+  assert.throws(() => validateAppRegistry(duplicateOrder), /order must be unique/);
+});
+
 test('BOSS build is isolated, runtime-enabled, hashed, and deterministic', async () => {
   const first = await buildTargetApp({ bundleRoot, appId: 'boss' });
   const firstManifestText = await fs.readFile(path.join(first.target, 'arcane-app-package.json'), 'utf8');
@@ -111,6 +152,9 @@ test('BOSS build is isolated, runtime-enabled, hashed, and deterministic', async
 
   assert.equal(firstManifest.app.id, 'boss');
   assert.equal(firstManifest.app.type, 'app');
+  assert.equal(firstManifest.app.description, 'A private workspace for grounded business research, document libraries, and assisted analysis.');
+  assert.equal(firstManifest.app.icon, 'img/boss-libraries-logo-stacked.png');
+  assert.equal(firstManifest.app.order, 10);
   assert.deepEqual(paths, [...paths].sort());
   assert(paths.includes('app/arcane-runtime/arcane-api.js'));
   assert(paths.includes('app/boss/boss-library.js'));
@@ -242,6 +286,8 @@ test('HTML component execution uses a deterministic CSP wrapper and cleans up ho
 
 test('Windows target generator embeds the validated navigation allowlist', async () => {
   const source = await fs.readFile(path.join(bundleRoot, 'tools/build-windows-target-app.ps1'), 'utf8');
+  assert.match(source, /\$AppId\.Length -gt 64/);
+  assert.match(source, /\[a-z0-9\]\*\(\?:-\[a-z0-9\]\+\)\*/);
   assert.match(source, /app\.security\.navigationEntries/);
   assert.match(source, /Unsafe target navigation entry/);
   assert.match(source, /navigation allowlist omits its launch entry/);

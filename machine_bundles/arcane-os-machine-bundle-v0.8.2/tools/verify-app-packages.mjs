@@ -4,15 +4,22 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyPackagedAppLinks } from './app-package-links.mjs';
+import { verifyAppContentManifest } from './app-catalog.mjs';
+import { loadAppRegistry } from './app-packager-lib.mjs';
 
 const bundleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const targetsRoot = path.join(bundleRoot, 'dist', 'targets');
-const registry = JSON.parse(await fs.readFile(path.join(bundleRoot, 'arcane-apps.json'), 'utf8'));
+const registry = await loadAppRegistry(bundleRoot);
 
 for (const appId of Object.keys(registry.apps).sort()) {
   const target = path.join(targetsRoot, appId);
   const manifest = JSON.parse(await fs.readFile(path.join(target, 'arcane-app-package.json'), 'utf8'));
   assert.equal(manifest.app.id, appId);
+  assert.equal(manifest.app.displayName, registry.apps[appId].displayName);
+  assert.equal(manifest.app.description, registry.apps[appId].description);
+  assert.equal(manifest.app.icon, registry.apps[appId].icon);
+  assert.equal(manifest.app.order, registry.apps[appId].order);
+  assert.deepEqual(manifest.app.capabilities, registry.apps[appId].capabilities);
   const expected = new Map(manifest.files.map((entry) => [entry.path, entry]));
   assert.equal(expected.size, manifest.files.length, `${appId} has duplicate inventory paths`);
   const actual = [];
@@ -44,9 +51,16 @@ for (const appId of Object.keys(registry.apps).sort()) {
   }
   if (manifest.platform === 'windows') {
     assert(manifest.native?.launcher, `${appId} is missing its native launcher declaration`);
+    assert(expected.has('arcane-app-content.json'), `${appId} is missing its exact content manifest`);
     for (const required of [manifest.native.launcher, manifest.native.core, manifest.native.pipeGuard, 'Microsoft.Web.WebView2.Core.dll', 'WebView2Loader.dll', `start-${appId}.bat`]) {
       assert(expected.has(required), `${appId} native package is missing ${required}`);
     }
+    await verifyAppContentManifest({
+      target,
+      appId,
+      launcher: manifest.native.launcher,
+      version: manifest.bundleVersion,
+    });
   }
   const dependencies = await verifyPackagedAppLinks({ packageRoot: target, appId });
   assert.equal(manifest.app.security?.verifiedDependencies, dependencies.length, `${appId} dependency count mismatch`);

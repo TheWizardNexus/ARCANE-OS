@@ -26,6 +26,9 @@
   "apps": {
     "precrisis": {
       "displayName": "PreCrisis AI",
+      "description": "Clinical decision support, structured notes, and operational dashboards for earlier intervention.",
+      "icon": "img/192.png",
+      "order": 20,
       "type": "app",
       "source": "apps/precrisis",
       "entry": "index.html",
@@ -80,6 +83,9 @@
     },
     "boss": {
       "displayName": "BOSS",
+      "description": "A private workspace for grounded business research, document libraries, and assisted analysis.",
+      "icon": "img/boss-libraries-logo-stacked.png",
+      "order": 10,
       "type": "app",
       "source": "apps/boss",
       "entry": "chat.html",
