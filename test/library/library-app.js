@@ -1,8 +1,8 @@
-import '../../modules/DBOPFS.js';
-        import '../../modules/AI.js';
-        import ChatEntity from '../../entities/Chat.js';
-        import DocumentEntity from '../../entities/File.js';
-        import ImageEntity from '../../entities/Image.js';
+import '/arcane/modules/DBOPFS.js';
+        import '/arcane/modules/AI.js';
+        import ChatEntity from '/arcane/entities/Chat.js';
+        import DocumentEntity from '/arcane/entities/File.js';
+        import ImageEntity from '/arcane/entities/Image.js';
 
         const ALLOWED_DOC_EXTENSIONS = ['md'];
         const PREVIEWABLE_TEXT_EXTENSIONS = new Set(['md', 'markdown']);
@@ -1031,7 +1031,7 @@ import '../../modules/DBOPFS.js';
             for (const item of filtered) {
                 const isChat = item.folder === 'chats';
                 const isImage = (item.folder === 'images') || (item.type || '').toLowerCase().startsWith('image/');
-                const badgeSrc = isImage ? '../img/image.svg' : (isChat ? '../img/send.svg' : '../img/doc.svg');
+                const badgeSrc = isImage ? '/arcane/img/image.svg' : (isChat ? '/arcane/img/send.svg' : '/arcane/img/doc.svg');
                 const badgeAlt = isImage ? 'Image file' : (isChat ? 'Chat file' : 'Document file');
                 const displayName = isChat ? (item.chatTitle || item.name) : item.name;
                 const rowKey = `${item.folder || state.activeFolder}:${item.name}`;
@@ -1048,7 +1048,7 @@ import '../../modules/DBOPFS.js';
                             </span>
                         </button>
                         <button class="delete-btn" type="button" title="Delete file" aria-label="Delete ${escapeHTML(item.name)}" data-delete-file-name="${escapeHTML(item.name)}" data-delete-file-folder="${escapeHTML(item.folder || state.activeFolder)}">
-                            <img src="../img/trash.svg" alt="" aria-hidden="true">
+                            <img src="/arcane/img/trash.svg" alt="" aria-hidden="true">
                         </button>
                     </div>
                 `;

@@ -5,7 +5,7 @@ import Errors,{
     fingerprintIncident,
     normalizeErrorEvent,
     normalizeRejectionEvent,
-} from '../modules/Errors.js';
+} from '../arcane/modules/Errors.js';
 
 class MemoryStorage {
     constructor(){

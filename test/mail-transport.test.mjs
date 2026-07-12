@@ -1,30 +1,25 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import { describe,it } from 'node:test';
 
-import { MAIL_APP_KEY,MAIL_APP_NAME } from '../../../mail-auth.js';
-import { sendMailReport } from '../modules/MailTransport.mjs';
+import { sendMailReport } from '../arcane/modules/MailTransport.mjs';
 
-describe('Nelson mail transport', () => {
-    it('keeps the temporary Nelson class defaults aligned with the gateway', async () => {
-        const source=await readFile(
-            new URL('../modules/Mail.js',import.meta.url),
-            'utf8'
-        );
+const TEST_ENDPOINT='https://mail.example.test/v1/mail';
 
-        assert.equal(source.includes(`this.appName='${MAIL_APP_NAME}'`),true);
-        assert.equal(source.includes(`this.appKey='${MAIL_APP_KEY}'`),true);
-        assert.match(source,/messageType=''\)/);
-        assert.doesNotMatch(source,/messageType='report'/);
-        assert.match(source,/if\(messageType==='error'\)/);
-    });
+function createTestTransportConfig(){
+    return {
+        appKey:'private-test-key',
+        appName:'arcane-test',
+        endpoint:TEST_ENDPOINT,
+    };
+}
+
+describe('Arcane OS mail transport', () => {
 
     it('adds the configured app headers and idempotency key automatically', async () => {
         let captured;
+        const config=createTestTransportConfig();
         const result=await sendMailReport({
-            appKey:'private-test-key',
-            appName:'nelson',
-            endpoint:'https://mail.example.test/v1/mail',
+            ...config,
             fetchImpl:async (endpoint,options) => {
                 captured={ endpoint,options };
                 return new Response(
@@ -41,13 +36,13 @@ describe('Nelson mail transport', () => {
             reportKey:'report-request-001',
         });
 
-        assert.equal(captured.endpoint,'https://mail.example.test/v1/mail');
+        assert.equal(captured.endpoint,TEST_ENDPOINT);
         assert.equal(captured.options.method,'POST');
         assert.deepEqual(captured.options.headers,{
             'Content-Type':'application/json',
             'Idempotency-Key':'report-request-001',
-            'X-Mail-App':'nelson',
-            'X-Mail-Key':'private-test-key',
+            'X-Mail-App':config.appName,
+            'X-Mail-Key':config.appKey,
         });
         assert.deepEqual(JSON.parse(captured.options.body),{
             subject:'Safety update',
@@ -65,6 +60,7 @@ describe('Nelson mail transport', () => {
 
     it('sends deterministic error mail without loading AI or browser storage', async () => {
         const previous={
+            arcane:globalThis.arcane,
             fetch:globalThis.fetch,
             location:globalThis.location,
             window:globalThis.window,
@@ -72,6 +68,8 @@ describe('Nelson mail transport', () => {
         let captured;
 
         try {
+            const config=createTestTransportConfig();
+            globalThis.arcane={ config:{ mail:config } };
             globalThis.window={};
             globalThis.location={ pathname:'/chat.html' };
             globalThis.fetch=async (endpoint,options) => {
@@ -82,7 +80,7 @@ describe('Nelson mail transport', () => {
                 );
             };
 
-            const moduleUrl=new URL('../modules/Mail.js',import.meta.url);
+            const moduleUrl=new URL('../arcane/modules/Mail.js',import.meta.url);
             moduleUrl.searchParams.set('test','direct-error');
             await import(moduleUrl);
             const result=await globalThis.window.mail.send(
@@ -94,6 +92,9 @@ describe('Nelson mail transport', () => {
             );
             const body=JSON.parse(captured.options.body);
 
+            assert.equal(captured.endpoint,TEST_ENDPOINT);
+            assert.equal(captured.options.headers['X-Mail-App'],config.appName);
+            assert.equal(captured.options.headers['X-Mail-Key'],config.appKey);
             assert.equal(body.type,'error');
             assert.deepEqual(body.to,[]);
             assert.match(body.text,/Example failure/);
@@ -104,6 +105,8 @@ describe('Nelson mail transport', () => {
             else globalThis.window=previous.window;
             if(previous.location===undefined) delete globalThis.location;
             else globalThis.location=previous.location;
+            if(previous.arcane===undefined) delete globalThis.arcane;
+            else globalThis.arcane=previous.arcane;
             globalThis.fetch=previous.fetch;
         }
     });
@@ -111,9 +114,7 @@ describe('Nelson mail transport', () => {
     it('rejects non-success responses without leaking the response body', async () => {
         await assert.rejects(
             sendMailReport({
-                appKey:'private-test-key',
-                appName:'nelson',
-                endpoint:'https://mail.example.test/v1/mail',
+                ...createTestTransportConfig(),
                 fetchImpl:async () => new Response(
                     JSON.stringify({ error:'sensitive upstream detail' }),
                     { status:401 }
