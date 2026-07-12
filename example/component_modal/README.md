@@ -44,7 +44,7 @@ If you want to use the search box, you have to create the javascript to make it 
 ### HTML
 ```html
 
-<link rel="stylesheet" href="./css/layout.css" />
+<link rel="stylesheet" href="/arcane/css/layout.css" />
 <style>
     .modal-overlay {
         position: fixed;

@@ -10,22 +10,22 @@
 
 		<base href="/" />
 
-		<link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
-		<link rel="icon" href="./img/favicon.png" type="image/png" />
+		<link rel="manifest" href="/apps/precrisis/manifest.json" crossorigin="use-credentials" />
+		<link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png" />
 
 		<!-- Styles -->
-		<link rel="stylesheet" href="./css/layout.css" />
+		<link rel="stylesheet" href="/arcane/css/layout.css" />
 
 		<!-- Modules -->
-		<script async type="module" src="./modules/AI.js"></script>
+		<script async type="module" src="/arcane/modules/AI.js"></script>
 
-		<script async type="module" src="./modules/HTMLImport.js"></script>
-        <script async type="module" src="./modules/Errors.js"></script>
+		<script async type="module" src="/arcane/modules/HTMLImport.js"></script>
+		<script async type="module" src="/arcane/modules/Errors.js"></script>
 	</head>
 
 	<body>
-		<html-import class="header" href="./components/header.html"></html-import>
-        <html-import class="nav" href="./components/nav.html"></html-import>
+		<html-import class="header" href="/arcane/components/header.html"></html-import>
+        <html-import class="nav" href="/apps/precrisis/components/nav.html"></html-import>
 
 		<main class="contents">
 			<textarea id="prompt" rows="5" cols="50"></textarea>
@@ -46,16 +46,25 @@
 			const speakButton=document.querySelector('#speak')
 			const reply=document.querySelector('#reply')
 
-			function callAI(){
+			async function callAI(){
 				const messages=[{ role:'user', content:prompt.value }]
 
-				ai.fetch(
-					messages,
-					(response)=>{
-						const text=response?.choices?.[0]?.message?.content || ''
-						reply.textContent=text
-					}
-				)
+				if(!ai.configured){
+					reply.textContent='Configure an OpenAI API key or select a local Ollama model first.'
+					return
+				}
+
+				try{
+					await ai.fetch(
+						messages,
+						(response)=>{
+							const text=response?.choices?.[0]?.message?.content || ''
+							reply.textContent=text
+						}
+					)
+				}catch{
+					reply.textContent='The configured AI service could not respond.'
+				}
 			}
 
 			function speakReply(){

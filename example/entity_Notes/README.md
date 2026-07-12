@@ -54,7 +54,7 @@ Each note is stored as JSON with metadata (`id`, `type`, `note`, `timestamps`).
 # **Quick Example**
 
 ```js
-import Notes from './entities/Notes.js';
+import Notes from '/apps/precrisis/entities/Notes.js';
 
 const note = new Notes();
 

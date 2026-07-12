@@ -25,14 +25,14 @@ This allows you to build layouts from reusable HTML partials (headers, nav bars,
 The module initializes automatically when imported and registers the `html-import` custom element.
 
 ```js
-import './modules/HTMLImport.js'
+import '/arcane/modules/HTMLImport.js'
 ```
 
 After that, you can drop `html-import` tags anywhere in your HTML:
 
 ```html
-<html-import class="header" href="./components/header.html"></html-import>
-<html-import class="nav" href="./components/nav.html"></html-import>
+<html-import class="header" href="/arcane/components/header.html"></html-import>
+<html-import class="nav" href="/apps/precrisis/components/nav.html"></html-import>
 ```
 
 On first load, HTMLImport fetches and renders the fragments, then stores them in `localStorage` keyed by `href`. On subsequent loads within 7 days, it serves the cached HTML immediately and skips the network fetch.
@@ -60,7 +60,7 @@ On first load, HTMLImport fetches and renders the fragments, then stores them in
 | localCache | localStorage| Uses `localStorage[href]` to cache HTML and timestamp for up to 7 days     |
 | tag name   | string      | Custom element is registered globally as `html-import`                     |
 | HTMLElement| base class  | Inherits from the standard `HTMLElement`                                   |
-| module     | ES module   | Exported as the default export from `modules/HTMLImport.js`                |
+| module     | ES module   | Exported as the default export from `arcane/modules/HTMLImport.js`         |
 
 ### Methods
 
@@ -74,7 +74,7 @@ On first load, HTMLImport fetches and renders the fragments, then stores them in
 
 ### JS
 ```js
-import './modules/HTMLImport.js'
+import '/arcane/modules/HTMLImport.js'
 ```
 
 ### HTML
@@ -84,11 +84,11 @@ import './modules/HTMLImport.js'
 	<head>
 		<meta charset="utf-8" />
 		<title>HTMLImport Example</title>
-		<script async type="module" src="./modules/HTMLImport.js"></script>
+		<script async type="module" src="/arcane/modules/HTMLImport.js"></script>
 	</head>
 	<body>
-		<html-import class="header" href="./components/header.html"></html-import>
-		<html-import class="nav" href="./components/nav.html"></html-import>
+		<html-import class="header" href="/arcane/components/header.html"></html-import>
+		<html-import class="nav" href="/apps/precrisis/components/nav.html"></html-import>
 
 		<main>
 			<p>This content is static, but the header and nav were loaded via html-import.</p>

@@ -49,7 +49,7 @@ The system prioritizes:
 Create a user entity.
 
 ```js
-import UserEntity from './entities/User.js';
+import UserEntity from '/arcane/entities/User.js';
 
 const user=new UserEntity(
     {

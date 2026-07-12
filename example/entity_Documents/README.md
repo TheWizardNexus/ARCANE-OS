@@ -22,7 +22,7 @@ Each document is stored as a **single file** in the OPFS `documents` table.
 
 # **Events**
 
-Current upload events are emitted by the chat UI integration (`components/chat.html`) and handled in `chat.html`:
+Current upload events are emitted by the chat UI integration (`arcane/components/chat.html`) and handled by an application page such as `apps/precrisis/chat.html`:
 
 | Event name                  | Trigger                                  |
 | --------------------------- | ---------------------------------------- |
@@ -70,7 +70,7 @@ The system prioritizes:
 Create a document entity.
 
 ```js
-import DocumentEntity from './entities/Document.js';
+import DocumentEntity from '/arcane/entities/Document.js';
 
 const doc=new DocumentEntity();
 ```

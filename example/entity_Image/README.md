@@ -55,7 +55,7 @@ The system prioritizes:
 Create an image entity.
 
 ```js
-import ImageEntity from './entities/Image.js';
+import ImageEntity from '/arcane/entities/Image.js';
 
 const image = new ImageEntity();
 ```

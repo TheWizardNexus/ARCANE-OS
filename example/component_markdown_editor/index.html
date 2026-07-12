@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Arcane Markdown Editor Component Example</title>
+
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+
+        <style>
+            body{
+                box-sizing:border-box;
+                display:block;
+                height:auto;
+                min-height:100vh;
+                padding:2rem;
+            }
+
+            main{
+                border-radius:.5rem;
+                margin:0 auto;
+                max-width:64rem;
+            }
+
+            .example-editor{
+                display:block;
+                min-height:38rem;
+            }
+
+            .example-output{
+                background:var(--background);
+                border:1px solid var(--border-color);
+                border-radius:.5rem;
+                min-height:3rem;
+                overflow:auto;
+                padding:1rem;
+                white-space:pre-wrap;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main>
+            <h1>Markdown editor component</h1>
+            <p>The parent configures labels, supplies initial synthetic content, and implements the save callback.</p>
+
+            <html-import
+                id="exampleEditor"
+                class="example-editor"
+                href="./arcane/components/markdown-editor.html?v=7"
+            ></html-import>
+
+            <h2>Parent callback log</h2>
+            <pre id="exampleOutput" class="example-output" aria-live="polite">Waiting for markdown-editor-ready...</pre>
+        </main>
+
+        <script type="module">
+            const editor=document.querySelector('#exampleEditor');
+            const output=document.querySelector('#exampleOutput');
+
+            editor.save=async function saveMarkdown({title,markdown}){
+                output.textContent=JSON.stringify(
+                    {
+                        characters:markdown.length,
+                        saved:true,
+                        title:title||'Untitled synthetic note'
+                    },
+                    null,
+                    2
+                );
+
+                return {saved:true};
+            };
+
+            editor.addEventListener(
+                'markdown-editor-ready',
+                function markdownEditorReady(){
+                    editor.configure(
+                        {
+                            bodyPlaceholder:'Write a reusable Markdown note...',
+                            previewLabel:'Synthetic note preview',
+                            saveLabel:'Save Synthetic Note',
+                            titlePlaceholder:'Synthetic note title'
+                        }
+                    );
+                    editor.entryTitle='Synthetic release note';
+                    editor.value=[
+                        '## Example update',
+                        '',
+                        '- Demonstrates **Markdown** formatting',
+                        '- Uses synthetic, non-sensitive content',
+                        '- Saves through a parent callback'
+                    ].join('\n');
+                    output.textContent='Editor configured with synthetic content.';
+                }
+            );
+
+            editor.addEventListener(
+                'markdown-editor-saved',
+                function markdownEditorSaved(event){
+                    const length=event.detail.markdown.length;
+                    output.textContent+=`\nmarkdown-editor-saved emitted for ${length} characters.`;
+                }
+            );
+        </script>
+    </body>
+</html>

@@ -46,7 +46,7 @@ The system prioritizes:
 Create a chat session.
 
 ```js
-import ChatEntity from './entities/Chat.js';
+import ChatEntity from '/arcane/entities/Chat.js';
 
 const chat=new ChatEntity(
     'You are a calm and supportive evaluator'

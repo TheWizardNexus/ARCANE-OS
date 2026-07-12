@@ -58,7 +58,7 @@ Each report is stored as JSON with metadata (type, user ID, timestamp, content).
 # **Quick Example**
 
 ```js
-import Reports from './entities/Reports.js';
+import Reports from '/apps/precrisis/entities/Reports.js';
 
 const report = new Reports();
 

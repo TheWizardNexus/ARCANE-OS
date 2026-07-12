@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Arcane Chart Component Example</title>
+
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+
+        <style>
+            body{
+                box-sizing:border-box;
+                display:block;
+                height:auto;
+                min-height:100vh;
+                padding:2rem;
+            }
+
+            main{
+                border-radius:.5rem;
+                margin:0 auto;
+                max-width:64rem;
+            }
+
+            .example-chart{
+                display:block;
+                min-height:24rem;
+            }
+
+            .example-output{
+                background:var(--background);
+                border:1px solid var(--border-color);
+                border-radius:.5rem;
+                margin-top:1rem;
+                min-height:3rem;
+                overflow:auto;
+                padding:1rem;
+                white-space:pre-wrap;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main>
+            <h1>Chart component</h1>
+            <p>The parent page supplies synthetic data and display options through <code>populate()</code>.</p>
+
+            <html-import
+                id="exampleChart"
+                class="example-chart"
+                href="./arcane/components/chart.html?v=4"
+            ></html-import>
+
+            <h2>Parent event log</h2>
+            <pre id="exampleOutput" class="example-output" aria-live="polite">Waiting for chart-ready...</pre>
+        </main>
+
+        <script type="module">
+            const chart=document.querySelector('#exampleChart');
+            const output=document.querySelector('#exampleOutput');
+            const syntheticData=[
+                {timestamp:Date.UTC(2026,0,1),value:18},
+                {timestamp:Date.UTC(2026,0,8),value:24},
+                {timestamp:Date.UTC(2026,0,15),value:21},
+                {timestamp:Date.UTC(2026,0,22),value:31},
+                {timestamp:Date.UTC(2026,0,29),value:36}
+            ];
+
+            chart.addEventListener(
+                'chart-ready',
+                async function chartReady(){
+                    await chart.populate(
+                        syntheticData,
+                        {
+                            color:'#2f6f9f',
+                            emptyLabel:'No synthetic measurements are available.',
+                            key:'synthetic-throughput',
+                            max:50,
+                            min:0,
+                            removable:true,
+                            removeLabel:'Remove synthetic throughput chart',
+                            seriesLabel:'Throughput',
+                            style:'area',
+                            timeLabel:'Week',
+                            title:'Synthetic weekly throughput',
+                            valueLabel:'Items'
+                        }
+                    );
+
+                    output.textContent=`Loaded ${chart.dataSet.length} synthetic points.`;
+                }
+            );
+
+            chart.addEventListener(
+                'chart-remove',
+                function chartRemove(event){
+                    output.textContent=`Parent received chart-remove for key: ${event.detail.key}`;
+                }
+            );
+        </script>
+    </body>
+</html>

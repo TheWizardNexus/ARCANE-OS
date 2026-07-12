@@ -78,7 +78,7 @@ When retrieved, DBLS will attempt to **parse JSON automatically**.
 The module initializes automatically when imported.
 
 ```js
-import './modules/DBLS.js'
+import '/arcane/modules/DBLS.js'
 ```
 
 After initialization the singleton is available globally:

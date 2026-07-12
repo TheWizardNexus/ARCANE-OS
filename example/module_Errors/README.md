@@ -22,7 +22,7 @@ reported through the same mail path.
 Include the module once on any page where you want automatic error reporting:
 
 ```html
-<script type="module" src="./modules/Errors.js"></script>
+<script type="module" src="/arcane/modules/Errors.js"></script>
 ```
 
 You normally do not call `window.errors` directly; the module hooks `window`
@@ -78,7 +78,7 @@ For a working demo (with buttons that trigger both cases), see
 // The module self-instantiates when imported; you usually
 // don't need to call it directly.
 
-import './modules/Errors.js';
+import '/arcane/modules/Errors.js';
 
 // Optionally, you can reference the singleton:
 if (window.errors) {
@@ -90,16 +90,16 @@ if (window.errors) {
 ### HTML
 ```html
 <!-- Minimal shell for loading the Errors module -->
-<html-import class="header" href="./components/header.html"></html-import>
-<html-import class="nav" href="./components/nav.html"></html-import>
-<html-import class="modal" href="./components/modal.html"></html-import>
+<html-import class="header" href="/arcane/components/header.html"></html-import>
+<html-import class="nav" href="/apps/precrisis/components/nav.html"></html-import>
+<html-import class="modal" href="/arcane/components/modal.html"></html-import>
 
 <main class="contents">
 	<button id="btn-throw-error">Throw Synchronous Error</button>
 	<button id="btn-reject-promise">Trigger Unhandled Rejection</button>
 </main>
 
-<script type="module" src="./modules/Errors.js"></script>
+<script type="module" src="/arcane/modules/Errors.js"></script>
 
 ```
 

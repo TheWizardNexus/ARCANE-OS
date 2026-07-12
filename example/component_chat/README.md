@@ -3,7 +3,7 @@
 ## **Overview**
 
 The **Chat component** is a reusable conversational UI built as an HTML fragment in
-`components/chat.html`. It is intended to be loaded via the `HTMLImport` module using
+`arcane/components/chat.html`. It is intended to be loaded via the `HTMLImport` module using
 the custom `<html-import>` tag.
 
 The component is responsible for:
@@ -14,7 +14,7 @@ The component is responsible for:
 * Calling host-provided hooks for sending messages and reacting to language changes.
 
 The component itself does not know about AI models, risk assessment, or backends.
-Those behaviors are implemented in the host page (for example in `nelson/chat.html`).
+Those behaviors are implemented in the host page (for example in `apps/precrisis/chat.html`).
 
 ---
 
@@ -116,25 +116,25 @@ chat.addEventListener('chat-language-changed', function (e) {
 		<base href="/" />
 
 		<link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
-		<link rel="icon" href="./img/favicon.png" type="image/png" />
+		<link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png" />
 
 		<!-- Styles -->
-		<link rel="stylesheet" href="./css/layout.css" />
+		<link rel="stylesheet" href="/arcane/css/layout.css" />
 
 		<!-- Modules -->
-		<script async type="module" src="./modules/HTMLImport.js"></script>
-		<script async type="module" src="./modules/Errors.js"></script>
+		<script async type="module" src="/arcane/modules/HTMLImport.js"></script>
+		<script async type="module" src="/arcane/modules/Errors.js"></script>
 	</head>
 
 	<body>
-		<html-import class="header" href="./components/header.html"></html-import>
-		<html-import class="nav" href="./components/nav.html"></html-import>
+		<html-import class="header" href="/arcane/components/header.html"></html-import>
+		<html-import class="nav" href="/apps/precrisis/components/nav.html"></html-import>
 
 		<main class="contents">
 			<h1>Chat Component Example</h1>
 			<p>Event log is displayed below the chat component.</p>
 
-			<html-import id="chat" class="chat" href="./components/chat.html"></html-import>
+			<html-import id="chat" class="chat" href="/arcane/components/chat.html"></html-import>
 
 			<h2>Event Log</h2>
 			<!-- preformatted text area for event log & displayed via log function -->

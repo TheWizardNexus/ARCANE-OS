@@ -47,7 +47,7 @@ speech.addEventListener(
 
 ### HTML
 ```html
-<html-import class="speech" href="./components/speech.html"></html-import>
+<html-import class="speech" href="/arcane/components/speech.html"></html-import>
 
 ```
 

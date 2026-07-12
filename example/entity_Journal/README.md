@@ -53,7 +53,7 @@ Each journal entry is stored as JSON using the schema above.
 # **Quick Example**
 
 ```js
-import Journal from './entities/Journal.js';
+import Journal from '/apps/precrisis/entities/Journal.js';
 
 const journal = new Journal();
 

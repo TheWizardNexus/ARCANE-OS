@@ -54,18 +54,18 @@ To use this component, include the HTML structure, CSS styles, and JavaScript in
         <base href="/" />
 
         <link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
-        <link rel="icon" href="./img/favicon.png" type="image/png">
+        <link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png">
         
         <!-- Styles -->
-        <link rel="stylesheet" href="./css/layout.css">
+        <link rel="stylesheet" href="/arcane/css/layout.css">
         
-        <script async type="module" src="./modules/HTMLImport.js"></script>
+        <script async type="module" src="/arcane/modules/HTMLImport.js"></script>
         
-        <script async type="module" src="./modules/Errors.js"></script>
+        <script async type="module" src="/arcane/modules/Errors.js"></script>
     </head>
 
     <body>
-        <html-import class="header" href="./components/header.html"></html-import>
+        <html-import class="header" href="/arcane/components/header.html"></html-import>
         <nav class="nav"></nav>
         
         <main class="contents">

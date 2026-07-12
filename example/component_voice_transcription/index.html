@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Arcane Voice Transcription Component Example</title>
+
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+
+        <style>
+            body{
+                box-sizing:border-box;
+                display:block;
+                height:auto;
+                min-height:100vh;
+                padding:2rem;
+            }
+
+            main{
+                border-radius:.5rem;
+                margin:0 auto;
+                max-width:64rem;
+            }
+
+            .example-transcription{
+                display:block;
+                min-height:30rem;
+            }
+
+            .example-actions{
+                margin:1rem 0;
+            }
+
+            .example-output{
+                background:var(--background);
+                border:1px solid var(--border-color);
+                border-radius:.5rem;
+                min-height:5rem;
+                overflow:auto;
+                padding:1rem;
+                white-space:pre-wrap;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main>
+            <h1>Voice transcription component</h1>
+            <p>The component owns recording and transcription. The parent owns save and completion behavior.</p>
+
+            <html-import
+                id="exampleTranscription"
+                class="example-transcription"
+                href="./arcane/components/voice-transcription.html?v=7"
+            ></html-import>
+
+            <section class="example-actions">
+                <button id="simulateCallbacks" type="button">Run Callbacks With Synthetic Text</button>
+            </section>
+
+            <h2>Parent callback log</h2>
+            <pre id="exampleOutput" class="example-output" aria-live="polite">Waiting for voice-transcription-ready...</pre>
+        </main>
+
+        <script type="module">
+            const voice=document.querySelector('#exampleTranscription');
+            const simulateButton=document.querySelector('#simulateCallbacks');
+            const output=document.querySelector('#exampleOutput');
+            const syntheticTranscript='This is synthetic transcription text for a reusable component example.';
+            const callbackLog=[];
+
+            function renderLog(){
+                output.textContent=callbackLog.join('\n');
+            }
+
+            voice.save=async function saveTranscription({transcript,segment}){
+                callbackLog.push(
+                    `save callback: transcript=${transcript.length} chars, segment=${segment.length} chars`
+                );
+                renderLog();
+                return {saved:true};
+            };
+
+            voice.complete=async function completeTranscription({transcript}){
+                callbackLog.push(`complete callback: transcript=${transcript.length} chars`);
+                renderLog();
+                return {complete:true};
+            };
+
+            voice.addEventListener(
+                'voice-transcription-ready',
+                function voiceTranscriptionReady(){
+                    voice.configure(
+                        {
+                            completeLabel:'Finish Example Transcript',
+                            description:'Record a short non-sensitive test phrase, or run the synthetic callback demo below.',
+                            emptyLabel:'Example transcription appears here.',
+                            transcriptionLabel:'Reusable voice transcription example'
+                        }
+                    );
+                    callbackLog.push('voice-transcription-ready received; labels configured by parent.');
+                    renderLog();
+                }
+            );
+
+            voice.addEventListener(
+                'voice-transcription-segment',
+                function voiceTranscriptionSegment(event){
+                    callbackLog.push(`segment event: ${event.detail.text.length} chars`);
+                    renderLog();
+                }
+            );
+
+            simulateButton.addEventListener(
+                'click',
+                async function simulateCallbacks(){
+                    await voice.save(
+                        {
+                            transcript:syntheticTranscript,
+                            segment:syntheticTranscript
+                        }
+                    );
+                    await voice.complete({transcript:syntheticTranscript});
+                }
+            );
+        </script>
+    </body>
+</html>

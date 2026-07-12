@@ -226,7 +226,7 @@ await dbopfs.restoreFromPNG(file)
 ### JS
 
 ```js
-import DBOPFS from './modules/DBOPFS.js'
+import DBOPFS from '/arcane/modules/DBOPFS.js'
 
 window.addEventListener(
     'dbopfs-ready',
@@ -267,7 +267,7 @@ window.addEventListener(
 ```html
 <script type="module">
 
-import './modules/DBOPFS.js'
+import '/arcane/modules/DBOPFS.js'
 
 window.addEventListener(
     'dbopfs-ready',

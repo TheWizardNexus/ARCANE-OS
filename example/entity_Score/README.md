@@ -60,7 +60,7 @@ Each score is stored as JSON with metadata (`type`, `username`, `date`, `data`) 
 # **Quick Example**
 
 ```js
-import Score from './entities/Score.js';
+import Score from '/apps/precrisis/entities/Score.js';
 
 const score = new Score();
 

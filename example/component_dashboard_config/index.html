@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <base href="../../">
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Arcane Dashboard Config Example</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin">
+
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+
+        <style>
+            body{
+                box-sizing:border-box;
+                display:block;
+                height:auto;
+                min-height:100vh;
+                padding:2em;
+            }
+
+            main{
+                border:1px solid var(--border-color);
+                border-radius:.75em;
+                margin:0 auto;
+                max-width:64em;
+                overflow:visible;
+            }
+
+            .example-layout{
+                display:grid;
+                gap:1.5em;
+                grid-template-columns:minmax(0,1fr) minmax(18em,1fr);
+            }
+
+            .state-card{
+                background:var(--background);
+                border:1px solid var(--border-color);
+                border-radius:.5em;
+                padding:1em;
+            }
+
+            pre{
+                overflow:auto;
+                white-space:pre-wrap;
+            }
+
+            @media (max-width:48em){
+                body{
+                    padding:.75em;
+                }
+
+                .example-layout{
+                    grid-template-columns:1fr;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <main>
+            <h1>Parent-driven dashboard configuration</h1>
+            <p>This page supplies synthetic definitions and keeps visibility choices only in page memory. Reloading resets the example.</p>
+
+            <section class="example-layout">
+                <section>
+                    <h2>Reusable component</h2>
+                    <p><strong>Experimental panel</strong> is omitted from the visibility map and has <code>defaultVisible: false</code>, so it starts unchecked.</p>
+                    <html-import
+                        id="dashboardConfig"
+                        href="./arcane/components/dashboard-config.html?v=3"
+                    ></html-import>
+                </section>
+
+                <section class="state-card" aria-live="polite">
+                    <h2>Parent state</h2>
+                    <p id="eventState">Waiting for the component.</p>
+                    <pre id="visibilityState"></pre>
+                </section>
+            </section>
+        </main>
+
+        <script type="module">
+            import waitForComponent from './arcane/modules/WaitForComponent.js';
+
+            const definitions=[
+                {
+                    key:'summary',
+                    title:'Summary panel',
+                    description:'A synthetic overview that is visible by default.',
+                    defaultVisible:true
+                },
+                {
+                    key:'activity',
+                    title:'Recent activity',
+                    description:'An explicitly hidden panel in the initial page-memory state.',
+                    defaultVisible:true
+                },
+                {
+                    key:'experimental',
+                    title:'Experimental panel',
+                    description:'This starts hidden because its definition sets defaultVisible to false.',
+                    defaultVisible:false
+                }
+            ];
+            const dashboardConfig=document.querySelector('#dashboardConfig');
+            const eventState=document.querySelector('#eventState');
+            const visibilityState=document.querySelector('#visibilityState');
+
+            let visibility={
+                summary:true,
+                activity:false
+            };
+
+            dashboardConfig.addEventListener(
+                'dashboard-config-change',
+                event=>{
+                    visibility={...event.detail.visibility};
+                    dashboardConfig.setVisibility(visibility);
+                    renderState(
+                        `Changed ${event.detail.definition.title} to ${event.detail.visible?'visible':'hidden'}.`
+                    );
+                }
+            );
+
+            dashboardConfig.addEventListener(
+                'dashboard-config-opened',
+                ()=>renderState('Configuration opened.')
+            );
+
+            dashboardConfig.addEventListener(
+                'dashboard-config-closed',
+                event=>{
+                    visibility={...event.detail.visibility};
+                    renderState('Configuration closed. Page-memory state is unchanged until another selection is made.');
+                }
+            );
+
+            const component=await waitForComponent(
+                dashboardConfig,
+                {
+                    methods:['configure','setVisibility','open'],
+                    property:'ready',
+                    event:'dashboard-config-ready'
+                }
+            );
+
+            component.configure(
+                {
+                    definitions,
+                    visibility,
+                    heading:'Choose example panels',
+                    description:'Selections update only the parent page memory.',
+                    triggerLabel:'Configure example dashboard'
+                }
+            );
+
+            renderState('Component ready. Open the configuration to change the in-memory state.');
+
+            function renderState(message=''){
+                const effective={};
+
+                for(const definition of definitions){
+                    effective[definition.key]=typeof visibility[definition.key]==='boolean'
+                        ?visibility[definition.key]
+                        :definition.defaultVisible!==false;
+                }
+
+                eventState.innerText=message;
+                visibilityState.textContent=JSON.stringify(
+                    {
+                        pageMemory:visibility,
+                        effectiveVisibility:effective
+                    },
+                    null,
+                    2
+                );
+            }
+        </script>
+    </body>
+</html>
