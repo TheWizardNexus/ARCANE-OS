@@ -3148,25 +3148,48 @@ function windowsPipeGuardExecutable() {
 }
 
 function verifyUnsignedLocalPipeGuardBinding(guardExecutable) {
+  const root = path.resolve(bundleRoot());
   const coreExecutable = path.resolve(process.execPath);
   if (path.dirname(guardExecutable).toLowerCase() !== path.dirname(coreExecutable).toLowerCase()) {
     throw new Error('Unsigned local Arcane Core and ArcanePipeGuard must be sibling files.');
   }
-  const manifestPath = path.join(bundleRoot(), 'arcane-release.json');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  if (manifest.schemaVersion !== 2 || manifest.hashAlgorithm !== 'sha256' || manifest.platform !== 'windows' || manifest.version !== VERSION || !Array.isArray(manifest.files)) {
-    throw new Error('Unsigned local Arcane release manifest is invalid.');
+  const manifestNames = ['arcane-machine-content.json', 'arcane-app-content.json']
+    .filter((name) => fs.existsSync(path.join(root, name)));
+  if (manifestNames.length !== 1) {
+    throw new Error('Unsigned local Arcane content manifest is missing or ambiguous.');
   }
-  const entries = new Map(manifest.files.map((entry) => [entry && entry.path, entry]));
-  for (const [releasePath, file] of [['ArcaneCore.exe', coreExecutable], ['ArcanePipeGuard.exe', guardExecutable]]) {
+  const manifestName = manifestNames[0];
+  const manifestPath = path.join(root, manifestName);
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const machineIdentityValid = manifestName === 'arcane-machine-content.json'
+    && manifest.release && manifest.release.name === BUNDLE_MANIFEST.name
+    && manifest.release.version === VERSION && manifest.release.platform === 'windows'
+    && manifest.release.architecture === process.arch;
+  const appIdentityValid = manifestName === 'arcane-app-content.json'
+    && manifest.app && manifest.app.id === appMode && manifest.app.version === VERSION;
+  if (manifest.schemaVersion !== 1 || manifest.hashAlgorithm !== 'sha256'
+    || (!machineIdentityValid && !appIdentityValid) || !Array.isArray(manifest.files)) {
+    throw new Error('Unsigned local Arcane content manifest is invalid.');
+  }
+  const entries = new Map();
+  for (const entry of manifest.files) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error('Unsigned local Arcane content manifest is invalid.');
+    }
+    const releasePath = normalizeIntegrityPath(entry.path);
+    if (entries.has(releasePath)) throw new Error('Unsigned local Arcane content manifest contains duplicate paths.');
+    entries.set(releasePath, entry);
+  }
+  for (const [displayName, file] of [['ArcaneCore.exe', coreExecutable], ['ArcanePipeGuard.exe', guardExecutable]]) {
+    const releasePath = normalizeIntegrityPath(path.relative(root, file).split(path.sep).join('/'));
     const entry = entries.get(releasePath);
-    if (!entry || !Number.isSafeInteger(entry.size) || !/^[a-f0-9]{64}$/i.test(String(entry.sha256 || ''))) {
-      throw new Error(`Unsigned local Arcane release does not bind ${releasePath}.`);
+    if (!entry || !Number.isSafeInteger(entry.size) || entry.size < 0 || !/^[a-f0-9]{64}$/i.test(String(entry.sha256 || ''))) {
+      throw new Error(`Unsigned local Arcane release does not bind ${displayName}.`);
     }
     const stat = fs.statSync(file);
     const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-    if (stat.size !== entry.size || hash.toLowerCase() !== String(entry.sha256).toLowerCase()) {
-      throw new Error(`Unsigned local ${releasePath} does not match the release manifest.`);
+    if (!stat.isFile() || stat.size !== entry.size || hash.toLowerCase() !== String(entry.sha256).toLowerCase()) {
+      throw new Error(`Unsigned local ${displayName} does not match the content manifest.`);
     }
   }
 }
