@@ -1,5 +1,8 @@
 node_modules/
 dist/
 local/
+apps/boss/business docs/
+apps/boss/documents/
+apps/boss/scripts/build_library.py
 
 *.log

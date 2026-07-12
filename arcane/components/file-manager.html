@@ -269,6 +269,10 @@
     let uploadDirectory='';
     let initialized=false;
 
+    function isVisibleFileName(fileName=''){
+        return !String(fileName).startsWith('.boss-library-');
+    }
+
     window.addEventListener(
         'dbopfs-ready',
         init,
@@ -318,7 +322,9 @@
                 event:'modal-ready'
             }
         );
-        const files=(await dbopfs.getAllKeys(directory)).sort();
+        const files=(await dbopfs.getAllKeys(directory))
+            .filter(isVisibleFileName)
+            .sort();
         const metadata=await getFilesMetadata(directory,files);
         const content=document.createElement('section');
         const styles=componentStyles.cloneNode(true);
@@ -750,7 +756,9 @@
 
         for(let i=0;i<tableNames.length;i++){
             const tableName=tableNames[i];
-            const files=(await dbopfs.getAllKeys(tableName)).sort();
+            const files=(await dbopfs.getAllKeys(tableName))
+                .filter(isVisibleFileName)
+                .sort();
             const metadata=layout==='files'
                 ?await getFilesMetadata(tableName,files)
                 :[];

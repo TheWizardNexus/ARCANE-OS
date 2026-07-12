@@ -105,6 +105,22 @@
         const chat=document.querySelector('#chat');
         const progressModal=document.querySelector('#progressModal');
         const modal=document.querySelector('#modal');
+        modal.addEventListener(
+            'click',
+            event=>{
+                const button=event.target.closest('button[data-modal-action]');
+
+                if(!button||!modal.contains(button)){
+                    return;
+                }
+
+                const handler=modal[button.dataset.modalAction];
+
+                if(typeof handler==='function'){
+                    void handler.call(modal);
+                }
+            }
+        );
         const toolsChat=[textAssessmentTool];
         const toolsFitness=[fitnessForServiceTool];
         const toolsRisk=[crisisDetectionTool,possibleRisksTool];
@@ -742,7 +758,7 @@ ${JSON.stringify(memories)}`
                         <h2>No Email Support Contacts Are Configured</h2>
                         <p>The crisis notification was not sent. You can call or text 988 now, or add email contacts in your profile.</p>
                         <div class="button-group">
-                            <button onclick="modal.callHotline()">Speak to Someone Now (988)</button>
+                            <button data-modal-action="callHotline">Speak to Someone Now (988)</button>
                         </div>
                     `);
                     modal.open();
@@ -769,7 +785,7 @@ ${JSON.stringify(memories)}`
                         <h2>Support Contacts Could Not Be Notified</h2>
                         <p>The email was not sent. Please call or text 988 now if you need immediate help.</p>
                         <div class="button-group">
-                            <button onclick="modal.callHotline()">Speak to Someone Now (988)</button>
+                            <button data-modal-action="callHotline">Speak to Someone Now (988)</button>
                         </div>
                     `);
                     modal.open();
@@ -810,8 +826,8 @@ ${JSON.stringify(memories)}`
                             <h2>You May Want to Consider Reaching Out for Help</h2>
                             <p>If you're feeling overwhelmed or in need of support, please take one of the following actions:</p>
                             <div class="button-group">
-                                <button onclick="modal.notifySupportNetwork()">Notify Support Network</button>
-                                <button onclick="modal.callHotline()">Speak to Someone Now (988)</button>
+                                <button data-modal-action="notifySupportNetwork">Notify Support Network</button>
+                                <button data-modal-action="callHotline">Speak to Someone Now (988)</button>
                             </div>
                         `);
 
@@ -834,8 +850,8 @@ ${JSON.stringify(memories)}`
                             <h2>Continuing This Could Result in a Crisis</h2>
                             <p>If you're feeling overwhelmed or in need of support, please tell the AI you wish to stop or end the assessment. You can also get help or notify your support network if you need it by taking one of the following actions:</p>
                             <div class="button-group">
-                                <button onclick="modal.notifySupportNetwork()">Notify Support Network</button>
-                                <button onclick="modal.callHotline()">Speak to Someone Now (988)</button>
+                                <button data-modal-action="notifySupportNetwork">Notify Support Network</button>
+                                <button data-modal-action="callHotline">Speak to Someone Now (988)</button>
                             </div>
                         `);
 
@@ -858,7 +874,7 @@ ${JSON.stringify(memories)}`
                             <h1>We're Here for You</h1>
                             <p>It appears that you may be in a mental health crisis. Please consider calling the hotline. Your support team is being notified.</p>
                             <div class="button-group">
-                                <button onclick="modal.callHotline()">Speak to Someone Now (988)</button>
+                                <button data-modal-action="callHotline">Speak to Someone Now (988)</button>
                             </div>
                             <p>You can also continue to talk to the Lifeline AI for support. We're here to help.</p>
                         `);

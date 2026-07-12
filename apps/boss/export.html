@@ -4,20 +4,22 @@
         <base href="../../" />
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <title>BOSS Dashboard</title>
+        <title>BOSS Libraries | Export</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="referrer" content="origin" />
+        <meta name="description" content="Create a portable backup of your BOSS Libraries data." />
+        <meta name="theme-color" content="#022241" />
         <link rel="manifest" href="./apps/boss/manifest.json" crossorigin="use-credentials" />
-        <link rel="icon" href="./apps/boss/img/Draft%20BOSS%20logo%20design%20V4.jpg" type="image/jpeg">
+        <link rel="icon" href="./apps/boss/img/boss-libraries-logo-stacked.png" type="image/png">
         
 
         <!-- Styles -->
         <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
-        <link rel="stylesheet" href="./apps/boss/boss.css">
+        <link rel="stylesheet" href="./apps/boss/boss.css?v=5">
         
         <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
         <script type="module" src="./arcane/modules/DBOPFS.js"></script>
-        <script type="module" src="./arcane/modules/HTMLImport.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
         <!-- Tiny, dependency-free QR library (≈20 kB, MIT) -->
         <script defer src="./arcane/modules/QRCode.min.js"></script>
 
@@ -30,28 +32,28 @@
 
     <body>
         <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./apps/boss/components/nav.html?v=1"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=2"></html-import>
         <html-import class="file-manager" href="./arcane/components/file-manager.html"></html-import>
         
         <main class="contents">
             <section>
-                <h1>Export Data To Share or Sync.</h1>
+                <h1>Export BOSS Libraries Data</h1>
                 <br>
 
-                <button disabled id="backupBtn">Backup Database</button>
+                <button disabled id="backupBtn">Create Backup</button>
 
-                <h2>How to Share?</h2>
-                <p>Save the file and share.</p>
+                <h2>Share or sync your backup</h2>
+                <p>Save the backup file, then move it to a trusted person or device.</p>
                 <ul>
-                    <li>Click "Backup Database".</li>
-                    <li>Open up your email or other chat app.</li>
+                    <li>Click "Create Backup".</li>
+                    <li>Open your email or another secure sharing app.</li>
                     <li>Attach the file.</li>
                     <li>Send it.</li>
                 </ul>
                 <br>
 
                 <h2>Disclaimer</h2>
-                <p>By using our AI, you agree to these terms and understand the limitations regarding data storage and device usage. Your privacy and security are our top priorities, and we strive to provide a safe and secure environment for all users.</p>
+                <p>Your backup may contain profile and library data. Store it securely and share it only with people or devices you trust.</p>
                 <br>
             </section>
         </main>

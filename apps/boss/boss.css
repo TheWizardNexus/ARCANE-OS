@@ -1,40 +1,190 @@
+/* BOSS Libraries master-brand layer.
+   Alternate user-selected Arcane themes retain their own variable values. */
+:root {
+    --boss-navy:#022241;
+    --boss-red:#981D0F;
+    --boss-gold:#E7AA3B;
+    --boss-blue:#015182;
+    --boss-green:#2F5426;
+    --boss-charcoal:#2B363E;
+    --boss-cream:#F7E5C6;
+    --boss-ivory:#FFFCF5;
+    --boss-display-font:Georgia,"Times New Roman",serif;
+    --boss-body-font:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+/* Apply the BOSS palette only to the default skin. User-selected skins such
+   as warm, curious, hopeful, harmony, and warrior continue to win by class. */
+body,
+body.default {
+    color-scheme:light;
+    --background:#F4E8CF;
+    --modal-background:var(--boss-ivory);
+    --text-color:var(--boss-navy);
+    --primary-color:var(--boss-navy);
+    --secondary-color:var(--boss-gold);
+    --accent-color:var(--boss-blue);
+    --border-color:#D7BF91;
+    --platinum:#66717B;
+    --button-text-color:var(--boss-cream);
+    --focus-color:var(--boss-blue);
+    --success-color:var(--boss-green);
+    --danger-color:var(--boss-red);
+    --shadow-color:rgba(2,34,65,.18);
+    font-family:var(--boss-body-font);
+}
+
+@media (prefers-color-scheme:dark) {
+    body:not([class]),
+    body.default {
+        color-scheme:dark;
+        --background:#07182A;
+        --modal-background:#10283E;
+        --text-color:#FFF8EA;
+        --primary-color:var(--boss-gold);
+        --secondary-color:#D0912A;
+        --accent-color:#84C5E8;
+        --border-color:#405A70;
+        --platinum:#D2C6AE;
+        --button-text-color:var(--boss-navy);
+        --focus-color:#84C5E8;
+        --success-color:#80B875;
+        --danger-color:#E37A6F;
+        --shadow-color:rgba(0,0,0,.42);
+    }
+}
+
 /*----------------------\
 |   COMPONENT MODIFIERS |
-\----------------------*/   
+\----------------------*/
 .header::part(crisis-call-988) {
     display:none;
 }
 
-.nav{
-    grid-row: 2;
-    grid-column: 1 / -1;
+.nav {
+    grid-row:2;
+    grid-column:1 / -1;
+    position:relative;
+    z-index:2;
 }
 
-.nav::part(nav){
+.nav::part(nav) {
     display:flex;
     justify-content:space-between;
     align-items:center;
 }
 
-.file-manager{
-    grid-row: 3 / -1;
-    grid-column: 1 / 2;
+.file-manager {
+    grid-row:3 / -1;
+    grid-column:1 / 2;
 }
 
-/*----------------------\
-|   GLOBAL MODIFIERS |
-\----------------------*/
-body{
+/*------------------\
+|   GLOBAL BRANDING |
+\------------------*/
+body {
     grid-template-rows:auto auto 1fr;
-    grid-template-columns:19em 3fr;
+    grid-template-columns:19em minmax(0,3fr);
 }
 
-main{
-    grid-row: 3 / -1;
+main {
+    grid-row:3 / -1;
+    border-top:1px solid var(--border-color);
+    border-top-color:color-mix(in srgb,var(--border-color) 75%,transparent);
 }
 
-@media (max-width: 48em) {
+main h1,
+main h2,
+main h3 {
+    font-family:var(--boss-display-font);
+    font-weight:700;
+    line-height:1.14;
+    letter-spacing:.015em;
+}
+
+main h1 {
+    color:var(--primary-color);
+}
+
+main > section,
+main > #dropZone {
+    border:1px solid var(--border-color);
+    border-radius:1rem;
+    background:var(--modal-background);
+    box-shadow:0 .6rem 1.8rem var(--shadow-color);
+}
+
+main > section {
+    box-sizing:border-box;
+    max-width:72rem;
+    margin:0 auto 1.25rem;
+}
+
+main > #dropZone {
+    max-width:52rem;
+    margin:clamp(1rem,5vw,4rem) auto;
+}
+
+button {
+    font-weight:700;
+    letter-spacing:.015em;
+}
+
+@media (max-width:48em) {
     body {
-        grid-template-columns: 10em 1fr;
+        grid-template-columns:10em minmax(0,1fr);
+    }
+
+    main > section {
+        margin-bottom:.9rem;
+    }
+}
+
+@media (max-width:36em) {
+    body {
+        grid-template-columns:minmax(0,1fr);
+    }
+
+    /* The document shelf is useful on larger screens, but it leaves too little
+       room for the librarian controls on a phone. The dedicated Library page
+       remains available from the navigation. */
+    .file-manager {
+        display:none;
+    }
+
+    main {
+        grid-column:1 / -1;
+        padding:.7rem;
+    }
+
+    main.contents {
+        display:grid;
+        grid-template-rows:minmax(0,1fr) auto;
+        overflow:hidden;
+    }
+
+    main.contents .chat {
+        height:auto;
+        min-height:0;
+    }
+
+    #uploadStatus {
+        position:static !important;
+        box-sizing:border-box;
+        right:auto !important;
+        bottom:auto !important;
+        max-width:none !important;
+        margin:.4rem 0 0 !important;
+    }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior:auto !important;
+        transition-duration:.01ms !important;
+        animation-duration:.01ms !important;
+        animation-iteration-count:1 !important;
     }
 }

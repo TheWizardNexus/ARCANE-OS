@@ -1,127 +1,221 @@
 <style>
+    :host {
+        --boss-navy:#022241;
+        --boss-gold:#E7AA3B;
+        --boss-cream:#F7E5C6;
+        display:block;
+    }
+
+    nav {
+        box-sizing:border-box;
+        min-height:5rem;
+        padding:.55rem clamp(.65rem,2vw,1.35rem);
+        gap:clamp(.65rem,2vw,1.5rem);
+        position:relative;
+        background:linear-gradient(125deg,var(--boss-navy),#073A60);
+        border-bottom:.2rem solid var(--boss-gold);
+        box-shadow:0 .5rem 1.4rem rgba(2,34,65,.24);
+    }
+
     .logo-container {
-        padding: 0em 1em;
-        color:var(--silver);
+        flex:0 1 15rem;
+        min-width:8rem;
+    }
+
+    .brand-link {
+        box-sizing:border-box;
+        display:block;
+        width:clamp(10rem,19vw,15rem);
+        height:3.8rem;
+        overflow:hidden;
+        border:.08rem solid rgba(231,170,59,.68);
+        border-radius:.65rem;
+        background:#fff;
+        box-shadow:0 .28rem .8rem rgba(0,0,0,.2);
+        -webkit-app-region:no-drag;
+        transition:transform 160ms,box-shadow 160ms;
+    }
+
+    .brand-link:hover {
+        transform:translateY(-1px);
+        box-shadow:0 .4rem 1rem rgba(0,0,0,.28);
+    }
+
+    .brand-link:focus-visible,
+    nav>ul a:focus-visible {
+        outline:.18rem solid var(--boss-gold);
+        outline-offset:.16rem;
     }
 
     .logo {
-        height: 9em;
-        -webkit-app-region: no-drag;
-        cursor: pointer;
-    }
-
-    nav h2{
-        margin:0 0 .2em 0;
+        display:block;
+        width:100%;
+        height:100%;
+        object-fit:cover;
+        object-position:center;
+        transform:scale(1.08);
     }
 
     nav>ul {
-        list-style: none;
-        word-wrap: break-word;
-        padding: 0em 1em;
-        margin: 0;
-        width:100%;
+        list-style:none;
+        padding:0;
+        margin:0;
+        min-width:0;
+        flex:1 1 auto;
         display:flex;
-        justify-content:space-evenly;
+        justify-content:flex-end;
         align-items:center;
+        gap:clamp(.15rem,.65vw,.55rem);
     }
 
     nav>ul>li {
-        margin: 0 0;
+        margin:0;
     }
 
-    nav a {
-        border-radius:.4em;
-        color: var(--platinum);
+    nav>ul a {
+        border:1px solid transparent;
+        border-radius:.55rem;
+        color:var(--boss-cream);
         display:block;
-        padding:.35em .5em;
-        text-decoration: none;
-        transition:background-color 180ms,color 180ms;
+        padding:.65rem .72rem;
+        font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        font-size:.88rem;
+        font-weight:700;
+        letter-spacing:.025em;
+        line-height:1;
+        text-decoration:none;
+        transition:background-color 180ms,color 180ms,border-color 180ms,transform 120ms;
     }
 
-    nav a:hover,
-    nav a[aria-current="page"] {
-        background:var(--secondary-color);
-        color:var(--text-color);
+    nav>ul a:hover,
+    nav>ul a[aria-current="page"] {
+        background:var(--boss-gold);
+        border-color:#F5D58E;
+        color:var(--boss-navy);
+    }
+
+    nav>ul a:active {
+        transform:translateY(1px);
     }
 
     nav aside {
-        position: absolute;
-        bottom: 1em;
-        left: 1em;
-        color: var(--gunmetal-light);
-        text-align: center;
+        flex:0 0 auto;
+        min-width:0;
+        color:var(--boss-cream);
+        font:600 .75rem/1.2 Inter,ui-sans-serif,sans-serif;
+        text-align:center;
     }
-    
-    /* hide icons by default, show labels */
+
     nav .icon {
-      display: none;
-      font-size: 1.2em;
-      padding:.7em .5em;
+        display:none;
+        min-width:1.45rem;
+        font-size:.68rem;
+        font-weight:850;
+        letter-spacing:.04em;
+        text-align:center;
     }
+
     nav .label {
-      display: inline;
+        display:inline;
     }
 
-    #user-photo {
-        height: 70px;
-        width: 70px;
-        padding: 0em 1em;
-        border-radius: 50%;
-    }
-    
-    /* single media‐query to collapse at 48em */
-    @media (max-width: 48em) {
-        /* 2) collapse the nav width and hide its header text */
-        .logo-container h2 {
-            display: none;
+    @media (max-width:48em) {
+        nav {
+            min-height:4.4rem;
+            gap:.45rem;
+            padding:.45rem .55rem;
         }
-        
+
+        .logo-container {
+            flex-basis:7.25rem;
+            min-width:6.4rem;
+        }
+
+        .brand-link {
+            width:7.25rem;
+            height:3.35rem;
+        }
+
+        nav>ul a {
+            padding:.62rem .45rem;
+        }
+
         nav .label {
-            display: none;
+            display:none;
         }
+
         nav .icon {
-            display: inline-block;
+            display:inline-block;
+        }
+
+        nav aside {
+            display:none;
         }
     }
 
+    @media (max-width:30em) {
+        .logo-container {
+            flex-basis:6rem;
+            min-width:5.5rem;
+        }
+
+        .brand-link {
+            width:6rem;
+            height:3rem;
+        }
+
+        nav>ul {
+            gap:.05rem;
+        }
+
+        nav>ul a {
+            padding:.55rem .34rem;
+        }
+    }
 </style>
 
 <nav part="nav">
   <div class="logo-container">
-    <h2>BOSS</h2>
+    <a class="brand-link" href="./apps/boss/chat.html" aria-label="BOSS Libraries home">
+      <img class="logo" src="./apps/boss/img/boss-libraries-logo-horizontal.png" alt="BOSS Libraries — Business Operator Solutions &amp; Services">
+    </a>
   </div>
   <ul>
     <li>
-      <a href="./apps/boss/chat.html">
-        <span class="icon">💬</span>
-        <span class="label">Chat</span>
+      <a href="./apps/boss/chat.html" aria-label="BOSS Libraries AI Librarian">
+        <span class="icon" aria-hidden="true">AI</span>
+        <span class="label">Librarian</span>
       </a>
     </li>
     <li>
-      <a href="./apps/boss/admin.html">
-        <span class="icon">👤</span>
+      <a href="./apps/boss/library.html" aria-label="BOSS Libraries documents">
+        <span class="icon" aria-hidden="true">LB</span>
+        <span class="label">Library</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/boss/admin.html" aria-label="Profile settings">
+        <span class="icon" aria-hidden="true">PR</span>
         <span class="label">Profile</span>
       </a>
     </li>
     <li>
-      <a href="./apps/boss/export.html">
-        <span class="icon">📤</span>
+      <a href="./apps/boss/export.html" aria-label="Export BOSS Libraries data">
+        <span class="icon" aria-hidden="true">EX</span>
         <span class="label">Export</span>
       </a>
     </li>
     <li>
-      <a href="./apps/boss/import.html">
-        <span class="icon">📥</span>
+      <a href="./apps/boss/import.html" aria-label="Import BOSS Libraries data">
+        <span class="icon" aria-hidden="true">IM</span>
         <span class="label">Import</span>
       </a>
     </li>
   </ul>
   <aside>
-    <br>
     <span id="AIReq"></span>
   </aside>
 </nav>
-
 
 <script type="module">
     const host=this;
@@ -129,14 +223,14 @@
     const nav=shadowRoot.querySelector('nav');
     const currentPath=new URL(window.location.href).pathname;
 
-    nav.querySelectorAll('a').forEach(
+    nav.querySelectorAll('ul a').forEach(
         link=>{
             if(new URL(link.href).pathname===currentPath){
                 link.setAttribute('aria-current','page');
             }
         }
     );
-    
+
     nav.addEventListener(
         'click',
         async (e)=>{

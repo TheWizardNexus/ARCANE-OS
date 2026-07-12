@@ -71,7 +71,6 @@
         </style>
 
         <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
-        <script defer src="https://www.gstatic.com/charts/loader.js"></script>
         <script type="module" src="./arcane/modules/DBOPFS.js"></script>
         <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
     </head>
@@ -99,16 +98,7 @@
         ];
 
         const wait=70;
-        const chartList=[];
-        const overallMH={}
-
-        let chartReady=false;
-        let timeout;
-
         let users=[];
-
-        google.charts.load('current', {packages: ['corechart', 'line']});
-        google.charts.setOnLoadCallback(chartsReady);
 
         window.addEventListener(
             'dbopfs-ready',
@@ -116,11 +106,6 @@
         );
 
         if(window.dbopfs?.ready ){
-            populateUI();
-        }
-
-        async function chartsReady(){
-            chartReady=true;
             populateUI();
         }
 
