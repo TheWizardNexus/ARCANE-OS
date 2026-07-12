@@ -1,0 +1,372 @@
+<link rel="stylesheet" href="./css/layout.css?v=3" />
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal {
+        background: var(--modal-background);
+        border:1px solid var(--border-color);
+        padding: 3em;
+        border-radius: .5em;
+        box-shadow:0 .5em 2em var(--shadow-color);
+        max-width: 35em;
+        width: 100%;
+        max-height: 80%;
+        overflow-y: auto;
+        position:relative;
+    }
+
+    .modal>.modal-button {
+        position:absolute;
+        top:.5em;
+        right: .5em;
+        opacity:.4;
+    }
+
+    .modal-button:hover, .close-modal-button:hover {
+        background-color:var(--secondary-color);
+        opacity:.7;
+    }
+
+    .modal input,
+    .modal textarea {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+        padding: 10px;
+        border:1px solid var(--border-color);
+        border-radius: 4px;
+    }
+
+    .modal textarea {
+        resize: vertical;
+    }
+
+    .modal button {
+        transition: opacity 250ms, background-color 250ms, box-shadow 250ms;
+        opacity: 1;
+        margin: 8px;
+        border: none;
+        cursor: pointer;
+        padding: 10px 20px;
+        border-radius: .5em;
+        box-shadow:0 .12em .35em var(--shadow-color);
+        background-color:var(--primary-color);
+        color:var(--button-text-color,var(--text-color));
+    }
+
+    .modal h1{
+        word-break: break-all;
+    }
+
+    .report-progress-list{
+        list-style:none;
+        margin:2em 0 0;
+        padding:0;
+    }
+
+    .report-progress-list li{
+        align-items:center;
+        border-bottom:1px solid rgba(127,127,127,.35);
+        display:flex;
+        gap:2em;
+        justify-content:space-between;
+        padding:.75em 0;
+    }
+
+    .report-progress-status{
+        white-space:nowrap;
+    }
+
+    .report-progress-list li[data-status="complete"] .report-progress-status{
+        color:var(--success-color);
+    }
+
+    .report-progress-list li[data-status="failed"] .report-progress-status{
+        color:var(--danger-color);
+    }
+</style>
+
+<div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal" class="modal">
+        <button id='close' class="modal-button">X</button>
+        <input type="search" id="modal-search" class="modal-search" placeholder="🔍 Search..."/>
+        <div id='modal-content' class="modal-content">
+
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    const host=this;
+    const shadowRoot=host.shadowRoot;
+    const modalOverlay = shadowRoot.querySelector('#modal-overlay');
+    const modalContent=shadowRoot.querySelector('#modal-content');
+    const modalSearch=shadowRoot.querySelector('#modal-search');
+    const closeButton=shadowRoot.querySelector('#close');
+    const modalStack=window.modalStack=window.modalStack||[];
+
+    let running=false;
+    let disposed=false;
+    let activeRun=Promise.resolve([]);
+
+    host.ready=false;
+
+    host.populate=populate;
+    host.open=open;
+    host.close=close;
+    host.runTasks=runTasks;
+
+    Object.defineProperty(
+        host,
+        'running',
+        {
+            get:()=>running
+        }
+    );
+
+    const modalReady = new CustomEvent( 
+        'modal-ready', {
+            detail: {  }
+        } 
+    );
+
+    modalOverlay.addEventListener(
+        'click', 
+        close
+    );
+
+    closeButton.addEventListener(
+        'click',
+        close
+    );
+
+    modalContent.addEventListener(
+        'click',
+        function modalAction(e){
+            const action=e.target.closest('[data-modal-action]');
+
+            if(!action){
+                return;
+            }
+
+            const detail={...action.dataset};
+            detail.action=detail.modalAction;
+            delete detail.modalAction;
+
+            host.dispatchEvent(
+                new CustomEvent(
+                    'modal-action',
+                    {
+                        detail:detail
+                    }
+                )
+            );
+        }
+    );
+
+    async function open(e=new Event('none')){
+        if(disposed){
+            return false;
+        }
+
+        const wasHidden=modalOverlay.classList.contains('hidden');
+        const stackIndex=modalStack.indexOf(host);
+
+        if(stackIndex>-1){
+            modalStack.splice(stackIndex,1);
+        }
+
+        modalStack.push(host);
+        modalOverlay.style.zIndex=1000+modalStack.length;
+        modalOverlay.classList.remove('hidden');
+
+        if(wasHidden){
+            host.dispatchEvent(
+                new CustomEvent('modal-opened')
+            );
+        }
+    }
+
+    async function close(e,force=false){
+        if(disposed){
+            return false;
+        }
+
+        if(running&&!force){
+            return true;
+        }
+
+        if(!force&&e&&e?.target?.id!=='modal-overlay'&&!e?.target?.classList.contains('modal-button')){
+            //dont close do bubble
+            return true;
+        }
+
+        const wasOpen=!modalOverlay.classList.contains('hidden');
+
+        modalOverlay.classList.add('hidden');
+        closeButton.classList.remove('hidden');
+
+        const stackIndex=modalStack.indexOf(host);
+
+        if(stackIndex>-1){
+            modalStack.splice(stackIndex,1);
+        }
+
+        if(wasOpen){
+            host.dispatchEvent(
+                new CustomEvent('modal-closed')
+            );
+        }
+
+        if(host.hasAttribute('data-once')){
+            dispose();
+        }
+    }
+
+    function dispose(){
+        if(disposed){
+            return;
+        }
+
+        disposed=true;
+        host.ready=false;
+
+        const stackIndex=modalStack.indexOf(host);
+
+        if(stackIndex>-1){
+            modalStack.splice(stackIndex,1);
+        }
+
+        document.removeEventListener('keydown',onDocumentKeydown);
+        host.remove();
+    }
+
+    async function populate(content='<p>Content goes here</p>',search=false){
+        closeButton.classList.remove('hidden');
+
+        if(!search){
+            modalSearch.classList.add('hidden');
+        }else{
+            modalSearch.classList.remove('hidden');
+        }
+
+        if(content instanceof Node){
+            modalContent.replaceChildren(content);
+        }else{
+            modalContent.innerHTML=content;
+        }
+    }
+
+    async function runTasks(title='Stand By While Reports Are Generated',jobs=[]){
+        if(running){
+            return activeRun;
+        }
+
+        const tasks=jobs.filter(
+            job=>job&&typeof job.name==='string'&&typeof job.task==='function'
+        );
+
+        if(!tasks.length){
+            return [];
+        }
+
+        running=true;
+        closeButton.classList.add('hidden');
+        modalSearch.classList.add('hidden');
+        modalContent.replaceChildren();
+
+        const heading=document.createElement('h2');
+        heading.innerText=title;
+
+        const message=document.createElement('p');
+        message.innerText='Please keep this window open until every report is complete.';
+
+        const list=document.createElement('ul');
+        list.className='report-progress-list';
+        list.setAttribute('aria-live','polite');
+
+        const rows=tasks.map(
+            function createProgressRow(job){
+                const row=document.createElement('li');
+                const name=document.createElement('span');
+                const status=document.createElement('span');
+
+                row.dataset.status='pending';
+                name.innerText=job.name;
+                status.className='report-progress-status';
+                status.innerText='Generating...';
+
+                row.append(name,status);
+                list.append(row);
+
+                return {
+                    row:row,
+                    status:status
+                };
+            }
+        );
+
+        modalContent.append(heading,message,list);
+        open();
+
+        activeRun=Promise.allSettled(
+            tasks.map(
+                async function runProgressTask(job,index){
+                    try{
+                        const result=await job.task();
+                        rows[index].row.dataset.status='complete';
+                        rows[index].status.innerText='Complete';
+                        return result;
+                    }catch(err){
+                        rows[index].row.dataset.status='failed';
+                        rows[index].status.innerText='Unable to complete';
+                        console.error(`Unable to complete ${job.name}:`,err);
+                        throw err;
+                    }
+                }
+            )
+        );
+
+        const results=await activeRun;
+        const failed=results.some(result=>result.status==='rejected');
+
+        if(failed){
+            running=false;
+            heading.innerText='Some Reports Could Not Be Completed';
+            message.innerText='You may close this message and try the assessment again.';
+            closeButton.classList.remove('hidden');
+            return results;
+        }
+
+        await new Promise(resolve=>setTimeout(resolve,700));
+        close(undefined,true);
+        running=false;
+        return results;
+    }
+
+    function onDocumentKeydown(e){
+        const topModal=modalStack[modalStack.length-1];
+
+        if(e.key==='Escape'&&topModal===host){
+            close();
+        }
+    }
+
+    document.addEventListener('keydown',onDocumentKeydown);
+
+    host.ready=true;
+    host.dispatchEvent(modalReady);
+
+</script>

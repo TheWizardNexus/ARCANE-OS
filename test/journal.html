@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <form id="journal-form">
+        <input id="subject" name="subject" type="text" placeholder="Subject" required>
+        <textarea id="entry" name="entry" placeholder="Journal entry" required></textarea>
+        <button id="submit" type="submit">Submit</button>
+    </form>
+
+    <script type="module">
+        import '../modules/DBOPFS.js';
+        import UserEntity from '../entities/User.js';
+        import Journal from '../entities/Journal.js';
+
+        const form = document.querySelector('#journal-form');
+        const subject = document.querySelector('#subject');
+        const entry = document.querySelector('#entry');
+        const submitBtn = document.querySelector('#submit');
+
+        const userEntity = new UserEntity();
+        await userEntity.load();
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const title = subject.value.trim();
+            const text = entry.value.trim();
+
+            try {
+                const journal = new Journal();
+
+                await journal.save({
+                    date: `${Date.now()}`,
+                    title,
+                    entry: text,
+                    user: `${userEntity.username || ''}`
+                });
+
+                form.reset();
+            } catch (error) {
+                console.error(error);
+            } 
+        });
+    </script>
+</body>
+
+</html>

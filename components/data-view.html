@@ -1,0 +1,91 @@
+<link rel="stylesheet" href="./css/layout.css?v=3">
+<style>
+    :host{
+        display:flex;
+        justify-content:flex-end;
+    }
+
+    button{
+        margin:0;
+    }
+</style>
+
+<button id="openData" type="button" aria-haspopup="dialog"></button>
+<html-import id="dataModal" class="modal" href="./components/modal.html?v=11"></html-import>
+
+<script type="module">
+    const host=this;
+    const openButton=host.shadowRoot.querySelector('#openData');
+    const dataModal=host.shadowRoot.querySelector('#dataModal');
+    const {default:waitForComponent}=await import('../modules/WaitForComponent.js');
+
+    let content=null;
+    let fileManager=null;
+
+    host.beforeOpen=typeof host.beforeOpen==='function'
+        ?host.beforeOpen
+        :async function beforeOpen(){};
+    host.open=openData;
+
+    openButton.innerText=host.dataset.button||'View Data';
+    openButton.addEventListener(
+        'click',
+        ()=>openData().catch(
+            error=>console.error('Unable to open data view:',error)
+        )
+    );
+
+    async function openData(){
+        await host.beforeOpen();
+
+        const reload=Boolean(content);
+
+        const modal=await waitForComponent(
+            dataModal,
+            {
+                methods:['populate','open'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+
+        if(!content){
+            content=document.createElement('section');
+            fileManager=document.createElement('html-import');
+
+            const heading=document.createElement('h1');
+
+            heading.innerText=host.dataset.title||'Data';
+            fileManager.className='file-manager';
+            fileManager.dataset.dirs=host.dataset.dirs||'';
+            fileManager.dataset.layout=host.dataset.layout||'files';
+            fileManager.setAttribute(
+                'href',
+                './components/file-manager.html?v=14'
+            );
+
+            content.append(heading,fileManager);
+            await modal.populate(content,false);
+        }
+
+        const manager=await waitForComponent(
+            fileManager,
+            {
+                methods:['loadAll'],
+                property:'ready',
+                event:'file-manager-ready'
+            }
+        );
+
+        if(reload){
+            await manager.loadAll();
+        }
+
+        modal.open();
+    }
+
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent('data-view-ready')
+    );
+</script>

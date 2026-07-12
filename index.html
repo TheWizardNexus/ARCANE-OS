@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./img/favicon.png" type="image/png">
+        
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./css/layout.css?v=3">
+        
+        <script type="module" src="./modules/Errors.js?v=2"></script>
+        <script type="module" src="./modules/DBLS.js"></script>
+        <script type="module" src="./modules/HTMLImport.js?v=2"></script>
+        <style>
+            section{
+                padding:3em;
+            }
+        </style>
+    </head>
+
+    <body>
+        <html-import class="header" href="./components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+            <section>
+                <h1>Privacy Policy and Terms & Conditions</h1>
+                <br>
+
+                <h2>Data Storage and Security</h2>
+                <p>All information processed and stored is stored exclusively on YOUR device. We do not store any data on our servers to ensure the highest level of privacy and security for our users. This means your data will not be synced with other devices. For the best experience, continuity of care, and the AI's train of thought, we strongly recommend using just one device.</p>
+                <br>
+
+                <h2>Multiple Devices</h2>
+                <p>We understand that some users may have unique situations requiring the use of multiple devices. If you find yourself in such a situation, you can register each device individually. However, please be aware that data will not be shared or synchronized between devices. Each device will function independently to maintain your privacy and security.</p>
+                <br>
+
+                <h2>Recommendations</h2>
+                <p>For optimal use and to maintain the integrity of your interactions with the AI, it is recommended to:</p>
+                <ul>
+                    <li>Use a single device whenever possible.</li>
+                    <li>Ensure your device is secure and protected to safeguard your data.</li>
+                    <li>Ensure your device has a password or uses a secure screenlock.</li>
+                </ul>
+                <br>
+
+                <h2>Disclaimer</h2>
+                <p>By using our AI, you agree to these terms and understand the limitations regarding data storage and device usage. Your privacy and security are our top priorities, and we strive to provide a safe and secure environment for all users.</p>
+                <br>
+
+                <p>If you have any questions or require further assistance, please contact our support team.</p>
+                <br/>
+                <button type="button" id="termsAgree">Read & Agree</button>
+            </section>
+        </main>
+        <script type="module">
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(
+                    function(registration) {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    }
+                ).catch(
+                    function(error) {
+                        console.log('Service Worker registration failed:', error);
+                    }
+                );
+            
+            document.querySelector('#termsAgree').addEventListener(
+                'click',
+                async ()=>{
+                    dbls.setMany(
+                        {
+                            tnc_agreed:true,
+                            tnc_agreed_mr_time:Date.now()
+                        }
+                    );
+
+                    if(dbls.get('email')){
+                        return document.location.href='./dashboard.html';
+                    }
+
+                    document.location.href='./admin.html';
+                }
+            )
+            
+
+            document.addEventListener(
+                'DOMContentLoaded',
+                async ()=>{
+                    window.addEventListener(
+                        'dbls-ready',
+                        initChat
+                    );
+
+                    if(window.dbls?.ready){
+                        initChat();
+                    };
+                }
+            );
+
+            async function initChat(){
+                if(dbls.get('email')){
+                return document.location.href='./dashboard.html';
+                }
+
+                if(dbls.get('tnc_agreed')){
+                    return document.location.href='./admin.html';
+                }
+
+                return false;
+            }
+
+        </script>
+    </body>
+</html>

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thewizardnexus.com/schemas/arcane-capability-manifest.schema.json",
+  "title": "ARCANE Capability Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "version",
+    "entrypoint",
+    "roles",
+    "inputSchema",
+    "outputSchema",
+    "audit",
+    "network",
+    "risk"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entrypoint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "inputSchema": {
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "filesystemRead": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "filesystemWrite": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "childProcesses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "devices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "audit": {
+      "enum": [
+        "none",
+        "metadata",
+        "full"
+      ]
+    },
+    "network": {
+      "enum": [
+        "none",
+        "local-only",
+        "allowlisted"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "critical"
+      ]
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "compassPolicies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

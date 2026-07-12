@@ -1,0 +1,630 @@
+<link rel="stylesheet" href="./css/layout.css?v=3" />
+<style>
+    .chat_area {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 1em;
+        height: calc(100% - 2em);
+        overflow: hidden;
+    }
+
+    .chat_area .thinking{
+        opacity:.36;
+    }
+
+    .chat_area ul {
+        list-style: none;
+        overflow-y: auto;
+        padding: 0 1em;
+    }
+
+    .chat_area li {
+        padding: 0.5em;
+        margin: 0 0 1em;
+        width: auto;
+        max-width: 95%;
+        clear: both;
+    }
+
+    .chat_area li.ai {
+        width: 90%;
+        float: left;
+        padding: 10px; /* Ensures padding around the content */
+    }
+
+
+    .chat_area li.user {
+        text-align: right;
+        float: right;
+    }
+
+    .chat_input_area {
+        display: grid;
+        padding-bottom: 2em;
+        grid-template-columns: 1fr auto auto;
+        column-gap: 0.5em;
+    }
+
+    .chat_input {
+        width: calc(100% - 1em);
+        min-height: 48px;
+        max-height: 160px; 
+        padding: 1.1em 1em;
+        margin: 0;
+        border:2px solid var(--border-color);
+        border-radius: 0.5em;
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        line-height: 20px; 
+        box-sizing: border-box;
+        resize: none;
+        overflow-y: auto;
+    }
+
+    .chat_input:focus {
+        outline:.18em solid var(--focus-color);
+        outline-offset:.12em;
+        border-color:var(--focus-color);
+    }
+
+    .chat_submit,
+    button.chat_upload {
+        display:grid;
+        place-items:center;
+        width:3.75em;
+        height:3.75em;
+        padding:0;
+        margin:0;
+        background-color:var(--primary-color);
+        border:.2em solid var(--primary-color);
+        border-radius:.8em;
+        cursor: pointer;
+        outline: none;
+        box-shadow:0 .18em .45em var(--shadow-color);
+        align-self: end;
+        transition:background-color 180ms,border-color 180ms,box-shadow 180ms,transform 120ms;
+        color:var(--button-text-color,var(--text-color));
+    }
+
+    .chat_submit::before,
+    button.chat_upload::before {
+        content:'';
+        width:1.65em;
+        height:1.65em;
+        background-color:currentColor;
+        mask-position:center;
+        mask-repeat:no-repeat;
+        mask-size:contain;
+        -webkit-mask-position:center;
+        -webkit-mask-repeat:no-repeat;
+        -webkit-mask-size:contain;
+    }
+
+    .chat_submit::before {
+        mask-image:url('./img/send.svg');
+        -webkit-mask-image:url('./img/send.svg');
+    }
+
+    button.chat_upload::before {
+        mask-image:url('./img/upload.svg');
+        -webkit-mask-image:url('./img/upload.svg');
+    }
+
+    .chat_submit img,
+    button.chat_upload img {
+        display:none;
+    }
+
+    .chat_submit:hover,
+    button.chat_upload:hover {
+        background-color:var(--secondary-color);
+        border-color:var(--secondary-color);
+        color:var(--text-color);
+        box-shadow:0 .25em .6em var(--shadow-color);
+    }
+
+
+    :host(.journal){
+           .chat_output {
+               display:none;
+           }
+    }
+
+    table {
+        width:calc(100% - .5em);
+        margin: auto; /* Center the table horizontally */
+        border-collapse: collapse;
+        overflow-x: auto; /* Enables horizontal scrolling */
+        display:table;
+        background: var(--modal-background);
+        box-shadow: 0 0 0.7em var(--border-color);
+        border-radius: 0.5em 0.5em 0.5em 0.5em;
+        border-spacing: unset;
+    }
+
+    thead, tbody {
+        display: table; /* These elements behave like table rows */
+        width: 100%; /* Table rows take full available space */
+        table-layout: fixed; /* Ensures the table layout respects the width settings */
+    }
+
+    tbody tr{
+        height: 130px;
+    }
+
+    thead tr{
+        background: var(--background);
+        color: var(--platinum);
+        border-radius: .5em .5em 0 0;
+    }
+
+    tr{
+        display: grid;
+        grid-template-columns: 
+                6em 1fr 1fr 1fr;
+    }
+
+    tr:hover{
+        background:var(--secondary-color);
+    }
+
+    th, td {
+        text-align: left;
+        word-wrap: break-word;
+    }
+
+    th{
+        border:none;
+        padding:.4em;
+    }
+
+    td{
+        background: var(--border-color);
+        padding:.4em;
+        border: 1px solid var(--accent-color);
+        max-height: 15em;
+        overflow: auto;
+    }
+</style>
+
+<section class="chat_area">
+    <ul type='text' class='chat_output' id='chat_output'></ul>
+    <div class="chat_input_area">
+        <textarea type='text' class='chat_input' id='chat_input'></textarea>
+        <button type="button" id="chat_upload" class="chat_upload" title="Upload files" aria-label="Upload files">
+            <img class='upload-icon' src="./img/upload.svg" />
+        </button>
+        <input type="file" id="file_upload_input" class="chat_upload" accept=".txt, .md, image/*" hidden multiple />
+        <button type="button" id="chat_submit" class="chat_submit" title="Send message" aria-label="Send message">
+            <img class='send-icon' src="./img/send.svg" />
+        </button>
+    </div>
+    <html-import id="speech" href="./components/speech.html?v=1"></html-import>
+    <section class="controls">
+        <select id="languages">
+            <option value="english" selected>English</option>
+
+            <!-- American -->
+            <optgroup label="American">
+                <option value="american-spanish">Español (Estados Unidos)</option>
+                <option value="american-southern-dialect">Southern American English</option>
+                <option value="american-ebonics">African-American Vernacular English</option>
+            </optgroup>
+
+            <!-- English Variants -->
+            <optgroup label="English Variants">
+                <option value="british-english">British English</option>
+                <option value="cockney">Cockney</option>
+                <option value="australian-english">Australian English</option>
+                <option value="new-zealand-english">New Zealand English</option>
+                <option value="irish-english">Hiberno-English</option>
+                <option value="canadian-english">Canadian English</option>
+            </optgroup>
+
+            <!-- European -->
+            <optgroup label="European">
+                <option value="albanian">Shqip</option>
+                <option value="armenian">Հայերեն</option>
+                <option value="basque">Euskara</option>
+                <option value="belarusian">Беларуская</option>
+                <option value="bosnian">Bosanski</option>
+                <option value="bulgarian">Български</option>
+                <option value="catalan">Català</option>
+                <option value="croatian">Hrvatski</option>
+                <option value="czech">Čeština</option>
+                <option value="danish">Dansk</option>
+                <option value="dutch">Nederlands</option>
+                <option value="estonian">Eesti</option>
+                <option value="finnish">Suomi</option>
+                <option value="french">Français</option>
+                <option value="galician">Galego</option>
+                <option value="german">Deutsch</option>
+                <option value="greek">Ελληνικά</option>
+                <option value="hungarian">Magyar</option>
+                <option value="icelandic">Íslenska</option>
+                <option value="irish">Gaeilge</option>
+                <option value="italian">Italiano</option>
+                <option value="latvian">Latviešu</option>
+                <option value="lithuanian">Lietuvių</option>
+                <option value="luxembourgish">Lëtzebuergesch</option>
+                <option value="macedonian">Македонски</option>
+                <option value="maltese">Malti</option>
+                <option value="norwegian">Norsk</option>
+                <option value="polish">Polski</option>
+                <option value="portuguese">Português</option>
+                <option value="romanian">Română</option>
+                <option value="russian">Русский</option>
+                <option value="scottish-gaelic">Gàidhlig</option>
+                <option value="serbian">Српски</option>
+                <option value="slovak">Slovenčina</option>
+                <option value="slovenian">Slovenščina</option>
+                <option value="spanish">Español</option>
+                <option value="swedish">Svenska</option>
+                <option value="ukrainian">Українська</option>
+                <option value="welsh">Cymraeg</option>
+            </optgroup>
+
+            <!-- Middle Eastern -->
+            <optgroup label="Middle Eastern">
+                <option value="arabic">العربية</option>
+                <option value="hebrew">עברית</option>
+                <option value="persian">فارسی</option>
+                <option value="kurdish">Kurdî</option>
+                <option value="pashto">پښتو</option>
+                <option value="turkish">Türkçe</option>
+            </optgroup>
+
+            <!-- African -->
+            <optgroup label="African">
+                <option value="afrikaans">Afrikaans</option>
+                <option value="amharic">አማርኛ</option>
+                <option value="hausa">Hausa</option>
+                <option value="igbo">Igbo</option>
+                <option value="swahili">Kiswahili</option>
+                <option value="yoruba">Yorùbá</option>
+                <option value="zulu">IsiZulu</option>
+                <option value="xhosa">IsiXhosa</option>
+                <option value="somali">Soomaali</option>
+            </optgroup>
+
+            <!-- Indian Subcontinent -->
+            <optgroup label="Indian Subcontinent">
+                <option value="assamese">অসমীয়া</option>
+                <option value="bengali">বাংলা</option>
+                <option value="gujarati">ગુજરાતી</option>
+                <option value="hindi">हिन्दी</option>
+                <option value="kannada">ಕನ್ನಡ</option>
+                <option value="malayalam">മലയാളം</option>
+                <option value="marathi">मराठी</option>
+                <option value="nepali">नेपाली</option>
+                <option value="punjabi">ਪੰਜਾਬੀ</option>
+                <option value="sinhala">සිංහල</option>
+                <option value="tamil">தமிழ்</option>
+                <option value="telugu">తెలుగు</option>
+                <option value="urdu">اردو</option>
+            </optgroup>
+
+            <!-- East Asian -->
+            <optgroup label="East Asian">
+                <option value="chinese">中文</option>
+                <option value="japanese">日本語</option>
+                <option value="栃木弁">栃木弁</option>
+                <option value="korean">한국어</option>
+                <option value="mongolian">Монгол</option>
+                <option value="tibetan">བོད་སྐད</option>
+            </optgroup>
+
+            <!-- Southeast Asian -->
+            <optgroup label="Southeast Asian">
+                <option value="burmese">မြန်မာ</option>
+                <option value="indonesian">Bahasa Indonesia</option>
+                <option value="javanese">Basa Jawa</option>
+                <option value="khmer">ខ្មែរ</option>
+                <option value="lao">ລາວ</option>
+                <option value="malay">Bahasa Melayu</option>
+                <option value="tagalog">Tagalog</option>
+                <option value="thai">ไทย</option>
+                <option value="vietnamese">Tiếng Việt</option>
+            </optgroup>
+
+            <!-- Pacific -->
+            <optgroup label="Pacific">
+                <option value="maori">Te Reo Māori</option>
+                <option value="hawaiian">ʻŌlelo Hawaiʻi</option>
+                <option value="samoan">Gagana Samoa</option>
+                <option value="tongan">Lea Faka-Tonga</option>
+            </optgroup>
+
+            <!-- South American -->
+            <optgroup label="South American">
+                <option value="brazilian-portuguese">Português do Brasil</option>
+                <option value="quechua">Runasimi</option>
+                <option value="aymara">Aymar aru</option>
+                <option value="guarani">Avañe'ẽ</option>
+                <option value="mapudungun">Mapudungun</option>
+            </optgroup>
+
+            <!-- Ancient / Constructed -->
+            <optgroup label="Ancient / Constructed">
+                <option value="sumerian">𒅴𒂠 (Sumerian)</option>
+                <option value="akkadian">𒀝𒅗𒁺𒌑 (Akkadian)</option>
+                <option value="latin">Latina</option>
+                <option value="ancient-greek">Ἑλληνικὴ</option>
+                <option value="old-english">Ænglisc</option>
+                <option value="old-norse">Norrœnt mál</option>
+                <option value="gothic">𐌲𐌿𐍄𐌹𐍃𐌺</option>
+                <option value="aramaic">ܐܪܡܝܐ</option>
+                <option value="coptic">Ⲙⲉⲧⲣⲉⲙⲛ̀ⲭⲏⲙⲓ</option>
+                <option value="egyptian">𓂋𓐍𓏏𓊖 (Egyptian)</option>
+                <option value="etruscan">𐌄𐍄𐍂𐌖𐍃𐌂𐌖𐌌</option>
+                <option value="sanskrit">संस्कृतम्</option>
+                <option value="pali">𑀧𑀸𑀮𑀺</option>
+                <option value="elvish-quenya">Quenya</option>
+                <option value="elvish-sindarin">Sindarin</option>
+                <option value="klingon">tlhIngan Hol</option>
+                <option value="dothraki">Dothraki</option>
+                <option value="valyrian">Valyrio</option>
+                <option value="esperanto">Esperanto</option>
+                <option value="interlingua">Interlingua</option>
+                <option value="pirate">Pirate ☠️</option>
+                <option value="leetspeak">1337</option>
+                <option value="emoji">😀📜</option>
+                <option value="binary">01001000 01101001</option>
+                <option value="machine">Machine Language</option>
+                <option value="assembly">Assembly</option>
+                <option value="ai-whisper">AI Whisperer Mode 🤖</option>
+                <option value="zen">Zen Koan</option>
+            </optgroup>
+        </select>
+    </section>
+</section>
+
+<script type="module"> 
+    const host=this;
+    const shadowRoot=host.shadowRoot;
+    const textArea=shadowRoot.querySelector('#chat_input');
+    const chatOutput = shadowRoot.querySelector('#chat_output');
+    const send = shadowRoot.querySelector('#chat_submit');
+    const speech = shadowRoot.querySelector('#speech');
+    const uploadBtn = shadowRoot.querySelector('#chat_upload');
+    const fileInput = shadowRoot.querySelector('#file_upload_input');
+    const { default: MD } = await import('../modules/MD.js');
+    const { default: FileEntity } = await import('../entities/File.js');
+
+    host.language=host.language||'English';
+    host.name = host.name||'User';
+    host.aiName='AI';
+
+    host.sendMessage=host.sendMessage||async function(text=''){
+        console.warn('html-import chat.html `host.sendMessage` method not implemented.\n\nThis can also be done by listening for the "chat-send-message" event.\n\nIt is still best practice to implement the `.sendMessage` method atleast with an empty function.\n\n')
+    }
+
+    host.languageChanged=host.languageChanged||async function(text=''){
+        console.warn('html-import chat.html `host.languageChanged` method not implemented.\n\nThis can also be done by listening for the "chat-language-changed" event.\n\nIt is still best practice to implement the `.languageChanged` method atleast with an empty function.\n\n')
+    }
+
+    host.streamMessage=streamMessage;
+
+    {
+        const chatReady=new CustomEvent(
+            'chat-ready', {
+                detail: { chat: host }
+            }
+        );
+        
+        host.dispatchEvent(chatReady);
+    }
+
+    host.ready=true;
+
+    async function streamMessage(text='', id='', isThinking){
+        console.log(text,id,isThinking);
+        if(!id){
+            console.warn('Streaming messages require ids, none specified.')
+            return false;
+        }
+
+        const message=chatOutput.querySelector(`#message-${id}`);
+        
+        if(!message){
+            await receivedMessage(host.aiName,text,id,isThinking);
+            return false;
+        }
+
+        let target=message.querySelector('.markdown');
+
+        let thinkingHTML=message.querySelector('.thinking');
+        
+        if(isThinking){
+            target=thinkingHTML;
+        }
+        
+        if(isThinking && !thinkingHTML){
+            message.innerHTML+=`<span class='thinking'></span>`;
+            thinkingHTML=thinkingSpan;
+            thinkingHTML=message.querySelector('.thinking');
+        }
+
+        const clearThinking=(thinkingHTML && !isThinking); 
+        
+        //console.table(arguments);
+        if(!isThinking && text){
+            ai.streamTTS(
+                text
+            )
+        }
+        
+        if(clearThinking){
+            thinkingHTML.remove();
+        }
+        
+        target.raw ? target.raw+=text : target.raw=text;
+
+        target.innerHTML=new MD(target.raw).rendered;
+        
+        chatOutput.scrollTop = chatOutput.scrollHeight;
+    }
+
+    textArea.addEventListener('keyup', resizeTextArea);
+
+    send.addEventListener(
+        'click', 
+        sendMessage
+    );
+
+    uploadBtn.addEventListener(
+        'click',
+        function(){
+            fileInput.click();
+        }
+    );
+
+    fileInput.addEventListener(
+        'change',
+        async function onFileSelected() {
+            if (!fileInput.files.length>0) {
+                return;
+            }
+
+            for(let i=0;i<fileInput.files.length;i++){
+                const file=fileInput.files[i];
+                const newFile=new FileEntity(file.name, 'documents');
+                newFile.save(file);
+
+                const uploadEvent = new CustomEvent(
+                    'chat-file-uploaded',
+                    {
+                        detail: { file },
+                        bubbles: true,
+                        composed: true,
+                        cancelable: true
+                    }
+                );
+
+                host.dispatchEvent(uploadEvent);
+            }
+
+            fileInput.value = '';
+        }
+    );
+
+    speech.addEventListener(
+        'speech-transcription-complete',
+        sendMessage
+    )
+
+    shadowRoot.querySelector('#languages').addEventListener(
+        'change', 
+        function() {
+            host.language = this.value;
+            console.info("Language changed to:", host.language);
+
+            const chatEvent = new CustomEvent(
+                'chat-language-changed',
+                {
+                    detail: {
+                        message:host.language
+                    },
+                    bubbles: true,
+                    cancelable: true
+                }
+            );
+
+            host.dispatchEvent(chatEvent);
+            host.languageChanged(host.language);
+        }
+    );
+
+    function getMilTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    async function resizeTextArea(e={}) {
+        if(e.key && e.key == 'Enter' && !e.shiftKey && !send.disabled){
+            sendMessage();
+        }
+
+        // Reset height to shrink to content size
+        textArea.style.height = 'auto';
+        let scrollHeight = textArea.scrollHeight;
+        let computedStyle = window.getComputedStyle(textArea);
+        let lineHeight = parseInt(computedStyle.lineHeight, 10) || parseInt(computedStyle.fontSize, 10) * 1.2;
+        let maxHeight = lineHeight * 10;
+        textArea.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    }
+
+    async function sendMessage(forceText='') {
+        let text = textArea.value;
+        
+        if(forceText?.detail?.text){
+            text=forceText.detail.text;
+        }
+
+        if(forceText.length>0){
+            text=forceText;
+        }
+        const messageTime = getMilTime();
+        console.info("Dispatching message:", text);
+        textArea.value = ''; // Clear the textArea after sending
+        
+        //console.log(host,host.name);
+        // console.log(forceText,text,1);
+        // Update the UI with the user's message
+        
+        chatOutput.innerHTML += `
+            <li class='user'>
+                <strong>${host.name} ${messageTime}:</strong>
+                <br>
+                <br>
+                <div class='markdown'>
+                    ${new MD(text).rendered}
+                </div>
+            </li>
+        `;
+        chatOutput.scrollTop = chatOutput.scrollHeight;
+
+        const chatEvent = new CustomEvent(
+            'chat-send-message',
+            {
+                detail: {
+                    message:text
+                },
+                bubbles: true,
+                cancelable: true
+            }
+        );
+
+        ai.stopAudio();
+
+        host.dispatchEvent(chatEvent);
+        
+        host.sendMessage(text);
+    }
+
+    async function receivedMessage(name = 'Lifeline', text = '', id='', isThinking=false){
+        const messageTime = getMilTime();
+        if(isThinking){
+            text=`<span class='thinking'>${text}</span>`;
+        }
+        //console.log(text)
+        chatOutput.innerHTML += `
+            <li class='ai' ${id? `id="message-${id}"`:''}>
+                <strong>${name} ${messageTime}:</strong>
+                <br>
+                <br>
+                <div class='markdown'>
+                    ${new MD(text).rendered}
+                </div>
+            </li>
+        `;
+        chatOutput.scrollTop = chatOutput.scrollHeight;
+    }
+
+    // Initialize and adjust on input
+    resizeTextArea();
+
+</script>

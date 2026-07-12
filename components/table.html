@@ -1,0 +1,77 @@
+<link rel="stylesheet" href="./css/layout.css?v=3" />
+<style>
+    
+    input.search-users{
+        margin-bottom: 15px;
+    }
+
+</style>
+
+<table id="" class="notes">
+    <thead>
+        
+    </thead>
+    <tbody>
+        
+    </tbody>
+</table>
+
+<script typr="module">
+    const host = this;
+    const shadowRoot=this.shadowRoot;
+    host.buildHeader=buildHeader;
+    host.buildTable=buildTable;
+    host.ready=false;
+
+    const tableReady=new CustomEvent(
+        'table-ready', {
+            detail: {  }
+        }
+    );
+
+    const headerUpdate=new CustomEvent(
+        'header-update', {
+            detail: {  }
+        }
+    );
+
+    const bodyUpdate=new CustomEvent(
+        'body-update', {
+            detail: {  }
+        }
+    );
+
+    async function buildHeader(headerArray=['','']){
+        const tableHead = shadowRoot.querySelector('thead');
+        tableHead.innerHTML = '';
+        const th = tableHead.insertRow();
+                
+        headerArray.forEach(
+            (header)=>{
+                th.insertCell(-1).innerText=header;
+            }
+        );
+        host.dispatchEvent(headerUpdate);
+    }
+
+    async function buildTable(tableArray=[['', ''], ['','']]){
+        const tableBody = shadowRoot.querySelector('tbody');
+        tableBody.innerHTML = '';
+
+        tableArray.forEach(
+            (row)=>{ console.log('row',row);
+                const tr = tableBody.insertRow();
+                row.forEach(
+                    (cellValue)=>{
+                        tr.insertCell(-1).innerText=cellValue;
+                    }
+                );
+            }
+        );
+        host.dispatchEvent(bodyUpdate);
+    }
+    
+    host.ready=true;
+    host.dispatchEvent(tableReady);
+
+</script>

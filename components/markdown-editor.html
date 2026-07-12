@@ -1,0 +1,256 @@
+<link rel="stylesheet" href="./css/layout.css?v=3">
+<style>
+    :host{
+        display:block;
+        height:100%;
+        min-height:0;
+    }
+
+    .markdown-editor{
+        display:grid;
+        gap:.75em;
+        grid-template-rows:auto minmax(8em,1fr) auto minmax(10em,1fr) auto;
+        height:100%;
+        min-height:0;
+    }
+
+    .entry-title,
+    .entry-markdown{
+        box-sizing:border-box;
+        margin:0;
+        width:100%;
+    }
+
+    .preview{
+        background:var(--background);
+        border:1px solid var(--border-color);
+        border-radius:.5em;
+        overflow:auto;
+        padding:1em;
+    }
+
+    .preview:empty::before{
+        content:'Journal Entry Preview';
+        opacity:.55;
+    }
+
+    .toolbar,
+    .actions{
+        display:flex;
+        flex-wrap:wrap;
+        gap:.35em;
+    }
+
+    .toolbar button,
+    .actions button{
+        margin:0;
+    }
+
+    .entry-markdown{
+        font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        min-height:10em;
+        resize:vertical;
+    }
+
+    .actions{
+        align-items:center;
+        justify-content:flex-end;
+    }
+
+    .status{
+        margin-right:auto;
+    }
+</style>
+
+<section class="markdown-editor">
+    <input id="entryTitle" class="entry-title" type="text" placeholder="Title (optional)">
+    <section id="preview" class="preview" aria-label="Journal Entry Preview"></section>
+    <section id="toolbar" class="toolbar" aria-label="Markdown formatting">
+        <button type="button" data-format="heading" title="Heading">Heading</button>
+        <button type="button" data-format="bold" title="Bold">B</button>
+        <button type="button" data-format="italic" title="Italic"><em>I</em></button>
+        <button type="button" data-format="strike" title="Strikethrough"><s>S</s></button>
+        <button type="button" data-format="code" title="Inline code">Code</button>
+        <button type="button" data-format="link" title="Link">Link</button>
+        <button type="button" data-format="quote" title="Quote">Quote</button>
+        <button type="button" data-format="list" title="Bulleted list">List</button>
+    </section>
+    <textarea id="entryMarkdown" class="entry-markdown" placeholder="Write your journal entry in Markdown..."></textarea>
+    <section class="actions">
+        <span id="status" class="status" aria-live="polite">Loading editor...</span>
+        <button id="save" type="button" disabled>Save Journal Entry</button>
+    </section>
+</section>
+
+<script type="module">
+    const host=this;
+    const {default:MD}=await import('../modules/MD.js?v=2');
+    const titleInput=host.shadowRoot.querySelector('#entryTitle');
+    const preview=host.shadowRoot.querySelector('#preview');
+    const toolbar=host.shadowRoot.querySelector('#toolbar');
+    const textarea=host.shadowRoot.querySelector('#entryMarkdown');
+    const saveButton=host.shadowRoot.querySelector('#save');
+    const status=host.shadowRoot.querySelector('#status');
+
+    let previewFrame=0;
+
+    host.clear=clear;
+    host.focus=()=>textarea.focus();
+
+    Object.defineProperty(
+        host,
+        'value',
+        {
+            get:()=>textarea.value,
+            set:value=>{
+                textarea.value=`${value||''}`;
+                updatePreview();
+            }
+        }
+    );
+
+    Object.defineProperty(
+        host,
+        'entryTitle',
+        {
+            get:()=>titleInput.value,
+            set:value=>titleInput.value=`${value||''}`
+        }
+    );
+
+    textarea.addEventListener('input',schedulePreview);
+    toolbar.addEventListener('click',formatMarkdown);
+    saveButton.addEventListener('click',saveEntry);
+
+    function schedulePreview(){
+        if(previewFrame){
+            cancelAnimationFrame(previewFrame);
+        }
+
+        previewFrame=requestAnimationFrame(updatePreview);
+    }
+
+    function updatePreview(){
+        previewFrame=0;
+        preview.innerHTML=new MD(textarea.value).safeRendered;
+
+        preview.querySelectorAll('a').forEach(
+            link=>{
+                link.target='_blank';
+                link.rel='noopener noreferrer';
+            }
+        );
+    }
+
+    function formatMarkdown(e){
+        const button=e.target.closest('[data-format]');
+
+        if(!button){
+            return;
+        }
+
+        const formats={
+            heading:{prefix:'## ',placeholder:'Heading'},
+            bold:{before:'**',after:'**',placeholder:'bold text'},
+            italic:{before:'_',after:'_',placeholder:'italic text'},
+            strike:{before:'~~',after:'~~',placeholder:'strikethrough text'},
+            code:{before:'`',after:'`',placeholder:'code'},
+            link:{before:'[',after:'](https://)',placeholder:'link text'},
+            quote:{prefix:'> ',placeholder:'Quote'},
+            list:{prefix:'- ',placeholder:'List item'}
+        };
+        const format=formats[button.dataset.format];
+
+        if(!format){
+            return;
+        }
+
+        const start=textarea.selectionStart;
+        const end=textarea.selectionEnd;
+        const selected=textarea.value.slice(start,end);
+        const value=selected||format.placeholder;
+        let replacement='';
+        let selectionStart=start;
+        let selectionEnd=start;
+
+        if(format.prefix){
+            replacement=value.split(/\r?\n/).map(
+                line=>format.prefix+line
+            ).join('\n');
+            selectionStart=start+format.prefix.length;
+            selectionEnd=selectionStart+value.length;
+        }else{
+            replacement=format.before+value+format.after;
+            selectionStart=start+format.before.length;
+            selectionEnd=selectionStart+value.length;
+        }
+
+        textarea.setRangeText(replacement,start,end,'end');
+        textarea.focus();
+        textarea.setSelectionRange(selectionStart,selectionEnd);
+        schedulePreview();
+    }
+
+    async function saveEntry(){
+        const markdown=textarea.value;
+        const entryTitle=titleInput.value.trim();
+
+        if(!markdown.trim()){
+            status.innerText='Write an entry before saving.';
+            textarea.focus();
+            return false;
+        }
+
+        if(typeof host.save!=='function'){
+            status.innerText='Journal saving is unavailable.';
+            return false;
+        }
+
+        saveButton.disabled=true;
+        status.innerText='Saving...';
+
+        try{
+            await host.save(
+                {
+                    title:entryTitle,
+                    markdown:markdown
+                }
+            );
+
+            clear();
+            status.innerText='Saved.';
+            host.dispatchEvent(
+                new CustomEvent(
+                    'markdown-editor-saved',
+                    {
+                        detail:{
+                            title:entryTitle,
+                            markdown:markdown
+                        }
+                    }
+                )
+            );
+            return true;
+        }catch(error){
+            status.innerText='Unable to save this entry.';
+            console.error('Unable to save journal entry:',error);
+            return false;
+        }finally{
+            saveButton.disabled=false;
+        }
+    }
+
+    function clear(){
+        titleInput.value='';
+        textarea.value='';
+        updatePreview();
+    }
+
+    updatePreview();
+    status.innerText='';
+    saveButton.disabled=false;
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent('markdown-editor-ready')
+    );
+</script>

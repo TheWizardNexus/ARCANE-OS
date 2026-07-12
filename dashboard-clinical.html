@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./img/favicon.png" type="image/png">
+        
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./css/layout.css?v=3">
+        <style>
+            /* ---------- User cards ---------- */
+            .user-card{
+            background:var(--background);
+            border:1px solid var(--border-color);
+            border-radius:12px;
+            padding:1rem 1.25rem;
+            display:flex;
+            flex-direction:column;
+            gap:.6rem;
+            box-shadow:0 .2em .7em var(--shadow-color);
+            transition:box-shadow 180ms,transform 180ms;
+            }
+            .user-card:hover{
+                box-shadow:0 .4em 1em var(--shadow-color);
+                transform:translateY(-.2em);
+            }
+
+            .user-name{
+            font-size:1.05rem;
+            font-weight:600;
+            margin:0;
+            color:var(--accent-color);
+            text-decoration:none;
+            }
+
+            .user-score{
+            font-family:monospace;
+            font-size:.9rem;
+            text-align:right;
+            color:var(--accent-color);
+            }
+
+            .progress-wrap{
+            background:var(--border-color);
+            border-radius:8px;
+            height:.65rem;
+            overflow:hidden;
+            }
+            .progress-bar{
+            height:100%;
+            width:0%;
+            background:linear-gradient(90deg,var(--primary-color),var(--accent-color));
+            transition:width .8s;
+            }
+
+            /* ---------- Grid tweaks ---------- */
+            #userGrid{
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(18em,1fr));
+            gap:1em;
+            list-style:none;
+            margin:0; padding:0;
+            }
+        </style>
+
+        <script type="module" src="./modules/Errors.js?v=2"></script>
+        <script defer src="https://www.gstatic.com/charts/loader.js"></script>
+        <script type="module" src="./modules/DBOPFS.js"></script>
+        <script type="module" src="./modules/HTMLImport.js?v=2"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+            <div class="full-width">
+                <h2>Clinical Mental Health Center</h2>
+                <p>Your clients and their historic ratings for various symptoms conditions and risks. Here you can see the progress you and they are making, or issues you and they can work on. Further, you can see if the treatment they are enrolled in is improving their life or not.</p>
+            </div>
+            
+            <ul id="userGrid"></ul>
+        </main>
+    </body>
+    <script type="module">
+        import Scores from './entities/Scores.js';
+
+        const notes=[
+            'mental_health_assessment',
+            'topics_of_discussion_or_activities',
+            'treatment_options'
+        ];
+
+        const wait=70;
+        const chartList=[];
+        const overallMH={}
+
+        let chartReady=false;
+        let timeout;
+
+        let users=[];
+
+        google.charts.load('current', {packages: ['corechart', 'line']});
+        google.charts.setOnLoadCallback(chartsReady);
+
+        window.addEventListener(
+            'dbopfs-ready',
+            populateUI
+        );
+
+        if(window.dbopfs?.ready ){
+            populateUI();
+        }
+
+        async function chartsReady(){
+            chartReady=true;
+            populateUI();
+        }
+
+        function isOlderThan15Days(dateString) {
+            // Convert the input string to a Date object.
+            const inputDate = new Date(dateString);
+
+            // Get the current date.
+            const currentDate = new Date();
+
+            // Calculate the difference in milliseconds between the two dates.
+            const timeDifference = currentDate.getTime() - inputDate.getTime();
+
+            // Calculate the number of days in the time difference.
+            // There are 1000 milliseconds in a second, 60 seconds in a minute, 60 minutes in an hour, and 24 hours in a day.
+            const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
+
+            // Check if the difference is greater than 15 days.
+            return daysDifference > 15;
+        }
+
+        function createUserCard(username, mean){
+            const li   = document.createElement('li');
+            li.className = 'user-card';
+
+            // linkable name
+            li.innerHTML = `
+                <a class="user-name" href="./dashboard.html?id=${encodeURIComponent(username)}">
+                ${username}
+                </a>
+                <div class="progress-wrap"><div class="progress-bar"></div></div>
+                <span class="user-score">${mean.toFixed(2)} / 10</span>
+            `;
+
+            // animate bar after insertion so CSS transition runs
+            requestAnimationFrame(()=>{
+                li.querySelector('.progress-bar').style.width = (mean*10) + '%';
+            });
+
+            return li;
+        }
+
+        async function populateUI(){
+            if(!window.dbopfs?.ready){
+                return;
+            }
+
+            const records=await Scores.getAll();
+            const userScores={};
+            users=[];
+
+            for(let i=0;i<records.length;i++){
+                const score=records[i];
+
+                if(!score || typeof score!=='object'
+                    || (typeof score.username!=='string' && typeof score.username!=='number')
+                    || `${score.username}`.length<1
+                ){
+                    continue;
+                }
+
+                const username=`${score.username}`;
+
+                if(!Number.isFinite(Number(score.date))){
+                    continue;
+                }
+
+                if(!userScores[username]){
+                    users.push(username);
+                    userScores[username]=[];
+                }
+
+                userScores[username].push(score);
+            }
+            
+            const grid = document.getElementById('userGrid');
+            grid.innerHTML = '';                 // clear old
+
+            for(let username of users){
+                let averageMHOverPast15={
+                    value:0,
+                    count:0,
+                    mean:0
+                };
+
+                for(let i=0;i<userScores[username].length;i++){
+                    const score=userScores[username][i];
+
+                    if(isOlderThan15Days(score.date)){
+                        continue;
+                    }
+
+                    if(!score.data || typeof score.data!=='object' || Array.isArray(score.data)){
+                        continue;
+                    }
+
+                    const scoreKeys=Object.keys(score.data);
+
+                    for(let j=0;j<scoreKeys.length;j++){
+                        const key=scoreKeys[j];
+
+                        if(!key.includes('resilience') && !key.includes('functionality')
+                            && !key.includes('serve') && !key.includes('lead')
+                        ){
+                            continue;
+                        }
+
+                        const value=score.data[key];
+                        if(typeof value!=='number'){
+                            continue;
+                        }
+
+                        averageMHOverPast15.value+=value;
+                        averageMHOverPast15.count++;
+                        averageMHOverPast15.mean=averageMHOverPast15.value/averageMHOverPast15.count;
+                    }
+                }
+
+                grid.appendChild(createUserCard(username, averageMHOverPast15.mean));
+            }
+        }
+    </script>
+</html>

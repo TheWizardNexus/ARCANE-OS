@@ -1,0 +1,559 @@
+<link rel="stylesheet" href="./css/layout.css?v=3">
+<link rel="stylesheet" href="./modules/uPlot.min.css">
+<style>
+    :host{
+        display:block;
+        min-height:18em;
+        min-width:0;
+    }
+
+    .chart{
+        background:var(--chart-background,var(--background));
+        border:.1em solid var(--chart-grid-color,var(--border-color));
+        border-radius:.5em;
+        box-sizing:border-box;
+        color:var(--chart-text-color,var(--text-color));
+        display:grid;
+        grid-template-rows:auto minmax(11em,1fr) auto;
+        height:100%;
+        min-height:18em;
+        padding:1em;
+        position:relative;
+    }
+
+    h2{
+        font-size:1.15em;
+        margin:0 2em .4em 0;
+    }
+
+    .remove-chart{
+        background:transparent;
+        border:0;
+        box-shadow:none;
+        color:inherit;
+        font-size:1.5em;
+        line-height:1;
+        margin:0;
+        opacity:.25;
+        padding:.2em;
+        position:absolute;
+        right:.35em;
+        top:.25em;
+        transition:opacity 150ms ease-out;
+        z-index:2;
+    }
+
+    .remove-chart:hover,
+    .remove-chart:focus-visible{
+        opacity:1;
+    }
+
+    .plot{
+        min-height:11em;
+        min-width:0;
+        outline:none;
+        overflow:hidden;
+        position:relative;
+    }
+
+    .plot:focus-visible{
+        outline:2px solid currentColor;
+        outline-offset:.2em;
+    }
+
+    .chart-value{
+        background:var(--modal-background);
+        border:1px solid var(--chart-grid-color,var(--border-color));
+        border-left:.35em solid var(--chart-line-color,var(--primary-color));
+        border-radius:.45em;
+        display:grid;
+        font-size:.85em;
+        gap:.25em 1em;
+        grid-template-columns:minmax(0,1fr) auto;
+        margin:.55em 0 0;
+        min-height:3.5em;
+        padding:.5em .65em;
+        transition:box-shadow 120ms ease-out,border-color 120ms ease-out;
+    }
+
+    .chart-value[data-state="hover"],
+    .chart-value[data-state="keyboard"]{
+        border-color:var(--chart-line-color,var(--primary-color));
+        box-shadow:0 0 0 .15em var(--chart-grid-color,var(--border-color));
+    }
+
+    .value-context{
+        font-weight:bold;
+        grid-column:1 / -1;
+    }
+
+    .value-context::before{
+        content:'●';
+        color:var(--chart-point-color,var(--accent-color));
+        margin-right:.4em;
+    }
+
+    .value-field{
+        display:flex;
+        flex-direction:column;
+        min-width:0;
+    }
+
+    .value-field:last-child{
+        text-align:right;
+    }
+
+    .value-label{
+        font-size:.72em;
+        font-weight:bold;
+        letter-spacing:.06em;
+        opacity:.7;
+        text-transform:uppercase;
+    }
+
+    .value-date,
+    .value-score{
+        font-size:1.05em;
+        font-weight:bold;
+    }
+
+    .empty{
+        font-size:.85em;
+        margin:.4em 0 0;
+        min-height:1.2em;
+        align-self:center;
+        justify-self:center;
+        opacity:.65;
+    }
+
+    .hidden{
+        display:none;
+    }
+
+    .uplot{
+        font-family:inherit;
+    }
+</style>
+
+<section class="chart">
+    <button id="removeChart" class="remove-chart" type="button" title="Remove from dashboard" aria-label="Remove chart from dashboard">&times;</button>
+    <h2 id="chartTitle"></h2>
+    <div id="plot" class="plot" tabindex="0" aria-describedby="chartValue"></div>
+    <section id="chartValue" class="chart-value" data-state="latest" aria-live="polite" aria-atomic="true">
+        <span id="valueContext" class="value-context">Latest recorded point</span>
+        <span class="value-field">
+            <span class="value-label">Date</span>
+            <time id="valueDate" class="value-date"></time>
+        </span>
+        <span class="value-field">
+            <span class="value-label">Score</span>
+            <strong id="valueScore" class="value-score"></strong>
+        </span>
+    </section>
+    <p id="empty" class="empty hidden">No recorded data yet.</p>
+</section>
+
+<script type="module">
+    const host=this;
+    const {default:loadChartLibrary}=await import('../modules/ChartLibrary.js');
+    const title=host.shadowRoot.querySelector('#chartTitle');
+    const plot=host.shadowRoot.querySelector('#plot');
+    const chartValue=host.shadowRoot.querySelector('#chartValue');
+    const valueContext=host.shadowRoot.querySelector('#valueContext');
+    const valueDate=host.shadowRoot.querySelector('#valueDate');
+    const valueScore=host.shadowRoot.querySelector('#valueScore');
+    const empty=host.shadowRoot.querySelector('#empty');
+    const removeButton=host.shadowRoot.querySelector('#removeChart');
+
+    let rows=[];
+    let chart=null;
+    let uPlot=null;
+    let selectedIndex=-1;
+    let resizeFrame=0;
+
+    host.populate=populate;
+    host.update=update;
+    host.addData=addData;
+    host.destroy=destroy;
+
+    Object.defineProperty(
+        host,
+        'dataSet',
+        {
+            get:()=>rows.map(row=>row.slice()),
+            set:data=>update(data)
+        }
+    );
+
+    Object.defineProperty(
+        host,
+        'chartTitle',
+        {
+            get:()=>title.innerText,
+            set:value=>{
+                host.dataset.title=`${value||''}`;
+                updateTitle();
+            }
+        }
+    );
+
+    Object.defineProperty(
+        host,
+        'chartStyle',
+        {
+            get:()=>host.dataset.chartStyle||'line',
+            set:value=>{
+                host.dataset.chartStyle=`${value||'line'}`;
+                createChart();
+            }
+        }
+    );
+
+    removeButton.addEventListener(
+        'click',
+        function removeChart(){
+            host.dispatchEvent(
+                new CustomEvent(
+                    'chart-remove',
+                    {
+                        bubbles:true,
+                        composed:true,
+                        detail:{
+                            key:host.dataset.chartKey||''
+                        }
+                    }
+                )
+            );
+        }
+    );
+
+    plot.addEventListener('keydown',navigatePoints);
+    plot.addEventListener(
+        'pointerleave',
+        ()=>updateSelectedValue(selectedIndex,'selected')
+    );
+
+    const resizeObserver=new ResizeObserver(scheduleResize);
+    resizeObserver.observe(host);
+
+    async function populate(data=[],options={}){
+        if(options&&typeof options==='object'){
+            if(options.title){
+                host.dataset.title=options.title;
+            }
+
+            if(options.style){
+                host.dataset.chartStyle=options.style;
+            }
+
+            if(options.key){
+                host.dataset.chartKey=options.key;
+            }
+        }
+
+        updateTitle();
+        return update(data);
+    }
+
+    async function update(data=[]){
+        rows=normalizeData(data);
+        selectedIndex=rows.length-1;
+
+        if(!uPlot){
+            uPlot=await loadChartLibrary();
+        }
+
+        if(!rows.length){
+            destroyChart();
+            plot.classList.add('hidden');
+            chartValue.classList.add('hidden');
+            empty.classList.remove('hidden');
+            return [];
+        }
+
+        plot.classList.remove('hidden');
+        chartValue.classList.remove('hidden');
+        empty.classList.add('hidden');
+
+        if(chart){
+            chart.setData(toChartData(rows));
+            updateSelectedValue(selectedIndex,'latest');
+            return host.dataSet;
+        }
+
+        createChart();
+        return host.dataSet;
+    }
+
+    async function addData(data=[]){
+        const additions=normalizeData(data);
+        return update(rows.concat(additions));
+    }
+
+    function normalizeData(data=[]){
+        const normalized=[];
+
+        if(data&&typeof data==='object'&&!Array.isArray(data)){
+            data=Object.entries(data);
+        }
+
+        if(!Array.isArray(data)){
+            return normalized;
+        }
+
+        for(let i=0;i<data.length;i++){
+            const item=data[i];
+            const date=Array.isArray(item)
+                ?item[0]
+                :item?.date??item?.timestamp??item?.x;
+            const value=Array.isArray(item)
+                ?item[1]
+                :item?.value??item?.score??item?.y;
+            const timestamp=Number(date);
+            const numericValue=Number(value);
+
+            if(!Number.isFinite(timestamp)||!Number.isFinite(numericValue)){
+                continue;
+            }
+
+            normalized.push([timestamp,numericValue]);
+        }
+
+        normalized.sort((a,b)=>a[0]-b[0]);
+
+        return Array.from(
+            new Map(
+                normalized.map(row=>[row[0],row])
+            ).values()
+        );
+    }
+
+    function toChartData(data=[]){
+        return [
+            data.map(row=>row[0]/1000),
+            data.map(row=>row[1])
+        ];
+    }
+
+    function createChart(){
+        if(!uPlot||!rows.length||plot.clientWidth<1){
+            return;
+        }
+
+        destroyChart();
+
+        const style=host.dataset.chartStyle||'line';
+        const color=getChartColor(
+            '--chart-text-color',
+            '--text-color',
+            'rgb(60,60,60)'
+        );
+        const lineColor=host.dataset.color||getChartColor(
+            '--chart-line-color',
+            '--primary-color',
+            'rgb(0,128,255)'
+        );
+        const pointColor=getChartColor(
+            '--chart-point-color',
+            '--accent-color',
+            lineColor
+        );
+        const gridColor=getChartColor(
+            '--chart-grid-color',
+            '--border-color',
+            'rgba(90,90,90,.35)'
+        );
+        const areaColor=getChartColor(
+            '--chart-area-color',
+            '--secondary-color',
+            lineColor
+        );
+        const height=Math.max(176,plot.clientHeight||176);
+        const width=Math.max(280,plot.clientWidth||280);
+
+        chart=new uPlot(
+            {
+                width:width,
+                height:height,
+                cursor:{
+                    drag:{
+                        x:true,
+                        y:false,
+                        setScale:true
+                    },
+                    points:{
+                        size:8
+                    }
+                },
+                legend:{show:false},
+                scales:{
+                    x:{time:true},
+                    y:{
+                        auto:false,
+                        range:[
+                            Number(host.dataset.min??0),
+                            Number(host.dataset.max??10)
+                        ]
+                    }
+                },
+                axes:[
+                    {
+                        stroke:color,
+                        grid:{stroke:gridColor}
+                    },
+                    {
+                        stroke:color,
+                        grid:{stroke:gridColor},
+                        size:38
+                    }
+                ],
+                series:[
+                    {},
+                    {
+                        label:host.dataset.seriesLabel||'Score',
+                        stroke:lineColor,
+                        width:style==='points'?0:2,
+                        fill:style==='area'?areaColor:null,
+                        points:{
+                            show:true,
+                            stroke:pointColor,
+                            size:7,
+                            width:2
+                        }
+                    }
+                ],
+                hooks:{
+                    setCursor:[
+                        chart=>{
+                            if(Number.isInteger(chart.cursor.idx)){
+                                selectedIndex=chart.cursor.idx;
+                                updateSelectedValue(selectedIndex,'hover');
+                            }
+                        }
+                    ]
+                }
+            },
+            toChartData(rows),
+            plot
+        );
+
+        updateSelectedValue(selectedIndex,'latest');
+    }
+
+    function getChartColor(name='',fallbackName='',fallback=''){
+        const styles=getComputedStyle(host);
+        return styles.getPropertyValue(name).trim()
+            || styles.getPropertyValue(fallbackName).trim()
+            || fallback;
+    }
+
+    function navigatePoints(e){
+        if(!rows.length||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){
+            return;
+        }
+
+        e.preventDefault();
+
+        if(e.key==='Home'){
+            selectedIndex=0;
+        }else if(e.key==='End'){
+            selectedIndex=rows.length-1;
+        }else if(e.key==='ArrowLeft'){
+            selectedIndex=Math.max(0,selectedIndex-1);
+        }else{
+            selectedIndex=Math.min(rows.length-1,selectedIndex+1);
+        }
+
+        updateSelectedValue(selectedIndex,'keyboard');
+    }
+
+    function updateSelectedValue(index=-1,state='selected'){
+        const row=rows[index];
+
+        if(!row){
+            valueContext.innerText='No point selected';
+            valueDate.innerText='';
+            valueScore.innerText='';
+            return;
+        }
+
+        const date=new Date(row[0]);
+        const validDate=Number.isFinite(date.getTime());
+        const score=formatValue(row[1]);
+        const maximum=formatValue(Number(host.dataset.max??10));
+        const contexts={
+            hover:'Point under cursor',
+            keyboard:'Keyboard-selected point',
+            latest:'Latest recorded point',
+            selected:'Selected point'
+        };
+
+        chartValue.dataset.state=state;
+        valueContext.innerText=contexts[state]||contexts.selected;
+        valueDate.dateTime=validDate?date.toISOString():'';
+        valueDate.innerText=validDate?date.toLocaleString():`${row[0]}`;
+        valueScore.innerText=`${score} / ${maximum}`;
+        plot.setAttribute(
+            'aria-label',
+            `${title.innerText}. Date: ${valueDate.innerText}. Score: ${score} out of ${maximum}. Use left and right arrow keys to review every recorded point.`
+        );
+    }
+
+    function formatValue(value=0){
+        return Number.isInteger(value)
+            ?`${value}`
+            :value.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+    }
+
+    function updateTitle(){
+        title.innerText=host.dataset.title||'Chart';
+        removeButton.setAttribute(
+            'aria-label',
+            `Remove ${title.innerText} from dashboard`
+        );
+    }
+
+    function scheduleResize(){
+        if(resizeFrame){
+            cancelAnimationFrame(resizeFrame);
+        }
+
+        resizeFrame=requestAnimationFrame(resizeChart);
+    }
+
+    function resizeChart(){
+        resizeFrame=0;
+
+        if(!chart||plot.clientWidth<1){
+            return;
+        }
+
+        chart.setSize(
+            {
+                width:Math.max(280,plot.clientWidth),
+                height:Math.max(176,plot.clientHeight||176)
+            }
+        );
+    }
+
+    function destroyChart(){
+        if(chart){
+            chart.destroy();
+            chart=null;
+        }
+
+        plot.replaceChildren();
+    }
+
+    function destroy(){
+        resizeObserver.disconnect();
+        destroyChart();
+        rows=[];
+    }
+
+    updateTitle();
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent('chart-ready')
+    );
+</script>

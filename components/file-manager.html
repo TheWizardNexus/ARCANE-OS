@@ -1,0 +1,797 @@
+<style>
+    :host{
+        display:block;
+        overflow-y:auto;
+        height:100%;
+    }
+
+    .file-manager{
+        min-height:100%;
+    }
+
+    .directory{
+        list-style:none;
+        padding:1em;
+        margin:0;
+        max-height: 1em;
+        overflow: hidden;
+        transition: max-height 250ms ease-out;
+    }
+
+    .directory.open{
+        max-height: 80em;
+        /*overflow-y: auto;*/
+    }
+
+    .file{
+        display:flex;
+        align-items:flex-start;
+        cursor:pointer;
+        line-height:1;
+    }
+    
+    img.icon{
+        filter:var(--file-icon-filter,none);
+        transition:filter 180ms,transform 180ms;
+    }
+
+    img.action-icon{
+        filter:var(--icon-filter,none);
+    }
+
+    .directory .icon{
+        width:2em;
+        height:2em;
+        margin-right:0.5em;
+    }
+
+    .file span{
+        line-height:2.5em;
+    }
+
+    .file-count{
+        margin-left:auto;
+        opacity:.6;
+    }
+
+    .empty-directory{
+        list-style:none;
+        opacity:.6;
+        padding:.75em 2.5em;
+    }
+
+    :host([data-layout="grid"]) .file-manager{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(12em,1fr));
+        gap:1em;
+        min-height:0;
+    }
+
+    :host([data-layout="grid"]) .directory{
+        background:var(--background);
+        border:1px solid var(--border-color);
+        border-radius:.5em;
+        box-shadow:0 .15em .45em var(--shadow-color);
+        max-height:none;
+        padding:1em;
+    }
+
+    :host([data-layout="grid"]) .directory>.file:not(.folder),
+    :host([data-layout="grid"]) .empty-directory{
+        display:none;
+    }
+
+    :host([data-layout="grid"]) .folder{
+        align-items:center;
+        flex-direction:column;
+        text-align:center;
+    }
+
+    :host([data-layout="grid"]) .folder .icon{
+        height:4em;
+        margin:0;
+        width:4em;
+    }
+
+    :host([data-layout="grid"]) .folder:hover .icon{
+        filter:var(--file-icon-filter,none) drop-shadow(0 .2em .25em var(--shadow-color));
+        transform:translateY(-.12em);
+    }
+
+    :host([data-layout="grid"]) .folder .file-count{
+        line-height:1.5em;
+        margin:0;
+    }
+
+    :host([data-layout="files"]) .directory{
+        max-height:none;
+        padding:0;
+    }
+
+    :host([data-layout="files"]) .folder{
+        display:none;
+    }
+
+    .directory-file-list{
+        list-style:none;
+        margin:1em 0 0;
+        padding:0;
+    }
+
+    .directory-actions,
+    .file-view-actions{
+        display:flex;
+        justify-content:flex-end;
+    }
+
+    .file-view-delete{
+        align-items:center;
+        display:flex;
+        gap:.5em;
+    }
+
+    .file-view-delete img{
+        height:1.25em;
+        width:1.25em;
+    }
+
+    .file-row,
+    .modal .file-row{
+        align-items:center;
+        background:transparent;
+        border:0;
+        border-radius:0;
+        box-sizing:border-box;
+        box-shadow:none;
+        color:var(--text-color);
+        display:flex;
+        line-height:1;
+        margin:0;
+        overflow-wrap:anywhere;
+        padding:0;
+        text-align:left;
+    }
+
+    .file-row-open,
+    .modal .file-row-open{
+        align-items:flex-start;
+        background:transparent;
+        border:0;
+        border-radius:0;
+        box-shadow:none;
+        color:var(--text-color);
+        display:flex;
+        flex:1 1 auto;
+        gap:.5em;
+        margin:0;
+        min-width:0;
+        padding:0;
+        text-align:left;
+    }
+
+    .file-row-open:hover{
+        background:var(--secondary-color);
+    }
+
+    .file-delete,
+    .modal .file-delete{
+        background:transparent;
+        border:0;
+        box-shadow:none;
+        flex:0 0 auto;
+        margin:0;
+        opacity:.55;
+        padding:.35em;
+    }
+
+    .file-delete:hover{
+        opacity:1;
+    }
+
+    .file-delete img{
+        display:block;
+        height:1.25em;
+        width:1.25em;
+    }
+
+    :host([data-layout="files"]) .file-row,
+    [data-layout="files"] .file-row{
+        border-bottom:1px solid var(--border-color);
+        padding:.5em;
+        width:100%;
+    }
+
+    .file-row .file-icon{
+        flex:0 0 2em;
+        height:2em;
+        width:2em;
+    }
+
+    .file-row .file-details{
+        display:flex;
+        flex-direction:column;
+        min-width:0;
+    }
+
+    .file-row .file-name{
+        display:block;
+        line-height:2.5em;
+        overflow-wrap:anywhere;
+    }
+
+    :host([data-layout="files"]) .file-row .file-name,
+    [data-layout="files"] .file-row .file-name{
+        line-height:1.4em;
+    }
+
+    .file-row .file-metadata{
+        display:block;
+        font-size:.8em;
+        line-height:1.4em;
+        margin-top:.25em;
+        opacity:.65;
+    }
+
+</style>
+
+<div class="file-manager">
+    
+</div>
+
+<input id="fileUpload" type="file" hidden multiple>
+
+<html-import id="directoryModal" class="modal" href="./components/modal.html?v=11"></html-import>
+<html-import id="fileModal" class="modal" href="./components/modal.html?v=11"></html-import>
+<html-import id="deleteModal" class="modal" href="./components/modal.html?v=11"></html-import>
+
+<script type="module">
+    import('../modules/DBOPFS.js');
+    //importing Document at the end of the file to avoid blocking;
+
+    const host=this;
+    host.loadAll=loadAll;
+
+    const {default:waitForComponent}=await import('../modules/WaitForComponent.js');
+
+    const fileManager=host.shadowRoot.querySelector('.file-manager');
+    const componentStyles=host.shadowRoot.querySelector('style');
+    const fileUpload=host.shadowRoot.querySelector('#fileUpload');
+    const directoryModal=host.shadowRoot.querySelector('#directoryModal');
+    const fileModal=host.shadowRoot.querySelector('#fileModal');
+    const deleteModal=host.shadowRoot.querySelector('#deleteModal');
+    const layout=host.dataset.layout||'';
+    const dirs=host.dataset.dirs?.split(',').map(
+        directory=>directory.trim()
+    ).filter(Boolean);
+    const fileEntityPromise=import('../entities/File.js');
+
+    let activeFileURL='';
+    let uploadDirectory='';
+    let initialized=false;
+
+    window.addEventListener(
+        'dbopfs-ready',
+        init,
+        {once:true}
+    );
+
+    if(window.dbopfs?.ready){
+        init();
+    }
+
+    fileUpload.addEventListener(
+        'change',
+        ()=>uploadFiles().catch(
+            error=>console.error('Unable to upload files:',error)
+        )
+    );
+
+    fileManager.addEventListener(
+        'click', 
+        async function(e){
+            const folder=e.target.closest('.folder');
+
+            if(folder){
+                const directoryElement=folder.closest('.directory');
+                if(!directoryElement) return;
+
+                if(layout==='grid'){
+                    openDirectory(directoryElement.dataset.directory).catch(
+                        error=>console.error('Unable to open directory:',error)
+                    );
+                    return;
+                }
+
+                directoryElement.classList.toggle('open');
+                return;
+            }
+
+        }
+    );
+
+    async function openDirectory(directory=''){
+        const modal=await waitForComponent(
+            directoryModal,
+            {
+                methods:['populate','open'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+        const files=(await dbopfs.getAllKeys(directory)).sort();
+        const metadata=await getFilesMetadata(directory,files);
+        const content=document.createElement('section');
+        const styles=componentStyles.cloneNode(true);
+        const heading=document.createElement('h1');
+        const actions=document.createElement('section');
+        const uploadButton=document.createElement('button');
+        const list=document.createElement('ul');
+
+        heading.innerText=directory;
+        actions.className='directory-actions';
+        uploadButton.type='button';
+        uploadButton.dataset.directory=directory;
+        uploadButton.innerText='Upload Files';
+        uploadButton.addEventListener(
+            'click',
+            ()=>selectFiles(directory)
+        );
+        list.className='directory-file-list';
+        list.dataset.layout='files';
+
+        actions.append(uploadButton);
+        content.append(styles,heading,actions);
+
+        if(!files.length){
+            const empty=document.createElement('p');
+            empty.innerText='This directory is empty.';
+            content.append(empty);
+        }else{
+            for(let i=0;i<files.length;i++){
+                list.append(
+                    createFileRow(
+                        directory,
+                        files[i],
+                        metadata[i]
+                    )
+                );
+            }
+
+            content.append(list);
+        }
+
+        await modal.populate(content,false);
+        modal.open();
+    }
+
+    async function openFile(directory='',fileName=''){
+        const modal=await waitForComponent(
+            fileModal,
+            {
+                methods:['populate','open'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+        const content=document.createElement('section');
+        const styles=componentStyles.cloneNode(true);
+        const heading=document.createElement('h1');
+        const actions=document.createElement('section');
+        const deleteButton=document.createElement('button');
+        const deleteIcon=document.createElement('img');
+        const status=document.createElement('p');
+
+        heading.innerText=`${directory}/${fileName}`;
+        actions.className='file-view-actions';
+        deleteButton.type='button';
+        deleteButton.className='file-view-delete';
+        deleteButton.innerText='Delete File';
+        deleteIcon.alt='';
+        deleteIcon.className='action-icon';
+        deleteIcon.src='./img/trash.svg';
+        deleteButton.prepend(deleteIcon);
+        deleteButton.addEventListener(
+            'click',
+            ()=>confirmDelete(directory,fileName,true).catch(
+                error=>console.error('Unable to delete file:',error)
+            )
+        );
+        status.innerText='Opening file...';
+        actions.append(deleteButton);
+        content.append(
+            styles,
+            heading,
+            actions,
+            document.createElement('hr'),
+            status
+        );
+
+        modal.populate(content,false);
+        modal.open();
+
+        try{
+            const {default:FileEntity}=await fileEntityPromise;
+            const file=new FileEntity(fileName,directory);
+            const fileRef=await file.open();
+
+            status.remove();
+
+            if(fileRef.size<1){
+                const empty=document.createElement('h2');
+
+                if(!layout){
+                    await dbopfs.delete(directory,fileName);
+                    await loadAll();
+                    empty.innerText='File was empty and has been deleted';
+                }else{
+                    empty.innerText='File is empty';
+                }
+
+                content.append(empty);
+            }else{
+                content.append(await renderFile(fileRef));
+            }
+        }catch(error){
+            status.innerText='Unable to open this file.';
+            console.error('Unable to open file:',error);
+        }
+    }
+
+    async function renderFile(fileRef){
+        if(activeFileURL){
+            URL.revokeObjectURL(activeFileURL);
+            activeFileURL='';
+        }
+
+        if(['png','jpg','jpeg','webp','svg'].includes(fileRef.ext)){
+            const image=document.createElement('img');
+
+            activeFileURL=URL.createObjectURL(
+                new Blob([fileRef],{type:fileRef.mime})
+            );
+            image.alt=fileRef.name;
+            image.src=activeFileURL;
+            image.style.maxWidth='100%';
+            return image;
+        }
+
+        if(fileRef.ext==='pdf'){
+            const frame=document.createElement('iframe');
+
+            activeFileURL=URL.createObjectURL(
+                new Blob([fileRef],{type:fileRef.mime})
+            );
+            frame.src=activeFileURL;
+            frame.style.height='60vh';
+            frame.style.width='100%';
+            frame.title=fileRef.name;
+            return frame;
+        }
+
+        if(!layout&&['html','md'].includes(fileRef.ext)){
+            const rendered=document.createElement('div');
+
+            rendered.innerHTML=fileRef.ext==='md'
+                ?fileRef.parsed
+                :await fileRef.text();
+            return rendered;
+        }
+
+        const rendered=document.createElement('div');
+
+        switch(fileRef.ext){
+            case 'json':
+                rendered.append(
+                    createPreformatted(
+                        JSON.stringify(fileRef.parsed,null,4)
+                    )
+                );
+                break;
+            case 'jsonl':
+            case 'ndjson':
+                for(let i=0;i<fileRef.parsed.length;i++){
+                    rendered.append(
+                        createPreformatted(
+                            JSON.stringify(fileRef.parsed[i],null,4)
+                        )
+                    );
+
+                    if(i<fileRef.parsed.length-1){
+                        rendered.append(document.createElement('hr'));
+                    }
+                }
+                break;
+            default:
+                rendered.append(
+                    createPreformatted(await fileRef.text())
+                );
+        }
+
+        return rendered;
+    }
+
+    function createPreformatted(content=''){
+        const pre=document.createElement('pre');
+        pre.innerText=content;
+        return pre;
+    }
+
+    async function getFilesMetadata(directory='',files=[]){
+        return Promise.all(
+            files.map(
+                fileName=>dbopfs.getFileMetadata(
+                    directory,
+                    fileName
+                ).catch(()=>({}))
+            )
+        );
+    }
+
+    function formatLastModified(metadata={}){
+        if(!metadata.lastModified){
+            return '';
+        }
+
+        return `Updated: ${new Date(metadata.lastModified).toLocaleString()}`;
+    }
+
+    function createFileRow(directory='',fileName='',metadata={}){
+        const file=document.createElement('li');
+        const openButton=document.createElement('button');
+        const fileIcon=document.createElement('img');
+        const fileDetails=document.createElement('span');
+        const fileLabel=document.createElement('span');
+        const fileMetadata=document.createElement('small');
+        const deleteButton=document.createElement('button');
+        const deleteIcon=document.createElement('img');
+
+        file.className='file file-row';
+
+        file.title=fileName;
+        openButton.type='button';
+        openButton.className='file-row-open';
+        openButton.dataset.fileAction='open';
+        openButton.dataset.directory=directory;
+        openButton.dataset.file=fileName;
+
+        fileIcon.alt='';
+        fileIcon.className='icon file-icon';
+        fileIcon.src='./img/doc.svg';
+        fileDetails.className='file-details';
+        fileLabel.className='file-name';
+        fileLabel.innerText=fileName;
+        fileMetadata.className='file-metadata';
+        fileMetadata.innerText=formatLastModified(metadata);
+
+        fileDetails.append(fileLabel);
+
+        if(fileMetadata.innerText){
+            fileDetails.append(fileMetadata);
+        }
+
+        deleteButton.type='button';
+        deleteButton.className='file-delete';
+        deleteButton.dataset.fileAction='delete';
+        deleteButton.dataset.directory=directory;
+        deleteButton.dataset.file=fileName;
+        deleteButton.title=`Delete ${fileName}`;
+        deleteButton.setAttribute('aria-label',`Delete ${fileName}`);
+
+        deleteIcon.alt='';
+        deleteIcon.className='action-icon';
+        deleteIcon.src='./img/trash.svg';
+
+        openButton.addEventListener(
+            'click',
+            ()=>openFile(directory,fileName).catch(
+                error=>console.error('Unable to open file:',error)
+            )
+        );
+        deleteButton.addEventListener(
+            'click',
+            ()=>confirmDelete(directory,fileName).catch(
+                error=>console.error('Unable to delete file:',error)
+            )
+        );
+
+        openButton.append(fileIcon,fileDetails);
+        deleteButton.append(deleteIcon);
+        file.append(openButton,deleteButton);
+
+        return file;
+    }
+
+    async function confirmDelete(directory='',fileName='',closeFile=false){
+        if(!directory||!fileName){
+            return false;
+        }
+
+        const modal=await waitForComponent(
+            deleteModal,
+            {
+                methods:['populate','open','close'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+        const content=document.createElement('section');
+        const heading=document.createElement('h1');
+        const message=document.createElement('p');
+        const cancelButton=document.createElement('button');
+        const deleteButton=document.createElement('button');
+
+        heading.innerText='Delete File';
+        message.innerText=`Delete ${fileName}? This cannot be undone.`;
+        cancelButton.type='button';
+        cancelButton.innerText='Cancel';
+        deleteButton.type='button';
+        deleteButton.innerText='Delete';
+
+        cancelButton.addEventListener(
+            'click',
+            ()=>modal.close(undefined,true)
+        );
+        deleteButton.addEventListener(
+            'click',
+            async function deleteSelectedFile(){
+                cancelButton.disabled=true;
+                deleteButton.disabled=true;
+
+                try{
+                    await dbopfs.delete(directory,fileName);
+                    await modal.close(undefined,true);
+
+                    if(closeFile&&typeof fileModal.close==='function'){
+                        await fileModal.close(undefined,true);
+                    }
+
+                    await loadAll();
+
+                    if(layout==='grid'){
+                        await openDirectory(directory);
+                    }
+                }catch(error){
+                    message.innerText=`Unable to delete ${fileName}.`;
+                    cancelButton.disabled=false;
+                    deleteButton.disabled=false;
+                    console.error('Unable to delete file:',error);
+                }
+            }
+        );
+
+        content.append(
+            heading,
+            message,
+            cancelButton,
+            deleteButton
+        );
+
+        await modal.populate(content,false);
+        modal.open();
+
+        return true;
+    }
+
+    function selectFiles(directory=''){
+        if(!directory){
+            return;
+        }
+
+        uploadDirectory=directory;
+        fileUpload.click();
+    }
+
+    async function uploadFiles(){
+        const files=Array.from(fileUpload.files||[]);
+        const directory=uploadDirectory;
+        fileUpload.value='';
+
+        if(!files.length||!directory){
+            return;
+        }
+
+        const {default:FileEntity}=await fileEntityPromise;
+
+        const results=await Promise.allSettled(
+            files.map(
+                function saveUploadedFile(file){
+                    return new FileEntity(
+                        file.name,
+                        directory
+                    ).save(file);
+                }
+            )
+        );
+
+        await loadAll();
+
+        if(layout==='grid'){
+            await openDirectory(directory);
+        }
+
+        const failed=results.find(
+            result=>result.status==='rejected'
+        );
+
+        if(failed){
+            throw failed.reason;
+        }
+    }
+
+    async function init(){
+        if(initialized){
+            return;
+        }
+
+        initialized=true;
+
+        try{
+            await fileEntityPromise;
+            await loadAll();
+            host.ready=true;
+            host.dispatchEvent(
+                new CustomEvent('file-manager-ready')
+            );
+        }catch(error){
+            initialized=false;
+            console.error('Unable to initialize file manager:',error);
+        }
+    }
+
+    async function loadAll(){
+        let tableNames=dirs;
+
+        if(!tableNames?.length){
+            tableNames=await dbopfs.getTableNames(Boolean(layout));
+        }
+
+        tableNames.sort();
+        fileManager.replaceChildren();
+
+        for(let i=0;i<tableNames.length;i++){
+            const tableName=tableNames[i];
+            const files=(await dbopfs.getAllKeys(tableName)).sort();
+            const metadata=layout==='files'
+                ?await getFilesMetadata(tableName,files)
+                :[];
+            const directory=document.createElement('ul');
+            const folder=document.createElement('li');
+            const folderIcon=document.createElement('img');
+            const folderName=document.createElement('span');
+            const fileCount=document.createElement('span');
+
+            directory.className='directory';
+            directory.dataset.directory=tableName;
+            folder.className='file folder';
+            folderIcon.className='icon';
+            folderIcon.src='./img/folder.svg';
+            folderName.innerText=tableName;
+            fileCount.className='file-count';
+            fileCount.innerText=`${files.length} ${files.length===1?'file':'files'}`;
+
+            folder.append(folderIcon,folderName,fileCount);
+            directory.append(folder);
+
+            for(let j=0;j<files.length;j++){
+                const fileName=files[j];
+
+                directory.append(
+                    createFileRow(
+                        tableName,
+                        fileName,
+                        metadata[j]
+                    )
+                );
+            }
+
+            if(!files.length){
+                const empty=document.createElement('li');
+                empty.className='empty-directory';
+                empty.innerText='Empty';
+                directory.append(empty);
+            }
+
+            fileManager.append(directory);
+        }
+    }
+</script>

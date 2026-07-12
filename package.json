@@ -1,0 +1,13 @@
+{
+  "name": "twin",
+  "version": "0.1.0",
+  "description": "This is the documentation on the framework.",
+  "scripts": {
+    "test": "node --test test/errors.test.mjs test/mail-server.test.mjs test/mail-transport.test.mjs"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "strong-type": "^1.1.0"
+  }
+}

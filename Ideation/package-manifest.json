@@ -1,0 +1,12 @@
+{
+  "package": "ARCANE Ideation and Architecture Package",
+  "version": "0.1.0",
+  "product": "ARCANE",
+  "expansion": "Adaptive Runtime for Cognitive AI Native Environments",
+  "organization": "The Wizard Nexus",
+  "foundation": "TWiN Compass",
+  "generated_concept_images": 18,
+  "brand_reference_images": 2,
+  "preferred_runtime": "Node.js Single Executable Application",
+  "status": "ideation / architecture"
+}

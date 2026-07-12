@@ -1,0 +1,154 @@
+<style>
+    /* Styles when 'no-logo' class is added to the host */
+    :host(.no-logo) .logo{
+        visibility: hidden;
+        -webkit-app-region: drag;
+    }
+
+    header{
+        -webkit-app-region: drag;
+        padding: 0 0.5em;
+        display: grid;
+        grid-template-columns:2em 2em 2em minmax(0,1fr) 2em 8em;
+        align-items: center;
+        text-align:center;
+        color: var(--platinum);
+    }
+
+    header .logo {
+        height:2em;
+        text-align:center;
+        -webkit-app-region: no-drag;
+        cursor:pointer;
+    }
+
+    h1{
+        font-weight: 300;
+        font-size:1em;
+    }
+
+    button{
+        -webkit-app-region: no-drag;
+        opacity:55%;
+        transition:opacity 250ms;
+        border: none;
+        background:transparent;
+        cursor:pointer;
+        color:var(--platinum);
+        font-weight:600
+    }
+
+    button:hover{
+        opacity:100%;
+        cursor:pointer;
+    }
+
+    button>img{
+        filter:var(--icon-filter,none);
+        height:1.2em;
+    }
+
+    .crisis-call{
+        background:var(--primary-color);
+        color:var(--button-text-color,var(--text-color));
+        padding:.7em 0 .4em;
+        border-radius: .2em;
+        opacity:70%;
+        width:100%;
+        white-space:nowrap;
+    }
+
+    .internet-status{
+        color:var(--danger-color);
+    }
+
+    .internet-status.online{
+        color:var(--success-color);
+    }
+</style>
+<header>
+    <button id="back"><img src="./img/arrow-left.png"/></button>
+    <button id="forward"><img src="./img/arrow-right.png"/></button>
+    <button id="refresh"><img src="./img/refresh.png"/></button>
+    <h1 id="title"></h1>
+    <span class="internet-status">●</span>
+    <a part='crisis-call-988' href='tel:988'>
+        <button class="crisis-call">988</button>
+    </a>
+</header>
+
+<script type="module">
+    import('../entities/User.js');
+    
+    const host=this;
+
+    window.addEventListener('user-entity-loaded', setSkin);
+    window.addEventListener('online', checkInternet);
+    window.addEventListener('offline', checkInternet);
+
+    if (window.user?.ready) {
+        setSkin();
+    }
+
+    checkInternet();
+
+    let color = {};
+
+    this.shadowRoot.querySelector('#back').addEventListener(
+        'click',
+        (e)=>{
+            window.history.back();
+        }
+    );
+
+    this.shadowRoot.querySelector('#forward').addEventListener(
+        'click',
+        (e)=>{
+            window.history.forward();
+        }
+    );
+
+    this.shadowRoot.querySelector('#refresh').addEventListener(
+        'click',
+        (e)=>{
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key?.includes('/')) {
+                    continue;
+                }
+                localStorage.removeItem(key);
+                //just removed one, so the current index will be replaved with the next key
+                //don't increment
+                i--;
+                console.warn(`Removed component cache ${key}`);
+            }
+            
+            window.location.reload(true);
+        }
+    );
+
+    this.shadowRoot.querySelector('#title').innerText = document.title;
+
+    async function setSkin() {
+        try {
+            const skin = window.user?.skin;
+            if (skin) {
+                document.body.className = skin;
+            } else {
+                console.log('No saved skin found. Using default.');
+            }
+        } catch (err) {
+            console.error('Failed to set global saved skin', err);
+        }
+    }
+
+    // Check if user can connect to the internet (make sure the cloud can be reached)
+    async function checkInternet() {
+        const online = navigator.onLine;
+        console.log(`Internet status: ${online ? 'Online' : 'Offline'}`);
+        host.shadowRoot.querySelector('.internet-status')
+            .classList
+            .toggle('online', online);
+
+    }
+</script>

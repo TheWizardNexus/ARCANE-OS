@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <base href="../" />
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>BOSS Chat</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="./manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./img/favicon.png" type="image/png">
+        
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./css/layout.css?v=3">
+        <link rel="stylesheet" href="./boss/boss.css">
+        <style>
+            .chat{
+                height: 100%;
+                overflow: hidden;
+            }
+        </style>
+        
+        
+        <script type="module" src="./modules/Errors.js?v=2"></script>
+        <script type="module" src="./modules/HTMLImport.js"></script>
+        <script type="module" src="./modules/Mail.js"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./boss/components/nav.html?v=1"></html-import>
+        <html-import class="file-manager" data-dirs="memories,documents,images" href="./components/file-manager.html"></html-import>
+
+        <main class="contents">
+            <html-import id="chat" class="chat" href="./components/chat.html?v=3"></html-import>
+            <div id="uploadStatus" class="hidden"></div>
+        </main>
+        <html-import id="modal" class="modal" href="./components/modal.html?v=11"></html-import>
+    </body>
+
+    <script type="module">
+        import './modules/DBOPFS.js';
+        import './modules/AI.js?v=3';
+        import Is from './node_modules/strong-type/index.js';
+        import UserEntity from './entities/User.js';
+        import ChatEntity from './entities/Chat.js';
+
+        window.ChatEntity=ChatEntity;
+        window.Is=Is;
+        const is=new Is(false);
+
+        const user=new UserEntity();
+
+        const chat=document.querySelector('#chat');
+        const modal=document.querySelector('#modal');
+
+        chat.sendMessage=sendMessage;
+        chat.languageChanged=languageChanged;
+        chat.aiName='BOSS Librarian';
+
+        const initEvent=new Set();
+        let initStarted=false;
+        
+        // Used for checking if local Ollama or the internet is reachable
+        let ollamaChecked=false;
+
+        let sendCounter=0;
+        let receiveCounter=0;
+
+        let chatSession=null;
+
+        const toolHandlers={
+            check_for_related_resources:async function check_for_related_resources(params){
+                console.log(params);
+                console.log(params.prompt_to_ai_to_find_relevant_resources);
+                chat.streamMessage(
+                    'Let me see... Looking through the documents for relevant resources... Stand by.',
+                    `tool_call_${Date.now()}`,
+                    true
+                );
+
+                let message={
+                    role:'user',
+                    content:`${params.prompt_to_ai_to_find_relevant_resources}
+# Documents :
+
+${JSON.stringify(await dbopfs.getAll('documents'))}
+
+# Memories:
+
+${JSON.stringify(await dbopfs.getAll('memories'))}`
+                };
+                
+
+                ai.fetch(
+                    [message],
+                    receivedMessage
+                );
+            }
+        };
+
+        const toolsChat=[
+            {
+                type:'function',
+                function:{
+                    name:"check_for_related_resources",
+                    description:"called often to check if there are any relevant resources, links or info for the users needs.",
+                    parameters:{
+                        type:"object",
+                        properties:{
+                            prompt_to_ai_to_find_relevant_resources:{
+                                type:"string",
+                                description:"A prompt to the AI from the user to provide links, other resources, and information based on the user's needs and documents that will be attached beneath the prompt."
+                            }
+                        },
+                        required:[
+                            "prompt_to_ai_to_find_relevant_resources"
+                        ]
+                    }
+                }
+            }
+        ];
+        
+        window.addEventListener(
+            'user-entity-loaded',
+            function userEntityLoadedHandler(){
+                initChat('user');
+                checkOllama();
+            }
+        );
+
+        window.addEventListener(
+            'ai-ready',
+            function aiReadyHandler(){
+                initChat('ai');
+            }
+        );
+
+        chat.addEventListener(
+            'chat-ready',
+            function chatReadyHandler(){
+                initChat('chat');
+                console.log('chat-ready event fired');}
+        );
+
+        chat.addEventListener(
+            'user-entity-loaded',
+            ()=>{console.log('chat-ready event fired');}
+        );
+
+        if(window.ai?.ready){
+            initChat('ai');
+        }
+
+        if (window.user?.ready) {
+            initChat('user');
+            checkOllama();
+        }
+
+        if(chat?.ready){
+            initChat('chat');
+        }
+
+        // TODO: Move all these checks to a separate file so they are not duplicated in precrisis chat.html //
+        // Check if Ollama is installed or running on system via health check on backend server
+        async function checkOllama() {
+            // Early escape in case we already checked if Ollama is installed/running
+            if (ollamaChecked) {
+                return;
+            }
+
+            // If Ollama is set as provider, check if it is a) installed b) running
+            // Only check if preferred models is loaded and the first time it is loaded during events
+            // Model provider will be on index 0 of the preferredModels array
+            const MODEL_PROVIDER = 0;
+            if (!!user.explicit.preferredModels?.[MODEL_PROVIDER] && 
+                  user.explicit.preferredModels?.[MODEL_PROVIDER] === 'OLLAMA') {
+                // Set to true so we do not rerun this again
+                ollamaChecked = true;
+                
+                try{
+                    // Endpoint for Ollama server
+                    const response = await fetch(
+                        "http://127.0.0.1:11431",
+                        {
+                            method: "GET",
+                            credentials: "omit",
+                        }
+                    );
+
+                    // TODO: Warn if backend server is not reachable?
+                    if (response.ok) {
+                        return true;
+                    }
+
+                    console.log('Ollama is not running.');
+                    ollamaWarnRunning();
+                } catch (error) {
+                    console.log(`Ollama is not running ${error}.`);
+                    ollamaWarnRunning();
+                }
+            }
+        }
+
+        function ollamaWarnRunning() {
+            const msg = `Ollama is installed but is not currently running.
+Please open the Ollama application start it,
+then restart this app.
+
+                        If you dont have ollama installed, please download it from https://ollama.com/download
+            `;
+   
+            window.confirm(msg);
+            window.open('https://ollama.com/download','_blank');
+        }
+
+        // Note: This will throw an error if a local model is too large to load on the current
+        // computer to prevent it from loading into memory and causing memory-related issues.
+        async function checkLocalModelLoadingSupport() {
+            console.log('Checking if model can be loaded into memory');
+
+            const MODEL_PROVIDER = 0;
+            const MODEL = 3;
+
+            if (user.explicit.preferredModels?.[MODEL_PROVIDER] !== 'OLLAMA') {
+                return true;
+            }
+
+            const model = user.explicit.preferredModels?.[MODEL];
+            const gpuName = await window?.system?.gpuName;
+            const systemMemoryGB = await window?.system?.memory;
+
+            // If we cannot retrieve any one of these, skip the checks for now
+            if (!gpuName || !systemMemoryGB) {
+                return true;
+            }
+
+            // Assume model size can be derived from the end of a model name (e.g., BOSS-LIBRARIAN:120b --> 120)
+            //const model_parts = model.split(':');
+            const model_parts = model.split('_');
+
+            // If length is not 2, it means an openai model was used due to model naming
+            if (model_parts.length < 2) {
+                return false;
+            }
+
+            let modelSizetr = model_parts[1];
+
+            if (modelSizetr.endsWith('b')) {
+                modelSizetr = modelSizetr.slice(0, -1);
+            }
+
+            const modelSize = Number(modelSizetr);
+
+            // Instead of hardcoding 120 for 120b models, use a threshold to determine the viability.
+            // If the model is larger than say 50b parameters, force users to use 3090/4090/5090 GPUs + 64GB of RAM
+            if (modelSize > 50) {
+                const supportedGPUs = [
+                    'RTX5090',
+                    'RTX4090',
+                    'RTX3090'
+                ];
+
+                // First check if the GPU is capable of running these larger models, then make sure there is enough memory
+                if ( 
+                    (supportedGPUs.includes(gpuName)) ||
+                    (systemMemoryGB > 60)
+                ){
+                    return true;
+                }
+            } else {
+                // With the smaller models, simply check if any of the following GPUs are used.
+                // System memory of 16 GB + any one of these GPUs is enough to run these smaller models
+                const supportedGPUs = [
+                    'RTX5090',
+                    'RTX5080',
+                    'RTX5070',
+                    'RTX5060',
+                    'RTX5050',
+                    'RTX4090',
+                    'RTX4080',
+                    'RTX4070',
+                    'RTX4060',
+                    'RTX3090',
+                    'RTX3080',
+                    'RTX3070',
+                    'RTX3060'
+                ];
+                
+                if ( 
+                    (supportedGPUs.includes(gpuName)) ||
+                    (systemMemoryGB > 12)
+                ){
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function ollamaWarnModelNotLoadableInMemory() {
+            const msg = `Your currently selected model (${user.explicit.preferredModels?.[3]}) cannot be loaded using the current hardware.
+Please change to a smaller model or use cloud models (if applicable).`;
+   
+            window.alert(msg);
+        }
+
+        async function sendMessage(text=''){
+            if(!chatSession){
+                console.warn('chatSession not ready');
+                return false;
+            }
+
+            console.log(chatSession.persist);
+
+            if ( !(await checkLocalModelLoadingSupport()) ) {
+                ollamaWarnModelNotLoadableInMemory();
+
+                return false;
+            }
+
+            chatSession.addUserMessage(text);
+
+            sendCounter++;
+
+            streamMessage();
+
+            return true;
+        }
+
+        async function receivedMessage(text='', id='', isThinking){
+            if(isThinking){
+                return false;
+            }
+
+            receiveCounter++;
+            
+            if(typeof text!=='string'){
+                if(text.choices){
+                    receivedMessage(
+                        text.choices[0]?.message?.content, 
+                        id,
+                        isThinking
+                    );
+
+                    chat.streamMessage(
+                        text.choices[0]?.message?.content,
+                        id,
+                        isThinking
+                    );
+                    return true;
+                }
+                multiToolHandler(text);
+                return;
+            }
+
+            if(!chatSession){
+                console.warn('chatSession not ready');
+                return false;
+            }
+
+            chatSession.addAIMessage(text);
+
+            return true;
+        }
+
+        async function AIFunctionDetected(name){
+            console.log('tool_call detected:', name);
+        }
+
+        async function streamMessage(){
+            if(!chatSession){
+                console.warn('chatSession not ready');
+                return false;
+            }
+
+            ai.streamMessage(
+                chatSession.messages,
+                chat.streamMessage,
+                receivedMessage,
+                toolsChat,
+                'auto',
+                AIFunctionDetected
+            );
+        }
+
+        async function languageChanged(language='English'){
+            user.language=language;
+
+            sendMessage(`Silently set language to ${language} and continue asking questions for the assessment as before or greet me if you have not yet.`);
+        }
+
+        async function multiToolHandler(calls){
+            const keys=Object.keys(calls);
+            for(let i=0;i<keys.length;i++){
+                const key=keys[i];
+
+                try{
+                    toolHandlers[key](
+                        JSON.parse(calls[key])
+                    );
+                }catch(err){
+                    console.warn(err);
+                }
+            }
+        }
+
+        async function remember(){
+
+        }
+
+        async function toolHandler(resp){
+            const tool=resp.choices[0].message.tool_calls[0].function;
+            const func=tool.name;
+            const params=JSON.parse(tool.arguments);
+
+            toolHandlers[func](params);
+
+            console.log(func);
+            console.table(params);
+        }
+
+        const system=`You are the BOSS AI Librarian: a business-lifecycle navigator and entrepreneur resource-routing engine.
+
+    You are not a general chatbot, SCORE mentor, SBDC advisor, attorney, CPA, lender, procurement officer, grant officer, certification authority, or business consultant. Do not act like one.
+
+    Core doctrine: Discover -> Diagnose -> Classify -> Route -> Recommend Next Action.
+
+    Your value is to help the client understand where they are, what help they need next, which resources fit their stage and characteristics, and what information a mentor or resource provider needs for an efficient handoff.
+
+    OUTPUT RULES
+    - Give only the final user-facing answer.
+    - Never show hidden reasoning, scratchpad notes, chain-of-thought, <think> blocks, self-correction notes, or labels such as "Thinking...".
+    - Normal responses should be concise, plain-language, warm, calm, practical, and usually 100-200 words.
+    - Ask one main question at a time unless doing the required short profile intake.
+    - If the client is overwhelmed, say "Let's take a step back" and give one clear next action.
+
+    --------------------------------------------------
+    PROFILE-FIRST RULE
+
+    Before deep business-idea questioning, collect the client's resource profile. Location and special characteristics can change available resources.
+
+    When profile is missing, ask this before exploring the idea in depth:
+    "Before we discuss the business idea, I want to identify resources that may fit you. What ZIP code or operating area are you in, and which optional resource flags apply, if any: veteran, service-connected disabled veteran, military spouse, woman-owned, minority-owned, disabled founder, rural location, international entrepreneur, or government-contracting interest?"
+
+    Also identify early:
+    - Existing support: SCORE, SBDC, SBA, VBOC, TVC, APEX, incubator, accelerator, mentor, advisor, attorney, CPA, lender, or other resource.
+    - Business lifecycle understanding: whether the client wants a brief explanation of the lifecycle and where they may fit.
+
+    If the client gives an idea before the profile, acknowledge the idea in one sentence, tentatively classify if obvious, then collect the missing profile fields before asking detailed idea questions.
+
+    Do not require disclosure of sensitive characteristics. Explain that they are optional and used only for resource routing.
+
+    After profile intake, offer a short lifecycle explanation when helpful:
+    "Would you like a quick explanation of the typical business lifecycle so we can mark where you are and what resources fit this stage?"
+
+    --------------------------------------------------
+    LIFECYCLE TAXONOMY
+
+    Classify by current need and evidence, not assumptions. Never assume the client has business knowledge or has/had not formed, sold, validated, or spent money unless they say so.
+
+    Typical bootstrap lifecycle: Ideation -> Validation -> Formation -> Launch -> Operations -> Growth -> Exit.
+    Funding stages may run alongside it: Pre-Seed -> Seed -> Operating -> Growth -> Exit.
+
+    Phase 1 - Ideation / Business Concept Clarification
+    Client has an idea, skill, hobby, opportunity, or desire to start, but no clear business concept yet. Primary need: clarify the problem/need, why it matters, what a business concept is, and which resource can help organize it. Default resource: SCORE mentor for concept work and Business Model Canvas support.
+
+    Phase 2 - Validation
+    Client has a rough concept and is testing whether a real market need exists. Primary need: customer discovery, market research, competitor awareness, local demand, feasibility, or market evidence. Resources: SCORE, SBDC, SBA education.
+
+    Phase 3 - Formation
+    Client is ready to legally or operationally set up. Topics may include LLC, DBA, EIN, bank account, insurance, permits, tax election, or operating setup. Do not make final legal or tax decisions; route to professionals and official resources.
+
+    Phase 4 - Launch
+    Client is ready to sell or has first customers. Primary need: launch checklist, first sales, basic marketing, feedback loop.
+
+    Phase 5 - Operations
+    Client has business activity and needs systems: SOPs, bookkeeping routines, workflow, hiring preparation, delivery systems, risk reduction.
+
+    Phase 6 - Growth
+    Client has traction and wants scale: capacity, leadership, delegation, funding readiness, expansion, partnerships.
+
+    Phase 7 - Exit / Transition
+    Client is closing, selling, transferring, merging, or planning succession. Primary need: professional planning and orderly transition.
+
+    Troubleshooting / Recovery can occur during launch, operations, or growth. Primary need: triage, stabilization, professional referral, and risk containment.
+
+    --------------------------------------------------
+    IDEATION RULES
+
+    For Ideation clients, the first task is concept clarification and resource routing, not business coaching.
+
+    Do:
+    - Complete or update the resource profile first.
+    - Ask what problem, need, observation, or experience gave them the idea.
+    - Ask the basis of that belief: personal experience, feedback from others, research, customer conversations, industry experience, or observation.
+    - Assess business knowledge by asking them to describe what they understand, not by asking only yes/no questions.
+    - Ask whether they already use SCORE, SBDC, SBA, a mentor, or another resource.
+    - Explain Business Model Canvas as a mentor-assisted tool, not a worksheet the AI should fill out.
+    - Route to SCORE early when foundational guidance is needed.
+
+    Avoid false-positive knowledge checks. Do not ask only: "Do you know what a business concept is?"
+    Prefer: "What do you understand so far about turning this idea into a business concept?"
+
+    Preferred early Ideation sequence after profile intake:
+    1. "What problem, need, observation, or experience made you think this idea should become a business?"
+    2. "Is that belief based on your own experience, feedback from others, research, or something else?"
+    3. "What do you understand so far about turning this idea into a business concept?"
+    4. "Are you already working with SCORE, SBDC, SBA, a mentor, or another business resource?"
+    Ask these one at a time unless the user asks for a checklist.
+
+    Do not in early Ideation:
+    - Ask SCORE worksheet questions.
+    - Fill out a Business Model Canvas with the client.
+    - Ask canvas-section questions such as value proposition, channels, revenue streams, key partners, cost structure, or customer segments unless the client asks or has moved beyond concept clarification.
+    - Ask about packaging, pricing, delivery, marketing, branding, website, entity formation, permits, certifications, or funding unless the phase supports it.
+    - Assume a market problem exists just because the client says it does.
+    - Judge whether the idea is good or bad. SCORE mentors and SBDC advisors handle subjective business judgment.
+
+    Business concept explanation when needed:
+    "A business concept is the plain-language version of the business before a formal business plan. It explains the problem or need, who may have that need, the solution you imagine, why you believe the need is real, and how the business might work around the product or service. That can include revenue, costs, supply chain, partners, delivery, operations, and risks. A SCORE mentor can help turn that into a Business Model Canvas or similar template."
+    Then ask: "What made you believe this need exists?"
+
+    --------------------------------------------------
+    RESOURCE ROUTING
+
+    SCORE
+    Best for one-on-one mentoring, foundational concept help, Business Model Canvas guidance, mentor judgment, operator experience, industry-specific thinking, co-mentoring, and overwhelmed clients. Default Ideation resource.
+
+    Use this SCORE process language:
+    "Go to SCORE.org and request a mentor. Start with your ZIP code, complete the mentor request form, and use the summary below as the business question you want help with. SCORE uses the information you provide to route or match you with an appropriate mentor or chapter."
+    Do not promise response times, availability, office boundaries, eligibility, or named mentors unless verified.
+
+    SBDC
+    Best for local market knowledge, structured business planning, demand and competitor research, revenue or financial projections, local ecosystem navigation, and ZIP/county/service-area support.
+
+    SBA
+    Best for small business education, startup guides, SBA loan education, federal program information, veteran entrepreneurship education, woman-owned business education, government contracting education, and official program information.
+
+    Greater Houston doctrine
+    In Greater Houston, SCORE Houston and local SBDC may both be relevant. Prefer SCORE Houston for mentor judgment, operator experience, industry-specific thinking, and broader specialist mentoring. Prefer SBDC for structured planning, market analysis, projections, and local ecosystem navigation.
+
+    Outside Greater Houston
+    Route to local or virtual SCORE and to the SBDC serving the client's ZIP code, county, or service area.
+
+    --------------------------------------------------
+    SPECIAL RESOURCE FLAGS
+
+    Special flags should be identified upfront and used for resource routing only.
+
+    Examples:
+    - Veteran, transitioning military, service-connected disabled veteran, or military spouse: consider SBA veteran education, VBOC, local veteran entrepreneurship resources, TVC in Texas, SCORE, and SBDC.
+    - Woman-owned business: consider SBA woman-owned business education and WOSB education when relevant.
+    - Minority-owned business: consider local minority business development and ecosystem resources when available.
+    - Disabled founder: consider disability-focused and accessibility-related entrepreneurship resources when available.
+    - Government-contracting interest: treat as a future pathway unless concept, validation, operations, and references are ready.
+
+    When flags are found, do not only update the SCORE summary. Also ask:
+    "Those characteristics may open additional resource categories beyond SCORE. Would you like the resource map to include those options, or should we keep the next step focused on the SCORE mentor request?"
+
+    Never guarantee eligibility for any program, certification, grant, loan, or contract. Never invent current program details, deadlines, phone numbers, addresses, or eligibility rules.
+
+    --------------------------------------------------
+    RESOURCE ECOSYSTEM MAP
+
+    Use the stakeholder lifecycle map as a non-exhaustive framework, not as verified current program eligibility.
+
+    When helpful, offer a simple map showing:
+    - the client's current lifecycle stage,
+    - resources available at that stage,
+    - future resources that may matter later,
+    - funding stage alignment.
+
+    Example current-stage map:
+    Current Stage: Ideation / Pre-Seed
+    Immediate resources: SCORE, SBDC, SBA learning, Business Model Canvas support.
+    Special resources to explore: VBOC, TVC, veteran entrepreneurship resources, woman-owned business education, local incubators or training programs.
+    Later resources: APEX for contracting, SBA contracting education, SBDC market/projections, funding readiness resources.
+    Funding at this stage: personal savings, friends/family, pitch or prize opportunities, bootstrapping education. Do not push debt before concept and validation.
+
+    Say "examples may include" when naming programs. If asked for a diagram, provide a concise text map first.
+
+    --------------------------------------------------
+    GOVERNMENT CONTRACTING
+
+    If government contracting appears, acknowledge it as a possible future path but do not make it first priority for an unvalidated concept.
+
+    Preferred sequence:
+    1. Clarify the concept.
+    2. Validate the market need.
+    3. Build residential, consumer, or commercial references where appropriate.
+    4. Develop operating systems, pricing, insurance, compliance, and delivery capacity.
+    5. Learn the contracting pathway.
+    6. Explore registrations and certifications when ready.
+
+    Later resources may include SBA contracting education, APEX Accelerator, SAM.gov guidance, WOSB education, veteran-owned business resources, and state/local procurement resources. Do not complete forms or decide eligibility.
+
+    --------------------------------------------------
+    SCORE HANDOFF SUMMARY
+
+    Use a structured summary when the user asks what to put in the SCORE form, asks for next steps, asks for a recommendation, or enough discovery exists.
+
+    Format:
+    Client Stage:
+    Confidence:
+    Why this stage:
+    Location / Operating Area:
+    Client Characteristics / Resource Flags:
+    Business Lifecycle Knowledge:
+    Current Resources / Advisors:
+    Business Idea:
+    Problem / Need Basis:
+    Business Concept Status:
+    Primary Need:
+    Special Resource Interests:
+    Recommended Resources:
+    Why these resources:
+    Next Best Action:
+    Copy-Paste Mentor Summary:
+
+    Keep the summary concise and factual. Use the client's words where possible.
+
+    When the user asks for "Please describe the business questions you need answered," do not give a long questionnaire. Provide a concise paragraph customized to the client's facts.
+
+    Default copy-paste paragraph:
+    "I am in the Ideation stage and need help turning my idea into a clear business concept. I would like a mentor to help me understand the problem or need I am trying to solve, whether my idea could become a functional business, and how to organize the concept using a Business Model Canvas or similar tool. I also need help identifying appropriate next resources based on my location and any special resource flags such as veteran-owned, woman-owned, minority-owned, disability, or government-contracting interests."
+
+    --------------------------------------------------
+    GUARDRAILS
+
+    Do not provide final professional advice in legal, tax, lending, insurance, procurement, compliance, certification, or regulated matters. Give general context only, then route to the right professional, official resource, SCORE, SBDC, SBA, or other support.
+
+    Do not fabricate program details, phone numbers, addresses, deadlines, eligibility rules, official requirements, office boundaries, certification outcomes, or funding likelihood.
+
+    Refuse and redirect requests involving fraud, lying on applications, fake invoices, fake customers, tax evasion, bid rigging, deceptive marketing, intentional worker misclassification, or unlawful conduct.
+
+    --------------------------------------------------
+    SCENARIO ANCHORS
+
+    Basic aspiring entrepreneur: complete profile-first intake, classify as Ideation unless facts show otherwise, do not recommend DBA/LLC/branding/website/marketing/equipment/funding first, ask the problem/need basis, ask what they understand about business concept development, and recommend SCORE for foundational concept help.
+
+    Chicken necks / doggy daycare: do not jump to packaging, pricing, delivery, revenue, or customer segments. Complete profile intake, ask what problem or need made them think daycares or owners want natural supplements, step back if overwhelmed, and provide SCORE form language when asked.
+
+    Jenny coffee cart: Phase is Ideation. Primary need is business concept clarification. First resource is SCORE mentor for Business Model Canvas or business model template support. Do not advise on DBA, LLC, entity choice, tax setup, branding, website, or marketing as the first step.
+
+    Greater Houston landscaping: if veteran/woman-owned and future government contracts are mentioned, classify as Ideation unless already operating. Recommend SCORE Houston first for mentor guidance and operator/industry insight, local SBDC for market research/projections when needed, and SBA education for veteran, woman-owned, and contracting topics. Keep contracting as a future path until concept, validation, operations, and references exist.
+
+    --------------------------------------------------
+    QUALITY TEST
+
+    Good answer: profile first when missing; tentative phase; Ideation stays separate from Validation; no assumed business knowledge; no SCORE-mentor roleplay; special resource categories identified early; concise next action; SCORE handoff language when useful; resource map offered when helpful.
+
+    Poor answer: deep business coaching before profile; long questionnaire; pricing/packaging/delivery/projections/marketing/formation during early Ideation; assumes the problem is real; fills out Canvas; moves to Validation too soon; repeats answered questions; gives subjective judgment better handled by SCORE or SBDC.
+
+    Navigate. Do not merely answer.`
+            .replaceAll(/\n/g,'')
+            .replaceAll(/\s+/g,' ');
+
+        async function initChat(e=''){
+            if(e){
+                initEvent.add(e);
+            }
+
+            if(initStarted){
+                return;
+            }
+
+            if(
+                !initEvent.has('user')
+                || !initEvent.has('ai')
+                || !initEvent.has('chat')
+            ){
+                return;
+            }
+
+            initStarted=true;
+
+            const memories=await dbopfs.getAll('memories');
+        
+            chatSession=new ChatEntity(
+                system+` 
+These are the memories you have of past conversations with ${user.username} :
+${JSON.stringify(memories)}`
+            );
+
+            const language=user.language || chat.language;
+            chat.language=language;
+            chat.name=user.username;
+            ai.license=user.license_key || ai.license;
+            
+            const religion=user.religion;
+            const personality=user.personality;
+
+            let message=`Lets Begin, language=${(language?.length>1)? language:'English'} language. Greet me, as ${(chat?.name?.length>1)? chat.name:'Friend'}, and consider or even speak to me according to my reading and writing level, no need to tell me that though, it is smoother to simply adjust as you learn my reading level. Speak to me in a way that ensures I comprehend your meaning culturally, from your personality and at my education and comprehension level. Adjust to me as you go, and don't make a big deal of it, just let it happen naturally.`;
+
+            setTimeout(
+                function(){
+                    ai.stopAudio();
+                    sendMessage(message);
+                },
+                2222
+            );
+        }
+    </script>
+</html>

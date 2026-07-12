@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./img/favicon.png" type="image/png">
+        
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./css/layout.css?v=3">
+        
+        <script type="module" src="./modules/Errors.js?v=2"></script>
+        <script type="module" src="./modules/DBLS.js"></script>
+        <script type="module" src="./modules/HTMLImport.js?v=2"></script>
+
+        <style>
+            /* Import drop zone */
+            #dropZone{
+                border:2px dashed var(--border-color);
+                border-radius:0.75em;
+                padding:2em;
+                text-align:center;
+                cursor:pointer;
+                transition:
+                    border-color 200ms,
+                    background 200ms,
+                    transform 150ms,
+                    box-shadow 200ms;
+            }
+
+            input,#fileInput,#fileInput::file-selector-button{
+                cursor:pointer;
+            }
+
+            /* Hover hint */
+            #dropZone:hover{
+                border-color:var(--primary-color);
+            }
+
+            /* File dragged over */
+            #dropZone.dragover{
+                border-color:var(--secondary-color);
+                background:var(--modal-background);
+                box-shadow:0 0 0.6em var(--secondary-color);
+                transform:scale(1.02);
+            }
+
+            /* While restore is running */
+            #dropZone.loading{
+                opacity:0.6;
+                pointer-events:none;
+            }
+
+            /* Restore success */
+            #dropZone.success{
+                border-color:var(--secondary-color);
+                box-shadow:0 0 0.8em var(--secondary-color);
+            }
+
+            /* Restore failure */
+            #dropZone.error{
+                border-color:var(--accent-color);
+                box-shadow:0 0 0.8em var(--accent-color);
+            }
+
+            #importStatus{
+                margin-top:1em;
+                padding:0.75em 1em;
+                border-radius:0.5em;
+                border:1px solid var(--border-color);
+                background:var(--modal-background);
+                color:var(--text-color);
+                transition:opacity 200ms;
+            }
+
+            #importStatus.success{
+                border-color:var(--secondary-color);
+                box-shadow:0 0 0.4em var(--secondary-color);
+            }
+
+            #importStatus.error{
+                border-color:var(--accent-color);
+                box-shadow:0 0 0.4em var(--accent-color);
+            }
+
+            #importStatus.loading{
+                border-color:var(--primary-color);
+            }
+            
+        </style>
+    </head>
+
+    <body>
+        <html-import class="header" href="./components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+
+            <div id="dropZone">
+                <h1>Import Your Database.</h1>
+                <p>Restore from a backup image</p>
+                <p>Drag & drop your <strong>PreCrisis backup image</strong> here<br>or</p>
+                <input type="file" id="fileInput" accept="image/png">
+            </div>
+
+            <div id="importStatus" class="hidden"></div>
+        </main>
+
+        <script type="module">
+            import UserEntity from './entities/User.js';
+
+            const user=new UserEntity();
+            const zone=document.querySelector('#dropZone');
+
+            window.addEventListener(
+                'user-entity-loaded',
+                initImport
+            );
+
+            function initImport(){
+
+                const input=document.querySelector('#fileInput');
+
+                input.addEventListener(
+                    'change',
+                    function(e){
+                        if(e.target.files.length){
+                            handleFile(e.target.files[0]);
+                        }
+                    }
+                );
+
+                ['dragenter','dragover'].forEach(
+                    function(evt){
+                        zone.addEventListener(
+                            evt,
+                            function(e){
+                                e.preventDefault()
+                                zone.classList.add('dragover')
+                            }
+                        )
+                    }
+                );
+
+                ['dragleave','drop'].forEach(
+                    function(evt){
+                        zone.addEventListener(
+                            evt,
+                            function(e){
+                                e.preventDefault()
+                                zone.classList.remove('dragover')
+                            }
+                        )
+                    }
+                );
+
+                zone.addEventListener(
+                    'click',
+                    function(e){
+                        if (e.target.tagName.toLowerCase() !== 'input'){
+                            document.querySelector('#fileInput').click();
+                        }
+                    }
+                )
+
+                zone.addEventListener(
+                    'drop',
+                    function(e){
+
+                        const file=e.dataTransfer.files[0];
+
+                        if(file){
+                            handleFile(file);
+                        }
+                    }
+                );
+            }
+
+            async function handleFile(file){
+
+                zone.classList.remove('success','error')
+                zone.classList.add('loading')
+
+                try{
+
+                    setStatus('Restoring database…','loading')
+
+                    await dbopfs.restoreFromPNG(file)
+
+                    setStatus('Database restored successfully','success')
+
+                    zone.classList.remove('loading');
+                    zone.classList.add('success');
+
+                }catch(err){
+
+                    console.error(err)
+
+                    setStatus('Restore failed: '+err.message,'error')
+
+                    zone.classList.remove('loading')
+                    zone.classList.add('error')
+                }
+            }
+
+            async function setStatus(message,type='loading'){
+                const el=document.querySelector('#importStatus');
+
+                el.textContent=message;
+
+                el.className=type;
+                el.id='importStatus';
+
+                el.classList.remove('hidden');
+
+                if(type==='success'){
+                    setTimeout(()=>{
+                        el.classList.add('hidden');
+                        zone.classList.remove('success');
+                    },4000);
+                }
+            }
+        </script>
+    </body>
+</html>
