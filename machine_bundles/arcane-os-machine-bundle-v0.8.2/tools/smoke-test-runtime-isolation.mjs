@@ -13,11 +13,21 @@ for (const token of [
   'CoreWebView2HostResourceAccessKind.DenyCors',
   'if (!IsAllowedAppUri(eventArgs.Uri)) eventArgs.Cancel = true;',
   'String.Equals(uri.Scheme, Uri.UriSchemeHttps',
-  'String.Equals(uri.AbsolutePath, "/" + Program.AppMode + "/index.html"',
+  'foreach (string allowedPath in Program.AllowedNavigationPaths)',
+  'String.Equals(uri.AbsolutePath, allowedPath, StringComparison.Ordinal)',
+  'String.Equals(uri.AbsolutePath, "/app/" + Program.AppMode + "/index.html", StringComparison.Ordinal)',
+  'String.IsNullOrEmpty(uri.Query)',
+  'String.IsNullOrEmpty(uri.Fragment)',
   'Program.AppMode == "shell"',
   'eventArgs.PermissionKind == CoreWebView2PermissionKind.Microphone',
   'CoreWebView2PermissionState.Deny',
 ]) assert.ok(windowsHost.includes(token), `Windows runtime isolation is missing: ${token}`);
+const allowedUriMethod = windowsHost.match(/private static bool IsAllowedAppUri\(string value\)[\s\S]+?(?=\n\s*private static bool IsTrustedAppOrigin\(string value\))/)?.[0] || '';
+assert.match(
+  allowedUriMethod,
+  /if \(!String\.IsNullOrEmpty\(uri\.Query\) \|\| !String\.IsNullOrEmpty\(uri\.Fragment\)\) return false;/,
+  'Windows navigation must reject even allowlisted paths when the URI has a query or fragment.',
+);
 
 const linuxHost = await fs.readFile(path.join(root, 'src/hosts/linux/arcane_host.c'), 'utf8');
 for (const token of [

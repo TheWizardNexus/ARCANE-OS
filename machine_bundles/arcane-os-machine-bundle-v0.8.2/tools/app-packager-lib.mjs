@@ -261,7 +261,9 @@ export function validateAppRegistry(registry) {
   const apps = {};
   const presentationOrders = new Set();
   for (const [id, app] of Object.entries(registry.apps)) {
-    if (id.length > 64 || !APP_ID_PATTERN.test(id) || RESERVED_APP_IDS.has(id)) fail(`app id “${id}” is invalid or reserved.`);
+    if (id.length > 64 || !APP_ID_PATTERN.test(id) || RESERVED_APP_IDS.has(id) || WINDOWS_RESERVED_NAME.test(id)) {
+      fail(`app id “${id}” is invalid or reserved.`);
+    }
     const label = `apps.${id}`;
     if (!isPlainObject(app)) fail(`${label} must be an object.`);
     assertOnlyKeys(app, new Set(['displayName', 'description', 'icon', 'order', 'type', 'source', 'entry', 'capabilities', 'security', 'documentCatalog', 'include']), label);

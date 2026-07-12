@@ -87,6 +87,11 @@ test('registry rejects privileged types, capabilities, and overlapping allowlist
   delete nonCanonicalId.apps.boss;
   assert.throws(() => validateAppRegistry(nonCanonicalId), /app id .* is invalid or reserved/);
 
+  const windowsReservedId = clone(valid);
+  windowsReservedId.apps.con = windowsReservedId.apps.boss;
+  delete windowsReservedId.apps.boss;
+  assert.throws(() => validateAppRegistry(windowsReservedId), /app id .* is invalid or reserved/);
+
   const capability = clone(valid);
   capability.apps.boss.capabilities.push('users.manage');
   assert.throws(() => validateAppRegistry(capability), /approved non-privileged app capability/);

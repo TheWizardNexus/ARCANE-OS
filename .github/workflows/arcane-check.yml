@@ -24,11 +24,5 @@ jobs:
       - run: npm ci --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
       - name: Run portable mandatory checks
         run: npm run check
-      - name: Build Windows release and acquire pinned WebView2 SDK
-        run: npm run build:win --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
-      - name: Build Windows native targeted apps
-        run: npm run build:apps:windows --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
-      - name: Verify Windows native targeted apps
-        run: npm run verify:apps --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
-      - name: Verify compiled Windows dispatch contracts
-        run: npm run verify:windispatch --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
+      - name: Build and verify unified Windows distribution
+        run: npm run check:windows --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2

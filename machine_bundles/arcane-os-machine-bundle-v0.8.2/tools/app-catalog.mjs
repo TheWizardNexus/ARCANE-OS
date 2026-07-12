@@ -8,7 +8,18 @@ export const APP_PACKAGE_MANIFEST = 'arcane-app-package.json';
 export const APP_CATALOG = 'catalog.json';
 
 const APP_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const WINDOWS_RESERVED_APP_ID = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const TARGET_ROOT_DIRECTORY = 'app';
+const TARGET_BASE_FILES = Object.freeze([
+  'arcane-bundle.json',
+  APP_PACKAGE_MANIFEST,
+  'ArcaneCore.exe',
+  'ArcanePipeGuard.exe',
+  'Microsoft.Web.WebView2.Core.dll',
+  'Microsoft.Web.WebView2.WinForms.dll',
+  'WebView2Loader.dll',
+]);
 
 function fail(message) {
   throw new Error(`Invalid Arcane installed-app package: ${message}`);
@@ -52,7 +63,9 @@ async function exists(candidate) {
 }
 
 function validateAppId(value, label = 'app id') {
-  if (typeof value !== 'string' || value.length > 64 || !APP_ID_PATTERN.test(value)) fail(`${label} is invalid.`);
+  if (typeof value !== 'string' || value.length > 64 || !APP_ID_PATTERN.test(value) || WINDOWS_RESERVED_APP_ID.test(value)) {
+    fail(`${label} is invalid or reserved.`);
+  }
   return value;
 }
 
@@ -65,10 +78,46 @@ function validateLauncher(appId, launcher) {
   return launcher;
 }
 
+function exactNames(actual, expected) {
+  const left = [...actual].sort(compareText);
+  const right = [...expected].sort(compareText);
+  return left.length === right.length && left.every((name, index) => name === right[index]);
+}
+
+async function assertExactTargetLayout(target, appId, launcher, phase) {
+  const rootStat = await fs.lstat(target);
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) fail('target root must be a regular directory.');
+  const entries = await fs.readdir(target, { withFileTypes: true });
+  const names = entries.map((entry) => entry.name);
+  const expected = [TARGET_ROOT_DIRECTORY, ...TARGET_BASE_FILES];
+  if (phase === 'write') {
+    if (names.includes(APP_CONTENT_MANIFEST)) expected.push(APP_CONTENT_MANIFEST);
+    if (names.includes(launcher)) expected.push(launcher);
+  } else {
+    expected.push(APP_CONTENT_MANIFEST, launcher);
+  }
+  if (!exactNames(names, expected)) {
+    fail(phase === 'write'
+      ? `${appId} pre-wrapper target root contains missing or unexpected entries.`
+      : `${appId} finalized target root contains missing or unexpected entries.`);
+  }
+  for (const entry of entries) {
+    const absolute = path.join(target, entry.name);
+    const stat = await fs.lstat(absolute);
+    if (stat.isSymbolicLink()) fail(`${appId} target root contains symbolic link "${entry.name}".`);
+    if (entry.name === TARGET_ROOT_DIRECTORY) {
+      if (!entry.isDirectory() || !stat.isDirectory()) fail(`${appId} target app payload is not a regular directory.`);
+    } else if (!entry.isFile() || !stat.isFile()) {
+      fail(`${appId} target root entry "${entry.name}" is not a regular file.`);
+    }
+  }
+}
+
 async function enumerateHashedFiles(root, excluded = new Set()) {
   const files = [];
   async function visit(directory, relativeDirectory = '') {
     const entries = await fs.readdir(directory, { withFileTypes: true });
+    if (entries.length === 0) fail(`package contains empty directory "${relativeDirectory || '.'}".`);
     entries.sort((left, right) => compareText(left.name, right.name));
     for (const entry of entries) {
       const relative = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
@@ -134,6 +183,7 @@ export async function writeAppContentManifest({ target, appId, launcher = expect
   const absoluteTarget = path.resolve(target);
   validateAppId(appId);
   validateLauncher(appId, launcher);
+  await assertExactTargetLayout(absoluteTarget, appId, launcher, 'write');
   const packageData = await fs.readFile(path.join(absoluteTarget, APP_PACKAGE_MANIFEST));
   const packageManifest = JSON.parse(packageData.toString('utf8'));
   if (packageManifest.app?.id !== appId) fail(`the outer package identity does not match ${appId}.`);
@@ -155,6 +205,7 @@ export async function verifyAppContentManifest({ target, appId, launcher = expec
   const absoluteTarget = path.resolve(target);
   validateAppId(appId);
   validateLauncher(appId, launcher);
+  await assertExactTargetLayout(absoluteTarget, appId, launcher, 'verify');
   const data = await fs.readFile(path.join(absoluteTarget, APP_CONTENT_MANIFEST));
   const manifest = parseContentManifest(data, { appId, version });
   const excluded = new Set([APP_CONTENT_MANIFEST, APP_PACKAGE_MANIFEST, launcher]);
@@ -164,6 +215,9 @@ export async function verifyAppContentManifest({ target, appId, launcher = expec
 }
 
 async function verifyOuterPackage(target, packageManifest, packageData) {
+  const appId = validateAppId(packageManifest && packageManifest.app && packageManifest.app.id, 'package app id');
+  const launcher = expectedLauncher(appId);
+  await assertExactTargetLayout(path.resolve(target), appId, launcher, 'verify');
   if (!Array.isArray(packageManifest.files)) fail(`${APP_PACKAGE_MANIFEST} has no file inventory.`);
   const expected = validateFileInventory(packageManifest.files, `${APP_PACKAGE_MANIFEST}.files`);
   const actual = await enumerateHashedFiles(target, new Set([APP_PACKAGE_MANIFEST]));

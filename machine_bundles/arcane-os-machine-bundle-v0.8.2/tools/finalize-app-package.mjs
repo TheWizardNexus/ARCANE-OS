@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { writeAppContentManifest } from './app-catalog.mjs';
+import { verifyAppContentManifest } from './app-catalog.mjs';
 
 const bundleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const targetsRoot = path.join(bundleRoot, 'dist', 'targets');
@@ -22,7 +22,12 @@ if (manifest.app?.id !== appId) throw new Error('Target app manifest identity mi
 for (const required of [launcher, 'ArcaneCore.exe', 'ArcanePipeGuard.exe', 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll']) {
   await fs.access(path.join(target, required));
 }
-const content = await writeAppContentManifest({ target, appId, launcher });
+const content = await verifyAppContentManifest({
+  target,
+  appId,
+  launcher,
+  version: manifest.bundleVersion,
+});
 
 const files = [];
 async function visit(directory, relativeDirectory = '') {

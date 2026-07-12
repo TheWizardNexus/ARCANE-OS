@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const [guard, core, windows, linux, host, windowsBuild, targetBuild, releaseIntegrity, targetFinalizer] = await Promise.all([
+const [guard, core, windows, linux, host, windowsBuild, targetBuild, releaseIntegrity, machineContent, targetFinalizer] = await Promise.all([
   fs.readFile(path.join(root, 'src/hosts/windows/ArcanePipeGuard.cs'), 'utf8'),
   fs.readFile(path.join(root, 'src/core/arcane-core.template.cjs'), 'utf8'),
   fs.readFile(path.join(root, 'src/native/windows.cjs'), 'utf8'),
@@ -13,6 +13,7 @@ const [guard, core, windows, linux, host, windowsBuild, targetBuild, releaseInte
   fs.readFile(path.join(root, 'tools/build-windows-webview2.ps1'), 'utf8'),
   fs.readFile(path.join(root, 'tools/build-windows-target-app.ps1'), 'utf8'),
   fs.readFile(path.join(root, 'tools/release-integrity.mjs'), 'utf8'),
+  fs.readFile(path.join(root, 'tools/machine-content.mjs'), 'utf8'),
   fs.readFile(path.join(root, 'tools/finalize-app-package.mjs'), 'utf8'),
 ]);
 
@@ -39,10 +40,30 @@ assert.match(core, /if \(!simulate && platform === 'linux'\)/);
 assert.match(core, /PRIVILEGE_PEER_VERIFICATION_UNAVAILABLE/);
 assert.match(core, /verifyPrivilegePipeGuardTrust/);
 assert.match(core, /verifyUnsignedLocalPipeGuardBinding/);
+assert.match(core, /'EXTERNAL_PROVISIONER_REQUIRED'/);
+assert.match(core, /payload\.selfHosted/);
+const selfHostedCheck = core.indexOf('if (!simulate && payload.selfHosted)');
+const missingPayloadCheck = core.indexOf('if (!payload.files || !payload.files.length)');
+assert(selfHostedCheck >= 0 && missingPayloadCheck > selfHostedCheck,
+  'an installed Provisioner must require an external updater before generic payload errors or file mutation');
 assert.match(windows, /Get-AuthenticodeSignature/);
 assert.match(windows, /guardThumbprint === coreThumbprint/);
 assert.match(windows, /allowUnsignedLocalRelease/);
-assert.match(host, /arg == "--allow-unsigned-local-release"/);
+assert.match(windows, /runningInstalledArcaneProcesses/);
+assert.match(windows, /relativePath: normalizeInstalledPath\(record\.relativePath/);
+assert.match(host, /bool allowUnsigned = HasExactArgument\(args, "--allow-unsigned-local-release"\);/);
+assert.match(host, /string securityMode = VerifyExecutableSignatures\(executables, allowUnsigned\);/);
+assert.match(host, /internal bool IsUnsignedLocalTest \{ get \{ return String\.Equals\(SecurityMode, "unsigned-local-test", StringComparison\.Ordinal\); \} \}/);
+assert.match(host, /start\.EnvironmentVariables\["ARCANE_RELEASE_SECURITY_MODE"\] = releaseSecurity\.SecurityMode;/);
+const buildArguments = host.match(/private static string BuildArguments\([\s\S]+?(?=\n\s*private static string Quote\()/)?.[0] || '';
+assert.match(buildArguments, /if \(releaseSecurity\.IsUnsignedLocalTest\) result\.Append\(" --allow-unsigned-local-release"\);/);
+assert.doesNotMatch(buildArguments, /arg == "--allow-unsigned-local-release"/);
+
+assert.match(host, /private const string MachineManifestName = "arcane-machine-content\.json";/);
+assert.match(host, /string expectedPrefix = "ARCANE-MACHINE-BINDING\|1\|";/);
+assert.match(host, /if \(!FixedTimeEquals\(markerParts\[3\], manifestHash\)\) throw new InvalidDataException/);
+assert.match(host, /RequireInventoryFile\(files, "apps\/catalog\.json"\);/);
+assert.match(host, /RequireEmbeddedMarker\(retainedByPath\[Path\.GetFullPath\(otherHostPath\)\], marker\);/);
 
 assert.match(core, /\^\[A-Za-z0-9_-\]\{22\}\$/);
 assert.match(core, /authTag\.length !== 16/);
@@ -63,10 +84,28 @@ for (const build of [windowsBuild, targetBuild]) {
   assert.match(build, /smoke-test-windows-pipe-guard\.mjs/);
   assert.match(build, /Set-AuthenticodeSignature/);
   assert.match(build, /\$requireSignedRelease\s*=\s*\$env:ARCANE_REQUIRE_SIGNED_RELEASE -eq '1'/);
-  assert.match(build, /\$requireSignedRelease -and -not \$timestampServer/);
+  assert.match(build, /if \(\$signingThumbprint\) \{\s*if \(-not \$timestampServer\)/);
+  assert.match(build, /elseif \(\$requireSignedRelease\)/);
   assert.match(build, /TimeStamperCertificate/);
 }
-assert.match(releaseIntegrity, /'ArcanePipeGuard\.exe'/);
+assert.match(windowsBuild, /\$bin = Join-Path \$release 'bin'/);
+assert.match(windowsBuild, /machine-content\.mjs'\) write \$release/);
+assert.match(windowsBuild, /\$machineBinding = "ARCANE-MACHINE-BINDING\|1\|\$\(\$bundle\.version\)\|\$contentHash"/);
+assert.match(windowsBuild, /AssemblyMetadata\("ArcaneContentBinding", "\$machineBinding"\)/);
+const machineWriteIndex = windowsBuild.indexOf("machine-content.mjs') write $release");
+const machineBindingIndex = windowsBuild.indexOf('$machineBinding = "ARCANE-MACHINE-BINDING|1|');
+const firstHostBuildIndex = windowsBuild.indexOf("Build-Host 'ArcaneProvisioner.exe'");
+assert(machineWriteIndex >= 0 && machineBindingIndex > machineWriteIndex && firstHostBuildIndex > machineBindingIndex,
+  'Windows hosts must be compiled only after the exact machine content manifest is written and hashed.');
+
+assert.match(releaseIntegrity, /'bin\/ArcanePipeGuard\.exe'/);
+assert.match(releaseIntegrity, /'arcane-machine-content\.json'/);
+assert.match(releaseIntegrity, /'apps\/catalog\.json'/);
+assert.match(machineContent, /'bin\/ArcaneProvisioner\.exe'/);
+assert.match(machineContent, /'bin\/ArcaneShell\.exe'/);
+assert.match(machineContent, /enumerateMachineContent\(root, \{ phase: 'write' \}\)/);
+assert.match(machineContent, /enumerateMachineContent\(root, \{ phase: 'verify' \}\)/);
+assert.match(machineContent, /manifest does not exactly match the release payload/);
 assert.match(targetFinalizer, /pipeGuard: 'ArcanePipeGuard\.exe'/);
 
 console.log('Arcane kernel-bound privilege boundary source and build contracts passed.');

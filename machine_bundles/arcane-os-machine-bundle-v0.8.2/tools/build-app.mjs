@@ -8,6 +8,7 @@ import { publishWindowsAppProjection } from './app-catalog.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const bundleRoot = path.resolve(here, '..');
 const args = process.argv.slice(2);
+const allowUnsignedLocalRelease = args.includes('--allow-unsigned-local-release');
 
 function option(name) {
   const inline = args.find((argument) => argument.startsWith(`${name}=`));
@@ -18,6 +19,10 @@ function option(name) {
 
 const platform = option('--platform') || (process.platform === 'win32' ? 'windows' : 'portable');
 if (!['portable', 'windows'].includes(platform)) throw new Error('Supported app package platforms are portable and windows.');
+if (allowUnsignedLocalRelease && platform !== 'windows') throw new Error('Unsigned local-release permission applies only to Windows native app wrapping.');
+if (allowUnsignedLocalRelease && process.env.ARCANE_REQUIRE_SIGNED_RELEASE === '1') {
+  throw new Error('--allow-unsigned-local-release conflicts with ARCANE_REQUIRE_SIGNED_RELEASE=1.');
+}
 
 async function buildApp(appId) {
   if (platform === 'portable') return buildTargetApp({ bundleRoot, appId });
@@ -33,7 +38,14 @@ async function buildApp(appId) {
       '-AppId', appId,
       '-Source', source.target,
       '-Target', target,
-    ], { cwd: bundleRoot, stdio: 'inherit', windowsHide: true });
+    ], {
+      cwd: bundleRoot,
+      stdio: 'inherit',
+      windowsHide: true,
+      env: allowUnsignedLocalRelease
+        ? { ...process.env, ARCANE_REQUIRE_SIGNED_RELEASE: '0' }
+        : process.env,
+    });
     if (result.status !== 0) throw new Error(`Windows Arcane app wrapping failed with exit code ${result.status}.`);
     return { ...source, target, platform: 'windows' };
   } finally {
@@ -42,7 +54,7 @@ async function buildApp(appId) {
 }
 
 if (args.includes('--help') || args.includes('-h')) {
-  console.log('Usage: node tools/build-app.mjs --app=<registered-name> [--platform=windows|portable]\n       node tools/build-app.mjs --all [--platform=windows|portable]\n       node tools/build-app.mjs --list');
+  console.log('Usage: node tools/build-app.mjs --app=<registered-name> [--platform=windows|portable] [--allow-unsigned-local-release]\n       node tools/build-app.mjs --all [--platform=windows|portable] [--allow-unsigned-local-release]\n       node tools/build-app.mjs --list');
   process.exit(0);
 }
 
@@ -53,7 +65,7 @@ if (args.includes('--list')) {
 }
 
 if (args.includes('--all')) {
-  const allowed = new Set(['--all', '--platform', platform, `--platform=${platform}`]);
+  const allowed = new Set(['--all', '--platform', platform, `--platform=${platform}`, '--allow-unsigned-local-release']);
   for (const argument of args) if (!allowed.has(argument)) throw new Error(`Unknown argument “${argument}”.`);
   const apps = await listTargetApps(bundleRoot);
   for (const app of apps) {
@@ -69,7 +81,7 @@ if (args.includes('--all')) {
 
 const appId = option('--app');
 if (!appId) throw new Error('Pass --app=<registered-name>. Use --list to see valid targets.');
-const allowedArguments = new Set([`--app=${appId}`, '--app', appId, '--platform', platform, `--platform=${platform}`]);
+const allowedArguments = new Set([`--app=${appId}`, '--app', appId, '--platform', platform, `--platform=${platform}`, '--allow-unsigned-local-release']);
 for (const argument of args) {
   if (!allowedArguments.has(argument)) throw new Error(`Unknown argument “${argument}”.`);
 }

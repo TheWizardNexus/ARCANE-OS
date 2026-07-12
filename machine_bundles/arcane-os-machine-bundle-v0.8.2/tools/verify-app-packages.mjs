@@ -52,9 +52,10 @@ for (const appId of Object.keys(registry.apps).sort()) {
   if (manifest.platform === 'windows') {
     assert(manifest.native?.launcher, `${appId} is missing its native launcher declaration`);
     assert(expected.has('arcane-app-content.json'), `${appId} is missing its exact content manifest`);
-    for (const required of [manifest.native.launcher, manifest.native.core, manifest.native.pipeGuard, 'Microsoft.Web.WebView2.Core.dll', 'WebView2Loader.dll', `start-${appId}.bat`]) {
+    for (const required of [manifest.native.launcher, manifest.native.core, manifest.native.pipeGuard, 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll']) {
       assert(expected.has(required), `${appId} native package is missing ${required}`);
     }
+    assert(!expected.has(`start-${appId}.bat`), `${appId} native package retains a mutable batch launcher`);
     await verifyAppContentManifest({
       target,
       appId,

@@ -32,12 +32,13 @@ test('target content manifest is deterministic, exact, and excludes its wrapper 
   const fixture = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-app-content-'));
   try {
     await fs.mkdir(path.join(fixture, 'app/boss/img'), { recursive: true });
-    await fs.mkdir(path.join(fixture, 'runtime'), { recursive: true });
     await fs.writeFile(path.join(fixture, 'app/boss/img/icon.png'), Buffer.from([1, 2, 3]));
-    await fs.writeFile(path.join(fixture, 'runtime/arcane-core.cjs'), 'core\n');
     await fs.writeFile(path.join(fixture, 'ArcaneCore.exe'), 'core executable\n');
     await fs.writeFile(path.join(fixture, 'ArcanePipeGuard.exe'), 'guard executable\n');
-    await fs.writeFile(path.join(fixture, 'ArcaneApp-boss.exe'), 'wrapper excluded\n');
+    await fs.writeFile(path.join(fixture, 'Microsoft.Web.WebView2.Core.dll'), 'core dll\n');
+    await fs.writeFile(path.join(fixture, 'Microsoft.Web.WebView2.WinForms.dll'), 'forms dll\n');
+    await fs.writeFile(path.join(fixture, 'WebView2Loader.dll'), 'loader dll\n');
+    await fs.writeFile(path.join(fixture, 'arcane-bundle.json'), '{}\n');
     await fs.writeFile(path.join(fixture, APP_PACKAGE_MANIFEST), canonical({
       schemaVersion: 1,
       bundleVersion: '0.8.2',
@@ -53,19 +54,65 @@ test('target content manifest is deterministic, exact, and excludes its wrapper 
     assert.deepEqual(first.manifest.files.map((entry) => entry.path), [
       'ArcaneCore.exe',
       'ArcanePipeGuard.exe',
+      'Microsoft.Web.WebView2.Core.dll',
+      'Microsoft.Web.WebView2.WinForms.dll',
+      'WebView2Loader.dll',
       'app/boss/img/icon.png',
-      'runtime/arcane-core.cjs',
+      'arcane-bundle.json',
     ]);
     assert(!firstText.includes('ArcaneApp-boss.exe'));
     assert(!firstText.includes(APP_CONTENT_MANIFEST));
     assert(!firstText.includes(APP_PACKAGE_MANIFEST));
+    await fs.writeFile(path.join(fixture, 'ArcaneApp-boss.exe'), 'wrapper excluded\n');
     await verifyAppContentManifest({ target: fixture, appId: 'boss', version: '0.8.2' });
+    await assert.rejects(
+      () => writeAppContentManifest({ target: fixture, appId: 'con' }),
+      /app id is invalid or reserved/,
+    );
+
+    await fs.rm(path.join(fixture, 'ArcaneApp-boss.exe'));
+    await assert.rejects(
+      () => verifyAppContentManifest({ target: fixture, appId: 'boss', version: '0.8.2' }),
+      /finalized target root contains missing or unexpected entries/,
+    );
+    await fs.writeFile(path.join(fixture, 'ArcaneApp-boss.exe'), 'wrapper excluded\n');
+    const contentData = await fs.readFile(path.join(fixture, APP_CONTENT_MANIFEST));
+    await fs.rm(path.join(fixture, APP_CONTENT_MANIFEST));
+    await assert.rejects(
+      () => verifyAppContentManifest({ target: fixture, appId: 'boss', version: '0.8.2' }),
+      /finalized target root contains missing or unexpected entries/,
+    );
+    await fs.writeFile(path.join(fixture, APP_CONTENT_MANIFEST), contentData);
 
     await fs.writeFile(path.join(fixture, 'unlisted.txt'), 'drift\n');
     await assert.rejects(
       () => verifyAppContentManifest({ target: fixture, appId: 'boss', version: '0.8.2' }),
-      /does not exactly match the target content/,
+      /finalized target root contains missing or unexpected entries/,
     );
+    await fs.rm(path.join(fixture, 'unlisted.txt'));
+
+    await fs.mkdir(path.join(fixture, 'app/boss/empty'));
+    await assert.rejects(
+      () => verifyAppContentManifest({ target: fixture, appId: 'boss', version: '0.8.2' }),
+      /package contains empty directory "app\/boss\/empty"/,
+    );
+    await fs.rm(path.join(fixture, 'app/boss/empty'), { recursive: true });
+
+    await fs.mkdir(path.join(fixture, 'runtime'));
+    await fs.writeFile(path.join(fixture, 'runtime/arcane-core.cjs'), 'mutable runtime\n');
+    await assert.rejects(
+      () => writeAppContentManifest({ target: fixture, appId: 'boss' }),
+      /pre-wrapper target root contains missing or unexpected entries/,
+    );
+    await fs.rm(path.join(fixture, 'runtime'), { recursive: true });
+    for (const name of ['start-boss.bat', 'Helper.exe']) {
+      await fs.writeFile(path.join(fixture, name), 'unexpected mutable entry\n');
+      await assert.rejects(
+        () => writeAppContentManifest({ target: fixture, appId: 'boss' }),
+        /pre-wrapper target root contains missing or unexpected entries/,
+      );
+      await fs.rm(path.join(fixture, name));
+    }
   } finally {
     await fs.rm(fixture, { recursive: true, force: true });
   }
@@ -142,12 +189,15 @@ test('installed catalog is deterministic, ID-addressable, and cannot expand capa
   );
 });
 
-test('native finalization and Windows all-app builds publish the verified runtime projection', async () => {
-  const [finalizer, builder] = await Promise.all([
+test('native content binding precedes finalization and Windows all-app builds publish the verified runtime projection', async () => {
+  const [contentWriter, finalizer, builder] = await Promise.all([
+    fs.readFile(path.join(bundleRoot, 'tools/write-app-content-manifest.mjs'), 'utf8'),
     fs.readFile(path.join(bundleRoot, 'tools/finalize-app-package.mjs'), 'utf8'),
     fs.readFile(path.join(bundleRoot, 'tools/build-app.mjs'), 'utf8'),
   ]);
-  assert.match(finalizer, /writeAppContentManifest\(\{ target, appId, launcher \}\)/);
+  assert.match(contentWriter, /writeAppContentManifest\(\{ target, appId, launcher \}\)/);
+  assert.match(finalizer, /verifyAppContentManifest/);
+  assert.doesNotMatch(finalizer, /writeAppContentManifest/);
   assert.match(builder, /publishWindowsAppProjection\(\{ bundleRoot, appIds: apps\.map/);
   assert.match(builder, /if \(platform === 'windows'\)/);
 });
