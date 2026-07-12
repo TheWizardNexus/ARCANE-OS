@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="./css/layout.css?v=3" />
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3" />
 <style>
     .chat_area {
         display: flex;
@@ -102,13 +102,13 @@
     }
 
     .chat_submit::before {
-        mask-image:url('./img/send.svg');
-        -webkit-mask-image:url('./img/send.svg');
+        mask-image:url('./arcane/img/send.svg');
+        -webkit-mask-image:url('./arcane/img/send.svg');
     }
 
     button.chat_upload::before {
-        mask-image:url('./img/upload.svg');
-        -webkit-mask-image:url('./img/upload.svg');
+        mask-image:url('./arcane/img/upload.svg');
+        -webkit-mask-image:url('./arcane/img/upload.svg');
     }
 
     .chat_submit img,
@@ -193,14 +193,14 @@
     <div class="chat_input_area">
         <textarea type='text' class='chat_input' id='chat_input'></textarea>
         <button type="button" id="chat_upload" class="chat_upload" title="Upload files" aria-label="Upload files">
-            <img class='upload-icon' src="./img/upload.svg" />
+            <img class='upload-icon' src="./arcane/img/upload.svg" />
         </button>
         <input type="file" id="file_upload_input" class="chat_upload" accept=".txt, .md, image/*" hidden multiple />
         <button type="button" id="chat_submit" class="chat_submit" title="Send message" aria-label="Send message">
-            <img class='send-icon' src="./img/send.svg" />
+            <img class='send-icon' src="./arcane/img/send.svg" />
         </button>
     </div>
-    <html-import id="speech" href="./components/speech.html?v=1"></html-import>
+    <html-import id="speech" href="./arcane/components/speech.html?v=1"></html-import>
     <section class="controls">
         <select id="languages">
             <option value="english" selected>English</option>
@@ -605,7 +605,7 @@
         host.sendMessage(text);
     }
 
-    async function receivedMessage(name = 'Lifeline', text = '', id='', isThinking=false){
+    async function receivedMessage(name = 'Assistant', text = '', id='', isThinking=false){
         const messageTime = getMilTime();
         if(isThinking){
             text=`<span class='thinking'>${text}</span>`;

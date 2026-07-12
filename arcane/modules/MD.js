@@ -1,5 +1,5 @@
 import { marked } from './Marked.min.js';
-import Is from '../node_modules/strong-type/index.js';
+import Is from '../../node_modules/strong-type/index.js';
 
 marked.use(
     {

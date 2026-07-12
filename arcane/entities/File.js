@@ -1,4 +1,4 @@
-import Is from '../node_modules/strong-type/index.js';
+import Is from '../../node_modules/strong-type/index.js';
 import '../modules/DBOPFS.js';
 import MD from '../modules/MD.js';
 

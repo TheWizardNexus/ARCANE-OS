@@ -240,9 +240,9 @@
 
 <input id="fileUpload" type="file" hidden multiple>
 
-<html-import id="directoryModal" class="modal" href="./components/modal.html?v=11"></html-import>
-<html-import id="fileModal" class="modal" href="./components/modal.html?v=11"></html-import>
-<html-import id="deleteModal" class="modal" href="./components/modal.html?v=11"></html-import>
+<html-import id="directoryModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
+<html-import id="fileModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
+<html-import id="deleteModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
 
 <script type="module">
     import('../modules/DBOPFS.js');
@@ -388,7 +388,7 @@
         deleteButton.innerText='Delete File';
         deleteIcon.alt='';
         deleteIcon.className='action-icon';
-        deleteIcon.src='./img/trash.svg';
+        deleteIcon.src='./arcane/img/trash.svg';
         deleteButton.prepend(deleteIcon);
         deleteButton.addEventListener(
             'click',
@@ -556,7 +556,7 @@
 
         fileIcon.alt='';
         fileIcon.className='icon file-icon';
-        fileIcon.src='./img/doc.svg';
+        fileIcon.src='./arcane/img/doc.svg';
         fileDetails.className='file-details';
         fileLabel.className='file-name';
         fileLabel.innerText=fileName;
@@ -579,7 +579,7 @@
 
         deleteIcon.alt='';
         deleteIcon.className='action-icon';
-        deleteIcon.src='./img/trash.svg';
+        deleteIcon.src='./arcane/img/trash.svg';
 
         openButton.addEventListener(
             'click',
@@ -764,7 +764,7 @@
             directory.dataset.directory=tableName;
             folder.className='file folder';
             folderIcon.className='icon';
-            folderIcon.src='./img/folder.svg';
+            folderIcon.src='./arcane/img/folder.svg';
             folderName.innerText=tableName;
             fileCount.className='file-count';
             fileCount.innerText=`${files.length} ${files.length===1?'file':'files'}`;

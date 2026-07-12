@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="./css/layout.css?v=3">
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
 <style>
     :host{
         display:block;
@@ -30,7 +30,7 @@
     }
 
     .preview:empty::before{
-        content:'Journal Entry Preview';
+        content:attr(data-empty-label);
         opacity:.55;
     }
 
@@ -64,7 +64,7 @@
 
 <section class="markdown-editor">
     <input id="entryTitle" class="entry-title" type="text" placeholder="Title (optional)">
-    <section id="preview" class="preview" aria-label="Journal Entry Preview"></section>
+    <section id="preview" class="preview" aria-label="Markdown preview" data-empty-label="Markdown preview"></section>
     <section id="toolbar" class="toolbar" aria-label="Markdown formatting">
         <button type="button" data-format="heading" title="Heading">Heading</button>
         <button type="button" data-format="bold" title="Bold">B</button>
@@ -75,10 +75,10 @@
         <button type="button" data-format="quote" title="Quote">Quote</button>
         <button type="button" data-format="list" title="Bulleted list">List</button>
     </section>
-    <textarea id="entryMarkdown" class="entry-markdown" placeholder="Write your journal entry in Markdown..."></textarea>
+    <textarea id="entryMarkdown" class="entry-markdown" placeholder="Write in Markdown..."></textarea>
     <section class="actions">
         <span id="status" class="status" aria-live="polite">Loading editor...</span>
-        <button id="save" type="button" disabled>Save Journal Entry</button>
+        <button id="save" type="button" disabled>Save</button>
     </section>
 </section>
 
@@ -95,6 +95,7 @@
     let previewFrame=0;
 
     host.clear=clear;
+    host.configure=configure;
     host.focus=()=>textarea.focus();
 
     Object.defineProperty(
@@ -121,6 +122,33 @@
     textarea.addEventListener('input',schedulePreview);
     toolbar.addEventListener('click',formatMarkdown);
     saveButton.addEventListener('click',saveEntry);
+
+    function configure(options={}){
+        if(!options||typeof options!=='object'){
+            return false;
+        }
+
+        const labels={
+            bodyPlaceholder:[textarea,'placeholder'],
+            previewLabel:[preview,'aria-label'],
+            saveLabel:[saveButton,'textContent'],
+            titlePlaceholder:[titleInput,'placeholder']
+        };
+
+        for(const [key,[element,property]] of Object.entries(labels)){
+            if(typeof options[key]==='string'&&options[key]){
+                if(property==='textContent'){
+                    element.textContent=options[key];
+                }else{
+                    element.setAttribute(property,options[key]);
+                }
+            }
+        }
+
+        const previewLabel=options.previewLabel||preview.getAttribute('aria-label');
+        preview.dataset.emptyLabel=previewLabel;
+        return true;
+    }
 
     function schedulePreview(){
         if(previewFrame){
@@ -196,13 +224,13 @@
         const entryTitle=titleInput.value.trim();
 
         if(!markdown.trim()){
-            status.innerText='Write an entry before saving.';
+            status.innerText='Write content before saving.';
             textarea.focus();
             return false;
         }
 
         if(typeof host.save!=='function'){
-            status.innerText='Journal saving is unavailable.';
+            status.innerText='Saving is unavailable.';
             return false;
         }
 
@@ -232,8 +260,8 @@
             );
             return true;
         }catch(error){
-            status.innerText='Unable to save this entry.';
-            console.error('Unable to save journal entry:',error);
+            status.innerText='Unable to save.';
+            console.error('Unable to save Markdown content:',error);
             return false;
         }finally{
             saveButton.disabled=false;
@@ -246,6 +274,12 @@
         updatePreview();
     }
 
+    configure({
+        bodyPlaceholder:host.dataset.bodyPlaceholder,
+        previewLabel:host.dataset.previewLabel,
+        saveLabel:host.dataset.saveLabel,
+        titlePlaceholder:host.dataset.titlePlaceholder
+    });
     updatePreview();
     status.innerText='';
     saveButton.disabled=false;

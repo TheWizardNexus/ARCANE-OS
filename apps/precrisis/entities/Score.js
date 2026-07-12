@@ -1,5 +1,5 @@
-import Is from '../node_modules/strong-type/index.js';
-import '../modules/DBOPFS.js';
+import Is from '../../../node_modules/strong-type/index.js';
+import '../../../arcane/modules/DBOPFS.js';
 import Reports from './Reports.js';
 
 const is = new Is(false);

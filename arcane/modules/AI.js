@@ -55,25 +55,28 @@ class AI {
         LOCAL_SPEACH: 'kokoro'
     }
 
-    #serviceHeaders = {
-        OPENAI: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.license}`,
-            'Access-Control-Allow-Origin': '*'
-        },
-        OLLAMA: {
-            'Content-Type': 'application/json',
-        }
+    get #serviceHeaders(){
+        return {
+            OPENAI: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.license}`
+            },
+            OLLAMA: {
+                'Content-Type': 'application/json',
+            }
+        };
     }
 
     // A separate header config is required for speech-to-text services due to OpenAI
-    #sttHeaders = {
-        OPENAI: {
-            'Authorization': `Bearer ${this.license}`,
-        },
-        OLLAMA: {
-            'Authorization': `Bearer ${this.license}`,
-        }
+    get #sttHeaders(){
+        return {
+            OPENAI: {
+                'Authorization': `Bearer ${this.license}`,
+            },
+            OLLAMA: {
+                'Authorization': `Bearer ${this.license}`,
+            }
+        };
     }
 
     ready=false;
@@ -95,25 +98,16 @@ class AI {
     //audioType = 'audio/wav; codecs=1';
 
     constructor(
-        llmService='OPENAI', 
-        sttService='OPENAI',
-        ttsService='OPENAI',
-        model='OPENAI',
-        modelTTS='OPENAI',
-        modelSTT='OPENAI'
+        llmService='',
+        sttService='',
+        ttsService='',
+        model='',
+        modelTTS='',
+        modelSTT=''
     ) {
         if(window.ai){
             return window.ai;
         }
-
-        console.trace(
-            llmService,
-            sttService,
-            ttsService,
-            model,
-            modelTTS,
-            modelSTT
-        );
 
         this.setAI(
             llmService,
@@ -149,15 +143,36 @@ class AI {
         return false;
     }
 
-    // TODO: Move this to UI configuration page
+    #license='';
+
+    // Browser-delivered framework code must not contain provider credentials.
+    // The selected host, application, or user profile supplies one at runtime.
     get license(){
-        let license = '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';
-                
-        return license;
+        return this.#license || globalThis.arcane?.config?.openAI?.apiKey || '';
     }
     
     set license(value){
-        return this.license;
+        this.#license=typeof value==='string' ? value.trim():'';
+        return this.#license;
+    }
+
+    get configured(){
+        return ['OPENAI','OLLAMA'].includes(this.llmService)
+            &&(this.llmService!=='OPENAI'||Boolean(this.license));
+    }
+
+    #assertServiceConfigured(service=this.llmService){
+        if(service&&service!=='OPENAI'){
+            return true;
+        }
+
+        if(service==='OPENAI'&&this.license){
+            return true;
+        }
+
+        const error=new Error('AI provider is not configured.');
+        error.code='AI_PROVIDER_NOT_CONFIGURED';
+        throw error;
     }
 
     audioMessageChunks='';
@@ -180,26 +195,11 @@ class AI {
         } else {
             return {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.license}`,
-                'Access-Control-Allow-Origin': '*'
+                'Authorization': `Bearer ${this.license}`
             };
         }
     }
 
-/*
-    get exHeaders(){
-        return {
-            'Content-Type': 'application/json',
-
-            'Authorization': `Bearer ${this.license||'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'}`,
-            'Access-Control-Allow-Origin':'*',
-
-            // 'Authorization': `Bearer ${this.license||'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'}`,
-            // 'Access-Control-Allow-Origin':'*',
-            // 'Access-Control-Allow-Credentials':'true'
-        };
-    }
-*/
 
     // Set models to be used by the AI. 
     // Note: Only those that are defined are set.
@@ -235,6 +235,43 @@ class AI {
         return true;
     }
 
+    async #assertResponseOK(response){
+        if(response.ok){
+            return response;
+        }
+
+        let detail='';
+
+        try{
+            const contentType=response.headers.get('content-type')||'';
+
+            if(contentType.includes('application/json')){
+                const errorResponse=await response.json();
+                detail=errorResponse?.error?.message
+                    || errorResponse?.message
+                    || '';
+            }else{
+                const errorText=await response.text();
+
+                if(errorText&&!errorText.trim().startsWith('<')){
+                    detail=errorText.trim().slice(0,500);
+                }
+            }
+        }catch{
+            // The response status is enough when its body cannot be read.
+        }
+
+        const status=[response.status,response.statusText]
+            .filter(Boolean)
+            .join(' ');
+        const message=`AI request failed${status ? ` (${status})`:''}`;
+        const error=new Error(message);
+        error.code='AI_REQUEST_FAILED';
+        error.status=response.status;
+        error.providerMessage=detail;
+        throw error;
+    }
+
 
     async streamMessage(
         messages=[],
@@ -247,6 +284,8 @@ class AI {
         id=Date.now(),
         seeThinking=false
     ){
+        this.#assertServiceConfigured(this.llmService);
+
         const request={
             model:this.model,
             messages:messages, 
@@ -266,15 +305,28 @@ class AI {
 
         streamHandler('Thinking...',`M-${id}`,isThinking);
 
-        const response = await fetch(
-            this.url, 
-            {
-                method: 'POST',
-                credentials: credentials,
-                headers: this.#serviceHeaders[this.llmService],
-                body: body
-            }
-        );
+        let response;
+
+        try{
+            response=await fetch(
+                this.url,
+                {
+                    method:'POST',
+                    credentials,
+                    headers:this.#serviceHeaders[this.llmService],
+                    body
+                }
+            );
+        }catch(err){
+            const error=new Error(
+                'Unable to reach the AI service.',
+                {cause:err}
+            );
+            error.code='AI_SERVICE_UNREACHABLE';
+            throw error;
+        }
+
+        await this.#assertResponseOK(response);
 
         let chunkString='';
         let chunkCache='';
@@ -317,8 +369,8 @@ class AI {
                             //console.log(resp)
                             const choice = resp.choices?.[0] || {};
                             const delta = choice.delta || {};
-                            const content = choice.delta.content || '';
-                            const tool_calls=choice.delta?.tool_calls || [];
+                            const content = delta.content || '';
+                            const tool_calls=delta.tool_calls || [];
                             let value = content;
 
                             let reasoning = '';
@@ -359,7 +411,11 @@ class AI {
                                     const tool_func=tool_calls[i]?.function;
                                     if(tool_func?.name){
                                         current_func=tool_func.name;
-                                        earlyFunctionTrigger(current_func);
+                                        Promise.resolve(
+                                            earlyFunctionTrigger(current_func)
+                                        ).catch(
+                                            error=>console.error('Early tool trigger failed:',error)
+                                        );
                                     }
                                     
                                     tool_funcs[current_func]?
@@ -384,7 +440,7 @@ class AI {
 
         //console.log(tool_funcs,current_func);
         //async
-        streamComplete(chunkString||tool_funcs, `M-${id}`,isThinking);
+        await streamComplete(chunkString||tool_funcs, `M-${id}`,isThinking);
 
         //sync
         return chunkString||tool_funcs;
@@ -399,6 +455,8 @@ class AI {
         parallel_tool_calls=true,
         id=Date.now(),
     ){
+        this.#assertServiceConfigured(this.llmService);
+
         const request={
             model:this.model,
             messages:messages, 
@@ -430,41 +488,15 @@ class AI {
                 }
             );
         }catch(err){
-            throw new Error(
+            const error=new Error(
                 'Unable to reach the AI service.',
                 {cause:err}
             );
+            error.code='AI_SERVICE_UNREACHABLE';
+            throw error;
         }
 
-        if(!response.ok){
-            let detail='';
-
-            try{
-                const contentType=response.headers.get('content-type')||'';
-
-                if(contentType.includes('application/json')){
-                    const errorResponse=await response.json();
-                    detail=errorResponse?.error?.message
-                        || errorResponse?.message
-                        || '';
-                }else{
-                    const errorText=await response.text();
-
-                    if(errorText&&!errorText.trim().startsWith('<')){
-                        detail=errorText.trim().slice(0,500);
-                    }
-                }
-            }catch{
-                // The response status is enough when its body cannot be read.
-            }
-
-            const status=[response.status,response.statusText]
-                .filter(Boolean)
-                .join(' ');
-            const message=`AI request failed${status ? ` (${status})`:''}`;
-
-            throw new Error(detail ? `${message}: ${detail}`:message);
-        }
+        await this.#assertResponseOK(response);
 
         const contentType=response.headers.get('content-type')||'';
 
@@ -482,7 +514,7 @@ class AI {
 
         //console.log(responseJSON);
         //async
-        responseHandler(responseJSON,id,false);
+        await responseHandler(responseJSON,id,false);
         //sync
         return responseJSON;
     }
@@ -517,6 +549,7 @@ class AI {
         //console.log(output);
 
         try {
+            this.#assertServiceConfigured(this.ttsService);
             const audioChunks = [];
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const sourceNode = audioContext.createBufferSource();
@@ -577,6 +610,8 @@ class AI {
         audioFile,
         responseHandler=(text='')=>{}
     ){
+        this.#assertServiceConfigured(this.sttService);
+
         const formData = new FormData();
         formData.append('file', audioFile);
         formData.append('model', this.modelSTT);
@@ -602,7 +637,7 @@ class AI {
         const text = await response.text();
         
         //async
-        responseHandler(text);
+        await responseHandler(text);
 
         //sync
         return text;
@@ -697,17 +732,6 @@ function instantiateAI() {
 
         window.dispatchEvent(aiReady);
 
-        console.info(
-            `If you want to point at a different model, copy and paste and change the code below
-            window.ai=new AI(
-                'OLLAMA', 
-                'LOCAL_SPEACH',
-                'LOCAL_SPEACH',
-                'PRECRISIS',
-                'LOCAL',
-                'LOCAL'
-            );`
-        );
     }
 }
 

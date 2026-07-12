@@ -1,0 +1,316 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<link rel="stylesheet" href="./arcane/css/dashboard-config.css?v=1">
+<style>
+    :host{
+        display:block;
+    }
+
+</style>
+
+<button id="openConfig" type="button" aria-haspopup="dialog" disabled>Configure Dashboard</button>
+<html-import id="configModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
+
+<script type="module">
+    const host=this;
+    const {default:waitForComponent}=await import('../modules/WaitForComponent.js');
+    const openButton=host.shadowRoot.querySelector('#openConfig');
+    const configModal=host.shadowRoot.querySelector('#configModal');
+
+    let definitions=[];
+    let visibility={};
+    let content=null;
+    let labels={
+        description:'Choose which charts appear on your dashboard.',
+        heading:'Configure Dashboard',
+        triggerLabel:'Configure Dashboard'
+    };
+
+    host.configure=configure;
+    host.setDefinitions=setDefinitions;
+    host.setVisibility=setVisibility;
+    host.open=openConfig;
+    host.close=closeConfig;
+
+    Object.defineProperties(
+        host,
+        {
+            definitions:{
+                get:()=>definitions.map(definition=>({...definition})),
+                set:setDefinitions
+            },
+            visibility:{
+                get:getVisibility,
+                set:setVisibility
+            }
+        }
+    );
+
+    openButton.addEventListener(
+        'click',
+        ()=>openConfig().catch(
+            error=>console.error('Unable to configure dashboard:',error)
+        )
+    );
+
+    configModal.addEventListener(
+        'modal-closed',
+        ()=>host.dispatchEvent(
+            new CustomEvent(
+                'dashboard-config-closed',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{visibility:getVisibility()}
+                }
+            )
+        )
+    );
+
+    function configure(options={}){
+        if(!options||typeof options!=='object'||Array.isArray(options)){
+            throw new TypeError('Dashboard configuration must be an object');
+        }
+
+        if(options.definitions!==undefined){
+            setDefinitions(options.definitions);
+        }
+        if(options.visibility!==undefined){
+            setVisibility(options.visibility);
+        }
+
+        for(const key of ['description','heading','triggerLabel']){
+            if(typeof options[key]==='string'&&options[key].trim()){
+                labels[key]=options[key].trim();
+            }
+        }
+
+        refreshContent();
+        openButton.innerText=labels.triggerLabel;
+        openButton.disabled=definitions.length===0;
+        return {
+            definitions:host.definitions,
+            visibility:getVisibility(),
+            ...labels
+        };
+    }
+
+    function setDefinitions(values=[]){
+        if(!Array.isArray(values)){
+            throw new TypeError('Dashboard definitions must be an array');
+        }
+
+        const keys=new Set();
+        definitions=values.map(
+            (value,index)=>{
+                if(!value||typeof value!=='object'||Array.isArray(value)){
+                    throw new TypeError('Dashboard definitions must be objects');
+                }
+
+                const key=String(value.key||'').trim();
+                if(!key||keys.has(key)){
+                    throw new Error('Dashboard definition keys must be unique and nonempty');
+                }
+
+                keys.add(key);
+                return {
+                    ...value,
+                    key,
+                    title:String(value.title||key)
+                };
+            }
+        );
+
+        refreshContent();
+        openButton.disabled=definitions.length===0;
+        return host.definitions;
+    }
+
+    function setVisibility(values={}){
+        if(!values||typeof values!=='object'||Array.isArray(values)){
+            throw new TypeError('Dashboard visibility must be an object');
+        }
+
+        visibility={};
+        for(const [key,value] of Object.entries(values)){
+            if(typeof value==='boolean'){
+                visibility[key]=value;
+            }
+        }
+
+        syncOptions();
+        return getVisibility();
+    }
+
+    function getVisibility(){
+        return {...visibility};
+    }
+
+    function isVisible(definition={}){
+        return typeof visibility[definition.key]==='boolean'
+            ?visibility[definition.key]
+            :definition.defaultVisible!==false;
+    }
+
+    async function openConfig(){
+        if(!definitions.length){
+            return false;
+        }
+
+        const modal=await waitForComponent(
+            configModal,
+            {
+                methods:['populate','open'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+
+        if(!content){
+            content=createContent();
+            await modal.populate(content,false);
+        }
+
+        refreshContent();
+        modal.open();
+        host.dispatchEvent(
+            new CustomEvent(
+                'dashboard-config-opened',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{visibility:getVisibility()}
+                }
+            )
+        );
+        return true;
+    }
+
+    async function closeConfig(){
+        const modal=await waitForComponent(
+            configModal,
+            {
+                methods:['close'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+        modal.close();
+        return true;
+    }
+
+    function createContent(){
+        const section=document.createElement('section');
+        const styles=document.createElement('link');
+        const heading=document.createElement('h1');
+        const message=document.createElement('p');
+        const options=document.createElement('section');
+
+        styles.rel='stylesheet';
+        styles.href='./arcane/css/dashboard-config.css?v=1';
+        heading.dataset.dashboardConfigHeading='';
+        message.dataset.dashboardConfigDescription='';
+        options.className='chart-options';
+        options.dataset.dashboardConfigOptions='';
+        options.addEventListener('change',changeVisibility);
+        section.append(styles,heading,message,options);
+        return section;
+    }
+
+    function refreshContent(){
+        if(!content){
+            return;
+        }
+
+        const heading=content.querySelector('[data-dashboard-config-heading]');
+        const message=content.querySelector('[data-dashboard-config-description]');
+        const options=content.querySelector('[data-dashboard-config-options]');
+        const fragment=document.createDocumentFragment();
+
+        heading.innerText=labels.heading;
+        message.innerText=labels.description;
+
+        for(const definition of definitions){
+            const label=document.createElement('label');
+            const checkbox=document.createElement('input');
+            const title=document.createElement('h3');
+            const description=document.createElement('p');
+
+            label.className='chart-option';
+            checkbox.type='checkbox';
+            checkbox.dataset.chartKey=definition.key;
+            checkbox.checked=isVisible(definition);
+            title.innerText=definition.title;
+            description.innerText=definition.description||'';
+            label.append(checkbox,title,description);
+            fragment.append(label);
+        }
+
+        options.replaceChildren(fragment);
+    }
+
+    function syncOptions(){
+        if(!content){
+            return;
+        }
+
+        const byKey=new Map(
+            definitions.map(definition=>[definition.key,definition])
+        );
+
+        content.querySelectorAll('[data-chart-key]').forEach(
+            checkbox=>{
+                const definition=byKey.get(checkbox.dataset.chartKey);
+                checkbox.checked=definition ?isVisible(definition):false;
+            }
+        );
+    }
+
+    function changeVisibility(e){
+        const checkbox=e.target.closest('[data-chart-key]');
+        const definition=definitions.find(
+            candidate=>candidate.key===checkbox?.dataset.chartKey
+        );
+
+        if(!checkbox||!definition){
+            return;
+        }
+
+        const previous=isVisible(definition);
+        const next={
+            ...visibility,
+            [definition.key]:checkbox.checked
+        };
+        const changeEvent=new CustomEvent(
+            'dashboard-config-change',
+            {
+                bubbles:true,
+                cancelable:true,
+                composed:true,
+                detail:{
+                    definition:{...definition},
+                    key:definition.key,
+                    visibility:{...next},
+                    visible:checkbox.checked
+                }
+            }
+        );
+
+        if(!host.dispatchEvent(changeEvent)){
+            checkbox.checked=previous;
+            return;
+        }
+
+        visibility=next;
+        syncOptions();
+    }
+
+    openButton.innerText=labels.triggerLabel;
+    openButton.disabled=true;
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent(
+            'dashboard-config-ready',
+            {bubbles:true,composed:true}
+        )
+    );
+</script>

@@ -13,7 +13,7 @@ function loadChartLibrary(){
         function loadChartLibraryPromise(resolve,reject){
             const script=document.createElement('script');
 
-            script.src='./modules/uPlot.iife.min.js';
+            script.src=new URL('./uPlot.iife.min.js',import.meta.url).href;
             script.addEventListener(
                 'load',
                 ()=>window.uPlot

@@ -1,4 +1,4 @@
-import Is from '../node_modules/strong-type/index.js';
+import Is from '../../node_modules/strong-type/index.js';
 import DBLS from '../modules/DBLS.js';
 
 /**
@@ -18,10 +18,26 @@ import DBLS from '../modules/DBLS.js';
  * The import must remain even if unused because it registers the singleton.
  */
 import DBOPFS from '../modules/DBOPFS.js';
-import {
-    createDefaultDashboard,
-    normalizeDashboard
-} from '../modules/DashboardCharts.js';
+
+function createDefaultDashboard(){
+    return { charts:{} };
+}
+
+function normalizeDashboard(dashboard={}){
+    const source=dashboard&&typeof dashboard==='object'&&!Array.isArray(dashboard)
+        &&dashboard.charts&&typeof dashboard.charts==='object'&&!Array.isArray(dashboard.charts)
+        ? dashboard.charts
+        : {};
+    const charts={};
+
+    for(const [key,value] of Object.entries(source)){
+        if(typeof value==='boolean'){
+            charts[key]=value;
+        }
+    }
+
+    return { charts };
+}
 
 const is = new Is(false);
 

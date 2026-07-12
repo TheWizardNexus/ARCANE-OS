@@ -3,16 +3,17 @@
 
     <head>
         <meta charset="utf-8">
+        <base href="../../">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title>PreCrisis.AI Assessment</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="referrer" content="origin" />
-        <link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
-        <link rel="icon" href="./img/favicon.png" type="image/png">
+        <link rel="manifest" href="./apps/precrisis/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/precrisis/img/favicon.png" type="image/png">
         
 
         <!-- Styles -->
-        <link rel="stylesheet" href="./css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
         <style>
             .chat{
                 height: 100%;
@@ -46,15 +47,15 @@
         </style>
         
         
-        <script type="module" src="./modules/Errors.js?v=2"></script>
-        <script type="module" src="./modules/HTMLImport.js?v=2"></script>
-        <script type="module" src="./modules/Mail.js"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+        <script type="module" src="./arcane/modules/Mail.js"></script>
     </head>
 
     <body>
-        <html-import class="header" href="./components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./components/nav.html?v=5"></html-import>
-        <html-import class="hidden" href="./components/table.html"></html-import>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+        <html-import class="hidden" href="./arcane/components/table.html"></html-import>
 
         <main class="contents data-chat">
             <html-import
@@ -63,25 +64,25 @@
                 data-button="View Previous Assessments"
                 data-title="Previous Assessments"
                 data-dirs="chats"
-                href="./components/data-view.html?v=4"
+                href="./arcane/components/data-view.html?v=4"
             ></html-import>
-            <html-import id="chat" class="chat" href="./components/chat.html?v=3"></html-import>
+            <html-import id="chat" class="chat" href="./arcane/components/chat.html?v=3"></html-import>
             <div id="uploadStatus" class="hidden"></div>
         </main>
-        <html-import id="progressModal" class="modal" href="./components/modal.html?v=11"></html-import>
-        <html-import id="modal" class="modal" href="./components/modal.html?v=11"></html-import>
+        <html-import id="progressModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
+        <html-import id="modal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
     </body>
     <script type="module">
-        import './modules/DBOPFS.js';
-        import './modules/AI.js?v=3';
+        import './arcane/modules/DBOPFS.js';
+        import './arcane/modules/AI.js?v=3';
         import Is from './node_modules/strong-type/index.js';
-        import UserEntity from './entities/User.js';
-        import ChatEntity from './entities/Chat.js';
-        import Reports from './entities/Reports.js';
-        import Score from './entities/Score.js';
-        import Notes from './entities/Notes.js';
-        import AssessmentReportRunner from './modules/AssessmentReportRunner.js';
-        import {settleOrThrow} from './modules/AssessmentRecords.js';
+        import UserEntity from './arcane/entities/User.js';
+        import ChatEntity from './arcane/entities/Chat.js';
+        import Reports from './apps/precrisis/entities/Reports.js';
+        import Score from './apps/precrisis/entities/Score.js';
+        import Notes from './apps/precrisis/entities/Notes.js';
+        import AssessmentReportRunner from './apps/precrisis/modules/AssessmentReportRunner.js';
+        import {settleOrThrow} from './apps/precrisis/modules/AssessmentRecords.js';
         import {
             assessmentCompleteTool,
             crisisDetectionTool,
@@ -89,11 +90,11 @@
             possibleRisksTool,
             relationshipRisksTool,
             textAssessmentTool
-        } from './modules/AssessmentTools.js';
+        } from './apps/precrisis/modules/AssessmentTools.js';
         import {
             handleResponse,
             handleStreamedCalls
-        } from './modules/ToolCallRouter.js';
+        } from './arcane/modules/ToolCallRouter.js';
 
         window.ChatEntity=ChatEntity;
         window.Is=Is;
@@ -281,6 +282,14 @@ ${JSON.stringify(memories)}`
             setTimeout(
                 function(){
                     ai.stopAudio();
+                    if(!ai.configured){
+                        chat.streamMessage(
+                            'AI is not configured. Add an API key in Profile or select a local Ollama model.',
+                            `provider-config-${Date.now()}`,
+                            false
+                        );
+                        return;
+                    }
                     sendMessage(message);
                 },
                 2222
@@ -362,9 +371,7 @@ ${JSON.stringify(memories)}`
 
             sendCounter++;
 
-            streamMessage();
-
-            return true;
+            return streamMessage();
         }
 
         async function receivedMessage(text='', id='', isThinking){
@@ -424,17 +431,36 @@ ${JSON.stringify(memories)}`
             }
 
             if(checkCrisisCheck()){
-                crisisAssessment();
+                void crisisAssessment().catch(
+                    ()=>console.warn('Automated crisis assessment is unavailable.')
+                );
             }
 
-            ai.streamMessage(
-                chatSession.messages,
-                chat.streamMessage,
-                receivedMessage,
-                toolsChat,
-                'auto',
-                AIFunctionDetected
-            );
+            const requestId=Date.now();
+
+            try{
+                await ai.streamMessage(
+                    chatSession.messages,
+                    chat.streamMessage,
+                    receivedMessage,
+                    toolsChat,
+                    'auto',
+                    AIFunctionDetected,
+                    true,
+                    requestId
+                );
+                return true;
+            }catch(error){
+                const message=error?.code==='AI_PROVIDER_NOT_CONFIGURED'
+                    ?'AI is not configured. Add an API key in Profile or select a local Ollama model.'
+                    :'The AI service could not respond. Check the configured provider and try again.';
+                chat.streamMessage(message,`M-${requestId}`,false);
+                console.warn('AI stream unavailable.',{
+                    code:error?.code||'AI_STREAM_FAILED',
+                    status:error?.status||null
+                });
+                return false;
+            }
         }
 
         function checkCrisisCheck(){

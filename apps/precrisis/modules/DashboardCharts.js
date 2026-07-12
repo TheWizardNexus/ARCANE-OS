@@ -73,50 +73,23 @@ const dashboardCharts=Object.freeze(
                 description:description,
                 style:'line',
                 fullWidth:key==='overall_MH',
-                defaultVisible:true
+                defaultVisible:true,
+                min:0,
+                max:10,
+                seriesLabel:'Score',
+                valueLabel:'Score',
+                timeLabel:'Date',
+                removable:true
             }
         )
     )
 );
-
-function createDefaultDashboard(){
-    const charts={};
-
-    for(let i=0;i<dashboardCharts.length;i++){
-        charts[dashboardCharts[i].key]=dashboardCharts[i].defaultVisible;
-    }
-
-    return {charts:charts};
-}
-
-function normalizeDashboard(dashboard={}){
-    const normalized=createDefaultDashboard();
-    const charts=dashboard&&typeof dashboard==='object'&&!Array.isArray(dashboard)
-        ?dashboard.charts
-        :null;
-
-    if(!charts||typeof charts!=='object'||Array.isArray(charts)){
-        return normalized;
-    }
-
-    for(let i=0;i<dashboardCharts.length;i++){
-        const key=dashboardCharts[i].key;
-
-        if(typeof charts[key]==='boolean'){
-            normalized.charts[key]=charts[key];
-        }
-    }
-
-    return normalized;
-}
 
 function getDashboardChart(key=''){
     return dashboardCharts.find(chart=>chart.key===key)||null;
 }
 
 export {
-    createDefaultDashboard,
     dashboardCharts,
-    getDashboardChart,
-    normalizeDashboard
+    getDashboardChart
 };

@@ -1,4 +1,4 @@
-import Is from '../node_modules/strong-type/index.js';
+import Is from '../../node_modules/strong-type/index.js';
 import '../modules/DBOPFS.js';
 import '../modules/AI.js?v=3';
 import {hasUserEntry} from '../modules/ChatRecords.js';

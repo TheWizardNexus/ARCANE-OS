@@ -5,10 +5,10 @@ const DEFAULT_MAX_REPORTS_PER_SESSION=10;
 const DEFAULT_MAX_REPORTS_PER_WINDOW=3;
 const DEFAULT_MAX_PENDING_INCIDENTS=25;
 const DEFAULT_RATE_WINDOW_MS=60_000;
-const LEDGER_STORAGE_KEY='precrisis-global-errors-v1';
+const LEDGER_STORAGE_KEY='arcane-global-errors-v1';
 const MAX_DETAIL_LENGTH=8_000;
-const HANDLER_MARKER=Symbol.for('precrisis.global-errors.handler');
-const DEVELOPER_MODAL_HREF='./components/modal.html?v=11';
+const HANDLER_MARKER=Symbol.for('arcane.global-errors.handler');
+const DEVELOPER_MODAL_HREF=new URL('../components/modal.html?v=11',import.meta.url).href;
 
 const MESSAGE_STYLE=[
     'Write a simple plain-text email showing the error and, when the available details support it, a possible solution.',
@@ -886,8 +886,8 @@ class Errors {
         const errorStormDetected=record.errorStormDetected
             || reservation.circuitOpened;
         const baseSubject=record.incident.type==='unhandledrejection'
-            ? 'PRECRISIS JS UNHANDLED REJECTION'
-            : 'PRECRISIS JS ERROR';
+            ? 'ARCANE JS UNHANDLED REJECTION'
+            : 'ARCANE JS ERROR';
 
         let subject=baseSubject;
         if(errorStormDetected){

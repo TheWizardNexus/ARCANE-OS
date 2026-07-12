@@ -3,20 +3,21 @@
 
     <head>
         <meta charset="utf-8">
+        <base href="../../">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title>PreCrisis.AI Dashboard</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="referrer" content="origin" />
-        <link rel="manifest" href="manifest.json" crossorigin="use-credentials" />
-        <link rel="icon" href="./img/favicon.png" type="image/png">
+        <link rel="manifest" href="./apps/precrisis/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/precrisis/img/favicon.png" type="image/png">
         
 
         <!-- Styles -->
-        <link rel="stylesheet" href="./css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
         
-        <script type="module" src="./modules/Errors.js?v=2"></script>
-        <script type="module" src="./modules/DBLS.js"></script>
-        <script type="module" src="./modules/HTMLImport.js?v=2"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBLS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
         <style>
             section{
                 padding:3em;
@@ -25,8 +26,8 @@
     </head>
 
     <body>
-        <html-import class="header" href="./components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./components/nav.html?v=5"></html-import>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
 
         <main class="contents">
             <section>
@@ -60,7 +61,7 @@
             </section>
         </main>
         <script type="module">
-            navigator.serviceWorker.register('./service-worker.js')
+            navigator.serviceWorker.register('./apps/precrisis/service-worker.js')
                 .then(
                     function(registration) {
                         console.log('Service Worker registered with scope:', registration.scope);
@@ -82,10 +83,10 @@
                     );
 
                     if(dbls.get('email')){
-                        return document.location.href='./dashboard.html';
+                        return document.location.href='./apps/precrisis/dashboard.html';
                     }
 
-                    document.location.href='./admin.html';
+                    document.location.href='./apps/precrisis/admin.html';
                 }
             )
             
@@ -106,11 +107,11 @@
 
             async function initChat(){
                 if(dbls.get('email')){
-                return document.location.href='./dashboard.html';
+                return document.location.href='./apps/precrisis/dashboard.html';
                 }
 
                 if(dbls.get('tnc_agreed')){
-                    return document.location.href='./admin.html';
+                    return document.location.href='./apps/precrisis/admin.html';
                 }
 
                 return false;

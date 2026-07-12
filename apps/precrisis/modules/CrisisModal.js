@@ -1,4 +1,4 @@
-import waitForComponent from './WaitForComponent.js';
+import waitForComponent from '../../../arcane/modules/WaitForComponent.js';
 
 async function showCrisisModal(modal,params={}){
     const crisis=Number(params.crisis)||0;

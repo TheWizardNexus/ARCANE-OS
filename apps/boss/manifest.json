@@ -1,0 +1,16 @@
+{
+    "name": "BOSS",
+    "short_name": "BOSS",
+    "start_url": "./chat.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#141414",
+    "theme_color": "#141414",
+    "icons": [
+        {
+            "src": "./img/Draft%20BOSS%20logo%20design%20V4.jpg",
+            "sizes": "1024x1024",
+            "type": "image/jpeg"
+        }
+    ]
+}

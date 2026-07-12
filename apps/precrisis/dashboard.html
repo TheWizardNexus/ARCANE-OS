@@ -3,13 +3,14 @@
 
     <head>
         <meta charset="utf-8">
+        <base href="../../">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title>PreCrisis.AI Dashboard</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="referrer" content="origin">
-        <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
-        <link rel="icon" href="./img/favicon.png" type="image/png">
-        <link rel="stylesheet" href="./css/layout.css?v=3">
+        <link rel="manifest" href="./apps/precrisis/manifest.json" crossorigin="use-credentials">
+        <link rel="icon" href="./apps/precrisis/img/favicon.png" type="image/png">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
         <style>
             main.contents{
                 display:block;
@@ -151,14 +152,14 @@
             }
 
         </style>
-        <script type="module" src="./modules/Errors.js?v=2"></script>
-        <script type="module" src="./modules/DBOPFS.js"></script>
-        <script type="module" src="./modules/HTMLImport.js?v=2"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
     </head>
 
     <body>
-        <html-import class="header" href="./components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./components/nav.html?v=5"></html-import>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
 
         <main class="contents">
             <section class="dashboard-heading">
@@ -169,7 +170,7 @@
                 <html-import
                     id="dashboardConfig"
                     class="dashboard-config"
-                    href="./components/dashboard-config.html?v=2"
+                    href="./arcane/components/dashboard-config.html?v=3"
                 ></html-import>
             </section>
 
@@ -195,15 +196,15 @@
     </body>
 
     <script type="module">
-        import Notes from './entities/Notes.js?v=2';
-        import Scores from './entities/Scores.js';
-        import './entities/User.js';
-        import {dashboardCharts,getDashboardChart} from './modules/DashboardCharts.js';
+        import Notes from './apps/precrisis/entities/Notes.js?v=2';
+        import Scores from './apps/precrisis/entities/Scores.js';
+        import './arcane/entities/User.js';
+        import {dashboardCharts,getDashboardChart} from './apps/precrisis/modules/DashboardCharts.js';
         import {
             collectDashboardChartData,
             dashboardNoteKeys
-        } from './modules/DashboardData.js';
-        import waitForComponent from './modules/WaitForComponent.js';
+        } from './apps/precrisis/modules/DashboardData.js';
+        import waitForComponent from './arcane/modules/WaitForComponent.js';
 
         const config=new URLSearchParams(window.location.search);
         const selectedUser=config.get('id');
@@ -224,6 +225,10 @@
         window.addEventListener('dbopfs-ready',populateUI);
         window.addEventListener('user-entity-loaded',populateUI);
         chartGrid.addEventListener('chart-remove',removeChart);
+        dashboardConfig.addEventListener(
+            'dashboard-config-change',
+            e=>setChartVisibility(e.detail?.key,e.detail?.visible)
+        );
         dashboardConfig.addEventListener(
             'dashboard-config-closed',
             ()=>renderCharts(currentChartData)
@@ -253,6 +258,23 @@
         }
 
         async function loadDashboard(){
+            const configComponent=await waitForComponent(
+                dashboardConfig,
+                {
+                    methods:['configure','setVisibility','open'],
+                    property:'ready',
+                    event:'dashboard-config-ready'
+                }
+            );
+            configComponent.configure(
+                {
+                    definitions:dashboardCharts,
+                    visibility:window.user.dashboard.charts,
+                    heading:'Configure Dashboard',
+                    description:'Choose which charts appear on your dashboard. Changes save automatically.',
+                    triggerLabel:'Configure Dashboard'
+                }
+            );
             idDisplay.innerText=selectedUser?`${selectedUser}'s `:'';
 
             const [scores,notes]=await Promise.all(
@@ -273,6 +295,7 @@
 
             const generation=renderGeneration;
             const visibility=window.user.dashboard.charts;
+            dashboardConfig.setVisibility?.(visibility);
             const fragment=document.createDocumentFragment();
             const pending=[];
             const observed=[];
@@ -280,7 +303,11 @@
             for(let i=0;i<dashboardCharts.length;i++){
                 const definition=dashboardCharts[i];
 
-                if(visibility[definition.key]===false){
+                const isVisible=typeof visibility[definition.key]==='boolean'
+                    ?visibility[definition.key]
+                    :definition.defaultVisible!==false;
+
+                if(!isVisible){
                     continue;
                 }
 
@@ -331,7 +358,14 @@
             chart.dataset.chartKey=definition.key;
             chart.dataset.title=definition.title;
             chart.dataset.chartStyle=definition.style;
-            chart.setAttribute('href','./components/chart.html?v=3');
+            chart.dataset.min=`${definition.min}`;
+            chart.dataset.max=`${definition.max}`;
+            chart.dataset.seriesLabel=definition.seriesLabel;
+            chart.dataset.valueLabel=definition.valueLabel;
+            chart.dataset.timeLabel=definition.timeLabel;
+            chart.dataset.removable=`${definition.removable===true}`;
+            chart.dataset.removeLabel=`Remove ${definition.title} from dashboard`;
+            chart.setAttribute('href','./arcane/components/chart.html?v=4');
 
             if(definition.fullWidth){
                 chart.classList.add('full-width');
@@ -410,13 +444,9 @@
         function removeChart(e){
             const key=e.detail?.key;
 
-            if(!key||!getDashboardChart(key)){
+            if(!setChartVisibility(key,false)){
                 return;
             }
-
-            const dashboard=window.user.dashboard;
-            dashboard.charts[key]=false;
-            window.user.dashboard=dashboard;
 
             const chart=e.target.closest('[data-chart-key]');
 
@@ -425,6 +455,18 @@
                 chart.destroy?.();
                 chart.remove();
             }
+        }
+
+        function setChartVisibility(key='',visible=true){
+            if(!getDashboardChart(key)||typeof visible!=='boolean'){
+                return false;
+            }
+
+            const dashboard=window.user.dashboard;
+            dashboard.charts[key]=visible;
+            window.user.dashboard=dashboard;
+            dashboardConfig.setVisibility?.(dashboard.charts);
+            return true;
         }
 
         function clearCharts(){

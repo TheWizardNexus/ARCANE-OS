@@ -2,23 +2,23 @@
 <html lang="en">
 
     <head>
-        <base href="../" />
+        <base href="../../" />
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title>BOSS Dashboard</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="referrer" content="origin" />
-        <link rel="manifest" href="./manifest.json" crossorigin="use-credentials" />
-        <link rel="icon" href="./img/favicon.png" type="image/png">
+        <link rel="manifest" href="./apps/boss/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/boss/img/Draft%20BOSS%20logo%20design%20V4.jpg" type="image/jpeg">
         
 
         <!-- Styles -->
-        <link rel="stylesheet" href="./css/layout.css?v=3">
-        <link rel="stylesheet" href="./boss/boss.css">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./apps/boss/boss.css">
         
-        <script type="module" src="./modules/Errors.js?v=2"></script>
-        <script type="module" src="./modules/DBLS.js"></script>
-        <script type="module" src="./modules/HTMLImport.js"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBLS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js"></script>
 
         <style>
             /* Import drop zone */
@@ -98,9 +98,9 @@
     </head>
 
     <body>
-        <html-import class="header" href="./components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./boss/components/nav.html?v=1"></html-import>
-        <html-import class="file-manager" href="./components/file-manager.html"></html-import>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=1"></html-import>
+        <html-import class="file-manager" href="./arcane/components/file-manager.html"></html-import>
 
         <main class="contents">
 
@@ -115,7 +115,7 @@
         </main>
 
         <script type="module">
-            import UserEntity from './entities/User.js';
+            import UserEntity from './arcane/entities/User.js';
 
             const user=new UserEntity();
             const zone=document.querySelector('#dropZone');

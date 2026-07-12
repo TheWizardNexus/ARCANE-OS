@@ -1,6 +1,6 @@
 import PostSaveAssessment from './PostSaveAssessment.js';
 import showCrisisModal from './CrisisModal.js';
-import waitForComponent from './WaitForComponent.js';
+import waitForComponent from '../../../arcane/modules/WaitForComponent.js';
 
 function createPostSaveAssessment(progressModal,crisisModal){
     return new PostSaveAssessment(

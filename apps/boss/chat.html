@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <base href="../" />
+        <base href="../../" />
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title>BOSS Chat</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="referrer" content="origin" />
-        <link rel="manifest" href="./manifest.json" crossorigin="use-credentials" />
-        <link rel="icon" href="./img/favicon.png" type="image/png">
+        <link rel="manifest" href="./apps/boss/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/boss/img/Draft%20BOSS%20logo%20design%20V4.jpg" type="image/jpeg">
         
 
         <!-- Styles -->
-        <link rel="stylesheet" href="./css/layout.css?v=3">
-        <link rel="stylesheet" href="./boss/boss.css">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./apps/boss/boss.css">
         <style>
             .chat{
                 height: 100%;
@@ -22,29 +22,29 @@
         </style>
         
         
-        <script type="module" src="./modules/Errors.js?v=2"></script>
-        <script type="module" src="./modules/HTMLImport.js"></script>
-        <script type="module" src="./modules/Mail.js"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js"></script>
+        <script type="module" src="./arcane/modules/Mail.js"></script>
     </head>
 
     <body>
-        <html-import class="header" href="./components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./boss/components/nav.html?v=1"></html-import>
-        <html-import class="file-manager" data-dirs="memories,documents,images" href="./components/file-manager.html"></html-import>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=1"></html-import>
+        <html-import class="file-manager" data-dirs="memories,documents,images" href="./arcane/components/file-manager.html"></html-import>
 
         <main class="contents">
-            <html-import id="chat" class="chat" href="./components/chat.html?v=3"></html-import>
+            <html-import id="chat" class="chat" href="./arcane/components/chat.html?v=3"></html-import>
             <div id="uploadStatus" class="hidden"></div>
         </main>
-        <html-import id="modal" class="modal" href="./components/modal.html?v=11"></html-import>
+        <html-import id="modal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
     </body>
 
     <script type="module">
-        import './modules/DBOPFS.js';
-        import './modules/AI.js?v=3';
+        import './arcane/modules/DBOPFS.js';
+        import './arcane/modules/AI.js?v=3';
         import Is from './node_modules/strong-type/index.js';
-        import UserEntity from './entities/User.js';
-        import ChatEntity from './entities/Chat.js';
+        import UserEntity from './arcane/entities/User.js';
+        import ChatEntity from './arcane/entities/Chat.js';
 
         window.ChatEntity=ChatEntity;
         window.Is=Is;
@@ -93,7 +93,7 @@ ${JSON.stringify(await dbopfs.getAll('memories'))}`
                 };
                 
 
-                ai.fetch(
+                return ai.fetch(
                     [message],
                     receivedMessage
                 );
@@ -324,9 +324,7 @@ Please change to a smaller model or use cloud models (if applicable).`;
 
             sendCounter++;
 
-            streamMessage();
-
-            return true;
+            return streamMessage();
         }
 
         async function receivedMessage(text='', id='', isThinking){
@@ -351,8 +349,8 @@ Please change to a smaller model or use cloud models (if applicable).`;
                     );
                     return true;
                 }
-                multiToolHandler(text);
-                return;
+                await multiToolHandler(text);
+                return true;
             }
 
             if(!chatSession){
@@ -375,14 +373,31 @@ Please change to a smaller model or use cloud models (if applicable).`;
                 return false;
             }
 
-            ai.streamMessage(
-                chatSession.messages,
-                chat.streamMessage,
-                receivedMessage,
-                toolsChat,
-                'auto',
-                AIFunctionDetected
-            );
+            const requestId=Date.now();
+
+            try{
+                await ai.streamMessage(
+                    chatSession.messages,
+                    chat.streamMessage,
+                    receivedMessage,
+                    toolsChat,
+                    'auto',
+                    AIFunctionDetected,
+                    true,
+                    requestId
+                );
+                return true;
+            }catch(error){
+                const message=error?.code==='AI_PROVIDER_NOT_CONFIGURED'
+                    ?'AI is not configured. Add an API key in Profile or select a local Ollama model.'
+                    :'The AI service could not respond. Check the configured provider and try again.';
+                chat.streamMessage(message,`M-${requestId}`,false);
+                console.warn('AI stream unavailable.',{
+                    code:error?.code||'AI_STREAM_FAILED',
+                    status:error?.status||null
+                });
+                return false;
+            }
         }
 
         async function languageChanged(language='English'){
@@ -397,7 +412,7 @@ Please change to a smaller model or use cloud models (if applicable).`;
                 const key=keys[i];
 
                 try{
-                    toolHandlers[key](
+                    await toolHandlers[key](
                         JSON.parse(calls[key])
                     );
                 }catch(err){
@@ -415,7 +430,7 @@ Please change to a smaller model or use cloud models (if applicable).`;
             const func=tool.name;
             const params=JSON.parse(tool.arguments);
 
-            toolHandlers[func](params);
+            await toolHandlers[func](params);
 
             console.log(func);
             console.table(params);
@@ -697,6 +712,14 @@ ${JSON.stringify(memories)}`
             setTimeout(
                 function(){
                     ai.stopAudio();
+                    if(!ai.configured){
+                        chat.streamMessage(
+                            'AI is not configured. Add an API key in Profile or select a local Ollama model.',
+                            `provider-config-${Date.now()}`,
+                            false
+                        );
+                        return;
+                    }
                     sendMessage(message);
                 },
                 2222

@@ -1,4 +1,4 @@
-import './AI.js';
+import '../../../arcane/modules/AI.js';
 import Notes from '../entities/Notes.js';
 import AssessmentReportRunner from './AssessmentReportRunner.js';
 import {saveScoreAndReport} from './AssessmentRecords.js';
@@ -10,7 +10,7 @@ import {
     relationshipRisksTool,
     textAssessmentTool
 } from './AssessmentTools.js';
-import {handleResponse} from './ToolCallRouter.js';
+import {handleResponse} from '../../../arcane/modules/ToolCallRouter.js';
 
 class PostSaveAssessment{
     #onCrisis=null;

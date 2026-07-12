@@ -1,5 +1,5 @@
-<link rel="stylesheet" href="./css/layout.css?v=3">
-<link rel="stylesheet" href="./modules/uPlot.min.css">
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<link rel="stylesheet" href="./arcane/modules/uPlot.min.css">
 <style>
     :host{
         display:block;
@@ -136,21 +136,21 @@
 </style>
 
 <section class="chart">
-    <button id="removeChart" class="remove-chart" type="button" title="Remove from dashboard" aria-label="Remove chart from dashboard">&times;</button>
+    <button id="removeChart" class="remove-chart hidden" type="button" title="Remove chart" aria-label="Remove chart" disabled>&times;</button>
     <h2 id="chartTitle"></h2>
     <div id="plot" class="plot" tabindex="0" aria-describedby="chartValue"></div>
     <section id="chartValue" class="chart-value" data-state="latest" aria-live="polite" aria-atomic="true">
         <span id="valueContext" class="value-context">Latest recorded point</span>
         <span class="value-field">
-            <span class="value-label">Date</span>
+            <span id="timeLabel" class="value-label">Date</span>
             <time id="valueDate" class="value-date"></time>
         </span>
         <span class="value-field">
-            <span class="value-label">Score</span>
+            <span id="valueLabel" class="value-label">Value</span>
             <strong id="valueScore" class="value-score"></strong>
         </span>
     </section>
-    <p id="empty" class="empty hidden">No recorded data yet.</p>
+    <p id="empty" class="empty hidden">No data yet.</p>
 </section>
 
 <script type="module">
@@ -160,7 +160,9 @@
     const plot=host.shadowRoot.querySelector('#plot');
     const chartValue=host.shadowRoot.querySelector('#chartValue');
     const valueContext=host.shadowRoot.querySelector('#valueContext');
+    const timeLabel=host.shadowRoot.querySelector('#timeLabel');
     const valueDate=host.shadowRoot.querySelector('#valueDate');
+    const valueLabel=host.shadowRoot.querySelector('#valueLabel');
     const valueScore=host.shadowRoot.querySelector('#valueScore');
     const empty=host.shadowRoot.querySelector('#empty');
     const removeButton=host.shadowRoot.querySelector('#removeChart');
@@ -238,16 +240,28 @@
 
     async function populate(data=[],options={}){
         if(options&&typeof options==='object'){
-            if(options.title){
-                host.dataset.title=options.title;
+            const optionNames={
+                color:'color',
+                emptyLabel:'emptyLabel',
+                key:'chartKey',
+                max:'max',
+                min:'min',
+                removeLabel:'removeLabel',
+                seriesLabel:'seriesLabel',
+                style:'chartStyle',
+                timeLabel:'timeLabel',
+                title:'title',
+                valueLabel:'valueLabel'
+            };
+
+            for(const [optionName,datasetName] of Object.entries(optionNames)){
+                if(options[optionName]!==undefined){
+                    host.dataset[datasetName]=`${options[optionName]}`;
+                }
             }
 
-            if(options.style){
-                host.dataset.chartStyle=options.style;
-            }
-
-            if(options.key){
-                host.dataset.chartKey=options.key;
+            if(options.removable!==undefined){
+                host.dataset.removable=`${options.removable===true}`;
             }
         }
 
@@ -370,6 +384,13 @@
         );
         const height=Math.max(176,plot.clientHeight||176);
         const width=Math.max(280,plot.clientWidth||280);
+        const minimum=Number(host.dataset.min);
+        const maximum=Number(host.dataset.max);
+        const hasFixedRange=host.dataset.min!==undefined
+            &&host.dataset.max!==undefined
+            &&Number.isFinite(minimum)
+            &&Number.isFinite(maximum)
+            &&maximum>minimum;
 
         chart=new uPlot(
             {
@@ -388,13 +409,9 @@
                 legend:{show:false},
                 scales:{
                     x:{time:true},
-                    y:{
-                        auto:false,
-                        range:[
-                            Number(host.dataset.min??0),
-                            Number(host.dataset.max??10)
-                        ]
-                    }
+                    y:hasFixedRange
+                        ?{auto:false,range:[minimum,maximum]}
+                        :{auto:true}
                 },
                 axes:[
                     {
@@ -410,7 +427,7 @@
                 series:[
                     {},
                     {
-                        label:host.dataset.seriesLabel||'Score',
+                        label:host.dataset.seriesLabel||'Value',
                         stroke:lineColor,
                         width:style==='points'?0:2,
                         fill:style==='area'?areaColor:null,
@@ -480,7 +497,11 @@
         const date=new Date(row[0]);
         const validDate=Number.isFinite(date.getTime());
         const score=formatValue(row[1]);
-        const maximum=formatValue(Number(host.dataset.max??10));
+        const hasMaximum=host.dataset.max!==undefined
+            &&Number.isFinite(Number(host.dataset.max));
+        const maximum=hasMaximum
+            ?formatValue(Number(host.dataset.max))
+            :'';
         const contexts={
             hover:'Point under cursor',
             keyboard:'Keyboard-selected point',
@@ -492,10 +513,13 @@
         valueContext.innerText=contexts[state]||contexts.selected;
         valueDate.dateTime=validDate?date.toISOString():'';
         valueDate.innerText=validDate?date.toLocaleString():`${row[0]}`;
-        valueScore.innerText=`${score} / ${maximum}`;
+        valueScore.innerText=hasMaximum ?`${score} / ${maximum}`:score;
+        const valueDescription=hasMaximum
+            ?`${score} out of ${maximum}`
+            :score;
         plot.setAttribute(
             'aria-label',
-            `${title.innerText}. Date: ${valueDate.innerText}. Score: ${score} out of ${maximum}. Use left and right arrow keys to review every recorded point.`
+            `${title.innerText}. ${timeLabel.innerText}: ${valueDate.innerText}. ${valueLabel.innerText}: ${valueDescription}. Use left and right arrow keys to review every recorded point.`
         );
     }
 
@@ -507,10 +531,18 @@
 
     function updateTitle(){
         title.innerText=host.dataset.title||'Chart';
-        removeButton.setAttribute(
-            'aria-label',
-            `Remove ${title.innerText} from dashboard`
-        );
+        timeLabel.innerText=host.dataset.timeLabel||'Date';
+        valueLabel.innerText=host.dataset.valueLabel
+            ||host.dataset.seriesLabel
+            ||'Value';
+        empty.innerText=host.dataset.emptyLabel||'No data yet.';
+        const removable=host.dataset.removable==='true';
+
+        removeButton.classList.toggle('hidden',!removable);
+        removeButton.disabled=!removable;
+        const removeLabel=host.dataset.removeLabel||`Remove ${title.innerText}`;
+        removeButton.setAttribute('aria-label',removeLabel);
+        removeButton.title=removeLabel;
     }
 
     function scheduleResize(){

@@ -106,17 +106,25 @@ function normalizeRecipients(values){
 }
 
 class Mail {
-    constructor() {
+    constructor(config=globalThis.arcane?.config?.mail||{}) {
         if(window.mail){
             return window.mail;
         }
 
-        // Temporary private-app credentials. These are instance members so a
-        // future runtime/server-issued credential can replace the defaults.
-        this.appName='nelson';
-        this.appKey='dvHfbgaqIcIv2eiN_6Yvk4CCSFHZECJ6-bArdx6TzpA';
-        this.endpoint='https://mail.precrisis.analyticsgateway.com/v1/mail';
-        this.requestTimeout=300_000;
+        this.appName=typeof config.appName==='string'&&config.appName.trim()
+            ? config.appName.trim()
+            : 'arcane';
+        this.appKey=typeof config.appKey==='string' ? config.appKey:'';
+        this.endpoint=typeof config.endpoint==='string' ? config.endpoint:'';
+        this.requestTimeout=Number.isFinite(config.requestTimeout)
+            ? config.requestTimeout
+            : 300_000;
+    }
+
+    #assertConfigured(){
+        if(!this.endpoint||!this.appKey){
+            throw new Error('Mail transport is not configured');
+        }
     }
 
     async send(to=[], subject='', payload={}, messageStyle='', messageType='') {
@@ -137,6 +145,8 @@ class Mail {
             throw new TypeError('Mail type must be error, report, or crisis_detected');
         }
 
+        this.#assertConfigured();
+
         const recipients=normalizeRecipients(to);
         if(messageType!=='error'&&recipients.length===0){
             throw new TypeError('Report and crisis mail require at least one recipient');
@@ -154,7 +164,7 @@ class Mail {
         if(messageType==='error'){
             reportPayload.report={
                 subject:normalizedSubject,
-                text:`PreCrisis application error\n\n${serializePayload(reportPayload)}`,
+                text:`${this.appName} application error\n\n${serializePayload(reportPayload)}`,
                 to:recipients,
                 type:messageType,
             };
