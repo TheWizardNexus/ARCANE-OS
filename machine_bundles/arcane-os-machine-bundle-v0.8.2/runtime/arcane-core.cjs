@@ -28,8 +28,48 @@ function createWindowsNativeAdapter(ctx) {
   const cmdExe = ctx.path.join(system32, 'cmd.exe');
   const rundll32Exe = ctx.path.join(system32, 'rundll32.exe');
   const regExe = ctx.path.join(system32, 'reg.exe');
-  const simulatedAccounts = new Set();
-  const simulatedUsers = new Map();
+  const simulatedAccounts = ctx.simulatedAccounts
+    && ['has', 'add', 'delete'].every((name) => typeof ctx.simulatedAccounts[name] === 'function')
+    ? ctx.simulatedAccounts
+    : new Set();
+  const simulatedUsers = ctx.simulatedUsers
+    && ['has', 'get', 'set', 'delete', 'values'].every((name) => typeof ctx.simulatedUsers[name] === 'function')
+    ? ctx.simulatedUsers
+    : new Map();
+  const WINDOWS_SHELL_BINDING_VERSION = 2;
+  const WINDOWS_SHELL_ASSIGNMENT_MODE = 'windows-dual';
+
+  function normalizeShellRecovery(value, previousShellPresent) {
+    const source = value && typeof value === 'object'
+      ? value
+      : { previousShell: value, previousShellPresent: Boolean(previousShellPresent) };
+    const dual = Number(source.shellBindingVersion) === WINDOWS_SHELL_BINDING_VERSION
+      && source.assignmentMode === WINDOWS_SHELL_ASSIGNMENT_MODE;
+    return {
+      dual,
+      shellBindingVersion: dual ? WINDOWS_SHELL_BINDING_VERSION : 1,
+      assignmentMode: dual ? WINDOWS_SHELL_ASSIGNMENT_MODE : 'windows-legacy',
+      shellMutationPhase: String(source.shellMutationPhase || 'assigned'),
+      previousShell: source.previousShell ?? null,
+      previousShellPresent: Boolean(source.previousShellPresent),
+      previousPolicyShell: dual ? source.previousPolicyShell ?? null : null,
+      previousPolicyShellPresent: dual ? Boolean(source.previousPolicyShellPresent) : false,
+      previousLegacyShell: dual ? source.previousLegacyShell ?? null : source.previousShell ?? null,
+      previousLegacyShellPresent: dual ? Boolean(source.previousLegacyShellPresent) : Boolean(source.previousShellPresent),
+    };
+  }
+
+  function simulatedShellValue(binding, name) {
+    const presentName = `${name}Present`;
+    return {
+      present: Boolean(binding && binding[presentName]),
+      value: binding && binding[presentName] ? binding[name] ?? '' : null,
+    };
+  }
+
+  function sameShellValue(left, right) {
+    return left.present === right.present && (!left.present || left.value === right.value);
+  }
 
   function unloadTemporaryHiveScript(context) {
     return `$key=$null;$previous=$null;$remaining=$null
@@ -840,13 +880,24 @@ foreach($target in $targets){
       const names = [...new Map([...recorded, ...[...simulatedUsers.values()].map((item) => item.username)].map((value) => [value.toLowerCase(), value])).values()];
       return names.map((username) => {
         const key = username.toLowerCase();
-        const assigned = simulatedUsers.get(key) || null;
+        const binding = simulatedUsers.get(key) || null;
         const exists = simulatedAccounts.has(key);
+        const policy = simulatedShellValue(binding, 'policyShell');
+        const legacy = simulatedShellValue(binding, 'legacyShell');
+        const policyAssigned = policy.present && policy.value === expectedShell;
+        const legacyAssigned = legacy.present && legacy.value === expectedShell;
+        const assigned = policyAssigned && legacyAssigned;
         return {
           username,
-          shell: assigned ? expectedShell : null,
-          shellAssigned: Boolean(assigned),
-          enabled: exists ? assigned && assigned.enabled !== false : null,
+          shell: legacy.present ? legacy.value : policy.present ? policy.value : null,
+          policyShell: policy.present ? policy.value : null,
+          policyShellPresent: policy.present,
+          legacyShell: legacy.present ? legacy.value : null,
+          legacyShellPresent: legacy.present,
+          shellAssigned: assigned,
+          shellBindingVersion: assigned ? WINDOWS_SHELL_BINDING_VERSION : null,
+          assignmentMode: assigned ? WINDOWS_SHELL_ASSIGNMENT_MODE : policyAssigned || legacyAssigned ? 'windows-partial' : null,
+          enabled: exists ? binding && binding.enabled !== false : null,
           profile: exists ? 'SIMULATED' : null,
           verification: 'simulated',
           source: 'native-windows',
@@ -865,7 +916,10 @@ foreach($user in (Get-LocalUser -ErrorAction Stop)){
   $sid=$user.SID.Value
   $profile=Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue
   $profilePath=if($profile){$profile.LocalPath}else{$null}
-  $shellValue=$null
+  $policyShell=$null
+  $policyShellPresent=$false
+  $legacyShell=$null
+  $legacyShellPresent=$false
   $verified=$false
   $hive=$sid
   $temporary=$false
@@ -878,23 +932,36 @@ foreach($user in (Get-LocalUser -ErrorAction Stop)){
       if($LASTEXITCODE -eq 0){$temporary=$true;$verified=$true}
     }
     if($verified){
-      $key="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
-      $shellValue=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue).Shell
+      $policyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
+      $legacyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
+      $policyProperty=Get-ItemProperty -LiteralPath $policyKey -Name Shell -ErrorAction SilentlyContinue
+      $legacyProperty=Get-ItemProperty -LiteralPath $legacyKey -Name Shell -ErrorAction SilentlyContinue
+      if($null -ne $policyProperty){$policyShellPresent=$true;$policyShell=$policyProperty.Shell}
+      if($null -ne $legacyProperty){$legacyShellPresent=$true;$legacyShell=$legacyProperty.Shell}
     }
   } finally {
     if($temporary){
       ${unloadTemporaryHiveScript('user-shell discovery')}
     }
   }
-  $assigned=[bool]($verified -and [String]::Equals([string]$shellValue,[string]$expected,[StringComparison]::Ordinal))
+  $policyAssigned=[bool]($verified -and $policyShellPresent -and [String]::Equals([string]$policyShell,[string]$expected,[StringComparison]::Ordinal))
+  $legacyAssigned=[bool]($verified -and $legacyShellPresent -and [String]::Equals([string]$legacyShell,[string]$expected,[StringComparison]::Ordinal))
+  $assigned=[bool]($policyAssigned -and $legacyAssigned)
+  $assignmentMode=if($assigned){'windows-dual'}elseif($policyAssigned -or $legacyAssigned){'windows-partial'}else{$null}
   if($assigned -or ($recorded -contains $user.Name)){
     $results += [pscustomobject]@{
       username=$user.Name
       sid=$sid
       enabled=[bool]$user.Enabled
       profile=$profilePath
-      shell=$shellValue
+      shell=if($legacyShellPresent){$legacyShell}elseif($policyShellPresent){$policyShell}else{$null}
+      policyShell=$policyShell
+      policyShellPresent=$policyShellPresent
+      legacyShell=$legacyShell
+      legacyShellPresent=$legacyShellPresent
       shellAssigned=$assigned
+      shellBindingVersion=if($assigned){2}else{$null}
+      assignmentMode=$assignmentMode
       verification=if($verified){'verified'}else{'recorded-only'}
       source='native-windows'
     }
@@ -912,7 +979,13 @@ foreach($user in (Get-LocalUser -ErrorAction Stop)){
       return recorded.map((username) => ({
         username,
         shell: null,
+        policyShell: null,
+        policyShellPresent: false,
+        legacyShell: null,
+        legacyShellPresent: false,
         shellAssigned: false,
+        shellBindingVersion: null,
+        assignmentMode: null,
         enabled: null,
         profile: null,
         verification: 'recorded-only',
@@ -925,11 +998,20 @@ foreach($user in (Get-LocalUser -ErrorAction Stop)){
   async function prepareUserShellBackup(username, action) {
     if (ctx.simulate) {
       const key = username.toLowerCase();
+      const binding = simulatedUsers.get(key) || null;
+      const policy = simulatedShellValue(binding, 'policyShell');
+      const legacy = simulatedShellValue(binding, 'legacyShell');
       return {
         username,
         accountExisted: simulatedAccounts.has(key),
-        previousShell: simulatedUsers.has(key) ? shellCommand() : null,
-        previousShellPresent: simulatedUsers.has(key),
+        previousShell: legacy.present ? legacy.value : null,
+        previousShellPresent: legacy.present,
+        previousPolicyShell: policy.present ? policy.value : null,
+        previousPolicyShellPresent: policy.present,
+        previousLegacyShell: legacy.present ? legacy.value : null,
+        previousLegacyShellPresent: legacy.present,
+        shellBindingVersion: WINDOWS_SHELL_BINDING_VERSION,
+        assignmentMode: WINDOWS_SHELL_ASSIGNMENT_MODE,
         verification: 'simulated',
       };
     }
@@ -938,7 +1020,7 @@ $ProgressPreference='SilentlyContinue'
 $name=${ctx.psQuote(username)}
 $user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
 if(-not $user){
-  [pscustomobject]@{username=$name;accountExisted=$false;previousShell=$null;previousShellPresent=$false;profile=$null;sid=$null;verification='verified'}|ConvertTo-Json -Compress
+  [pscustomobject]@{username=$name;accountExisted=$false;previousShell=$null;previousShellPresent=$false;previousPolicyShell=$null;previousPolicyShellPresent=$false;previousLegacyShell=$null;previousLegacyShellPresent=$false;shellBindingVersion=2;assignmentMode='windows-dual';profile=$null;sid=$null;verification='verified'}|ConvertTo-Json -Compress
   exit 0
 }
 $adminGroupSid='S-1-5-32-544'
@@ -946,32 +1028,35 @@ $adminMember=Get-LocalGroupMember -SID $adminGroupSid -ErrorAction SilentlyConti
 if($adminMember){ throw "Arcane will not replace the login shell of administrator account '$name'." }
 $sid=$user.SID.Value
 $profile=(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue).LocalPath
-$previousShell=$null
-$previousShellPresent=$false
+$previousPolicyShell=$null
+$previousPolicyShellPresent=$false
+$previousLegacyShell=$null
+$previousLegacyShellPresent=$false
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $temporary=$false
 $hive=$sid
-if(-not $loaded -and $profile){
+if(-not $loaded){
+  if(-not $profile){throw "Windows could not locate the user profile for '$name' to back up both shell bindings."}
   $ntUser=Join-Path $profile 'NTUSER.DAT'
-  if(Test-Path -LiteralPath $ntUser){
-    $hive='ARCANE_PREPARE_'+($sid -replace '-','_')
-    & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-    if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name' to back up its shell." }
-    $temporary=$true
-  }
+  if(-not (Test-Path -LiteralPath $ntUser)){throw "Windows could not locate NTUSER.DAT for '$name' to back up both shell bindings."}
+  $hive='ARCANE_PREPARE_'+($sid -replace '-','_')
+  & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
+  if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name' to back up its shell." }
+  $temporary=$true
 }
 try {
-  if($loaded -or $temporary){
-    $key="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
-    $previous=Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue
-    if($null -ne $previous){$previousShellPresent=$true;$previousShell=$previous.Shell}
-  }
+  $policyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
+  $legacyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
+  $previousPolicy=Get-ItemProperty -LiteralPath $policyKey -Name Shell -ErrorAction SilentlyContinue
+  $previousLegacy=Get-ItemProperty -LiteralPath $legacyKey -Name Shell -ErrorAction SilentlyContinue
+  if($null -ne $previousPolicy){$previousPolicyShellPresent=$true;$previousPolicyShell=$previousPolicy.Shell}
+  if($null -ne $previousLegacy){$previousLegacyShellPresent=$true;$previousLegacyShell=$previousLegacy.Shell}
 } finally {
   if($temporary){
     ${unloadTemporaryHiveScript('shell backup preparation')}
   }
 }
-[pscustomobject]@{username=$name;accountExisted=$true;previousShell=$previousShell;previousShellPresent=$previousShellPresent;profile=$profile;sid=$sid;verification='verified'}|ConvertTo-Json -Compress`;
+[pscustomobject]@{username=$name;accountExisted=$true;previousShell=$previousLegacyShell;previousShellPresent=$previousLegacyShellPresent;previousPolicyShell=$previousPolicyShell;previousPolicyShellPresent=$previousPolicyShellPresent;previousLegacyShell=$previousLegacyShell;previousLegacyShellPresent=$previousLegacyShellPresent;shellBindingVersion=2;assignmentMode='windows-dual';profile=$profile;sid=$sid;verification='verified'}|ConvertTo-Json -Compress`;
     try {
       const result = await ctx.powershell(script, { action, purpose: 'prepare-user-shell-backup' });
       return JSON.parse(String(result.stdout || '').trim().split(/\r?\n/).filter(Boolean).pop());
@@ -989,11 +1074,64 @@ try {
 
   async function provisionUser(username, password, action, shellBackup) {
     const shell = shellCommand();
+    const recovery = normalizeShellRecovery(shellBackup);
+    if (!recovery.dual) {
+      throw ctx.arcaneError(
+        'INVALID_SHELL_BACKUP',
+        'Arcane refused to change a Windows shell without a complete dual-binding recovery record.',
+        'Refresh the account state and retry so Arcane can capture both Windows shell bindings.',
+        409
+      );
+    }
     if (ctx.simulate) {
       const key = username.toLowerCase();
       const created = !simulatedAccounts.has(key);
+      const existingBinding = simulatedUsers.get(key) || { username, enabled: true };
+      const currentPolicy = simulatedShellValue(existingBinding, 'policyShell');
+      const currentLegacy = simulatedShellValue(existingBinding, 'legacyShell');
+      const expectedPolicy = { present: recovery.previousPolicyShellPresent, value: recovery.previousPolicyShell };
+      const expectedLegacy = { present: recovery.previousLegacyShellPresent, value: recovery.previousLegacyShell };
+      if (created !== !shellBackup.accountExisted || !sameShellValue(currentPolicy, expectedPolicy) || !sameShellValue(currentLegacy, expectedLegacy)) {
+        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `The Windows account or one of its shell bindings changed after Arcane saved its recovery record.`, 'No shell change was made. Refresh the account list and try again.', 409);
+      }
       simulatedAccounts.add(key);
-      simulatedUsers.set(key, { username, shell, enabled: !created });
+      try {
+        existingBinding.policyShell = shell;
+        existingBinding.policyShellPresent = true;
+        if (ctx.simulatedUserFailure === 'crash-after-policy-shell-write' && !ctx.simulatedUserFailureTriggered) {
+          ctx.simulatedUserFailureTriggered = true;
+          simulatedUsers.set(key, existingBinding);
+          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing the Windows policy shell binding.', 'The next retry must recover the original durable dual-binding baseline.', 500);
+          error.simulatedCrash = true;
+          throw error;
+        }
+        if (ctx.simulatedShellWriteFailure === 'after-policy') throw new Error('Simulated failure after the policy shell write.');
+        existingBinding.legacyShell = shell;
+        existingBinding.legacyShellPresent = true;
+        if (ctx.simulatedUserFailure === 'crash-after-legacy-shell-write' && !ctx.simulatedUserFailureTriggered) {
+          ctx.simulatedUserFailureTriggered = true;
+          simulatedUsers.set(key, existingBinding);
+          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing both Windows shell bindings.', 'The next retry must recover the original durable dual-binding baseline.', 500);
+          error.simulatedCrash = true;
+          throw error;
+        }
+        if (ctx.simulatedShellWriteFailure === 'after-legacy') throw new Error('Simulated failure after the legacy shell write.');
+        existingBinding.username = username;
+        existingBinding.enabled = !created;
+        simulatedUsers.set(key, existingBinding);
+      } catch (error) {
+        if (error && error.simulatedCrash) throw error;
+        existingBinding.policyShell = recovery.previousPolicyShell;
+        existingBinding.policyShellPresent = recovery.previousPolicyShellPresent;
+        existingBinding.legacyShell = recovery.previousLegacyShell;
+        existingBinding.legacyShellPresent = recovery.previousLegacyShellPresent;
+        simulatedUsers.set(key, existingBinding);
+        if (created) {
+          simulatedUsers.delete(key);
+          simulatedAccounts.delete(key);
+        }
+        throw error;
+      }
       if (created && ctx.simulatedUserFailure === 'crash-before-native-return' && !ctx.simulatedUserFailureTriggered) {
         ctx.simulatedUserFailureTriggered = true;
         const error = ctx.arcaneError(
@@ -1023,7 +1161,23 @@ try {
         };
         throw error;
       }
-      return { username, created, sid: 'SIMULATED', profile: 'SIMULATED', shell, enabled: !created, activationPending: created, previousShell: null, previousShellPresent: false };
+      return {
+        username,
+        created,
+        sid: 'SIMULATED',
+        profile: 'SIMULATED',
+        shell,
+        enabled: !created,
+        activationPending: created,
+        previousShell: recovery.previousLegacyShell,
+        previousShellPresent: recovery.previousLegacyShellPresent,
+        previousPolicyShell: recovery.previousPolicyShell,
+        previousPolicyShellPresent: recovery.previousPolicyShellPresent,
+        previousLegacyShell: recovery.previousLegacyShell,
+        previousLegacyShellPresent: recovery.previousLegacyShellPresent,
+        shellBindingVersion: WINDOWS_SHELL_BINDING_VERSION,
+        assignmentMode: WINDOWS_SHELL_ASSIGNMENT_MODE,
+      };
     }
     const shellExecutable=ctx.path.join(paths.installRoot,'bin','ArcaneShell.exe');
     if(!ctx.fs.existsSync(shellExecutable)){
@@ -1041,8 +1195,10 @@ $password=[Console]::In.ReadLine()
 if([string]::IsNullOrEmpty($password)){ throw 'Arcane did not receive the protected temporary password.' }
 $shell=${ctx.psQuote(shell)}
 $expectedAccountExisted=${shellBackup && shellBackup.accountExisted ? '$true' : '$false'}
-$expectedPreviousPresent=${shellBackup && shellBackup.previousShellPresent ? '$true' : '$false'}
-$expectedPrevious=${ctx.psQuote(shellBackup && shellBackup.previousShell !== null && shellBackup.previousShell !== undefined ? shellBackup.previousShell : '')}
+$expectedPolicyPresent=${recovery.previousPolicyShellPresent ? '$true' : '$false'}
+$expectedPolicy=${ctx.psQuote(recovery.previousPolicyShell === null || recovery.previousPolicyShell === undefined ? '' : recovery.previousPolicyShell)}
+$expectedLegacyPresent=${recovery.previousLegacyShellPresent ? '$true' : '$false'}
+$expectedLegacy=${ctx.psQuote(recovery.previousLegacyShell === null || recovery.previousLegacyShell === undefined ? '' : recovery.previousLegacyShell)}
 $created=$false
 $createdSid=$null
 $profilePath=$null
@@ -1110,39 +1266,60 @@ if(-not (Test-Path -LiteralPath $ntUser)){
 }
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $hive=$sid
-$previousShell=$null
-$previousShellPresent=$false
 if(-not $loaded){
   $hive='ARCANE_'+($sid -replace '-','_')
   & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
   if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
 }
 try {
-  $key="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
-  $previous=Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue
-  if($null -ne $previous){$previousShellPresent=$true;$previousShell=$previous.Shell}
-  if($previousShellPresent -ne $expectedPreviousPresent -or ($previousShellPresent -and -not [String]::Equals([string]$previousShell,[string]$expectedPrevious,[StringComparison]::Ordinal))){
-    throw "The login shell for '$name' changed after Arcane saved its recovery record. No shell change was made."
+  function Get-ArcaneShellValue([string]$Path){
+    $property=Get-ItemProperty -LiteralPath $Path -Name Shell -ErrorAction SilentlyContinue
+    if($null -eq $property){return [pscustomobject]@{Present=$false;Value=$null}}
+    return [pscustomobject]@{Present=$true;Value=$property.Shell}
   }
-  try {
-    New-Item -Path $key -Force | Out-Null
-    New-ItemProperty -Path $key -Name Shell -PropertyType String -Value $shell -Force | Out-Null
-    $assigned=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop).Shell
-    if(-not [String]::Equals([string]$assigned,[string]$shell,[StringComparison]::Ordinal)){ throw "Windows did not retain the Arcane shell assignment for '$name'." }
-  } catch {
-    if($previousShellPresent){
-      New-ItemProperty -Path $key -Name Shell -PropertyType String -Value $previousShell -Force | Out-Null
+  function Test-ArcaneShellValue([string]$Path,[bool]$Present,[string]$Value){
+    $actual=Get-ArcaneShellValue $Path
+    return [bool]($actual.Present -eq $Present -and (-not $Present -or [String]::Equals([string]$actual.Value,[string]$Value,[StringComparison]::Ordinal)))
+  }
+  function Set-ArcaneShellValue([string]$Path,[bool]$Present,[string]$Value){
+    if($Present){
+      New-Item -Path $Path -Force | Out-Null
+      New-ItemProperty -Path $Path -Name Shell -PropertyType String -Value $Value -Force | Out-Null
     } else {
-      Remove-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue
+      Remove-ItemProperty -LiteralPath $Path -Name Shell -ErrorAction SilentlyContinue
     }
-    throw
+  }
+  $policyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
+  $legacyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
+  $previousPolicy=Get-ArcaneShellValue $policyKey
+  $previousLegacy=Get-ArcaneShellValue $legacyKey
+  if(-not (Test-ArcaneShellValue $policyKey $expectedPolicyPresent $expectedPolicy) -or -not (Test-ArcaneShellValue $legacyKey $expectedLegacyPresent $expectedLegacy)){
+    throw "A Windows shell binding for '$name' changed after Arcane saved its recovery record. No shell change was made."
+  }
+  $assignmentError=$null
+  try {
+    Set-ArcaneShellValue $policyKey $true $shell
+    if(-not (Test-ArcaneShellValue $policyKey $true $shell)){throw "Windows did not retain the Arcane policy shell assignment for '$name'."}
+    Set-ArcaneShellValue $legacyKey $true $shell
+    if(-not (Test-ArcaneShellValue $legacyKey $true $shell)){throw "Windows did not retain the Arcane legacy shell assignment for '$name'."}
+  } catch {
+    $assignmentError=$_
+    $rollbackErrors=@()
+    try{Set-ArcaneShellValue $policyKey ([bool]$previousPolicy.Present) ([string]$previousPolicy.Value)}catch{$rollbackErrors+=('policy write: '+$_.Exception.Message)}
+    try{Set-ArcaneShellValue $legacyKey ([bool]$previousLegacy.Present) ([string]$previousLegacy.Value)}catch{$rollbackErrors+=('legacy write: '+$_.Exception.Message)}
+    if(-not (Test-ArcaneShellValue $policyKey ([bool]$previousPolicy.Present) ([string]$previousPolicy.Value))){$rollbackErrors+='policy verification failed'}
+    if(-not (Test-ArcaneShellValue $legacyKey ([bool]$previousLegacy.Present) ([string]$previousLegacy.Value))){$rollbackErrors+='legacy verification failed'}
+    if($rollbackErrors.Count){
+      throw ("Arcane could not compensate both Windows shell bindings after assignment failed. Original error: "+$assignmentError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))
+    }
+    throw $assignmentError
   }
 } finally {
   if(-not $loaded){
     ${unloadTemporaryHiveScript('shell assignment')}
   }
 }
-[pscustomobject]@{username=$name;created=$created;sid=$sid;profile=$profilePath;shell=$shell;enabled=[bool]$user.Enabled;activationPending=$created;previousShell=$previousShell;previousShellPresent=$previousShellPresent}|ConvertTo-Json -Compress
+[pscustomobject]@{username=$name;created=$created;sid=$sid;profile=$profilePath;shell=$shell;enabled=[bool]$user.Enabled;activationPending=$created;previousShell=$previousLegacy.Value;previousShellPresent=[bool]$previousLegacy.Present;previousPolicyShell=$previousPolicy.Value;previousPolicyShellPresent=[bool]$previousPolicy.Present;previousLegacyShell=$previousLegacy.Value;previousLegacyShellPresent=[bool]$previousLegacy.Present;shellBindingVersion=2;assignmentMode='windows-dual'}|ConvertTo-Json -Compress
 } catch {
   $originalError=$_
   if($created){
@@ -1217,13 +1394,20 @@ try {
   }
 
   async function activateProvisionedUser(username, staged, action) {
-    if (!staged || !staged.created || !staged.sid) {
+    const stagedRecovery = normalizeShellRecovery(staged);
+    if (!staged || !staged.created || !staged.sid || !stagedRecovery.dual) {
       throw ctx.arcaneError('INVALID_STAGED_ACCOUNT', 'Arcane cannot activate an account without its staged creation record.', 'Retry the complete Add Arcane user operation.', 409);
     }
     if (ctx.simulate) {
       const key = username.toLowerCase();
       const assigned = simulatedUsers.get(key);
       if (!assigned || !simulatedAccounts.has(key)) throw new Error('The simulated staged account is missing.');
+      const expectedShell = shellCommand();
+      const policy = simulatedShellValue(assigned, 'policyShell');
+      const legacy = simulatedShellValue(assigned, 'legacyShell');
+      if (!policy.present || policy.value !== expectedShell || !legacy.present || legacy.value !== expectedShell) {
+        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', 'Arcane refused to activate the staged account because both Windows shell bindings were not exact.', 'Repair or retry the staged account transaction.', 409);
+      }
       assigned.enabled = true;
       if (ctx.simulatedUserFailure === 'crash-during-activation' && !ctx.simulatedUserFailureTriggered) {
         ctx.simulatedUserFailureTriggered = true;
@@ -1270,9 +1454,13 @@ if(-not (Test-Path "Registry::HKEY_USERS\\$expectedSid")){
   }
 }
 try {
-  $key="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
-  $currentShell=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue).Shell
-  if(-not [String]::Equals([string]$currentShell,[string]$expectedShell,[StringComparison]::Ordinal)){throw "Arcane refused to activate '$name' because its staged shell no longer matches Arcane."}
+  $policyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
+  $legacyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
+  $policyProperty=Get-ItemProperty -LiteralPath $policyKey -Name Shell -ErrorAction SilentlyContinue
+  $legacyProperty=Get-ItemProperty -LiteralPath $legacyKey -Name Shell -ErrorAction SilentlyContinue
+  $policyMatches=[bool]($null -ne $policyProperty -and [String]::Equals([string]$policyProperty.Shell,[string]$expectedShell,[StringComparison]::Ordinal))
+  $legacyMatches=[bool]($null -ne $legacyProperty -and [String]::Equals([string]$legacyProperty.Shell,[string]$expectedShell,[StringComparison]::Ordinal))
+  if(-not ($policyMatches -and $legacyMatches)){throw "Arcane refused to activate '$name' because both staged Windows shell bindings no longer match Arcane exactly."}
 } finally {
   if($temporary){${unloadTemporaryHiveScript('staged account activation')}}
 }
@@ -1374,9 +1562,55 @@ $adsi.SetInfo()
     }
   }
 
-  async function restoreUserShell(username, previousShell, previousShellPresent, action) {
+  async function restoreUserShell(username, recoveryInput, previousShellPresentOrAction, maybeAction) {
+    const structuredRecovery = Boolean(recoveryInput && typeof recoveryInput === 'object');
+    const recovery = normalizeShellRecovery(recoveryInput, structuredRecovery ? undefined : previousShellPresentOrAction);
+    const action = structuredRecovery ? previousShellPresentOrAction : maybeAction;
+    const previousShell = recovery.previousShell;
+    const previousShellPresent = recovery.previousShellPresent;
     if (ctx.simulate) {
-      simulatedUsers.delete(username.toLowerCase());
+      const key = username.toLowerCase();
+      const binding = simulatedUsers.get(key) || { username, enabled: simulatedAccounts.has(key) };
+      const expected = shellCommand();
+      if (recovery.dual) {
+        const policy = simulatedShellValue(binding, 'policyShell');
+        const legacy = simulatedShellValue(binding, 'legacyShell');
+        const baselinePolicy = { present: recovery.previousPolicyShellPresent, value: recovery.previousPolicyShell };
+        const baselineLegacy = { present: recovery.previousLegacyShellPresent, value: recovery.previousLegacyShell };
+        const policyArcane = policy.present && policy.value === expected;
+        const legacyArcane = legacy.present && legacy.value === expected;
+        const prepared = recovery.shellMutationPhase === 'prepared';
+        const policyAllowed = prepared ? policyArcane || sameShellValue(policy, baselinePolicy) : policyArcane;
+        const legacyAllowed = prepared ? legacyArcane || sameShellValue(legacy, baselineLegacy) : legacyArcane;
+        if (!policyAllowed || !legacyAllowed) {
+          throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `Arcane refused to overwrite a Windows shell binding for “${username}” because it contains an unrecognized value.`, 'Review both per-user shell registry values manually. No change was made.', 409);
+        }
+        binding.policyShell = recovery.previousPolicyShell;
+        binding.policyShellPresent = recovery.previousPolicyShellPresent;
+        binding.legacyShell = recovery.previousLegacyShell;
+        binding.legacyShellPresent = recovery.previousLegacyShellPresent;
+        simulatedUsers.set(key, binding);
+        return {
+          username,
+          restored: true,
+          shell: recovery.previousLegacyShellPresent ? recovery.previousLegacyShell : null,
+          policyShell: recovery.previousPolicyShellPresent ? recovery.previousPolicyShell : null,
+          policyShellPresent: recovery.previousPolicyShellPresent,
+          legacyShell: recovery.previousLegacyShellPresent ? recovery.previousLegacyShell : null,
+          legacyShellPresent: recovery.previousLegacyShellPresent,
+          shellAssigned: false,
+          shellBindingVersion: WINDOWS_SHELL_BINDING_VERSION,
+          assignmentMode: WINDOWS_SHELL_ASSIGNMENT_MODE,
+          verification: 'simulated',
+        };
+      }
+      const legacy = simulatedShellValue(binding, 'legacyShell');
+      if (!legacy.present || legacy.value !== expected) {
+        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `Arcane refused to overwrite the current legacy shell for “${username}” because it no longer matches Arcane.`, 'Review the account manually. No change was made.', 409);
+      }
+      binding.legacyShell = previousShell;
+      binding.legacyShellPresent = previousShellPresent;
+      simulatedUsers.set(key, binding);
       return {
         username,
         restored: true,
@@ -1386,6 +1620,113 @@ $adsi.SetInfo()
       };
     }
     const expectedShell = shellCommand();
+    if (recovery.dual) {
+      const preparedRecovery = recovery.shellMutationPhase === 'prepared';
+      const dualScript = `$ErrorActionPreference='Stop'
+$ProgressPreference='SilentlyContinue'
+$name=${ctx.psQuote(username)}
+$expected=${ctx.psQuote(expectedShell)}
+$prepared=${preparedRecovery ? '$true' : '$false'}
+$previousPolicy=${ctx.psQuote(recovery.previousPolicyShell === null || recovery.previousPolicyShell === undefined ? '' : recovery.previousPolicyShell)}
+$previousPolicyPresent=${recovery.previousPolicyShellPresent ? '$true' : '$false'}
+$previousLegacy=${ctx.psQuote(recovery.previousLegacyShell === null || recovery.previousLegacyShell === undefined ? '' : recovery.previousLegacyShell)}
+$previousLegacyPresent=${recovery.previousLegacyShellPresent ? '$true' : '$false'}
+$user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
+if(-not $user){ throw "The local Windows account '$name' does not exist." }
+$sid=$user.SID.Value
+$profile=(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue).LocalPath
+if(-not $profile){ throw "Windows could not locate the user profile for '$name'." }
+$ntUser=Join-Path $profile 'NTUSER.DAT'
+if(-not (Test-Path -LiteralPath $ntUser)){ throw "Windows could not locate NTUSER.DAT for '$name'." }
+$loaded=Test-Path "Registry::HKEY_USERS\\$sid"
+$hive=$sid
+$temporary=$false
+if(-not $loaded){
+  $suffix=($sid -replace '-','_')
+  foreach($prefix in @('ARCANE_','ARCANE_PREPARE_','ARCANE_RESTORE_','ARCANE_SCAN_','ARCANE_RECOVERY_')){
+    $candidate=$prefix+$suffix
+    if(Test-Path "Registry::HKEY_USERS\\$candidate"){$hive=$candidate;$temporary=$true;break}
+  }
+  if(-not $temporary){
+    $hive='ARCANE_RECOVERY_'+$suffix
+    & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
+    if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
+    $temporary=$true
+  }
+}
+try {
+  function Get-ArcaneShellValue([string]$Path){
+    $property=Get-ItemProperty -LiteralPath $Path -Name Shell -ErrorAction SilentlyContinue
+    if($null -eq $property){return [pscustomobject]@{Present=$false;Value=$null}}
+    return [pscustomobject]@{Present=$true;Value=$property.Shell}
+  }
+  function Test-ArcaneShellValue([string]$Path,[bool]$Present,[string]$Value){
+    $actual=Get-ArcaneShellValue $Path
+    return [bool]($actual.Present -eq $Present -and (-not $Present -or [String]::Equals([string]$actual.Value,[string]$Value,[StringComparison]::Ordinal)))
+  }
+  function Test-ArcaneExpected([string]$Path){return (Test-ArcaneShellValue $Path $true $expected)}
+  function Set-ArcaneShellValue([string]$Path,[bool]$Present,[string]$Value){
+    if($Present){
+      New-Item -Path $Path -Force | Out-Null
+      New-ItemProperty -Path $Path -Name Shell -PropertyType String -Value $Value -Force | Out-Null
+    } else {
+      Remove-ItemProperty -LiteralPath $Path -Name Shell -ErrorAction SilentlyContinue
+    }
+  }
+  $policyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
+  $legacyKey="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
+  $currentPolicy=Get-ArcaneShellValue $policyKey
+  $currentLegacy=Get-ArcaneShellValue $legacyKey
+  if($prepared){
+    $policyAllowed=[bool]((Test-ArcaneExpected $policyKey) -or (Test-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy))
+    $legacyAllowed=[bool]((Test-ArcaneExpected $legacyKey) -or (Test-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy))
+  } else {
+    $policyAllowed=[bool](Test-ArcaneExpected $policyKey)
+    $legacyAllowed=[bool](Test-ArcaneExpected $legacyKey)
+  }
+  if(-not ($policyAllowed -and $legacyAllowed)){
+    throw "Arcane refused to overwrite a Windows shell binding for '$name' because it contains a value outside the durable recovery record."
+  }
+  $restoreError=$null
+  try {
+    Set-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy
+    if(-not (Test-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy)){throw "Windows did not retain the restored policy shell for '$name'."}
+    Set-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy
+    if(-not (Test-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy)){throw "Windows did not retain the restored legacy shell for '$name'."}
+  } catch {
+    $restoreError=$_
+    $rollbackErrors=@()
+    try{Set-ArcaneShellValue $policyKey ([bool]$currentPolicy.Present) ([string]$currentPolicy.Value)}catch{$rollbackErrors+=('policy write: '+$_.Exception.Message)}
+    try{Set-ArcaneShellValue $legacyKey ([bool]$currentLegacy.Present) ([string]$currentLegacy.Value)}catch{$rollbackErrors+=('legacy write: '+$_.Exception.Message)}
+    if(-not (Test-ArcaneShellValue $policyKey ([bool]$currentPolicy.Present) ([string]$currentPolicy.Value))){$rollbackErrors+='policy verification failed'}
+    if(-not (Test-ArcaneShellValue $legacyKey ([bool]$currentLegacy.Present) ([string]$currentLegacy.Value))){$rollbackErrors+='legacy verification failed'}
+    if($rollbackErrors.Count){throw ("Arcane could not compensate both Windows shell bindings after restoration failed. Original error: "+$restoreError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))}
+    throw $restoreError
+  }
+} finally {
+  if($temporary){${unloadTemporaryHiveScript('dual shell restoration')}}
+}
+$restoredShell=if($previousLegacyPresent){$previousLegacy}else{$null}
+[pscustomobject]@{username=$name;restored=$true;shell=$restoredShell;policyShell=if($previousPolicyPresent){$previousPolicy}else{$null};policyShellPresent=$previousPolicyPresent;legacyShell=$restoredShell;legacyShellPresent=$previousLegacyPresent;shellAssigned=$false;shellBindingVersion=2;assignmentMode='windows-dual';profile=$profile;sid=$sid;verification='verified'}|ConvertTo-Json -Compress`;
+      try {
+        const result = await ctx.powershell(dualScript, {
+          action,
+          purpose: 'restore-arcane-user-shell',
+          redactArgs: true,
+          displayCommand: '$ powershell.exe [restore previous dual user shell bindings]',
+        });
+        return JSON.parse(String(result.stdout || '').trim().split(/\r?\n/).filter(Boolean).pop());
+      } catch (error) {
+        const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
+        error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_SHELL_RESTORE_FAILED' : error.code;
+        error.userMessage = `Windows could not restore the previous login shell bindings for “${username}”.`;
+        error.resolution = readable
+          ? `${readable} Confirm the account profile is not in use, then retry from an administrator session.`
+          : 'Confirm the account exists, sign it out, approve administrator access, and try again.';
+        error.username = username;
+        throw error;
+      }
+    }
     const script = `$ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
 $name=${ctx.psQuote(username)}
@@ -1609,8 +1950,14 @@ try {
 function createLinuxNativeAdapter(ctx) {
   'use strict';
 
-  const simulatedAccounts = new Set();
-  const simulatedShellAssignments = new Map();
+  const simulatedAccounts = ctx.simulatedAccounts
+    && ['has', 'add', 'delete'].every((name) => typeof ctx.simulatedAccounts[name] === 'function')
+    ? ctx.simulatedAccounts
+    : new Set();
+  const simulatedShellAssignments = ctx.simulatedShellAssignments
+    && ['has', 'get', 'set', 'delete', 'values'].every((name) => typeof ctx.simulatedShellAssignments[name] === 'function')
+    ? ctx.simulatedShellAssignments
+    : new Map();
 
   const paths = Object.freeze({
     installRoot: !ctx.production&&process.env.ARCANE_INSTALL_ROOT || '/opt/arcane-os',
@@ -2178,6 +2525,8 @@ Categories=System;Settings;
       accountExisted: Boolean(existing),
       previousShell: existing && existing.shell || defaultLoginShell(),
       previousShellPresent: true,
+      shellBindingVersion: 1,
+      assignmentMode: 'linux-login-shell',
       profile: existing && existing.profile || null,
       uid: existing && existing.uid !== undefined ? existing.uid : null,
       verification: ctx.simulate ? 'simulated' : 'verified',
@@ -2201,7 +2550,7 @@ Categories=System;Settings;
       const key = username.toLowerCase();
       simulatedAccounts.add(key);
       simulatedShellAssignments.set(key, { username, shell });
-      return { username, created: !exists, uid: 1000, profile: `/home/${username}`, shell, previousShell, previousShellPresent: true };
+      return { username, created: !exists, uid: 1000, profile: `/home/${username}`, shell, previousShell, previousShellPresent: true, shellBindingVersion: 1, assignmentMode: 'linux-login-shell' };
     }
     throw ctx.arcaneError(
       'LINUX_DESKTOP_SESSION_REQUIRED',
@@ -2241,6 +2590,8 @@ Categories=System;Settings;
       shell,
       previousShell,
       previousShellPresent: true,
+      shellBindingVersion: 1,
+      assignmentMode: 'linux-login-shell',
     };
   }
 
@@ -2297,7 +2648,11 @@ Categories=System;Settings;
     }
   }
 
-  async function restoreUserShell(username, previousShell, previousShellPresent, action) {
+  async function restoreUserShell(username, recoveryInput, previousShellPresentOrAction, maybeAction) {
+    const structuredRecovery = Boolean(recoveryInput && typeof recoveryInput === 'object');
+    const previousShell = structuredRecovery ? recoveryInput.previousShell ?? null : recoveryInput;
+    const previousShellPresent = structuredRecovery ? Boolean(recoveryInput.previousShellPresent) : Boolean(previousShellPresentOrAction);
+    const action = structuredRecovery ? previousShellPresentOrAction : maybeAction;
     const restoredShell = previousShellPresent && previousShell ? previousShell : defaultLoginShell();
     if (ctx.simulate) {
       simulatedShellAssignments.delete(username.toLowerCase());
@@ -2443,6 +2798,21 @@ const simulateStandard = args.has('--simulate-standard') || process.env.ARCANE_S
 const hostPlatform = process.platform;
 const simulatedPlatform = simulate && !process.pkg ? argValue('--simulate-platform=') || process.env.ARCANE_SIMULATE_PLATFORM || '' : '';
 const simulatedUserFailure = simulate ? argValue('--simulate-user-failure=') || '' : '';
+const simulatedExistingUsers = simulate && !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-existing-user='))
+    .map((item) => item.slice('--simulate-existing-user='.length).trim())
+    .filter(Boolean)
+  : [];
+const simulatedLegacyArcaneUsers = simulate && !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-legacy-arcane-user='))
+    .map((item) => item.slice('--simulate-legacy-arcane-user='.length).trim())
+    .filter(Boolean)
+  : [];
+const simulatedLegacyDriftUsers = simulate && !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-legacy-drift-user='))
+    .map((item) => item.slice('--simulate-legacy-drift-user='.length).trim())
+    .filter(Boolean)
+  : [];
 const simulatedCapabilityOverride = simulate && !process.pkg
   ? String(argValue('--simulate-capabilities=') || '').split(',').map((value) => value.trim()).filter(Boolean)
   : [];
@@ -2492,6 +2862,22 @@ const nativeContext = {
   spawn,
   spawnSync,
 };
+const simulatedWindowsSeedUsers = [...new Set([...simulatedExistingUsers, ...simulatedLegacyArcaneUsers, ...simulatedLegacyDriftUsers])];
+if (platform === 'win32' && simulatedWindowsSeedUsers.length) {
+  nativeContext.simulatedAccounts = new Set(simulatedWindowsSeedUsers.map((username) => username.toLowerCase()));
+  nativeContext.simulatedUsers = new Map(simulatedWindowsSeedUsers.map((username) => [username.toLowerCase(), {
+    username,
+    enabled: true,
+    policyShell: null,
+    policyShellPresent: false,
+    legacyShell: 'explorer.exe',
+    legacyShellPresent: true,
+  }]));
+}
+if (platform === 'linux' && simulatedExistingUsers.length) {
+  nativeContext.simulatedAccounts = new Set(simulatedExistingUsers);
+  nativeContext.simulatedShellAssignments = new Map();
+}
 const native = platform === 'win32'
   ? createWindowsNativeAdapter(nativeContext)
   : platform === 'linux'
@@ -2500,6 +2886,27 @@ const native = platform === 'win32'
 if (!native) {
   console.error(`Arcane Core does not yet support ${platform}.`);
   process.exit(4);
+}
+if (platform === 'win32' && (simulatedLegacyArcaneUsers.length || simulatedLegacyDriftUsers.length)) {
+  for (const username of [...simulatedLegacyArcaneUsers, ...simulatedLegacyDriftUsers]) {
+    const key = username.toLowerCase();
+    const binding = nativeContext.simulatedUsers.get(key);
+    binding.legacyShell = simulatedLegacyDriftUsers.includes(username) ? 'third-party-shell.exe' : native.shellCommand();
+    binding.legacyShellPresent = true;
+    simulatedArcaneUsersState.users[key] = {
+      username,
+      createdByArcane: false,
+      previousShell: 'explorer.exe',
+      previousShellPresent: true,
+      previousShellCaptured: true,
+      shell: native.shellCommand(),
+      shellBindingVersion: 1,
+      assignmentMode: 'windows-legacy',
+      shellMutationPhase: 'assigned',
+      accountExistedBefore: true,
+      accountMutationPhase: 'existing-account',
+    };
+  }
 }
 const PATHS = native.paths;
 const windowsSystemRoot=productionPackaged ? 'C:\\Windows' : process.env.SystemRoot || 'C:\\Windows';
@@ -3171,12 +3578,53 @@ async function deleteAppStorage(keyInput) {
     return { key, deleted, totalBytes, maximumBytes: APP_STORAGE_TOTAL_MAX_BYTES };
   });
 }
+function shellRecoveryDescriptor(record, phaseOverride) {
+  const source = record && typeof record === 'object' ? record : {};
+  return {
+    previousShell: source.previousShell ?? null,
+    previousShellPresent: Boolean(source.previousShellPresent),
+    previousPolicyShell: source.previousPolicyShell ?? null,
+    previousPolicyShellPresent: Boolean(source.previousPolicyShellPresent),
+    previousLegacyShell: source.previousLegacyShell ?? null,
+    previousLegacyShellPresent: Boolean(source.previousLegacyShellPresent),
+    shellBindingVersion: Number(source.shellBindingVersion) || 1,
+    assignmentMode: source.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
+    shellMutationPhase: phaseOverride || source.shellMutationPhase || 'assigned',
+  };
+}
+function isCompleteWindowsDualBackup(backup) {
+  return Boolean(backup && Number(backup.shellBindingVersion) === 2 && backup.assignmentMode === 'windows-dual');
+}
+function backupAlreadyUsesArcane(backup) {
+  const expected = native.shellCommand();
+  if (native.id === 'windows') {
+    return Boolean(
+      isCompleteWindowsDualBackup(backup)
+      && backup.previousPolicyShellPresent
+      && backup.previousLegacyShellPresent
+      && backup.previousPolicyShell === expected
+      && backup.previousLegacyShell === expected
+    );
+  }
+  return Boolean(backup && backup.previousShellPresent && backup.previousShell === expected);
+}
 async function listArcaneUsers() {
   const state = readArcaneUsersState();
   const records = Object.values(state.users || {});
   const nativeUsers = await native.listArcaneUsers(records.map((item) => item.username));
   return nativeUsers.map((user) => {
     const record = state.users[String(user.username || '').toLowerCase()] || null;
+    const preparedExistingRecovery = Boolean(
+      record
+      && record.previousShellCaptured
+      && record.accountExistedBefore === true
+      && record.shellMutationPhase === 'prepared'
+    );
+    const incompleteNewAccount = Boolean(
+      record
+      && record.accountExistedBefore === false
+      && ['prepared', 'activation-pending', 'cleanup-required'].includes(record.accountMutationPhase)
+    );
     return {
       ...user,
       managedByArcane: Boolean(record),
@@ -3186,7 +3634,13 @@ async function listArcaneUsers() {
       passwordChangedAt: record && record.passwordChangedAt ? record.passwordChangedAt : null,
       previousShell: record && record.previousShellPresent ? record.previousShell || null : null,
       previousShellPresent: record ? Boolean(record.previousShellPresent) : false,
-      canRestoreShell: Boolean(record && record.previousShellCaptured && user.shellAssigned),
+      previousPolicyShell: record && record.previousPolicyShellPresent ? record.previousPolicyShell ?? null : null,
+      previousPolicyShellPresent: record ? Boolean(record.previousPolicyShellPresent) : false,
+      previousLegacyShell: record && record.previousLegacyShellPresent ? record.previousLegacyShell ?? null : null,
+      previousLegacyShellPresent: record ? Boolean(record.previousLegacyShellPresent) : false,
+      recordedShellBindingVersion: record ? Number(record.shellBindingVersion) || 1 : null,
+      recordedAssignmentMode: record && record.assignmentMode ? record.assignmentMode : null,
+      canRestoreShell: Boolean(record && record.previousShellCaptured && !incompleteNewAccount && (user.shellAssigned || preparedExistingRecovery)),
       shellMutationPhase: record && record.shellMutationPhase ? record.shellMutationPhase : null,
       shellRecoveryPrepared: Boolean(record && record.previousShellCaptured),
       accountMutationPhase: record && record.accountMutationPhase ? record.accountMutationPhase : null,
@@ -3910,6 +4364,75 @@ async function provisionUsers(usernames, action) {
         priorRecord = readArcaneUsersState().users[userKey] || null;
         actionLog(action, 'warn', `Arcane recovered an interrupted disabled account transaction for ${username} before retrying.`);
       }
+      const legacyWindowsAssignment = Boolean(
+        native.id === 'windows'
+        && priorRecord
+        && priorRecord.accountExistedBefore === true
+        && priorRecord.previousShellCaptured
+        && priorRecord.shellMutationPhase === 'assigned'
+        && (Number(priorRecord.shellBindingVersion) !== 2 || priorRecord.assignmentMode !== 'windows-dual')
+      );
+      if (legacyWindowsAssignment) {
+        if (!native.userExists(username)) {
+          throw arcaneError(
+            'USER_NOT_FOUND',
+            `Arcane cannot migrate the legacy shell recovery record for “${username}” because the account no longer exists.`,
+            'Confirm whether the account was intentionally removed, then review its protected Arcane recovery record as an administrator.',
+            404,
+            { username }
+          );
+        }
+        const restoredLegacy = await native.restoreUserShell(
+          username,
+          shellRecoveryDescriptor(priorRecord, 'assigned'),
+          action
+        );
+        await updateArcaneUserRecord(username, {
+          shell: restoredLegacy.shell ?? null,
+          shellRestoredAt: stamp(),
+          shellMutationPhase: 'legacy-migrated',
+          shellMutationCompletedAt: stamp(),
+          accountMutationPhase: 'existing-account',
+          accountMutationCompletedAt: stamp(),
+        });
+        const refreshed = (await listArcaneUsers()).find((user) => String(user.username || '').toLowerCase() === userKey);
+        if (refreshed) existingUsers.set(userKey, refreshed);
+        else existingUsers.delete(userKey);
+        priorRecord = readArcaneUsersState().users[userKey] || null;
+        actionLog(action, 'warn', `Arcane restored ${username} from its original legacy recovery record before capturing a new dual-binding baseline.`);
+      }
+      if (priorRecord
+        && priorRecord.accountExistedBefore === true
+        && priorRecord.previousShellCaptured
+        && priorRecord.shellMutationPhase === 'prepared') {
+        if (!native.userExists(username)) {
+          throw arcaneError(
+            'USER_NOT_FOUND',
+            `Arcane cannot recover the interrupted shell transaction for “${username}” because the account no longer exists.`,
+            'Confirm whether the account was intentionally removed, then review its protected Arcane recovery record as an administrator.',
+            404,
+            { username }
+          );
+        }
+        const recoveredShell = await native.restoreUserShell(
+          username,
+          shellRecoveryDescriptor(priorRecord, 'prepared'),
+          action
+        );
+        await updateArcaneUserRecord(username, {
+          shell: recoveredShell.shell ?? null,
+          shellRestoredAt: stamp(),
+          shellMutationPhase: 'recovered',
+          shellMutationCompletedAt: stamp(),
+          accountMutationPhase: 'existing-account',
+          accountMutationCompletedAt: stamp(),
+        });
+        const refreshed = (await listArcaneUsers()).find((user) => String(user.username || '').toLowerCase() === userKey);
+        if (refreshed) existingUsers.set(userKey, refreshed);
+        else existingUsers.delete(userKey);
+        priorRecord = readArcaneUsersState().users[userKey] || null;
+        actionLog(action, 'warn', `Arcane restored the original durable shell baseline for ${username} before starting a new provisioning transaction.`);
+      }
       const existingArcaneUser = existingUsers.get(userKey);
       if (existingArcaneUser && existingArcaneUser.shellAssigned) {
         const payload = { ...existingArcaneUser, created: false, alreadyAssigned: true, passwordStatus: existingArcaneUser.passwordStatus || 'existing-password-unchanged' };
@@ -3918,7 +4441,16 @@ async function provisionUsers(usernames, action) {
         continue;
       }
       const backup = await native.prepareUserShellBackup(username, action);
-      if (backup.previousShellPresent && backup.previousShell === native.shellCommand()) {
+      if (native.id === 'windows' && !isCompleteWindowsDualBackup(backup)) {
+        throw arcaneError(
+          'WINDOWS_SHELL_BACKUP_INCOMPLETE',
+          `Arcane could not capture both Windows shell bindings for “${username}”.`,
+          'No shell change was made. Sign the account out, confirm its profile is available, and retry from an administrator session.',
+          409,
+          { username }
+        );
+      }
+      if (backupAlreadyUsesArcane(backup)) {
         const payload = { username, created: false, alreadyAssigned: true, shell: native.shellCommand(), passwordStatus: priorRecord && priorRecord.passwordStatus || 'existing-password-unchanged' };
         results.push(payload);
         existingUsers.set(username.toLowerCase(), { ...payload, shellAssigned: true });
@@ -3929,6 +4461,12 @@ async function provisionUsers(usernames, action) {
         createdByArcane: priorRecord ? Boolean(priorRecord.createdByArcane) : false,
         previousShell: backup.previousShell ?? null,
         previousShellPresent: Boolean(backup.previousShellPresent),
+        previousPolicyShell: backup.previousPolicyShell ?? null,
+        previousPolicyShellPresent: Boolean(backup.previousPolicyShellPresent),
+        previousLegacyShell: backup.previousLegacyShell ?? null,
+        previousLegacyShellPresent: Boolean(backup.previousLegacyShellPresent),
+        shellBindingVersion: Number(backup.shellBindingVersion) || 1,
+        assignmentMode: backup.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
         previousShellCaptured: true,
         profile: backup.profile || priorRecord && priorRecord.profile || null,
         sid: backup.sid || priorRecord && priorRecord.sid || null,
@@ -3946,6 +4484,10 @@ async function provisionUsers(usernames, action) {
       actionLog(action, 'info', `Arcane durably saved the previous login shell for ${username} before making a shell change.`, {
         username,
         previousShellPresent: Boolean(backup.previousShellPresent),
+        previousPolicyShellPresent: Boolean(backup.previousPolicyShellPresent),
+        previousLegacyShellPresent: Boolean(backup.previousLegacyShellPresent),
+        shellBindingVersion: Number(backup.shellBindingVersion) || 1,
+        assignmentMode: backup.assignmentMode || null,
         verification: backup.verification || null,
       });
 
@@ -3983,6 +4525,12 @@ async function provisionUsers(usernames, action) {
         uid: result.uid !== undefined ? result.uid : null,
         previousShell: backup.previousShell ?? null,
         previousShellPresent: Boolean(backup.previousShellPresent),
+        previousPolicyShell: backup.previousPolicyShell ?? null,
+        previousPolicyShellPresent: Boolean(backup.previousPolicyShellPresent),
+        previousLegacyShell: backup.previousLegacyShell ?? null,
+        previousLegacyShellPresent: Boolean(backup.previousLegacyShellPresent),
+        shellBindingVersion: Number(backup.shellBindingVersion) || 1,
+        assignmentMode: backup.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
         previousShellCaptured: true,
         shellMutationPhase: 'assigned',
         shellMutationCompletedAt: stamp(),
@@ -4036,8 +4584,7 @@ async function provisionUsers(usernames, action) {
         } else {
           const restored = await native.restoreUserShell(
             item.username,
-            item.backup.previousShell ?? null,
-            Boolean(item.backup.previousShellPresent),
+            shellRecoveryDescriptor(item.backup, 'assigned'),
             action
           );
           rollback.push({ username: item.username, restored: true, shell: restored.shell || null });
@@ -4084,6 +4631,15 @@ async function activateStagedArcaneUser(username, action) {
     sid: record.sid,
     profile: record.profile || null,
     shell: record.shell || native.shellCommand(),
+    previousShell: record.previousShell ?? null,
+    previousShellPresent: Boolean(record.previousShellPresent),
+    previousPolicyShell: record.previousPolicyShell ?? null,
+    previousPolicyShellPresent: Boolean(record.previousPolicyShellPresent),
+    previousLegacyShell: record.previousLegacyShell ?? null,
+    previousLegacyShellPresent: Boolean(record.previousLegacyShellPresent),
+    shellBindingVersion: Number(record.shellBindingVersion) || 1,
+    assignmentMode: record.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
+    shellMutationPhase: record.shellMutationPhase || 'assigned',
   }, action);
   if (simulate && simulatedUserFailure === 'crash-after-enable' && !nativeContext.simulatedUserFailureTriggered) {
     nativeContext.simulatedUserFailureTriggered = true;
@@ -4190,8 +4746,7 @@ async function restoreArcaneUserShell(username, action) {
   actionStep(action, 25, `Restoring the previous login shell for ${normalized}…`);
   const result = await native.restoreUserShell(
     normalized,
-    record.previousShell ?? null,
-    Boolean(record.previousShellPresent),
+    shellRecoveryDescriptor(record, preparedRecovery ? 'prepared' : 'assigned'),
     action
   );
   await updateArcaneUserRecord(normalized, {

@@ -29,6 +29,21 @@ const simulateStandard = args.has('--simulate-standard') || process.env.ARCANE_S
 const hostPlatform = process.platform;
 const simulatedPlatform = simulate && !process.pkg ? argValue('--simulate-platform=') || process.env.ARCANE_SIMULATE_PLATFORM || '' : '';
 const simulatedUserFailure = simulate ? argValue('--simulate-user-failure=') || '' : '';
+const simulatedExistingUsers = simulate && !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-existing-user='))
+    .map((item) => item.slice('--simulate-existing-user='.length).trim())
+    .filter(Boolean)
+  : [];
+const simulatedLegacyArcaneUsers = simulate && !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-legacy-arcane-user='))
+    .map((item) => item.slice('--simulate-legacy-arcane-user='.length).trim())
+    .filter(Boolean)
+  : [];
+const simulatedLegacyDriftUsers = simulate && !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-legacy-drift-user='))
+    .map((item) => item.slice('--simulate-legacy-drift-user='.length).trim())
+    .filter(Boolean)
+  : [];
 const simulatedCapabilityOverride = simulate && !process.pkg
   ? String(argValue('--simulate-capabilities=') || '').split(',').map((value) => value.trim()).filter(Boolean)
   : [];
@@ -78,6 +93,22 @@ const nativeContext = {
   spawn,
   spawnSync,
 };
+const simulatedWindowsSeedUsers = [...new Set([...simulatedExistingUsers, ...simulatedLegacyArcaneUsers, ...simulatedLegacyDriftUsers])];
+if (platform === 'win32' && simulatedWindowsSeedUsers.length) {
+  nativeContext.simulatedAccounts = new Set(simulatedWindowsSeedUsers.map((username) => username.toLowerCase()));
+  nativeContext.simulatedUsers = new Map(simulatedWindowsSeedUsers.map((username) => [username.toLowerCase(), {
+    username,
+    enabled: true,
+    policyShell: null,
+    policyShellPresent: false,
+    legacyShell: 'explorer.exe',
+    legacyShellPresent: true,
+  }]));
+}
+if (platform === 'linux' && simulatedExistingUsers.length) {
+  nativeContext.simulatedAccounts = new Set(simulatedExistingUsers);
+  nativeContext.simulatedShellAssignments = new Map();
+}
 const native = platform === 'win32'
   ? createWindowsNativeAdapter(nativeContext)
   : platform === 'linux'
@@ -86,6 +117,27 @@ const native = platform === 'win32'
 if (!native) {
   console.error(`Arcane Core does not yet support ${platform}.`);
   process.exit(4);
+}
+if (platform === 'win32' && (simulatedLegacyArcaneUsers.length || simulatedLegacyDriftUsers.length)) {
+  for (const username of [...simulatedLegacyArcaneUsers, ...simulatedLegacyDriftUsers]) {
+    const key = username.toLowerCase();
+    const binding = nativeContext.simulatedUsers.get(key);
+    binding.legacyShell = simulatedLegacyDriftUsers.includes(username) ? 'third-party-shell.exe' : native.shellCommand();
+    binding.legacyShellPresent = true;
+    simulatedArcaneUsersState.users[key] = {
+      username,
+      createdByArcane: false,
+      previousShell: 'explorer.exe',
+      previousShellPresent: true,
+      previousShellCaptured: true,
+      shell: native.shellCommand(),
+      shellBindingVersion: 1,
+      assignmentMode: 'windows-legacy',
+      shellMutationPhase: 'assigned',
+      accountExistedBefore: true,
+      accountMutationPhase: 'existing-account',
+    };
+  }
 }
 const PATHS = native.paths;
 const windowsSystemRoot=productionPackaged ? 'C:\\Windows' : process.env.SystemRoot || 'C:\\Windows';
@@ -757,12 +809,53 @@ async function deleteAppStorage(keyInput) {
     return { key, deleted, totalBytes, maximumBytes: APP_STORAGE_TOTAL_MAX_BYTES };
   });
 }
+function shellRecoveryDescriptor(record, phaseOverride) {
+  const source = record && typeof record === 'object' ? record : {};
+  return {
+    previousShell: source.previousShell ?? null,
+    previousShellPresent: Boolean(source.previousShellPresent),
+    previousPolicyShell: source.previousPolicyShell ?? null,
+    previousPolicyShellPresent: Boolean(source.previousPolicyShellPresent),
+    previousLegacyShell: source.previousLegacyShell ?? null,
+    previousLegacyShellPresent: Boolean(source.previousLegacyShellPresent),
+    shellBindingVersion: Number(source.shellBindingVersion) || 1,
+    assignmentMode: source.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
+    shellMutationPhase: phaseOverride || source.shellMutationPhase || 'assigned',
+  };
+}
+function isCompleteWindowsDualBackup(backup) {
+  return Boolean(backup && Number(backup.shellBindingVersion) === 2 && backup.assignmentMode === 'windows-dual');
+}
+function backupAlreadyUsesArcane(backup) {
+  const expected = native.shellCommand();
+  if (native.id === 'windows') {
+    return Boolean(
+      isCompleteWindowsDualBackup(backup)
+      && backup.previousPolicyShellPresent
+      && backup.previousLegacyShellPresent
+      && backup.previousPolicyShell === expected
+      && backup.previousLegacyShell === expected
+    );
+  }
+  return Boolean(backup && backup.previousShellPresent && backup.previousShell === expected);
+}
 async function listArcaneUsers() {
   const state = readArcaneUsersState();
   const records = Object.values(state.users || {});
   const nativeUsers = await native.listArcaneUsers(records.map((item) => item.username));
   return nativeUsers.map((user) => {
     const record = state.users[String(user.username || '').toLowerCase()] || null;
+    const preparedExistingRecovery = Boolean(
+      record
+      && record.previousShellCaptured
+      && record.accountExistedBefore === true
+      && record.shellMutationPhase === 'prepared'
+    );
+    const incompleteNewAccount = Boolean(
+      record
+      && record.accountExistedBefore === false
+      && ['prepared', 'activation-pending', 'cleanup-required'].includes(record.accountMutationPhase)
+    );
     return {
       ...user,
       managedByArcane: Boolean(record),
@@ -772,7 +865,13 @@ async function listArcaneUsers() {
       passwordChangedAt: record && record.passwordChangedAt ? record.passwordChangedAt : null,
       previousShell: record && record.previousShellPresent ? record.previousShell || null : null,
       previousShellPresent: record ? Boolean(record.previousShellPresent) : false,
-      canRestoreShell: Boolean(record && record.previousShellCaptured && user.shellAssigned),
+      previousPolicyShell: record && record.previousPolicyShellPresent ? record.previousPolicyShell ?? null : null,
+      previousPolicyShellPresent: record ? Boolean(record.previousPolicyShellPresent) : false,
+      previousLegacyShell: record && record.previousLegacyShellPresent ? record.previousLegacyShell ?? null : null,
+      previousLegacyShellPresent: record ? Boolean(record.previousLegacyShellPresent) : false,
+      recordedShellBindingVersion: record ? Number(record.shellBindingVersion) || 1 : null,
+      recordedAssignmentMode: record && record.assignmentMode ? record.assignmentMode : null,
+      canRestoreShell: Boolean(record && record.previousShellCaptured && !incompleteNewAccount && (user.shellAssigned || preparedExistingRecovery)),
       shellMutationPhase: record && record.shellMutationPhase ? record.shellMutationPhase : null,
       shellRecoveryPrepared: Boolean(record && record.previousShellCaptured),
       accountMutationPhase: record && record.accountMutationPhase ? record.accountMutationPhase : null,
@@ -1496,6 +1595,75 @@ async function provisionUsers(usernames, action) {
         priorRecord = readArcaneUsersState().users[userKey] || null;
         actionLog(action, 'warn', `Arcane recovered an interrupted disabled account transaction for ${username} before retrying.`);
       }
+      const legacyWindowsAssignment = Boolean(
+        native.id === 'windows'
+        && priorRecord
+        && priorRecord.accountExistedBefore === true
+        && priorRecord.previousShellCaptured
+        && priorRecord.shellMutationPhase === 'assigned'
+        && (Number(priorRecord.shellBindingVersion) !== 2 || priorRecord.assignmentMode !== 'windows-dual')
+      );
+      if (legacyWindowsAssignment) {
+        if (!native.userExists(username)) {
+          throw arcaneError(
+            'USER_NOT_FOUND',
+            `Arcane cannot migrate the legacy shell recovery record for “${username}” because the account no longer exists.`,
+            'Confirm whether the account was intentionally removed, then review its protected Arcane recovery record as an administrator.',
+            404,
+            { username }
+          );
+        }
+        const restoredLegacy = await native.restoreUserShell(
+          username,
+          shellRecoveryDescriptor(priorRecord, 'assigned'),
+          action
+        );
+        await updateArcaneUserRecord(username, {
+          shell: restoredLegacy.shell ?? null,
+          shellRestoredAt: stamp(),
+          shellMutationPhase: 'legacy-migrated',
+          shellMutationCompletedAt: stamp(),
+          accountMutationPhase: 'existing-account',
+          accountMutationCompletedAt: stamp(),
+        });
+        const refreshed = (await listArcaneUsers()).find((user) => String(user.username || '').toLowerCase() === userKey);
+        if (refreshed) existingUsers.set(userKey, refreshed);
+        else existingUsers.delete(userKey);
+        priorRecord = readArcaneUsersState().users[userKey] || null;
+        actionLog(action, 'warn', `Arcane restored ${username} from its original legacy recovery record before capturing a new dual-binding baseline.`);
+      }
+      if (priorRecord
+        && priorRecord.accountExistedBefore === true
+        && priorRecord.previousShellCaptured
+        && priorRecord.shellMutationPhase === 'prepared') {
+        if (!native.userExists(username)) {
+          throw arcaneError(
+            'USER_NOT_FOUND',
+            `Arcane cannot recover the interrupted shell transaction for “${username}” because the account no longer exists.`,
+            'Confirm whether the account was intentionally removed, then review its protected Arcane recovery record as an administrator.',
+            404,
+            { username }
+          );
+        }
+        const recoveredShell = await native.restoreUserShell(
+          username,
+          shellRecoveryDescriptor(priorRecord, 'prepared'),
+          action
+        );
+        await updateArcaneUserRecord(username, {
+          shell: recoveredShell.shell ?? null,
+          shellRestoredAt: stamp(),
+          shellMutationPhase: 'recovered',
+          shellMutationCompletedAt: stamp(),
+          accountMutationPhase: 'existing-account',
+          accountMutationCompletedAt: stamp(),
+        });
+        const refreshed = (await listArcaneUsers()).find((user) => String(user.username || '').toLowerCase() === userKey);
+        if (refreshed) existingUsers.set(userKey, refreshed);
+        else existingUsers.delete(userKey);
+        priorRecord = readArcaneUsersState().users[userKey] || null;
+        actionLog(action, 'warn', `Arcane restored the original durable shell baseline for ${username} before starting a new provisioning transaction.`);
+      }
       const existingArcaneUser = existingUsers.get(userKey);
       if (existingArcaneUser && existingArcaneUser.shellAssigned) {
         const payload = { ...existingArcaneUser, created: false, alreadyAssigned: true, passwordStatus: existingArcaneUser.passwordStatus || 'existing-password-unchanged' };
@@ -1504,7 +1672,16 @@ async function provisionUsers(usernames, action) {
         continue;
       }
       const backup = await native.prepareUserShellBackup(username, action);
-      if (backup.previousShellPresent && backup.previousShell === native.shellCommand()) {
+      if (native.id === 'windows' && !isCompleteWindowsDualBackup(backup)) {
+        throw arcaneError(
+          'WINDOWS_SHELL_BACKUP_INCOMPLETE',
+          `Arcane could not capture both Windows shell bindings for “${username}”.`,
+          'No shell change was made. Sign the account out, confirm its profile is available, and retry from an administrator session.',
+          409,
+          { username }
+        );
+      }
+      if (backupAlreadyUsesArcane(backup)) {
         const payload = { username, created: false, alreadyAssigned: true, shell: native.shellCommand(), passwordStatus: priorRecord && priorRecord.passwordStatus || 'existing-password-unchanged' };
         results.push(payload);
         existingUsers.set(username.toLowerCase(), { ...payload, shellAssigned: true });
@@ -1515,6 +1692,12 @@ async function provisionUsers(usernames, action) {
         createdByArcane: priorRecord ? Boolean(priorRecord.createdByArcane) : false,
         previousShell: backup.previousShell ?? null,
         previousShellPresent: Boolean(backup.previousShellPresent),
+        previousPolicyShell: backup.previousPolicyShell ?? null,
+        previousPolicyShellPresent: Boolean(backup.previousPolicyShellPresent),
+        previousLegacyShell: backup.previousLegacyShell ?? null,
+        previousLegacyShellPresent: Boolean(backup.previousLegacyShellPresent),
+        shellBindingVersion: Number(backup.shellBindingVersion) || 1,
+        assignmentMode: backup.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
         previousShellCaptured: true,
         profile: backup.profile || priorRecord && priorRecord.profile || null,
         sid: backup.sid || priorRecord && priorRecord.sid || null,
@@ -1532,6 +1715,10 @@ async function provisionUsers(usernames, action) {
       actionLog(action, 'info', `Arcane durably saved the previous login shell for ${username} before making a shell change.`, {
         username,
         previousShellPresent: Boolean(backup.previousShellPresent),
+        previousPolicyShellPresent: Boolean(backup.previousPolicyShellPresent),
+        previousLegacyShellPresent: Boolean(backup.previousLegacyShellPresent),
+        shellBindingVersion: Number(backup.shellBindingVersion) || 1,
+        assignmentMode: backup.assignmentMode || null,
         verification: backup.verification || null,
       });
 
@@ -1569,6 +1756,12 @@ async function provisionUsers(usernames, action) {
         uid: result.uid !== undefined ? result.uid : null,
         previousShell: backup.previousShell ?? null,
         previousShellPresent: Boolean(backup.previousShellPresent),
+        previousPolicyShell: backup.previousPolicyShell ?? null,
+        previousPolicyShellPresent: Boolean(backup.previousPolicyShellPresent),
+        previousLegacyShell: backup.previousLegacyShell ?? null,
+        previousLegacyShellPresent: Boolean(backup.previousLegacyShellPresent),
+        shellBindingVersion: Number(backup.shellBindingVersion) || 1,
+        assignmentMode: backup.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
         previousShellCaptured: true,
         shellMutationPhase: 'assigned',
         shellMutationCompletedAt: stamp(),
@@ -1622,8 +1815,7 @@ async function provisionUsers(usernames, action) {
         } else {
           const restored = await native.restoreUserShell(
             item.username,
-            item.backup.previousShell ?? null,
-            Boolean(item.backup.previousShellPresent),
+            shellRecoveryDescriptor(item.backup, 'assigned'),
             action
           );
           rollback.push({ username: item.username, restored: true, shell: restored.shell || null });
@@ -1670,6 +1862,15 @@ async function activateStagedArcaneUser(username, action) {
     sid: record.sid,
     profile: record.profile || null,
     shell: record.shell || native.shellCommand(),
+    previousShell: record.previousShell ?? null,
+    previousShellPresent: Boolean(record.previousShellPresent),
+    previousPolicyShell: record.previousPolicyShell ?? null,
+    previousPolicyShellPresent: Boolean(record.previousPolicyShellPresent),
+    previousLegacyShell: record.previousLegacyShell ?? null,
+    previousLegacyShellPresent: Boolean(record.previousLegacyShellPresent),
+    shellBindingVersion: Number(record.shellBindingVersion) || 1,
+    assignmentMode: record.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
+    shellMutationPhase: record.shellMutationPhase || 'assigned',
   }, action);
   if (simulate && simulatedUserFailure === 'crash-after-enable' && !nativeContext.simulatedUserFailureTriggered) {
     nativeContext.simulatedUserFailureTriggered = true;
@@ -1776,8 +1977,7 @@ async function restoreArcaneUserShell(username, action) {
   actionStep(action, 25, `Restoring the previous login shell for ${normalized}…`);
   const result = await native.restoreUserShell(
     normalized,
-    record.previousShell ?? null,
-    Boolean(record.previousShellPresent),
+    shellRecoveryDescriptor(record, preparedRecovery ? 'prepared' : 'assigned'),
     action
   );
   await updateArcaneUserRecord(normalized, {

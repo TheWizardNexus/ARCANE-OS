@@ -1,8 +1,14 @@
 function createLinuxNativeAdapter(ctx) {
   'use strict';
 
-  const simulatedAccounts = new Set();
-  const simulatedShellAssignments = new Map();
+  const simulatedAccounts = ctx.simulatedAccounts
+    && ['has', 'add', 'delete'].every((name) => typeof ctx.simulatedAccounts[name] === 'function')
+    ? ctx.simulatedAccounts
+    : new Set();
+  const simulatedShellAssignments = ctx.simulatedShellAssignments
+    && ['has', 'get', 'set', 'delete', 'values'].every((name) => typeof ctx.simulatedShellAssignments[name] === 'function')
+    ? ctx.simulatedShellAssignments
+    : new Map();
 
   const paths = Object.freeze({
     installRoot: !ctx.production&&process.env.ARCANE_INSTALL_ROOT || '/opt/arcane-os',
@@ -570,6 +576,8 @@ Categories=System;Settings;
       accountExisted: Boolean(existing),
       previousShell: existing && existing.shell || defaultLoginShell(),
       previousShellPresent: true,
+      shellBindingVersion: 1,
+      assignmentMode: 'linux-login-shell',
       profile: existing && existing.profile || null,
       uid: existing && existing.uid !== undefined ? existing.uid : null,
       verification: ctx.simulate ? 'simulated' : 'verified',
@@ -593,7 +601,7 @@ Categories=System;Settings;
       const key = username.toLowerCase();
       simulatedAccounts.add(key);
       simulatedShellAssignments.set(key, { username, shell });
-      return { username, created: !exists, uid: 1000, profile: `/home/${username}`, shell, previousShell, previousShellPresent: true };
+      return { username, created: !exists, uid: 1000, profile: `/home/${username}`, shell, previousShell, previousShellPresent: true, shellBindingVersion: 1, assignmentMode: 'linux-login-shell' };
     }
     throw ctx.arcaneError(
       'LINUX_DESKTOP_SESSION_REQUIRED',
@@ -633,6 +641,8 @@ Categories=System;Settings;
       shell,
       previousShell,
       previousShellPresent: true,
+      shellBindingVersion: 1,
+      assignmentMode: 'linux-login-shell',
     };
   }
 
@@ -689,7 +699,11 @@ Categories=System;Settings;
     }
   }
 
-  async function restoreUserShell(username, previousShell, previousShellPresent, action) {
+  async function restoreUserShell(username, recoveryInput, previousShellPresentOrAction, maybeAction) {
+    const structuredRecovery = Boolean(recoveryInput && typeof recoveryInput === 'object');
+    const previousShell = structuredRecovery ? recoveryInput.previousShell ?? null : recoveryInput;
+    const previousShellPresent = structuredRecovery ? Boolean(recoveryInput.previousShellPresent) : Boolean(previousShellPresentOrAction);
+    const action = structuredRecovery ? previousShellPresentOrAction : maybeAction;
     const restoredShell = previousShellPresent && previousShell ? previousShell : defaultLoginShell();
     if (ctx.simulate) {
       simulatedShellAssignments.delete(username.toLowerCase());

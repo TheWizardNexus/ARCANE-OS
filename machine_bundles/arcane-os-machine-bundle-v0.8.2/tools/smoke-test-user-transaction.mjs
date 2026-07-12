@@ -7,15 +7,20 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const phases = ['after-create', 'after-profile', 'after-shell', 'after-state'];
 
-function startCore(phase) {
-  const child = spawn(process.execPath, [
+function startCore(phase, options={}) {
+  const platform=options.platform || 'win32';
+  const coreArgs=[
     path.join(root, 'runtime/arcane-core.cjs'),
     '--app=provisioner',
     '--simulate',
-    '--simulate-platform=win32',
+    `--simulate-platform=${platform}`,
     `--simulate-user-failure=${phase}`,
     `--bundle-root=${root}`,
-  ], { stdio: ['pipe', 'pipe', 'pipe'] });
+  ];
+  if(options.existingUser)coreArgs.push(`--simulate-existing-user=${options.existingUser}`);
+  if(options.legacyUser)coreArgs.push(`--simulate-legacy-arcane-user=${options.legacyUser}`);
+  if(options.legacyDriftUser)coreArgs.push(`--simulate-legacy-drift-user=${options.legacyDriftUser}`);
+  const child = spawn(process.execPath, coreArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
   let buffer = Buffer.alloc(0);
   let expected = null;
   const pending = new Map();
@@ -62,6 +67,96 @@ function startCore(phase) {
   return { child, call };
 }
 
+{
+  const phase='crash-after-policy-shell-write';
+  const username='arcane-retry-user';
+  const {child,call}=startCore(phase,{existingUser:username});
+  try{
+    await call('installation.ensure');
+    await assert.rejects(
+      call('users.add',{usernames:[username]}),
+      (error)=>error.code==='SIMULATED_USER_TRANSACTION_FAILURE',
+      'a process loss after the first Windows shell write must leave the original durable record prepared',
+    );
+    const interrupted=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(interrupted.shellMutationPhase,'prepared');
+    assert.equal(interrupted.shellAssigned,false);
+    assert.equal(interrupted.assignmentMode,'windows-partial');
+    assert.equal(interrupted.canRestoreShell,true,'an existing-account prepared record must expose its safe recovery action');
+
+    const retry=await call('users.add',{usernames:[username]});
+    assert.ok(retry.users.some((item)=>item.username===username && item.created===false && item.assignmentMode==='windows-dual'));
+    const assigned=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(assigned.shellAssigned,true,'retry must recover the original baseline before assigning a new exact dual binding');
+    assert.equal(assigned.recordedShellBindingVersion,2);
+    assert.equal(assigned.recordedAssignmentMode,'windows-dual');
+    await call('users.restoreShell',{username});
+  }finally{
+    child.stdin.end();
+    child.kill();
+  }
+}
+
+{
+  const username='arcane-legacy-user';
+  const {child,call}=startCore('',{legacyUser:username});
+  try{
+    await call('installation.ensure');
+    const migrated=await call('users.add',{usernames:[username]});
+    assert.ok(migrated.users.some((item)=>item.username===username && item.created===false && item.assignmentMode==='windows-dual'));
+    const assigned=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(assigned.previousLegacyShell,'explorer.exe','migration must preserve the original v1 recovery baseline');
+    assert.equal(assigned.previousLegacyShellPresent,true);
+    assert.equal(assigned.recordedShellBindingVersion,2);
+    await call('users.restoreShell',{username});
+    const restored=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(restored.legacyShell,'explorer.exe','dual restore after migration must return to the original legacy baseline');
+    assert.equal(restored.policyShellPresent,false);
+  }finally{
+    child.stdin.end();
+    child.kill();
+  }
+}
+
+{
+  const username='arcane-legacy-drift';
+  const {child,call}=startCore('',{legacyDriftUser:username});
+  try{
+    await call('installation.ensure');
+    await assert.rejects(
+      call('users.add',{usernames:[username]}),
+      (error)=>error.code==='SHELL_CHANGED_EXTERNALLY',
+      'legacy migration must refuse an externally changed legacy shell',
+    );
+    const preserved=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(preserved.legacyShell,'third-party-shell.exe');
+    assert.equal(preserved.shellMutationPhase,'assigned','external drift must not overwrite the original journal');
+  }finally{
+    child.stdin.end();
+    child.kill();
+  }
+}
+
+{
+  const username='arcane-linux-legacy';
+  const {child,call}=startCore('',{platform:'linux',existingUser:username});
+  try{
+    await call('installation.ensure');
+    const provisioned=await call('users.add',{usernames:[username]});
+    assert.ok(provisioned.users.some((item)=>item.username===username && item.created===false));
+    assert.equal(provisioned.credentials.length,0,'an existing Linux account must retain its password');
+    const assigned=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(assigned.shellAssigned,true);
+    assert.equal(assigned.recordedShellBindingVersion,1,'Linux must retain its single POSIX login-shell recovery contract');
+    assert.equal(assigned.recordedAssignmentMode,'linux-login-shell');
+    const restored=await call('users.restoreShell',{username});
+    assert.equal(restored.user.shellAssigned,false);
+  }finally{
+    child.stdin.end();
+    child.kill();
+  }
+}
+
 for (const phase of phases) {
   const { child, call } = startCore(phase);
   const username = `arcane-tx-${phase.replace('after-', '')}`;
@@ -98,6 +193,8 @@ for (const phase of phases) {
   try {
     await call('installation.ensure');
     await assert.rejects(call('users.add', { usernames: [username] }), (error) => error.code === 'SIMULATED_USER_TRANSACTION_FAILURE');
+    const prepared = (await call('users.list')).users.find((item) => item.username === username);
+    assert.equal(prepared.canRestoreShell, false, 'an incomplete newly-created account must not expose shell-only recovery');
     await assert.rejects(
       call('users.add', { usernames: [username] }),
       (error) => error.code === 'PARTIAL_ACCOUNT_RECOVERY_REQUIRED',
