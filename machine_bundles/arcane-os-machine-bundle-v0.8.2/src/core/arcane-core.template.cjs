@@ -44,6 +44,11 @@ const simulatedLegacyDriftUsers = simulate && !process.pkg
     .map((item) => item.slice('--simulate-legacy-drift-user='.length).trim())
     .filter(Boolean)
   : [];
+const simulatedUnsignedArcaneUsers = simulate && !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-unsigned-arcane-user='))
+    .map((item) => item.slice('--simulate-unsigned-arcane-user='.length).trim())
+    .filter(Boolean)
+  : [];
 const simulatedCapabilityOverride = simulate && !process.pkg
   ? String(argValue('--simulate-capabilities=') || '').split(',').map((value) => value.trim()).filter(Boolean)
   : [];
@@ -83,6 +88,8 @@ const nativeContext = {
   hideConsole,
   processPkg: Boolean(process.pkg),
   production:productionPackaged,
+  allowUnsignedLocalRelease,
+  releaseSecurityModeClaim:String(process.env.ARCANE_RELEASE_SECURITY_MODE || ''),
   os,
   fs,
   fsp,
@@ -93,7 +100,7 @@ const nativeContext = {
   spawn,
   spawnSync,
 };
-const simulatedWindowsSeedUsers = [...new Set([...simulatedExistingUsers, ...simulatedLegacyArcaneUsers, ...simulatedLegacyDriftUsers])];
+const simulatedWindowsSeedUsers = [...new Set([...simulatedExistingUsers, ...simulatedLegacyArcaneUsers, ...simulatedLegacyDriftUsers, ...simulatedUnsignedArcaneUsers])];
 if (platform === 'win32' && simulatedWindowsSeedUsers.length) {
   nativeContext.simulatedAccounts = new Set(simulatedWindowsSeedUsers.map((username) => username.toLowerCase()));
   nativeContext.simulatedUsers = new Map(simulatedWindowsSeedUsers.map((username) => [username.toLowerCase(), {
@@ -133,6 +140,36 @@ if (platform === 'win32' && (simulatedLegacyArcaneUsers.length || simulatedLegac
       shell: native.shellCommand(),
       shellBindingVersion: 1,
       assignmentMode: 'windows-legacy',
+      shellMutationPhase: 'assigned',
+      accountExistedBefore: true,
+      accountMutationPhase: 'existing-account',
+    };
+  }
+}
+if (platform === 'win32' && simulatedUnsignedArcaneUsers.length) {
+  const signedShell = native.shellCommand();
+  const unsignedShell = signedShell + ' --allow-unsigned-local-release';
+  for (const username of simulatedUnsignedArcaneUsers) {
+    const key = username.toLowerCase();
+    const binding = nativeContext.simulatedUsers.get(key);
+    binding.policyShell = unsignedShell;
+    binding.policyShellPresent = true;
+    binding.legacyShell = unsignedShell;
+    binding.legacyShellPresent = true;
+    simulatedArcaneUsersState.users[key] = {
+      username,
+      createdByArcane: false,
+      previousShell: 'explorer.exe',
+      previousShellPresent: true,
+      previousPolicyShell: 'explorer.exe',
+      previousPolicyShellPresent: true,
+      previousLegacyShell: 'explorer.exe',
+      previousLegacyShellPresent: true,
+      previousShellCaptured: true,
+      shell: unsignedShell,
+      securityMode: 'unsigned-local-test',
+      shellBindingVersion: 2,
+      assignmentMode: 'windows-dual',
       shellMutationPhase: 'assigned',
       accountExistedBefore: true,
       accountMutationPhase: 'existing-account',
@@ -195,8 +232,9 @@ const APP_CAPABILITIES = new Set(
 );
 const APPLICATION_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const APPLICATION_ID_MAX_LENGTH = 64;
-const APPLICATION_CATALOG_MAX_RECORDS = 128;
+const APPLICATION_CATALOG_MAX_RECORDS = 64;
 const RESERVED_APPLICATION_IDS = new Set(['provisioner','shell']);
+const WINDOWS_RESERVED_APPLICATION_IDS = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 
 function stamp() { return new Date().toISOString(); }
 function log(message, details) {
@@ -821,6 +859,8 @@ function shellRecoveryDescriptor(record, phaseOverride) {
     shellBindingVersion: Number(source.shellBindingVersion) || 1,
     assignmentMode: source.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
     shellMutationPhase: phaseOverride || source.shellMutationPhase || 'assigned',
+    shell: typeof source.shell === 'string' && source.shell ? source.shell : null,
+    securityMode: ['publisher-verified','unsigned-local-test'].includes(source.securityMode) ? source.securityMode : null,
   };
 }
 function isCompleteWindowsDualBackup(backup) {
@@ -871,6 +911,7 @@ async function listArcaneUsers() {
       previousLegacyShellPresent: record ? Boolean(record.previousLegacyShellPresent) : false,
       recordedShellBindingVersion: record ? Number(record.shellBindingVersion) || 1 : null,
       recordedAssignmentMode: record && record.assignmentMode ? record.assignmentMode : null,
+      recordedSecurityMode: record && record.securityMode ? record.securityMode : null,
       canRestoreShell: Boolean(record && record.previousShellCaptured && !incompleteNewAccount && (user.shellAssigned || preparedExistingRecovery)),
       shellMutationPhase: record && record.shellMutationPhase ? record.shellMutationPhase : null,
       shellRecoveryPrepared: Boolean(record && record.previousShellCaptured),
@@ -1320,115 +1361,151 @@ async function ensureRequirements(action, ids) {
   return final;
 }
 async function installArcaneGlobally(action) {
-  await recoverInterruptedInstallation(action);
-  const root = bundleRoot();
-  const payload = native.installPayload(root);
-  if (!payload.files || !payload.files.length) {
-    throw arcaneError('ARCANE_PAYLOAD_MISSING', 'The Arcane runtime files are missing from this bundle.', `Use a complete Arcane package. Bundle root: ${root}`);
-  }
-  if (!payload.releaseReady && !allowSourceInstall && !simulate) {
-    throw arcaneError(
-      'RELEASE_PAYLOAD_REQUIRED',
-      'Arcane is running from source, so there are no standalone executables to install yet.',
-      `Run the platform release build first. Missing release files: ${(payload.missingRelease || []).join(', ') || 'unknown'}. The provisioner will not install raw JavaScript as the production shell.`,
-      409,
-      { payloadMode: payload.mode, missingRelease: payload.missingRelease || [] }
-    );
-  }
-  actionLog(action, 'info', `Installing Arcane ${VERSION} globally from ${root}.`, { payloadMode: payload.mode });
-  const stage = `${PATHS.installRoot}.stage-${process.pid}-${Date.now()}`;
-  if (!simulate) {
-    await fsp.rm(stage, { recursive: true, force: true });
-    await fsp.mkdir(path.join(stage, 'bin'), { recursive: true });
-    await fsp.mkdir(path.join(stage, 'assets'), { recursive: true });
-  }
-  if (!simulate) {
-    for (const file of payload.files) {
-      const destination = path.join(stage, 'bin', file.destinationName);
-      await fsp.copyFile(file.source, destination);
-      if (file.executable) await fsp.chmod(destination, 0o755);
+  let lease = null;
+  let primaryError = null;
+  try {
+    if (native.acquireInstallLease) lease = await native.acquireInstallLease(action);
+    if (!simulate && native.assertNoRunningInstalledApplications) native.assertNoRunningInstalledApplications();
+    await recoverInterruptedInstallation(action);
+    const root = bundleRoot();
+    const payload = native.installPayload(root);
+    if (!payload.files || !payload.files.length) {
+      throw arcaneError('ARCANE_PAYLOAD_MISSING', 'The Arcane runtime files are missing from this bundle.', `Use a complete Arcane package. Bundle root: ${root}`);
     }
-    for (const directory of payload.directories || []) {
-      await copyTree(directory.source, path.join(stage, directory.destinationName));
+    if (!payload.releaseReady && !allowSourceInstall && !simulate) {
+      throw arcaneError(
+        'RELEASE_PAYLOAD_REQUIRED',
+        'Arcane is running from source, so there are no standalone executables to install yet.',
+        `Run the platform release build first. Missing release files: ${(payload.missingRelease || []).join(', ') || 'unknown'}. The provisioner will not install raw JavaScript as the production shell.`,
+        409,
+        { payloadMode: payload.mode, missingRelease: payload.missingRelease || [] }
+      );
     }
-    const bundleManifestSource = payload.bundleManifestSource || path.join(root, 'arcane-bundle.json');
-    if (fs.existsSync(bundleManifestSource)) await fsp.copyFile(bundleManifestSource, path.join(stage, 'arcane-bundle.json'));
-    for (const asset of payload.assetFiles || []) {
-      await fsp.copyFile(asset.source, path.join(stage, 'assets', asset.destinationName));
-    }
-    if ((!payload.assetFiles || !payload.assetFiles.length) && fs.existsSync(path.join(root, 'assets'))) {
-      await copyTree(path.join(root, 'assets'), path.join(stage, 'assets'));
-    }
-    if (payload.integrity && payload.integrity.sourceManifest && fs.existsSync(payload.integrity.sourceManifest)) {
-      await fsp.copyFile(payload.integrity.sourceManifest, path.join(stage, 'arcane-release.json'));
-    }
-  }
-  await native.writeLaunchers(stage, payload);
-  if (!simulate && payload.integrity) {
-    verifyIntegrityEntries(stage, payload.integrity.files, false);
-  }
-  const manifest = {
-    name: 'Arcane OS',
-    version: VERSION,
-    installedAt: stamp(),
-    installedBy: currentIdentity(),
-    platform: osInfo(),
-    nativeAdapter: native.id,
-    payloadMode: payload.mode,
-    sourceBundle: root,
-    requirements: BUNDLE_MANIFEST.requirements,
-    integrity: simulate ? { schemaVersion: 2, hashAlgorithm: 'sha256', scope: 'simulation', files: [] } : createInstalledIntegrity(stage),
-  };
-  await writeFile(path.join(stage, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
-  if (!simulate) {
-    const backup = `${PATHS.installRoot}.backup`;
-    if (fs.existsSync(backup)) {
-      throw arcaneError('INSTALL_BACKUP_BUSY', 'Arcane preserved an unresolved installation backup and will not overwrite it.', 'Review the backup and active installation as an administrator before retrying.', 409, { backup });
-    }
-    if (fs.existsSync(PATHS.installRoot)) {
-      await snapshotActiveInstallationForRollback(action);
-      await fsp.rename(PATHS.installRoot, backup);
-    }
-    let activated = false;
-    try {
-      await fsp.rename(stage, PATHS.installRoot);
-      activated = true;
-      const installedVerification = verifyInstalledIntegrity(manifest);
-      if (!installedVerification.ok) throw new Error(`Arcane rejected the activated installation: ${installedVerification.reason}`);
-      await native.applyInstallPermissions(action);
-      await ensureDir(PATHS.stateRoot);
-      if (native.applyStatePermissions) await native.applyStatePermissions(action);
-      try {
-        await durableWriteFile(path.join(PATHS.stateRoot, 'install.json'), JSON.stringify(manifest, null, 2), 0o600);
-        if (native.applyStatePermissions) await native.applyStatePermissions(action);
-      } catch (stateError) {
-        actionLog(action, 'warn', 'Arcane was installed, but the secondary installation-state copy could not be written.', { message: stateError.message });
+    actionLog(action, 'info', `Installing Arcane ${VERSION} globally from ${root}.`, { payloadMode: payload.mode });
+    const stage = `${PATHS.installRoot}.stage-${process.pid}-${Date.now()}`;
+    if (!simulate) {
+      await fsp.rm(stage, { recursive: true, force: true });
+      await fsp.mkdir(stage, { recursive: false });
+      for (const file of payload.files) {
+        const installPath = normalizeIntegrityPath(file.installPath || `bin/${file.destinationName}`);
+        const sourceStat = fs.lstatSync(file.source);
+        if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) throw new Error(`Arcane refused an unsafe release source for ${installPath}.`);
+        const destination = integrityFilePath(stage, installPath);
+        await ensureDir(path.dirname(destination));
+        await fsp.copyFile(file.source, destination);
+        if (file.executable) await fsp.chmod(destination, 0o755);
       }
+      if (payload.mode !== 'windows-webview2') {
+        for (const directory of payload.directories || []) await copyTree(directory.source, path.join(stage, directory.destinationName));
+        const bundleManifestSource = payload.bundleManifestSource || path.join(root, 'arcane-bundle.json');
+        if (fs.existsSync(bundleManifestSource)) await fsp.copyFile(bundleManifestSource, path.join(stage, 'arcane-bundle.json'));
+      }
+    }
+    await native.writeLaunchers(stage, payload);
+    if (!simulate && payload.integrity) {
+      verifyIntegrityEntries(stage, payload.integrity.files, true);
+      if (native.verifyStagedInstallation) native.verifyStagedInstallation(stage, false);
+    }
+    const manifest = {
+      name: 'Arcane OS',
+      version: VERSION,
+      installedAt: stamp(),
+      installedBy: currentIdentity(),
+      platform: osInfo(),
+      nativeAdapter: native.id,
+      payloadMode: payload.mode,
+      sourceBundle: root,
+      requirements: BUNDLE_MANIFEST.requirements,
+      integrity: simulate ? { schemaVersion: 2, hashAlgorithm: 'sha256', scope: 'simulation', files: [] } : createInstalledIntegrity(stage),
+    };
+    await writeFile(path.join(stage, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
+    if (!simulate && native.verifyStagedInstallation) native.verifyStagedInstallation(stage, true);
+    if (!simulate) {
+      const backup = `${PATHS.installRoot}.backup`;
       if (fs.existsSync(backup)) {
-        try {
-          const replacedManifest = readJsonFile(path.join(backup, 'arcane-install.json'));
-          const replacedVerification = verifyInstalledIntegrityAt(backup, replacedManifest);
-          if (replacedVerification.ok) {
-            await fsp.rm(backup, { recursive: true, force: true });
-          } else {
-            const legacyVersion = String(replacedManifest && replacedManifest.version || 'unknown').replace(/[^0-9A-Za-z._-]/g, '_');
-            const archive = `${backup}.legacy-${legacyVersion}-${Date.now()}`;
-            await fsp.rename(backup, archive);
-            actionLog(action, 'warn', 'Arcane preserved the replaced pre-integrity installation as a legacy archive.', { archive, replacedVerification });
+        throw arcaneError('INSTALL_BACKUP_BUSY', 'Arcane preserved an unresolved installation backup and will not overwrite it.', 'Review the backup and active installation as an administrator before retrying.', 409, { backup });
+      }
+      if (native.assertNoRunningInstalledApplications) native.assertNoRunningInstalledApplications();
+      let movedExisting = false;
+      if (fs.existsSync(PATHS.installRoot)) {
+        await snapshotActiveInstallationForRollback(action);
+        try { await fsp.rename(PATHS.installRoot, backup); movedExisting = true; }
+        catch (error) {
+          if (['EBUSY', 'EPERM', 'EACCES'].includes(error && error.code)) {
+            throw arcaneError('APPLICATIONS_BUSY', 'Arcane could not update files while an application is using them.', 'Close all Arcane applications, then retry.', 409, { retryable: true });
           }
-        } catch (cleanupError) {
-          actionLog(action, 'warn', 'The new Arcane installation is verified, but the replaced installation could not be cleaned up or archived.', { message: cleanupError.message, backup });
+          throw error;
         }
       }
-    } catch (error) {
-      if (activated && fs.existsSync(PATHS.installRoot)) await fsp.rm(PATHS.installRoot, { recursive: true, force: true });
-      if (fs.existsSync(backup)) await fsp.rename(backup, PATHS.installRoot);
-      throw error;
+      let activated = false;
+      try {
+        try { await fsp.rename(stage, PATHS.installRoot); activated = true; }
+        catch (error) {
+          if (['EBUSY', 'EPERM', 'EACCES'].includes(error && error.code)) {
+            throw arcaneError('APPLICATIONS_BUSY', 'Arcane could not activate the update while an application is using its files.', 'Close all Arcane applications, then retry.', 409, { retryable: true });
+          }
+          throw error;
+        }
+        const installedVerification = verifyInstalledIntegrity(manifest);
+        if (!installedVerification.ok) throw new Error(`Arcane rejected the activated installation: ${installedVerification.reason}`);
+        if (native.verifyStagedInstallation) native.verifyStagedInstallation(PATHS.installRoot, true);
+        await native.applyInstallPermissions(action);
+        await ensureDir(PATHS.stateRoot);
+        if (native.applyStatePermissions) await native.applyStatePermissions(action);
+        try {
+          await durableWriteFile(path.join(PATHS.stateRoot, 'install.json'), JSON.stringify(manifest, null, 2), 0o600);
+          if (native.applyStatePermissions) await native.applyStatePermissions(action);
+        } catch (stateError) {
+          actionLog(action, 'warn', 'Arcane was installed, but the secondary installation-state copy could not be written.', { message: stateError.message });
+        }
+        if (fs.existsSync(backup)) {
+          try {
+            const replacedManifest = readJsonFile(path.join(backup, 'arcane-install.json'));
+            const replacedVerification = verifyInstalledIntegrityAt(backup, replacedManifest);
+            if (replacedVerification.ok) await fsp.rm(backup, { recursive: true, force: true });
+            else {
+              const legacyVersion = String(replacedManifest && replacedManifest.version || 'unknown').replace(/[^0-9A-Za-z._-]/g, '_');
+              const archive = `${backup}.legacy-${legacyVersion}-${Date.now()}`;
+              await fsp.rename(backup, archive);
+              actionLog(action, 'warn', 'Arcane preserved the replaced pre-integrity installation as a legacy archive.', { archive, replacedVerification });
+            }
+          } catch (cleanupError) {
+            actionLog(action, 'warn', 'The new Arcane installation is verified, but the replaced installation could not be cleaned up or archived.', { message: cleanupError.message, backup });
+          }
+        }
+      } catch (error) {
+        const failed = `${PATHS.installRoot}.failed-${Date.now()}`;
+        try {
+          if (activated && fs.existsSync(PATHS.installRoot)) await fsp.rename(PATHS.installRoot, failed);
+          if (movedExisting && fs.existsSync(backup)) await fsp.rename(backup, PATHS.installRoot);
+          if (fs.existsSync(failed)) await fsp.rm(failed, { recursive: true, force: true });
+        } catch (rollbackError) {
+          throw arcaneError(
+            'INSTALL_ROLLBACK_FAILED',
+            'Arcane could not restore the previous installation after activation failed.',
+            'Preserve the installation, backup, and failed directories for administrator recovery.',
+            500,
+            { originalCode: error && error.code || null, rollbackCode: rollbackError && rollbackError.code || null }
+          );
+        }
+        throw error;
+      }
+    }
+    if (simulate) simulatedInstallationManifest = { ...manifest, simulated: true };
+    actionLog(action, 'info', `Arcane ${VERSION} installed at ${PATHS.installRoot}.`, { payloadMode: payload.mode });
+    return manifest;
+  } catch (error) {
+    primaryError = error;
+    throw error;
+  } finally {
+    if (lease && native.releaseInstallLease) {
+      try { await native.releaseInstallLease(lease); }
+      catch (leaseError) {
+        if (primaryError) actionLog(action, 'error', 'Arcane could not release its installation lease after failure.', { code: leaseError.code || null });
+        else throw leaseError;
+      }
     }
   }
-  if (simulate) simulatedInstallationManifest = { ...manifest, simulated: true };
-  actionLog(action, 'info', `Arcane ${VERSION} installed at ${PATHS.installRoot}.`, { payloadMode: payload.mode });
-  return manifest;
 }
 async function ensureArcaneInstallation(action) {
   const initial = installationState();
@@ -1520,6 +1597,20 @@ async function provisionUsers(usernames, action) {
   const unique = [...uniqueByKey.values()];
   const results = [];
   const changed = [];
+  const assignedShell = native.shellCommand();
+  const assignedSecurityMode = native.id === 'windows' && simulate ? 'publisher-verified' : releaseSecurityMode();
+  if (native.id === 'windows' && !simulate) {
+    const unsignedCommand = assignedShell.endsWith(' --allow-unsigned-local-release');
+    if (!['publisher-verified','unsigned-local-test'].includes(assignedSecurityMode)
+      || unsignedCommand !== (assignedSecurityMode === 'unsigned-local-test')) {
+      throw arcaneError(
+        'RELEASE_SECURITY_UNVERIFIED',
+        'Arcane refused to assign a login shell without a verified release security mode.',
+        'Repair or reinstall Arcane OS, then retry the user assignment.',
+        409
+      );
+    }
+  }
   if (native.applyStatePermissions) await native.applyStatePermissions(action);
   const existingUsers = new Map((await listArcaneUsers()).map((user) => [String(user.username || '').toLowerCase(), user]));
   try {
@@ -1664,8 +1755,60 @@ async function provisionUsers(usernames, action) {
         priorRecord = readArcaneUsersState().users[userKey] || null;
         actionLog(action, 'warn', `Arcane restored the original durable shell baseline for ${username} before starting a new provisioning transaction.`);
       }
+      const recordedCommandMigration = Boolean(
+        native.id === 'windows'
+        && priorRecord
+        && priorRecord.accountExistedBefore === true
+        && priorRecord.previousShellCaptured
+        && priorRecord.shellMutationPhase === 'assigned'
+        && Number(priorRecord.shellBindingVersion) === 2
+        && priorRecord.assignmentMode === 'windows-dual'
+        && typeof priorRecord.shell === 'string'
+        && priorRecord.shell
+        && priorRecord.shell !== assignedShell
+      );
+      if (recordedCommandMigration) {
+        const observed = existingUsers.get(userKey);
+        const recordedShellStillAssigned = Boolean(
+          observed
+          && observed.policyShellPresent
+          && observed.legacyShellPresent
+          && observed.policyShell === priorRecord.shell
+          && observed.legacyShell === priorRecord.shell
+        );
+        if (!recordedShellStillAssigned) {
+          throw arcaneError(
+            'SHELL_CHANGED_EXTERNALLY',
+            'Arcane refused to migrate the recorded login-shell command because the current bindings no longer match it exactly.',
+            'Review both protected per-user Windows shell bindings before retrying.',
+            409,
+            { username }
+          );
+        }
+        const restoredRecorded = await native.restoreUserShell(
+          username,
+          shellRecoveryDescriptor(priorRecord, 'assigned'),
+          action
+        );
+        await updateArcaneUserRecord(username, {
+          shell: restoredRecorded.shell ?? null,
+          shellRestoredAt: stamp(),
+          shellMutationPhase: 'command-migrated',
+          shellMutationCompletedAt: stamp(),
+          accountMutationPhase: 'existing-account',
+          accountMutationCompletedAt: stamp(),
+        });
+        const refreshed = (await listArcaneUsers()).find((user) => String(user.username || '').toLowerCase() === userKey);
+        if (refreshed) existingUsers.set(userKey, refreshed);
+        else existingUsers.delete(userKey);
+        priorRecord = readArcaneUsersState().users[userKey] || null;
+        actionLog(action, 'warn', 'Arcane restored the recorded login-shell baseline for ' + username + ' before normalizing its exact shell command.');
+      }
       const existingArcaneUser = existingUsers.get(userKey);
       if (existingArcaneUser && existingArcaneUser.shellAssigned) {
+        if (priorRecord && (priorRecord.shell !== assignedShell || priorRecord.securityMode !== assignedSecurityMode)) {
+          await updateArcaneUserRecord(username, { shell: assignedShell, securityMode: assignedSecurityMode });
+        }
         const payload = { ...existingArcaneUser, created: false, alreadyAssigned: true, passwordStatus: existingArcaneUser.passwordStatus || 'existing-password-unchanged' };
         results.push(payload);
         actionLog(action, 'info', `${username} already uses Arcane as its verified login shell; no account or password change was made.`, payload);
@@ -1690,6 +1833,8 @@ async function provisionUsers(usernames, action) {
       }
       await updateArcaneUserRecord(username, {
         createdByArcane: priorRecord ? Boolean(priorRecord.createdByArcane) : false,
+        shell: assignedShell,
+        securityMode: assignedSecurityMode,
         previousShell: backup.previousShell ?? null,
         previousShellPresent: Boolean(backup.previousShellPresent),
         previousPolicyShell: backup.previousPolicyShell ?? null,
@@ -1750,7 +1895,8 @@ async function provisionUsers(usernames, action) {
         provisionedAt: stamp(),
         passwordStatus,
         passwordChangedAt: result.created ? stamp() : null,
-        shell: result.shell || native.shellCommand(),
+        shell: result.shell || assignedShell,
+        securityMode: assignedSecurityMode,
         profile: result.profile || null,
         sid: result.sid || null,
         uid: result.uid !== undefined ? result.uid : null,
@@ -2238,11 +2384,15 @@ function publicAppDescriptor() {
   };
 }
 
+let corroboratedReleaseSecurityMode=null;
 function releaseSecurityMode() {
-  if(allowUnsignedLocalRelease)return 'unsigned-local-test';
   if(typeof native.releaseSecurityMode==='function'){
     try{
-      if(native.releaseSecurityMode()==='publisher-verified')return 'publisher-verified';
+      const mode=native.releaseSecurityMode();
+      if(mode==='publisher-verified'||mode==='unsigned-local-test'){
+        corroboratedReleaseSecurityMode=mode;
+        return mode;
+      }
     }catch(error){
       log('Arcane could not verify the installed release security mode.',{ code:error&&error.code||null,message:error&&error.message||String(error) });
     }
@@ -2317,7 +2467,8 @@ function isCanonicalApplicationId(input) {
     &&input.length>=1
     &&input.length<=APPLICATION_ID_MAX_LENGTH
     &&APPLICATION_ID_PATTERN.test(input)
-    &&!RESERVED_APPLICATION_IDS.has(input);
+    &&!RESERVED_APPLICATION_IDS.has(input)
+    &&!WINDOWS_RESERVED_APPLICATION_IDS.test(input);
 }
 
 function canonicalApplicationId(input) {
@@ -2359,6 +2510,7 @@ function publicApplicationIcon(input, id) {
     ||icon.includes('?')
     ||icon.includes('#')
     ||icon.split('/').some((segment)=>segment==='.'||segment==='..')
+    ||!icon.startsWith(`/apps/${id}/`)
   ){
     throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected an unsafe installed-app icon URL.','Repair or reinstall Arcane OS.',500,{ applicationId:id });
   }
@@ -2368,6 +2520,11 @@ function publicApplicationIcon(input, id) {
 function publicApplicationRecord(input) {
   if(!input||typeof input!=='object'||Array.isArray(input)){
     throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected an invalid installed-app record.','Repair or reinstall Arcane OS.',500);
+  }
+  const keys=Object.keys(input).sort();
+  const expectedKeys=['description','displayName','iconUrl','id','order','version'];
+  if(keys.length!==expectedKeys.length||keys.some((key,index)=>key!==expectedKeys[index])){
+    throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected unexpected installed-app metadata.','Repair or reinstall Arcane OS.',500);
   }
   if(!isCanonicalApplicationId(input.id)){
     throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected an invalid installed application ID.','Repair or reinstall Arcane OS.',500);
@@ -2420,7 +2577,10 @@ async function listInstalledApplications(request) {
   if(
     !result
     ||typeof result!=='object'
+    ||Array.isArray(result)
+    ||Object.keys(result).sort().join(',')!=='applications,securityMode,verified'
     ||result.verified!==true
+    ||!['publisher-verified','unsigned-local-test'].includes(result.securityMode)
     ||!Array.isArray(result.applications)
     ||result.applications.length>APPLICATION_CATALOG_MAX_RECORDS
   ){
@@ -2435,9 +2595,13 @@ async function listInstalledApplications(request) {
     seen.add(application.id);
   }
   applications.sort((left,right)=>left.order-right.order||left.displayName.localeCompare(right.displayName,'en')||left.id.localeCompare(right.id,'en'));
+  if(corroboratedReleaseSecurityMode&&result.securityMode!==corroboratedReleaseSecurityMode){
+    throw arcaneError('APPLICATION_CATALOG_UNVERIFIED','Arcane could not corroborate the installed application security mode.','Repair or reinstall the complete Arcane OS release.',503);
+  }
+  corroboratedReleaseSecurityMode=result.securityMode;
   return Object.freeze({
     verified:true,
-    securityMode:releaseSecurityMode(),
+    securityMode:result.securityMode,
     applications:Object.freeze(applications),
   });
 }
@@ -2451,6 +2615,15 @@ async function launchInstalledApplication(request) {
     result=await native.launchInstalledApplication(id);
   }catch(error){
     log('Installed application launch adapter failed.',{ applicationId:id,code:error&&error.code||null,message:error&&error.message||String(error) });
+    if(error&&error.code==='APPLICATION_INSTALL_BUSY'){
+      throw arcaneError('APPLICATION_INSTALL_BUSY','Arcane applications are temporarily unavailable while installation is active.','Wait for Arcane Provisioner to finish, then try again.',409,{ retryable:true });
+    }
+    if(error&&error.code==='APPLICATIONS_BUSY'){
+      throw arcaneError('APPLICATIONS_BUSY','One or more Arcane applications are still running.','Close the Arcane applications, then try again.',409,{ retryable:true });
+    }
+    if(error&&error.code==='APPLICATION_NOT_FOUND'){
+      throw arcaneError('APPLICATION_NOT_FOUND','That Arcane application is not installed.','Choose an application from the verified Arcane catalog.',404,{ applicationId:id });
+    }
     throw arcaneError('APPLICATION_LAUNCH_FAILED',`Arcane could not launch ${id}.`,'Retry from the verified Arcane shell catalog. If the problem continues, repair Arcane OS.',502,{ applicationId:id });
   }
   if(!result||typeof result!=='object'||result.accepted!==true){

@@ -68,6 +68,8 @@ assert.equal(hardened.paths.installRoot,'C:\\Program Files\\Arcane OS');
 assert.equal(hardened.paths.stateRoot,'C:\\ProgramData\\Arcane OS\\state');
 const backup=await hardened.prepareUserShellBackup('arcane-test',{});
 const staged=await hardened.provisionUser('arcane-test','secret-password',{},backup);
+staged.shell=hardened.shellCommand();
+staged.securityMode='publisher-verified';
 await hardened.activateProvisionedUser('arcane-test',staged,{});
 await hardened.rollbackCreatedUser('arcane-test',staged,{});
 await hardened.restoreUserShell('arcane-test',{...backup,shellMutationPhase:'assigned'},{});
@@ -117,6 +119,7 @@ assert.match(
 assert.doesNotMatch(listUsersCall.script, /ArcaneShell\\\.exe|-match| -eq \$expected/);
 
 const expectedShell=hardened.shellCommand();
+assert.equal(expectedShell,'"C:\\Program Files\\Arcane OS\\bin\\ArcaneShell.exe" --shell');
 for (const wrongShell of [
   expectedShell.replace('C:\\Program Files\\Arcane OS', 'C:\\Arcane Lookalike'),
   `${expectedShell} --extra-argument`,
@@ -136,6 +139,49 @@ function simulatedAdapterContext(accounts, bindings, overrides={}) {
     arcaneError(code,message,resolution,status){return Object.assign(new Error(message),{code,resolution,status});},
     ...overrides,
   };
+}
+
+{
+  const accounts=new Set(['existing']);
+  const bindings=new Map([['existing',{
+    username:'existing',
+    enabled:true,
+    policyShell:'explorer.exe',
+    policyShellPresent:true,
+    legacyShell:'explorer.exe',
+    legacyShellPresent:true,
+  }]]);
+  const unsigned=sandbox.createAdapter(simulatedAdapterContext(accounts,bindings,{
+    allowUnsignedLocalRelease:true,
+    releaseSecurityModeClaim:'unsigned-local-test',
+  }));
+  const unsignedShell='"C:\\Program Files\\Arcane OS\\bin\\ArcaneShell.exe" --shell --allow-unsigned-local-release';
+  assert.equal(unsigned.shellCommand(),unsignedShell,'unsigned-local shell assignment must carry the fixed host override');
+  const backup=await unsigned.prepareUserShellBackup('existing',{});
+  const assigned=await unsigned.provisionUser('existing','protected',{},backup);
+  assert.equal(assigned.shell,unsignedShell);
+  assert.equal((await unsigned.listArcaneUsers(['existing']))[0].shellAssigned,true,'unsigned detection must require the exact flagged command');
+
+  const repaired=sandbox.createAdapter(simulatedAdapterContext(accounts,bindings));
+  const beforeRepair=(await repaired.listArcaneUsers(['existing']))[0];
+  assert.equal(beforeRepair.shellAssigned,false,'signed mode must not mistake the old unsigned command for its normalized assignment');
+  assert.equal(beforeRepair.policyShell,unsignedShell);
+  await repaired.restoreUserShell('existing',{
+    ...backup,
+    shell:unsignedShell,
+    securityMode:'unsigned-local-test',
+    shellMutationPhase:'assigned',
+  },{});
+  assert.equal(bindings.get('existing').policyShell,'explorer.exe','signed repair must restore the protected original baseline first');
+  assert.equal(bindings.get('existing').legacyShell,'explorer.exe');
+  const signedBackup=await repaired.prepareUserShellBackup('existing',{});
+  const signedAssignment=await repaired.provisionUser('existing','protected',{},signedBackup);
+  assert.equal(signedAssignment.shell,expectedShell,'signed repair must normalize the assignment without preserving the stale unsigned flag');
+  await assert.rejects(
+    ()=>repaired.restoreUserShell('existing',{...signedBackup,shell:'third-party.exe',shellMutationPhase:'assigned'},{}),
+    (error)=>error?.code==='INVALID_SHELL_BACKUP',
+    'protected recovery still rejects a non-canonical recorded shell command',
+  );
 }
 
 const recoveryBaseline={

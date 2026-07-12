@@ -20,6 +20,7 @@ function startCore(phase, options={}) {
   if(options.existingUser)coreArgs.push(`--simulate-existing-user=${options.existingUser}`);
   if(options.legacyUser)coreArgs.push(`--simulate-legacy-arcane-user=${options.legacyUser}`);
   if(options.legacyDriftUser)coreArgs.push(`--simulate-legacy-drift-user=${options.legacyDriftUser}`);
+  if(options.unsignedUser)coreArgs.push(`--simulate-unsigned-arcane-user=${options.unsignedUser}`);
   const child = spawn(process.execPath, coreArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
   let buffer = Buffer.alloc(0);
   let expected = null;
@@ -131,6 +132,32 @@ function startCore(phase, options={}) {
     const preserved=(await call('users.list')).users.find((item)=>item.username===username);
     assert.equal(preserved.legacyShell,'third-party-shell.exe');
     assert.equal(preserved.shellMutationPhase,'assigned','external drift must not overwrite the original journal');
+  }finally{
+    child.stdin.end();
+    child.kill();
+  }
+}
+
+{
+  const username='arcane-u-repair';
+  const {child,call}=startCore('',{unsignedUser:username});
+  try{
+    await call('installation.ensure');
+    const before=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(before.shellAssigned,false,'signed mode must detect that the formerly valid unsigned command needs normalization');
+    assert.match(before.policyShell,/--allow-unsigned-local-release$/);
+    const repaired=await call('users.add',{usernames:[username]});
+    assert.ok(repaired.users.some((item)=>item.username===username && item.created===false));
+    const assigned=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(assigned.shellAssigned,true,'signed repair must restore the durable baseline before assigning the normalized signed command');
+    assert.equal(assigned.previousPolicyShell,'explorer.exe');
+    assert.equal(assigned.previousLegacyShell,'explorer.exe');
+    assert.equal(assigned.recordedSecurityMode,'publisher-verified');
+    assert.doesNotMatch(assigned.policyShell,/--allow-unsigned-local-release/);
+    await call('users.restoreShell',{username});
+    const restored=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(restored.policyShell,'explorer.exe');
+    assert.equal(restored.legacyShell,'explorer.exe');
   }finally{
     child.stdin.end();
     child.kill();

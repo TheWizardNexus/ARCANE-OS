@@ -13,21 +13,24 @@ const runtimePath=path.join(temporaryRoot,'arcane-core.cjs');
 const marker='const PATHS = native.paths;';
 const injectedAdapter=`
 let applicationsListCallCount=0;
+native.releaseSecurityMode=()=> 'publisher-verified';
 native.listInstalledApplications=async function(){
   if(arguments.length!==0)throw new Error('list contract received arguments');
   applicationsListCallCount+=1;
-  if(applicationsListCallCount===2)return {verified:true,applications:[{id:'boss',displayName:'BOSS',description:'Unsafe icon',iconUrl:'https://attacker.invalid/icon.png',version:'2.0.0',order:10}]};
-  if(applicationsListCallCount===3)return {verified:false,applications:[]};
-  if(applicationsListCallCount===4)return {verified:true,applications:[
-    {id:'boss',displayName:'BOSS',description:'Duplicate one',iconUrl:'/arcane-apps/boss/icon.png',version:'2.0.0',order:10},
-    {id:'boss',displayName:'BOSS again',description:'Duplicate two',iconUrl:'/arcane-apps/boss/icon.png',version:'2.0.0',order:20},
+  if(applicationsListCallCount===2)return {verified:true,securityMode:'publisher-verified',applications:[{id:'boss',displayName:'BOSS',description:'Unsafe icon',iconUrl:'https://attacker.invalid/icon.png',version:'2.0.0',order:10}]};
+  if(applicationsListCallCount===3)return {verified:false,securityMode:'publisher-verified',applications:[]};
+  if(applicationsListCallCount===4)return {verified:true,securityMode:'publisher-verified',applications:[
+    {id:'boss',displayName:'BOSS',description:'Duplicate one',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:10},
+    {id:'boss',displayName:'BOSS again',description:'Duplicate two',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:20},
   ]};
-  if(applicationsListCallCount===5)throw new Error('C:\\\\private\\catalog.json could not be read');
+  if(applicationsListCallCount===5)return {verified:true,securityMode:'publisher-verified',applications:[{id:'boss',displayName:'BOSS',description:'Unexpected field',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:10,path:'C:\\\\secret.exe'}]};
+  if(applicationsListCallCount===6)throw new Error('C:\\\\private\\catalog.json could not be read');
   return {
     verified:true,
+    securityMode:'publisher-verified',
     applications:[
-      {id:'precrisis',displayName:'PreCrisis AI',description:'Clinical operations workspace',iconUrl:'/arcane-apps/precrisis/icon.png',version:'1.2.3',order:20,path:'C:\\\\secret.exe',pid:99,args:['--unsafe'],env:{SECRET:'no'}},
-      {id:'boss',displayName:'BOSS',description:'Business operations workspace',iconUrl:'/arcane-apps/boss/icon.png',version:'2.0.0',order:10,path:'C:\\\\secret.exe',pid:42,args:['--unsafe'],env:{SECRET:'no'}},
+      {id:'precrisis',displayName:'PreCrisis AI',description:'Clinical operations workspace',iconUrl:'/apps/precrisis/app/precrisis/icon.png',version:'1.2.3',order:20},
+      {id:'boss',displayName:'BOSS',description:'Business operations workspace',iconUrl:'/apps/boss/app/boss/icon.png',version:'2.0.0',order:10},
     ],
   };
 };
@@ -91,10 +94,10 @@ function createClient(){
 const client=createClient();
 try{
   const currentApp=await client.call('app.current',{});
-  assert.equal(currentApp.securityMode,'unverified','release trust must fail closed when the native adapter cannot prove publisher verification');
+  assert.equal(currentApp.securityMode,'publisher-verified','release trust must reflect the native publisher proof');
   const catalog=await client.call('apps.list',{});
   assert.equal(catalog.verified,true);
-  assert.equal(catalog.securityMode,'unverified');
+  assert.equal(catalog.securityMode,'publisher-verified');
   assert.deepEqual(catalog.applications.map((application)=>application.id),['boss','precrisis'],'records must use deterministic catalog order');
   for(const application of catalog.applications){
     assert.deepEqual(Object.keys(application).sort(),['description','displayName','iconUrl','id','order','verified','version']);
@@ -103,6 +106,7 @@ try{
   await assert.rejects(client.call('apps.list',{}),(error)=>error.code==='APPLICATION_CATALOG_INVALID','remote icon metadata must fail closed');
   await assert.rejects(client.call('apps.list',{}),(error)=>error.code==='APPLICATION_CATALOG_UNVERIFIED','an unverified native catalog must fail closed');
   await assert.rejects(client.call('apps.list',{}),(error)=>error.code==='APPLICATION_CATALOG_INVALID','duplicate IDs must fail closed');
+  await assert.rejects(client.call('apps.list',{}),(error)=>error.code==='APPLICATION_CATALOG_INVALID','unexpected native record fields must fail closed');
   await assert.rejects(
     client.call('apps.list',{}),
     (error)=>error.code==='APPLICATION_CATALOG_UNAVAILABLE'&&!JSON.stringify(error).includes('private'),
@@ -118,6 +122,7 @@ try{
   await assert.rejects(client.call('apps.launch',{id:'BOSS'}),(error)=>error.code==='INVALID_APPLICATION_ID');
   await assert.rejects(client.call('apps.launch',{id:'boss '}),(error)=>error.code==='INVALID_APPLICATION_ID');
   await assert.rejects(client.call('apps.launch',{id:'shell'}),(error)=>error.code==='INVALID_APPLICATION_ID');
+  await assert.rejects(client.call('apps.launch',{id:'con'}),(error)=>error.code==='INVALID_APPLICATION_ID');
   await assert.rejects(client.call('apps.launch',{id:'precrisis'}),(error)=>error.code==='APPLICATION_LAUNCH_REJECTED');
   await assert.rejects(
     client.call('apps.launch',{id:'throwing'}),

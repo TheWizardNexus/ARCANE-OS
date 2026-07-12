@@ -42,6 +42,8 @@ function createWindowsNativeAdapter(ctx) {
       previousPolicyShellPresent: dual ? Boolean(source.previousPolicyShellPresent) : false,
       previousLegacyShell: dual ? source.previousLegacyShell ?? null : source.previousShell ?? null,
       previousLegacyShellPresent: dual ? Boolean(source.previousLegacyShellPresent) : Boolean(source.previousShellPresent),
+      assignedShell: typeof source.shell === 'string' && source.shell ? source.shell : null,
+      securityMode: ['publisher-verified', 'unsigned-local-test'].includes(source.securityMode) ? source.securityMode : null,
     };
   }
 
@@ -74,6 +76,806 @@ function createWindowsNativeAdapter(ctx) {
     ollamaRoot: ctx.path.join(programFiles, 'Ollama'),
     modelsRoot: ctx.path.join(programData, 'Arcane OS', 'ollama-models'),
   });
+
+  const APP_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+  const WINDOWS_RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+  const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+  const SAFE_ICON_EXTENSION = new Set(['.ico', '.jpeg', '.jpg', '.png', '.webp']);
+  const SAFE_APP_CAPABILITIES = new Set([
+    'diagnostics.read', 'identity.read', 'installation.read', 'media.microphone',
+    'network.status.read', 'requirements.read', 'storage.read', 'storage.write',
+    'system.metrics.read', 'system.read',
+  ]);
+  const MACHINE_CONTENT_EXCLUSIONS = new Set([
+    'arcane-install.json', 'arcane-machine-content.json', 'arcane-release.json',
+    'bin/ArcaneProvisioner.exe', 'bin/ArcaneShell.exe',
+  ]);
+  const MACHINE_BIN_FILES = new Set([
+    'ArcaneShell.exe', 'ArcaneProvisioner.exe', 'ArcaneCore.exe', 'ArcanePipeGuard.exe',
+    'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll',
+  ]);
+  const INSTALL_LEASE_FILE = 'installation-operation.json';
+
+  function failInstalledApps(code, message, resolution, details, statusCode) {
+    if (typeof ctx.arcaneError === 'function') {
+      throw ctx.arcaneError(code, message, resolution, statusCode || 409, details);
+    }
+    const error = new Error(message);
+    error.code = code;
+    error.resolution = resolution;
+    error.details = details;
+    throw error;
+  }
+
+  function isPlainObject(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  }
+
+  function assertExactKeys(value, expected, label) {
+    if (!isPlainObject(value)) throw new Error(`${label} must be a plain object.`);
+    const actual = Object.keys(value).sort();
+    const wanted = [...expected].sort();
+    if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) {
+      throw new Error(`${label} fields do not exactly match its schema.`);
+    }
+  }
+
+  function compareText(left, right) {
+    return left < right ? -1 : left > right ? 1 : 0;
+  }
+
+  function normalizeInstalledPath(input, label) {
+    const value = String(input === undefined || input === null ? '' : input);
+    if (!value || value.length > 512 || value.includes('\\') || value.includes('\0') || /[\x00-\x1f]/.test(value)) {
+      throw new Error(`${label || 'path'} must use canonical forward-slash relative syntax.`);
+    }
+    if (value.startsWith('/') || /^[a-zA-Z]:/.test(value) || value.startsWith('//')) {
+      throw new Error(`${label || 'path'} must be relative.`);
+    }
+    const segments = value.split('/');
+    if (value === '.' || value === '..' || value.startsWith('../')) throw new Error(`${label || 'path'} traverses its root.`);
+    for (const segment of segments) {
+      if (!segment || segment === '.' || segment === '..' || segment.endsWith('.') || segment.endsWith(' ') || segment.includes(':')) {
+        throw new Error(`${label || 'path'} contains an unsafe segment.`);
+      }
+      if (WINDOWS_RESERVED_NAME.test(segment)) throw new Error(`${label || 'path'} contains a Windows reserved segment.`);
+    }
+    return value;
+  }
+
+  function resolveInstalledPath(root, relativePath, label) {
+    const normalized = normalizeInstalledPath(relativePath, label);
+    const resolvedRoot = ctx.path.resolve(root);
+    const target = ctx.path.resolve(resolvedRoot, ...normalized.split('/'));
+    const relative = ctx.path.relative(resolvedRoot, target);
+    if (!relative || relative === '..' || relative.startsWith(`..${ctx.path.sep}`) || ctx.path.isAbsolute(relative)) {
+      throw new Error(`${label || 'path'} escapes its root.`);
+    }
+    return target;
+  }
+
+  function canonicalJson(value, finalNewline) {
+    return JSON.stringify(value, null, 2) + (finalNewline ? '\n' : '');
+  }
+
+  function readCanonicalJson(file, label, options) {
+    const opts = options || {};
+    const stat = ctx.fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(`${label} is not a regular file.`);
+    const maximum = opts.maximumBytes || 4 * 1024 * 1024;
+    if (stat.size < 2 || stat.size > maximum) throw new Error(`${label} has an invalid size.`);
+    const text = ctx.fs.readFileSync(file, 'utf8');
+    let value;
+    try { value = JSON.parse(text); } catch (_) { throw new Error(`${label} is not valid JSON.`); }
+    const withNewline = canonicalJson(value, true);
+    const withoutNewline = canonicalJson(value, false);
+    const canonical = opts.finalNewline === true
+      ? text === withNewline
+      : opts.finalNewline === false
+        ? text === withoutNewline
+        : text === withNewline || text === withoutNewline;
+    if (!canonical) throw new Error(`${label} is not canonical JSON.`);
+    return { value, text, data: Buffer.from(text, 'utf8'), sha256: ctx.crypto.createHash('sha256').update(text, 'utf8').digest('hex') };
+  }
+
+  function fileSha256(file) {
+    return ctx.crypto.createHash('sha256').update(ctx.fs.readFileSync(file)).digest('hex');
+  }
+
+  function bufferOccurrences(data, pattern) {
+    let count = 0;
+    let offset = 0;
+    while ((offset = data.indexOf(pattern, offset)) !== -1) {
+      count += 1;
+      offset += pattern.length;
+    }
+    return count;
+  }
+
+  function verifyCompiledBinding(file, marker, label) {
+    const data = ctx.fs.readFileSync(file);
+    const count = bufferOccurrences(data, Buffer.from(marker, 'utf8'))
+      + bufferOccurrences(data, Buffer.from(marker, 'utf16le'));
+    if (count !== 1) throw new Error(`${label} must contain exactly one compiled content binding.`);
+  }
+
+  function powershellLiteral(value) {
+    return `'${String(value).replace(/'/g, "''")}'`;
+  }
+
+  function safeApplicationEnvironment() {
+    const userProfile = env.USERPROFILE || ctx.path.join('C:\\Users', env.USERNAME || 'Default');
+    const localAppData = env.LOCALAPPDATA || ctx.path.join(userProfile, 'AppData', 'Local');
+    const trustedPath = [system32, systemRoot, ctx.path.dirname(powershellExe)].join(';');
+    return {
+      SystemRoot: systemRoot,
+      windir: systemRoot,
+      ProgramFiles: programFiles,
+      'ProgramFiles(x86)': programFilesX86,
+      'PROGRAMFILES(X86)': programFilesX86,
+      ProgramData: programData,
+      LOCALAPPDATA: localAppData,
+      USERPROFILE: userProfile,
+      USERNAME: env.USERNAME || '',
+      USERDOMAIN: env.USERDOMAIN || '',
+      COMPUTERNAME: env.COMPUTERNAME || ctx.os.hostname(),
+      TEMP: ctx.path.join(localAppData, 'Temp'),
+      TMP: ctx.path.join(localAppData, 'Temp'),
+      PATH: trustedPath,
+      Path: trustedPath,
+      PATHEXT: '.COM;.EXE;.BAT;.CMD',
+      ComSpec: cmdExe,
+      PSModulePath: ctx.path.join(ctx.path.dirname(powershellExe), 'Modules'),
+    };
+  }
+
+  function assertNoReparseTree(root) {
+    if (!ctx.production && typeof ctx.reparsePointProbe === 'function') {
+      const entries = ctx.reparsePointProbe(root);
+      if (Array.isArray(entries) && entries.length) throw new Error(`Installed tree contains a reparse point: ${entries[0]}.`);
+      return;
+    }
+    const script = `$ErrorActionPreference='Stop'\n$root=${powershellLiteral(ctx.path.resolve(root))}\n$items=@(Get-Item -LiteralPath $root -Force -ErrorAction Stop)+@(Get-ChildItem -LiteralPath $root -Force -Recurse -ErrorAction Stop)\n$bad=@($items|Where-Object{($_.Attributes -band [IO.FileAttributes]::ReparsePoint)-ne 0}|ForEach-Object{$_.FullName})\nConvertTo-Json -InputObject @($bad) -Compress`;
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
+      encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
+    });
+    if (!result || result.status !== 0) throw new Error('Windows could not verify the installed tree for reparse points.');
+    let entries;
+    try { entries = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid reparse-point verification result.'); }
+    if (!Array.isArray(entries)) entries = [entries];
+    if (entries.length) throw new Error(`Installed tree contains a reparse point: ${entries[0]}.`);
+  }
+
+  function enumerateExactTree(root, exclusions) {
+    const excluded = exclusions || new Set();
+    const rootStat = ctx.fs.lstatSync(root);
+    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error('Installed root is not a regular directory.');
+    const files = [];
+    const visit = (directory, relativeDirectory) => {
+      const entries = ctx.fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => compareText(left.name, right.name));
+      for (const entry of entries) {
+        const relative = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+        normalizeInstalledPath(relative, 'installed path');
+        const absolute = ctx.path.join(directory, entry.name);
+        const stat = ctx.fs.lstatSync(absolute);
+        if (stat.isSymbolicLink()) throw new Error(`Installed tree contains a reparse link: ${relative}.`);
+        if (entry.isDirectory() && stat.isDirectory()) visit(absolute, relative);
+        else if (entry.isFile() && stat.isFile()) {
+          if (!excluded.has(relative)) files.push({ path: relative, size: stat.size, sha256: fileSha256(absolute) });
+        } else throw new Error(`Installed tree contains an unsupported entry: ${relative}.`);
+      }
+    };
+    visit(ctx.path.resolve(root), '');
+    files.sort((left, right) => compareText(left.path, right.path));
+    return files;
+  }
+
+  function validateFileInventory(files, label, exclusions) {
+    if (!Array.isArray(files) || !files.length || files.length > 50000) throw new Error(`${label} must contain a bounded file inventory.`);
+    const seen = new Set();
+    const normalized = files.map((entry, index) => {
+      assertExactKeys(entry, new Set(['path', 'size', 'sha256']), `${label}[${index}]`);
+      const relative = normalizeInstalledPath(entry.path, `${label}[${index}].path`);
+      if (exclusions && exclusions.has(relative)) throw new Error(`${label} includes an excluded path: ${relative}.`);
+      if (seen.has(relative)) throw new Error(`${label} contains a duplicate path: ${relative}.`);
+      seen.add(relative);
+      if (!Number.isSafeInteger(entry.size) || entry.size < 0) throw new Error(`${label} contains an invalid size for ${relative}.`);
+      if (typeof entry.sha256 !== 'string' || !SHA256_PATTERN.test(entry.sha256)) throw new Error(`${label} contains an invalid SHA-256 for ${relative}.`);
+      return { path: relative, size: entry.size, sha256: entry.sha256 };
+    });
+    const sorted = [...normalized].sort((left, right) => compareText(left.path, right.path));
+    if (normalized.some((entry, index) => entry.path !== sorted[index].path)) throw new Error(`${label} is not sorted canonically.`);
+    return normalized;
+  }
+
+  function verifyExactInventory(root, expected, exclusions, label) {
+    const actual = enumerateExactTree(root, exclusions);
+    if (actual.length !== expected.length || actual.some((entry, index) => (
+      entry.path !== expected[index].path || entry.size !== expected[index].size || entry.sha256 !== expected[index].sha256
+    ))) throw new Error(`${label} does not exactly match its filesystem content.`);
+    return actual;
+  }
+
+  function validateCanonicalAppId(value, label) {
+    if (typeof value !== 'string' || value.length < 1 || value.length > 64 || !APP_ID_PATTERN.test(value)
+      || value === 'shell' || value === 'provisioner' || WINDOWS_RESERVED_NAME.test(value)) {
+      throw new Error(`${label || 'application id'} is not canonical.`);
+    }
+    return value;
+  }
+
+  function validatePresentationText(value, label, maximum, required) {
+    if ((value === null || value === undefined || value === '') && !required) return null;
+    if (typeof value !== 'string' || !value.trim() || value.trim() !== value || value.length > maximum
+      || /[\x00-\x1f\x7f-\x9f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value)
+      || /[<>]|&(?:#(?:x[0-9a-f]+|[0-9]+)|[a-z][a-z0-9]+);/i.test(value)) {
+      throw new Error(`${label} is unsafe.`);
+    }
+    return value;
+  }
+
+  function validateCapabilities(values, label) {
+    if (!Array.isArray(values)) throw new Error(`${label} must be an array.`);
+    const result = values.map((value) => {
+      if (typeof value !== 'string' || !SAFE_APP_CAPABILITIES.has(value)) throw new Error(`${label} contains an unapproved capability.`);
+      return value;
+    });
+    if (new Set(result).size !== result.length) throw new Error(`${label} contains duplicate capabilities.`);
+    const sorted = [...result].sort(compareText);
+    if (result.some((value, index) => value !== sorted[index])) throw new Error(`${label} is not sorted canonically.`);
+    return result;
+  }
+
+  function arraysEqual(left, right) {
+    return Array.isArray(left) && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => value === right[index]);
+  }
+
+  function assertRootLayout(root, installed) {
+    const expected = ['app', 'apps', 'arcane-bundle.json', 'arcane-machine-content.json', 'arcane-release.json', 'bin'];
+    if (installed) expected.push('arcane-install.json');
+    expected.sort(compareText);
+    const entries = ctx.fs.readdirSync(root, { withFileTypes: true }).sort((left, right) => compareText(left.name, right.name));
+    const actual = entries.map((entry) => entry.name);
+    if (actual.length !== expected.length || actual.some((name, index) => name !== expected[index])) {
+      throw new Error('Arcane release root contains missing or unexpected entries.');
+    }
+    for (const entry of entries) {
+      const stat = ctx.fs.lstatSync(ctx.path.join(root, entry.name));
+      if (stat.isSymbolicLink()) throw new Error(`Arcane release root contains a reparse link: ${entry.name}.`);
+      const shouldBeDirectory = entry.name === 'app' || entry.name === 'apps' || entry.name === 'bin';
+      if (shouldBeDirectory ? !(entry.isDirectory() && stat.isDirectory()) : !(entry.isFile() && stat.isFile())) {
+        throw new Error(`Arcane release root contains an invalid entry: ${entry.name}.`);
+      }
+    }
+    const binEntries = ctx.fs.readdirSync(ctx.path.join(root, 'bin'), { withFileTypes: true }).sort((left, right) => compareText(left.name, right.name));
+    const expectedBin = [...MACHINE_BIN_FILES].sort(compareText);
+    if (binEntries.length !== expectedBin.length || binEntries.some((entry, index) => entry.name !== expectedBin[index] || !entry.isFile())) {
+      throw new Error('Arcane bin directory contains missing or unexpected entries.');
+    }
+  }
+
+  function verifyMachineRelease(root, options) {
+    const opts = options || {};
+    const installed = Boolean(opts.installed);
+    const absoluteRoot = ctx.path.resolve(root);
+    assertNoReparseTree(absoluteRoot);
+    assertRootLayout(absoluteRoot, installed);
+
+    const bundleRecord = readCanonicalJson(ctx.path.join(absoluteRoot, 'arcane-bundle.json'), 'arcane-bundle.json', { maximumBytes: 1024 * 1024 });
+    const bundle = bundleRecord.value;
+    if (!isPlainObject(bundle) || bundle.version !== ctx.bundleVersion || bundle.protocolVersion !== 'arcane/1') {
+      throw new Error('Arcane bundle identity does not match this runtime.');
+    }
+
+    const releaseRecord = readCanonicalJson(ctx.path.join(absoluteRoot, 'arcane-release.json'), 'arcane-release.json', { maximumBytes: 8 * 1024 * 1024 });
+    const release = releaseRecord.value;
+    assertExactKeys(release, new Set(['schemaVersion', 'name', 'version', 'platform', 'architecture', 'hashAlgorithm', 'createdAt', 'files']), 'arcane-release.json');
+    if (release.schemaVersion !== 2 || release.version !== ctx.bundleVersion || release.platform !== 'windows'
+      || release.architecture !== 'x64' || release.hashAlgorithm !== 'sha256' || typeof release.name !== 'string'
+      || typeof release.createdAt !== 'string') throw new Error('Arcane release manifest identity is invalid.');
+    const releaseFiles = validateFileInventory(release.files, 'arcane-release.json.files');
+    const releaseExclusions = new Set(['arcane-release.json']);
+    if (installed) releaseExclusions.add('arcane-install.json');
+    verifyExactInventory(absoluteRoot, releaseFiles, releaseExclusions, 'Arcane outer release manifest');
+
+    const machineRecord = readCanonicalJson(ctx.path.join(absoluteRoot, 'arcane-machine-content.json'), 'arcane-machine-content.json', { maximumBytes: 8 * 1024 * 1024, finalNewline: true });
+    const machine = machineRecord.value;
+    assertExactKeys(machine, new Set(['schemaVersion', 'hashAlgorithm', 'release', 'files']), 'arcane-machine-content.json');
+    assertExactKeys(machine.release, new Set(['name', 'version', 'platform', 'architecture']), 'arcane-machine-content.json.release');
+    if (machine.schemaVersion !== 1 || machine.hashAlgorithm !== 'sha256' || machine.release.name !== bundle.name
+      || machine.release.version !== ctx.bundleVersion || machine.release.platform !== 'windows' || machine.release.architecture !== 'x64') {
+      throw new Error('Arcane machine content identity is invalid.');
+    }
+    const machineFiles = validateFileInventory(machine.files, 'arcane-machine-content.json.files', MACHINE_CONTENT_EXCLUSIONS);
+    verifyExactInventory(absoluteRoot, machineFiles, MACHINE_CONTENT_EXCLUSIONS, 'Arcane machine content manifest');
+    const releaseMachineEntry = releaseFiles.find((entry) => entry.path === 'arcane-machine-content.json');
+    if (!releaseMachineEntry || releaseMachineEntry.size !== machineRecord.data.length || releaseMachineEntry.sha256 !== machineRecord.sha256) {
+      throw new Error('Arcane outer release does not bind the machine content manifest.');
+    }
+    const machineBinding = `ARCANE-MACHINE-BINDING|1|${ctx.bundleVersion}|${machineRecord.sha256}`;
+    verifyCompiledBinding(ctx.path.join(absoluteRoot, 'bin', 'ArcaneShell.exe'), machineBinding, 'ArcaneShell.exe');
+    verifyCompiledBinding(ctx.path.join(absoluteRoot, 'bin', 'ArcaneProvisioner.exe'), machineBinding, 'ArcaneProvisioner.exe');
+    for (const required of [
+      'bin/ArcaneShell.exe', 'bin/ArcaneProvisioner.exe', 'bin/ArcaneCore.exe', 'bin/ArcanePipeGuard.exe',
+      'bin/Microsoft.Web.WebView2.Core.dll', 'bin/Microsoft.Web.WebView2.WinForms.dll', 'bin/WebView2Loader.dll',
+      'arcane-bundle.json', 'arcane-machine-content.json', 'apps/catalog.json',
+      'app/shared/arcane-api.js', 'app/provisioner/index.html', 'app/shell/index.html',
+    ]) if (!releaseFiles.some((entry) => entry.path === required)) throw new Error(`Arcane release omits required file ${required}.`);
+
+    if (installed) {
+      const installedRecord = readCanonicalJson(ctx.path.join(absoluteRoot, 'arcane-install.json'), 'arcane-install.json', { maximumBytes: 16 * 1024 * 1024 });
+      const integrity = installedRecord.value && installedRecord.value.integrity;
+      if (!isPlainObject(integrity) || integrity.schemaVersion !== 2 || integrity.hashAlgorithm !== 'sha256' || integrity.scope !== 'installed-tree') {
+        throw new Error('Installed Arcane integrity metadata is invalid.');
+      }
+      const installedFiles = validateFileInventory(integrity.files, 'arcane-install.json.integrity.files', new Set(['arcane-install.json']));
+      verifyExactInventory(absoluteRoot, installedFiles, new Set(['arcane-install.json']), 'Installed Arcane integrity manifest');
+    }
+    return { root: absoluteRoot, bundle, release, releaseFiles, machine, machineRecord };
+  }
+
+  function validateCatalog(root, machine) {
+    const appsRoot = ctx.path.join(root, 'apps');
+    const record = readCanonicalJson(ctx.path.join(appsRoot, 'catalog.json'), 'apps/catalog.json', { maximumBytes: 2 * 1024 * 1024, finalNewline: true });
+    const catalog = record.value;
+    assertExactKeys(catalog, new Set(['schemaVersion', 'protocolVersion', 'bundleVersion', 'apps']), 'apps/catalog.json');
+    if (catalog.schemaVersion !== 1 || catalog.protocolVersion !== 'arcane/1' || catalog.bundleVersion !== ctx.bundleVersion
+      || !Array.isArray(catalog.apps) || !catalog.apps.length || catalog.apps.length > 64) {
+      throw new Error('Arcane application catalog identity is invalid.');
+    }
+    const machineEntry = machine.files.find((entry) => entry.path === 'apps/catalog.json');
+    if (!machineEntry || machineEntry.size !== record.data.length || machineEntry.sha256 !== record.sha256) {
+      throw new Error('Arcane machine content does not bind the application catalog.');
+    }
+    const ids = new Set();
+    const orders = new Set();
+    const apps = catalog.apps.map((entry, index) => {
+      assertExactKeys(entry, new Set([
+        'id', 'displayName', 'description', 'icon', 'order', 'version', 'capabilities',
+        'contentManifestSha256', 'packageManifestSha256',
+      ]), `apps/catalog.json.apps[${index}]`);
+      const id = validateCanonicalAppId(entry.id, `apps/catalog.json.apps[${index}].id`);
+      if (ids.has(id)) throw new Error(`Arcane application catalog repeats ${id}.`);
+      ids.add(id);
+      if (!Number.isSafeInteger(entry.order) || entry.order < 0 || entry.order > 10000 || orders.has(entry.order)) {
+        throw new Error(`Arcane application catalog has invalid ordering for ${id}.`);
+      }
+      orders.add(entry.order);
+      const icon = normalizeInstalledPath(entry.icon, `${id}.icon`);
+      if (!icon.split('/').every((segment) => /^[A-Za-z0-9][A-Za-z0-9._~-]*$/.test(segment))) {
+        throw new Error(`Arcane application catalog icon path for ${id} is not URL-safe.`);
+      }
+      if (entry.version !== ctx.bundleVersion || !SHA256_PATTERN.test(entry.contentManifestSha256)
+        || !SHA256_PATTERN.test(entry.packageManifestSha256)) throw new Error(`Arcane application catalog hashes or version are invalid for ${id}.`);
+      return {
+        ...entry,
+        id,
+        displayName: validatePresentationText(entry.displayName, `${id}.displayName`, 80, true),
+        description: validatePresentationText(entry.description, `${id}.description`, 240, true),
+        icon,
+        capabilities: validateCapabilities(entry.capabilities, `${id}.capabilities`),
+      };
+    });
+    const expectedTop = ['catalog.json', ...apps.map((app) => app.id)].sort(compareText);
+    const actualTop = ctx.fs.readdirSync(appsRoot, { withFileTypes: true }).sort((left, right) => compareText(left.name, right.name));
+    if (actualTop.length !== expectedTop.length || actualTop.some((entry, index) => entry.name !== expectedTop[index])) {
+      throw new Error('Arcane applications directory contains missing or unexpected entries.');
+    }
+    for (const entry of actualTop) {
+      const stat = ctx.fs.lstatSync(ctx.path.join(appsRoot, entry.name));
+      if (stat.isSymbolicLink()) throw new Error(`Arcane applications directory contains a reparse link: ${entry.name}.`);
+      if (entry.name === 'catalog.json' ? !(entry.isFile() && stat.isFile()) : !(entry.isDirectory() && stat.isDirectory())) {
+        throw new Error(`Arcane applications directory contains an invalid entry: ${entry.name}.`);
+      }
+    }
+    return { catalog, apps, record };
+  }
+
+  function validateSecurityDescriptor(security, id) {
+    assertExactKeys(security, new Set(['contentSecurityPolicy', 'permissionsPolicy', 'securedDocuments', 'navigationEntries', 'verifiedDependencies']), `${id}.security`);
+    if (typeof security.contentSecurityPolicy !== 'string' || !security.contentSecurityPolicy
+      || typeof security.permissionsPolicy !== 'string' || !security.permissionsPolicy
+      || !Number.isSafeInteger(security.securedDocuments) || security.securedDocuments < 1
+      || !Number.isSafeInteger(security.verifiedDependencies) || security.verifiedDependencies < 1
+      || !Array.isArray(security.navigationEntries) || !security.navigationEntries.length) {
+      throw new Error(`${id} security descriptor is invalid.`);
+    }
+    const seen = new Set();
+    for (const navigation of security.navigationEntries) {
+      if (typeof navigation !== 'string' || !navigation.startsWith(`/${id}/`) || !navigation.endsWith('.html')
+        || navigation.includes('\\') || navigation.includes('%') || navigation.includes('?') || navigation.includes('#') || seen.has(navigation)) {
+        throw new Error(`${id} security navigation allowlist is invalid.`);
+      }
+      seen.add(navigation);
+    }
+  }
+
+  function validateDocumentCatalog(value, id) {
+    if (value === null) return;
+    assertExactKeys(value, new Set(['policy', 'count', 'destination']), `${id}.documentCatalog`);
+    if (value.policy !== 'empty-unpublished' || value.count !== 0 || normalizeInstalledPath(value.destination, `${id}.documentCatalog.destination`) !== value.destination) {
+      throw new Error(`${id} document catalog policy is invalid.`);
+    }
+  }
+
+  function verifyInstalledAppPackage(machineResult, catalogEntry) {
+    const id = catalogEntry.id;
+    const appRoot = resolveInstalledPath(ctx.path.join(machineResult.root, 'apps'), id, `${id} package root`);
+    const launcherName = `ArcaneApp-${id}.exe`;
+    const packageRecord = readCanonicalJson(ctx.path.join(appRoot, 'arcane-app-package.json'), `${id}/arcane-app-package.json`, { maximumBytes: 16 * 1024 * 1024, finalNewline: true });
+    if (packageRecord.sha256 !== catalogEntry.packageManifestSha256) throw new Error(`${id} package manifest does not match the catalog hash.`);
+    const packaged = packageRecord.value;
+    assertExactKeys(packaged, new Set(['schemaVersion', 'protocolVersion', 'bundleVersion', 'app', 'files', 'platform', 'architecture', 'native']), `${id} package manifest`);
+    if (packaged.schemaVersion !== 1 || packaged.protocolVersion !== 'arcane/1' || packaged.bundleVersion !== ctx.bundleVersion
+      || packaged.platform !== 'windows' || packaged.architecture !== 'x64') throw new Error(`${id} package identity is invalid.`);
+    assertExactKeys(packaged.app, new Set([
+      'id', 'displayName', 'description', 'icon', 'order', 'type', 'entry', 'launchEntry',
+      'capabilities', 'security', 'documentCatalog',
+    ]), `${id} package app descriptor`);
+    if (packaged.app.id !== id || packaged.app.type !== 'app' || packaged.app.entry !== `${id}/index.html`
+      || packaged.app.launchEntry !== `${id}/index.html` || packaged.app.displayName !== catalogEntry.displayName
+      || packaged.app.description !== catalogEntry.description || packaged.app.order !== catalogEntry.order
+      || !arraysEqual(packaged.app.capabilities, catalogEntry.capabilities)) throw new Error(`${id} package app descriptor does not match the catalog.`);
+    const icon = normalizeInstalledPath(packaged.app.icon, `${id} package icon`);
+    if (!SAFE_ICON_EXTENSION.has(ctx.path.extname(icon).toLowerCase())) throw new Error(`${id} package icon type is unsafe.`);
+    const expectedCatalogIcon = `${id}/app/${id}/${icon}`;
+    if (catalogEntry.icon !== expectedCatalogIcon) throw new Error(`${id} catalog icon does not match its package descriptor.`);
+    validateSecurityDescriptor(packaged.app.security, id);
+    validateDocumentCatalog(packaged.app.documentCatalog, id);
+    assertExactKeys(packaged.native, new Set(['launcher', 'core', 'pipeGuard', 'renderer', 'signatureStatus', 'signatureRequiredForDistribution']), `${id} native descriptor`);
+    if (packaged.native.launcher !== launcherName || packaged.native.core !== 'ArcaneCore.exe'
+      || packaged.native.pipeGuard !== 'ArcanePipeGuard.exe' || packaged.native.renderer !== 'WebView2'
+      || !['Valid', 'NotSigned'].includes(packaged.native.signatureStatus) || packaged.native.signatureRequiredForDistribution !== true) {
+      throw new Error(`${id} native descriptor is invalid.`);
+    }
+
+    const packageFiles = validateFileInventory(packaged.files, `${id} package files`, new Set(['arcane-app-package.json']));
+    verifyExactInventory(appRoot, packageFiles, new Set(['arcane-app-package.json']), `${id} package manifest`);
+    const executables = packageFiles.filter((entry) => /\.exe$/i.test(entry.path)).map((entry) => entry.path).sort(compareText);
+    const expectedExecutables = ['ArcaneCore.exe', 'ArcanePipeGuard.exe', launcherName].sort(compareText);
+    if (executables.length !== expectedExecutables.length || executables.some((name, index) => name !== expectedExecutables[index])) {
+      throw new Error(`${id} package contains an unexpected executable.`);
+    }
+
+    const contentRecord = readCanonicalJson(ctx.path.join(appRoot, 'arcane-app-content.json'), `${id}/arcane-app-content.json`, { maximumBytes: 16 * 1024 * 1024, finalNewline: true });
+    if (contentRecord.sha256 !== catalogEntry.contentManifestSha256) throw new Error(`${id} content manifest does not match the catalog hash.`);
+    const content = contentRecord.value;
+    assertExactKeys(content, new Set(['schemaVersion', 'hashAlgorithm', 'app', 'files']), `${id} content manifest`);
+    assertExactKeys(content.app, new Set(['id', 'version']), `${id} content identity`);
+    if (content.schemaVersion !== 1 || content.hashAlgorithm !== 'sha256' || content.app.id !== id || content.app.version !== ctx.bundleVersion) {
+      throw new Error(`${id} content manifest identity is invalid.`);
+    }
+    const contentExclusions = new Set(['arcane-app-content.json', 'arcane-app-package.json', launcherName]);
+    const contentFiles = validateFileInventory(content.files, `${id} content files`, contentExclusions);
+    verifyExactInventory(appRoot, contentFiles, contentExclusions, `${id} content manifest`);
+    if (!contentFiles.some((entry) => entry.path === `app/${id}/${icon}`)) throw new Error(`${id} content manifest omits its icon.`);
+    verifyCompiledBinding(
+      ctx.path.join(appRoot, launcherName),
+      `ARCANE-TARGET-BINDING|1|${id}|${contentRecord.sha256}`,
+      launcherName
+    );
+
+    const targetBundleRecord = readCanonicalJson(ctx.path.join(appRoot, 'arcane-bundle.json'), `${id}/arcane-bundle.json`, { maximumBytes: 1024 * 1024 });
+    const targetDescriptor = targetBundleRecord.value && targetBundleRecord.value.apps && targetBundleRecord.value.apps[id];
+    if (targetBundleRecord.value.version !== ctx.bundleVersion || targetBundleRecord.value.protocolVersion !== 'arcane/1'
+      || !isPlainObject(targetDescriptor) || Object.keys(targetBundleRecord.value.apps).length !== 1
+      || targetDescriptor.displayName !== catalogEntry.displayName || targetDescriptor.description !== catalogEntry.description
+      || targetDescriptor.icon !== icon || targetDescriptor.order !== catalogEntry.order || targetDescriptor.type !== 'app'
+      || targetDescriptor.entry !== `${id}/index.html` || !arraysEqual(targetDescriptor.capabilities, catalogEntry.capabilities)) {
+      throw new Error(`${id} target bundle descriptor does not match the catalog.`);
+    }
+    return {
+      id,
+      appRoot,
+      launcher: ctx.path.join(appRoot, launcherName),
+      signatureStatus: packaged.native.signatureStatus,
+      publicRecord: {
+        id,
+        displayName: catalogEntry.displayName,
+        description: catalogEntry.description,
+        iconUrl: `/apps/${id}/app/${id}/${icon}`,
+        version: catalogEntry.version,
+        order: catalogEntry.order,
+      },
+    };
+  }
+
+  function inspectAuthenticode(files) {
+    if (!ctx.production && typeof ctx.authenticodeInspector === 'function') return ctx.authenticodeInspector([...files]);
+    const fileList = files.map(powershellLiteral).join(',');
+    const script = `$ErrorActionPreference='Stop'\n$records=@()\nforeach($file in @(${fileList})){\n  $signature=Get-AuthenticodeSignature -LiteralPath $file\n  $records += [pscustomobject]@{path=$file;status=[string]$signature.Status;thumbprint=if($signature.SignerCertificate){[string]$signature.SignerCertificate.Thumbprint}else{$null};subject=if($signature.SignerCertificate){[string]$signature.SignerCertificate.Subject}else{$null};timestamped=[bool]($null -ne $signature.TimeStamperCertificate)}\n}\nConvertTo-Json -InputObject @($records) -Compress`;
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
+      encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024, env: safeApplicationEnvironment(),
+    });
+    if (!result || result.status !== 0) throw new Error('Windows could not inspect Arcane Authenticode signatures.');
+    let records;
+    try { records = JSON.parse(String(result.stdout || '').trim()); } catch (_) { throw new Error('Windows returned invalid Arcane signature records.'); }
+    return Array.isArray(records) ? records : [records];
+  }
+
+  function verifyAuthenticodeSet(files, packageClaims) {
+    const unique = [...new Set(files.map((file) => ctx.path.resolve(file)))].sort(compareText);
+    if (!unique.length) throw new Error('Arcane signature verification received no executables.');
+    const records = inspectAuthenticode(unique);
+    if (!Array.isArray(records) || records.length !== unique.length) throw new Error('Arcane signature verification returned an incomplete result.');
+    const byPath = new Map(records.map((record) => [String(record && record.path || '').toLowerCase(), record]));
+    const ordered = unique.map((file) => {
+      const record = byPath.get(file.toLowerCase());
+      if (!record || String(record.path || '').toLowerCase() !== file.toLowerCase()) throw new Error('Arcane signature verification omitted an executable.');
+      return record;
+    });
+    const allSigned = ordered.every((record) => record.status === 'Valid');
+    const allUnsigned = ordered.every((record) => record.status === 'NotSigned');
+    if (!allSigned && !allUnsigned) throw new Error('Arcane executables have mixed or invalid signature states.');
+    const claims = packageClaims || [];
+    if (allSigned) {
+      const thumbprints = ordered.map((record) => String(record.thumbprint || '').replace(/\s/g, '').toUpperCase());
+      if (thumbprints.some((value) => !/^[A-F0-9]{40,128}$/.test(value)) || new Set(thumbprints).size !== 1) {
+        throw new Error('Arcane executables do not share one valid publisher certificate.');
+      }
+      if (ordered.some((record) => record.timestamped !== true)) throw new Error('Arcane publisher signatures are not consistently timestamped.');
+      if (claims.some((claim) => claim !== 'Valid')) throw new Error('An Arcane package signature claim does not match its signed files.');
+      const claimedMode = String(ctx.releaseSecurityModeClaim || env.ARCANE_RELEASE_SECURITY_MODE || '');
+      if (claimedMode && claimedMode !== 'publisher-verified') throw new Error('The host release-security claim does not match the signed Arcane release.');
+      return { securityMode: 'publisher-verified', signerThumbprint: thumbprints[0] };
+    }
+    const claimedMode = String(ctx.releaseSecurityModeClaim || env.ARCANE_RELEASE_SECURITY_MODE || '');
+    if (!ctx.allowUnsignedLocalRelease || claimedMode !== 'unsigned-local-test') {
+      throw new Error('Unsigned Arcane executables require the explicit host-attested local-test mode.');
+    }
+    if (claims.some((claim) => claim !== 'NotSigned')) throw new Error('An Arcane package signature claim does not match its unsigned files.');
+    return { securityMode: 'unsigned-local-test', signerThumbprint: null };
+  }
+
+  function verifyInstalledApplicationSet(root, options) {
+    const opts = options || {};
+    const machineResult = verifyMachineRelease(root, { installed: Boolean(opts.installed) });
+    const catalogResult = validateCatalog(machineResult.root, machineResult.machine);
+    const packages = catalogResult.apps.map((entry) => verifyInstalledAppPackage(machineResult, entry));
+    const machineExecutables = [
+      'bin/ArcaneShell.exe', 'bin/ArcaneProvisioner.exe', 'bin/ArcaneCore.exe', 'bin/ArcanePipeGuard.exe',
+    ].map((relative) => resolveInstalledPath(machineResult.root, relative, 'Arcane executable'));
+    const appExecutables = [];
+    for (const item of packages) {
+      appExecutables.push(item.launcher, ctx.path.join(item.appRoot, 'ArcaneCore.exe'), ctx.path.join(item.appRoot, 'ArcanePipeGuard.exe'));
+    }
+    const security = verifyAuthenticodeSet([...machineExecutables, ...appExecutables], packages.map((item) => item.signatureStatus));
+    if (opts.targetId && !packages.some((item) => item.id === opts.targetId)) {
+      failInstalledApps('APPLICATION_NOT_FOUND', 'That Arcane application is not installed.', 'Choose an application from the verified Arcane catalog.', { applicationId: opts.targetId }, 404);
+    }
+    return { ...machineResult, ...catalogResult, packages, ...security };
+  }
+
+  function releaseSecurityMode() {
+    return verifyInstalledApplicationSet(paths.installRoot, { installed: true }).securityMode;
+  }
+
+  async function listInstalledApplications() {
+    const verified = verifyInstalledApplicationSet(paths.installRoot, { installed: true });
+    return {
+      verified: true,
+      securityMode: verified.securityMode,
+      applications: verified.packages.map((item) => ({ ...item.publicRecord })),
+    };
+  }
+
+  function installLeasePath() {
+    return ctx.path.join(paths.stateRoot, INSTALL_LEASE_FILE);
+  }
+
+  function validateInstallLease(value) {
+    assertExactKeys(value, new Set(['schemaVersion', 'pid', 'processStartTicks', 'nonce', 'createdAt']), INSTALL_LEASE_FILE);
+    if (value.schemaVersion !== 1 || !Number.isSafeInteger(value.pid) || value.pid < 1
+      || typeof value.processStartTicks !== 'string' || !/^\d{10,20}$/.test(value.processStartTicks)
+      || typeof value.nonce !== 'string' || !/^[a-f0-9]{48}$/.test(value.nonce)
+      || typeof value.createdAt !== 'string') throw new Error('The Arcane installation lease is malformed.');
+    const created = new Date(value.createdAt);
+    if (!Number.isFinite(created.getTime()) || created.toISOString() !== value.createdAt) {
+      throw new Error('The Arcane installation lease timestamp is malformed.');
+    }
+    return value;
+  }
+
+  function assertInstallLeaseProtected(target) {
+    if (!ctx.production && typeof ctx.installLeaseProtectionProbe === 'function') {
+      if (ctx.installLeaseProtectionProbe(target) !== true) throw new Error('The Arcane installation lease is not protected.');
+      return;
+    }
+    if (!ctx.production) return;
+    const script = `$ErrorActionPreference='Stop'\n$targets=@(${powershellLiteral(paths.stateRoot)},${powershellLiteral(target)})\n$allowed=@('S-1-5-18','S-1-5-32-544')\n$writeMask=[Security.AccessControl.FileSystemRights]::WriteData -bor [Security.AccessControl.FileSystemRights]::AppendData -bor [Security.AccessControl.FileSystemRights]::WriteExtendedAttributes -bor [Security.AccessControl.FileSystemRights]::WriteAttributes -bor [Security.AccessControl.FileSystemRights]::Delete -bor [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor [Security.AccessControl.FileSystemRights]::ChangePermissions -bor [Security.AccessControl.FileSystemRights]::TakeOwnership\nforeach($target in $targets){\n  $item=Get-Item -LiteralPath $target -Force -ErrorAction Stop\n  if(($item.Attributes -band [IO.FileAttributes]::ReparsePoint)-ne 0){throw 'Arcane state contains a reparse point.'}\n  $acl=Get-Acl -LiteralPath $target -ErrorAction Stop\n  $owner=(New-Object Security.Principal.NTAccount($acl.Owner)).Translate([Security.Principal.SecurityIdentifier]).Value\n  if($owner -notin $allowed -or -not $acl.AreAccessRulesProtected){throw 'Arcane state ownership or ACL protection is invalid.'}\n  foreach($rule in $acl.Access){\n    $sid=$rule.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value\n    if($rule.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and (($rule.FileSystemRights -band $writeMask)-ne 0) -and $sid -notin $allowed){throw 'Arcane state grants write access to an untrusted identity.'}\n  }\n}\n[Console]::Out.Write('protected')`;
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
+      encoding: 'utf8', windowsHide: true, timeout: 10000, env: safeApplicationEnvironment(),
+    });
+    if (!result || result.status !== 0 || String(result.stdout || '').trim() !== 'protected') {
+      throw new Error('Windows could not prove that the Arcane installation lease is protected.');
+    }
+  }
+
+  function inspectProcessIdentity(pid) {
+    if (!ctx.production && typeof ctx.processIdentityProbe === 'function') {
+      const identity = ctx.processIdentityProbe(pid);
+      if (identity && identity.state === 'alive' && typeof identity.startTicks === 'string' && /^\d{10,20}$/.test(identity.startTicks)) return identity;
+      if (identity && (identity.state === 'not-found' || identity.state === 'unqueryable')) return { state: identity.state };
+      return { state: 'unqueryable' };
+    }
+    if (!ctx.production && typeof ctx.processStartTicks === 'function') {
+      const ticks = ctx.processStartTicks(pid);
+      return typeof ticks === 'string' && /^\d{10,20}$/.test(ticks)
+        ? { state: 'alive', startTicks: ticks }
+        : ticks === null ? { state: 'not-found' } : { state: 'unqueryable' };
+    }
+    const script = `$ErrorActionPreference='Stop'\ntry{\n  $p=[Diagnostics.Process]::GetProcessById(${Number(pid)})\n  $ticks=$p.StartTime.ToUniversalTime().Ticks\n  [Console]::Out.Write((ConvertTo-Json -Compress @{state='alive';startTicks=[string]$ticks}))\n}catch [ArgumentException]{\n  [Console]::Out.Write('{\"state\":\"not-found\"}')\n}catch{\n  [Console]::Out.Write('{\"state\":\"unqueryable\"}')\n}`;
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
+      encoding: 'utf8', windowsHide: true, timeout: 10000, env: safeApplicationEnvironment(),
+    });
+    if (!result || result.status !== 0) return { state: 'unqueryable' };
+    let identity;
+    try { identity = JSON.parse(String(result.stdout || '').trim()); } catch (_) { return { state: 'unqueryable' }; }
+    if (identity && identity.state === 'alive' && typeof identity.startTicks === 'string' && /^\d{10,20}$/.test(identity.startTicks)) return identity;
+    if (identity && identity.state === 'not-found') return { state: 'not-found' };
+    return { state: 'unqueryable' };
+  }
+
+  function readInstallLeaseStatus() {
+    const target = installLeasePath();
+    if (!ctx.fs.existsSync(target)) return { state: 'absent', target };
+    try {
+      const stat = ctx.fs.lstatSync(target);
+      if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('The Arcane installation lease is not a regular file.');
+      assertInstallLeaseProtected(target);
+      const lease = validateInstallLease(readCanonicalJson(target, INSTALL_LEASE_FILE, { maximumBytes: 16 * 1024, finalNewline: true }).value);
+      const identity = inspectProcessIdentity(lease.pid);
+      if (identity.state === 'not-found' || (identity.state === 'alive' && identity.startTicks !== lease.processStartTicks)) {
+        return { state: 'stale', target, lease };
+      }
+      if (identity.state === 'alive') return { state: 'active', target, lease };
+      return { state: 'unqueryable', target, lease };
+    } catch (error) {
+      return { state: 'invalid', target, error };
+    }
+  }
+
+  function assertNoInstallLease() {
+    const status = readInstallLeaseStatus();
+    if (status.state !== 'absent' && status.state !== 'stale') {
+      failInstalledApps(
+        'APPLICATION_INSTALL_BUSY',
+        'Arcane applications are temporarily unavailable while installation is active.',
+        'Wait for Arcane Provisioner to finish, then try again.',
+        { retryable: true },
+        409
+      );
+    }
+  }
+
+  function processStartTicks(pid) {
+    const identity = inspectProcessIdentity(pid);
+    return identity.state === 'alive' ? identity.startTicks : null;
+  }
+
+  async function acquireInstallLease(action) {
+    if (ctx.simulate) return { simulated: true, nonce: 'simulation' };
+    await ctx.ensureDir(paths.stateRoot);
+    await applyStatePermissions(action);
+    const target = installLeasePath();
+    if (ctx.fs.existsSync(target)) {
+      const status = readInstallLeaseStatus();
+      if (status.state !== 'stale') {
+        failInstalledApps('INSTALL_BUSY', 'Another Arcane installation operation is already active.', 'Wait for it to finish, then try again.', { retryable: true }, 409);
+      }
+      await ctx.fsp.unlink(target).catch((error) => {
+        if (error && error.code !== 'ENOENT') throw error;
+      });
+    }
+    const startTicks = processStartTicks(process.pid);
+    if (!startTicks) throw new Error('Arcane could not bind its installation lease to this process.');
+    const lease = {
+      schemaVersion: 1,
+      pid: process.pid,
+      processStartTicks: startTicks,
+      nonce: ctx.crypto.randomBytes(24).toString('hex'),
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await ctx.fsp.writeFile(target, canonicalJson(lease, true), { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    } catch (error) {
+      if (error && error.code === 'EEXIST') {
+        failInstalledApps('INSTALL_BUSY', 'Another Arcane installation operation is already active.', 'Wait for it to finish, then try again.', { retryable: true }, 409);
+      }
+      throw error;
+    }
+    try {
+      await applyStatePermissions(action);
+    } catch (error) {
+      await ctx.fsp.unlink(target).catch(() => {});
+      throw error;
+    }
+    return lease;
+  }
+
+  async function releaseInstallLease(lease) {
+    if (!lease || lease.simulated) return;
+    const target = installLeasePath();
+    let current;
+    try { current = readCanonicalJson(target, INSTALL_LEASE_FILE, { maximumBytes: 16 * 1024, finalNewline: true }).value; }
+    catch (error) { if (error && error.code === 'ENOENT') return; throw error; }
+    if (!isPlainObject(current) || current.nonce !== lease.nonce || current.pid !== lease.pid || current.processStartTicks !== lease.processStartTicks) {
+      throw new Error('Arcane refused to release an installation lease owned by another operation.');
+    }
+    await ctx.fsp.unlink(target);
+  }
+
+  function runningInstalledApplicationIds() {
+    if (!ctx.production && typeof ctx.runningApplicationIds === 'function') return ctx.runningApplicationIds();
+    const appsRoot = ctx.path.join(paths.installRoot, 'apps');
+    if (!ctx.fs.existsSync(appsRoot)) return [];
+    const script = `$ErrorActionPreference='Stop'\n$root=([IO.Path]::GetFullPath(${powershellLiteral(appsRoot)})).TrimEnd('\\')+'\\'\n$ids=@()\nforeach($process in (Get-CimInstance Win32_Process -ErrorAction Stop)){\n  $file=[string]$process.ExecutablePath\n  if(-not $file){continue}\n  $full=[IO.Path]::GetFullPath($file)\n  if(-not $full.StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){continue}\n  $relative=$full.Substring($root.Length)\n  $id=($relative -split '\\\\')[0]\n  if($id){$ids+=$id}\n}\nConvertTo-Json -InputObject @($ids|Sort-Object -Unique) -Compress`;
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
+      encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
+    });
+    if (!result || result.status !== 0) throw new Error('Windows could not determine whether installed Arcane applications are running.');
+    let ids;
+    try { ids = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid running-application result.'); }
+    if (!Array.isArray(ids)) ids = [ids];
+    return ids.map((id) => validateCanonicalAppId(id, 'running application id'));
+  }
+
+  function assertNoRunningInstalledApplications() {
+    const ids = runningInstalledApplicationIds();
+    if (ids.length) {
+      failInstalledApps(
+        'APPLICATIONS_BUSY',
+        'One or more Arcane applications are still running.',
+        'Close the listed Arcane applications, then retry the installation.',
+        { applicationIds: ids, retryable: true },
+        409
+      );
+    }
+  }
+
+  async function launchInstalledApplication(idInput) {
+    const id = validateCanonicalAppId(idInput, 'application id');
+    assertNoInstallLease();
+    const verified = verifyInstalledApplicationSet(paths.installRoot, { installed: true, targetId: id });
+    assertNoInstallLease();
+    const target = verified.packages.find((item) => item.id === id);
+    const launchArguments = verified.securityMode === 'unsigned-local-test'
+      ? ['--allow-unsigned-local-release']
+      : [];
+    return new Promise((resolve, reject) => {
+      let child;
+      try {
+        child = ctx.spawn(target.launcher, launchArguments, {
+          cwd: target.appRoot,
+          env: safeApplicationEnvironment(),
+          shell: false,
+          windowsHide: false,
+          stdio: 'ignore',
+        });
+      } catch (error) { reject(error); return; }
+      let settled = false;
+      child.once('error', (error) => {
+        if (settled) return;
+        settled = true;
+        reject(error);
+      });
+      child.once('spawn', () => {
+        if (settled) return;
+        settled = true;
+        try { child.unref(); } catch (_) {}
+        resolve({ id, accepted: true });
+      });
+    });
+  }
 
   function commandExists(command) {
     return ctx.spawnSync(whereExe, [command], { stdio: 'ignore', windowsHide: true }).status === 0;
@@ -515,18 +1317,26 @@ ConvertTo-Json -InputObject @($records) -Compress`;
   }
 
   function installPayload(root) {
-    const dist = ctx.fs.existsSync(ctx.path.join(root, 'arcane-release.json')) && ctx.fs.existsSync(ctx.path.join(root, 'app'))
-      ? root
-      : ctx.path.join(root, 'dist');
+    const candidates = [root, ctx.path.join(root, 'dist', 'windows'), ctx.path.join(root, 'dist')];
+    const dist = candidates.find((candidate) => (
+      ctx.fs.existsSync(ctx.path.join(candidate, 'arcane-release.json'))
+      && ctx.fs.existsSync(ctx.path.join(candidate, 'arcane-machine-content.json'))
+      && ctx.fs.existsSync(ctx.path.join(candidate, 'bin'))
+      && ctx.fs.existsSync(ctx.path.join(candidate, 'app'))
+      && ctx.fs.existsSync(ctx.path.join(candidate, 'apps'))
+    ));
     const requiredReleaseFiles = [
-      'ArcaneShell.exe',
-      'ArcaneProvisioner.exe',
-      'ArcaneCore.exe',
-      'ArcanePipeGuard.exe',
-      'Microsoft.Web.WebView2.Core.dll',
-      'Microsoft.Web.WebView2.WinForms.dll',
-      'WebView2Loader.dll',
+      'bin/ArcaneShell.exe',
+      'bin/ArcaneProvisioner.exe',
+      'bin/ArcaneCore.exe',
+      'bin/ArcanePipeGuard.exe',
+      'bin/Microsoft.Web.WebView2.Core.dll',
+      'bin/Microsoft.Web.WebView2.WinForms.dll',
+      'bin/WebView2Loader.dll',
       'arcane-bundle.json',
+      'arcane-machine-content.json',
+      'arcane-release.json',
+      'apps/catalog.json',
       'app/shared/arcane-api.js',
       'app/shared/arcane-sigil.svg',
       'app/shared/arcane-sigil-512.png',
@@ -536,96 +1346,42 @@ ConvertTo-Json -InputObject @($records) -Compress`;
       'app/shell/index.html',
       'app/shell/manifest.webmanifest',
     ];
-    const appDirectory = ctx.path.join(dist, 'app');
-    const releaseManifestPath = ctx.path.join(dist, 'arcane-release.json');
-    const missingRelease = requiredReleaseFiles.filter((name) => !ctx.fs.existsSync(ctx.path.join(dist, ...name.split('/'))));
-    if (!ctx.fs.existsSync(appDirectory)) missingRelease.push('app/');
-    if (!ctx.fs.existsSync(releaseManifestPath)) missingRelease.push('arcane-release.json');
-
-    let releaseManifest = null;
+    const missingRelease = !dist
+      ? [...requiredReleaseFiles, 'bin/', 'app/', 'apps/']
+      : requiredReleaseFiles.filter((name) => !ctx.fs.existsSync(ctx.path.join(dist, ...name.split('/'))));
     let releaseProblem = null;
-    let verifiedEntries = [];
+    let verified = null;
     if (!missingRelease.length) {
       try {
-        releaseManifest = JSON.parse(ctx.fs.readFileSync(releaseManifestPath, 'utf8'));
-        if (releaseManifest.schemaVersion !== 2) releaseProblem = 'The release manifest must use integrity schema 2.';
-        else if (releaseManifest.hashAlgorithm !== 'sha256') releaseProblem = 'The release manifest must use SHA-256.';
-        else if (releaseManifest.version !== ctx.bundleVersion) releaseProblem = `The verified release is ${releaseManifest.version || 'unknown'}, not ${ctx.bundleVersion}.`;
-        else if (releaseManifest.platform !== 'windows') releaseProblem = `The release manifest targets ${releaseManifest.platform || 'an unknown platform'}, not Windows.`;
-        else {
-          const actualPaths = [];
-          const collect = (directory, relativeDirectory) => {
-            const entries = ctx.fs.readdirSync(directory, { withFileTypes: true });
-            for (const entry of entries) {
-              if (!relativeDirectory && (entry.name === 'arcane-release.json' || entry.name === '.gitkeep')) continue;
-              const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
-              const source = ctx.path.join(directory, entry.name);
-              if (entry.isSymbolicLink()) throw new Error(`The release contains a symbolic link: ${relativePath}.`);
-              if (entry.isDirectory()) {
-                if (!relativeDirectory && entry.name !== 'app') throw new Error(`The release contains an unexpected directory: ${entry.name}.`);
-                collect(source, relativePath);
-              } else if (entry.isFile()) actualPaths.push(relativePath);
-              else throw new Error(`The release contains an unsupported entry: ${relativePath}.`);
-            }
-          };
-          collect(dist, '');
-          actualPaths.sort();
-          const entries = new Map();
-          for (const entry of Array.isArray(releaseManifest.files) ? releaseManifest.files : []) {
-            const releasePath = entry && entry.path;
-            const parts = typeof releasePath === 'string' ? releasePath.split('/') : [];
-            if (!parts.length || parts.some((part) => !part || part === '.' || part === '..') || releasePath.includes('\\') || releasePath.includes(':')) {
-              throw new Error(`The release manifest contains an unsafe path: ${String(releasePath)}.`);
-            }
-            if (entries.has(releasePath)) throw new Error(`The release manifest contains a duplicate path: ${releasePath}.`);
-            if (!Number.isSafeInteger(entry.size) || entry.size < 0) throw new Error(`The release manifest contains an invalid size for ${releasePath}.`);
-            if (!/^[a-f0-9]{64}$/i.test(String(entry.sha256 || ''))) throw new Error(`The release manifest contains an invalid SHA-256 for ${releasePath}.`);
-            entries.set(releasePath, entry);
-          }
-          if (entries.size !== actualPaths.length || actualPaths.some((releasePath) => !entries.has(releasePath))) {
-            throw new Error('The release manifest file inventory does not exactly match the dist payload.');
-          }
-          for (const name of requiredReleaseFiles) {
-            if (!entries.has(name)) throw new Error(`The release manifest does not verify ${name}.`);
-          }
-          for (const releasePath of actualPaths) {
-            const entry = entries.get(releasePath);
-            const source = ctx.path.join(dist, ...releasePath.split('/'));
-            const stat = ctx.fs.statSync(source);
-            if (stat.size !== entry.size) throw new Error(`${releasePath} does not match the release manifest size.`);
-            const actual = ctx.crypto.createHash('sha256').update(ctx.fs.readFileSync(source)).digest('hex');
-            if (actual.toLowerCase() !== String(entry.sha256).toLowerCase()) throw new Error(`${releasePath} does not match the release manifest SHA-256.`);
-          }
-          verifiedEntries = actualPaths.map((releasePath) => ({ ...entries.get(releasePath) }));
-        }
+        verified = verifyInstalledApplicationSet(dist, { installed: false });
       } catch (error) { releaseProblem = `The release manifest could not be read: ${error.message}`; }
     }
 
-    if (!missingRelease.length && !releaseProblem) {
-      const topLevelFiles = verifiedEntries.filter((entry) => !entry.path.includes('/') && entry.path !== 'arcane-bundle.json');
-      const integrityFiles = verifiedEntries.map((entry) => ({
-        ...entry,
-        installPath: entry.path === 'arcane-bundle.json' || entry.path.startsWith('app/') ? entry.path : `bin/${entry.path}`,
-      }));
+    if (verified && !releaseProblem) {
+      const releaseManifestPath = ctx.path.join(dist, 'arcane-release.json');
+      const releaseStat = ctx.fs.lstatSync(releaseManifestPath);
+      const integrityFiles = [
+        ...verified.releaseFiles.map((entry) => ({ ...entry, installPath: entry.path })),
+        { path: 'arcane-release.json', installPath: 'arcane-release.json', size: releaseStat.size, sha256: fileSha256(releaseManifestPath) },
+      ].sort((left, right) => compareText(left.installPath, right.installPath));
       return {
         mode: 'windows-webview2',
         releaseReady: true,
         verified: true,
-        releaseManifest,
+        securityMode: verified.securityMode,
+        releaseManifest: verified.release,
         integrity: {
-          schemaVersion: releaseManifest.schemaVersion,
-          hashAlgorithm: releaseManifest.hashAlgorithm,
+          schemaVersion: 2,
+          hashAlgorithm: 'sha256',
           sourceManifest: releaseManifestPath,
           files: integrityFiles,
         },
-        bundleManifestSource: ctx.path.join(dist, 'arcane-bundle.json'),
-        assetFiles: ['arcane-sigil.svg', 'arcane-sigil-512.png', 'arcane-sigil.ico'].map((name) => ({
-          source: ctx.path.join(appDirectory, 'shared', name),
-          destinationName: name,
+        description: 'Verified Windows WebView2 hosts, machine content, and installed application catalog are ready for installation.',
+        files: integrityFiles.map((entry) => ({
+          source: ctx.path.join(dist, ...entry.installPath.split('/')),
+          installPath: entry.installPath,
         })),
-        description: 'Verified Windows WebView2 hosts, packaged Arcane Core, and application assets are ready for installation.',
-        files: topLevelFiles.map((entry) => ({ source: ctx.path.join(dist, entry.path), destinationName: entry.path })),
-        directories: [{ source: appDirectory, destinationName: 'app' }],
+        directories: [],
         missingRelease: [],
       };
     }
@@ -635,7 +1391,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
       releaseReady: false,
       verified: false,
       description: releaseProblem || 'The source Arcane Core is available, but a verified Windows WebView2 release has not been built.',
-      files: ctx.fs.existsSync(sourceCore) ? [{ source: sourceCore, destinationName: 'arcane-core.cjs' }] : [],
+      files: ctx.fs.existsSync(sourceCore) ? [{ source: sourceCore, installPath: 'bin/arcane-core.cjs', destinationName: 'arcane-core.cjs' }] : [],
       directories: [],
       missingRelease: [...new Set(missingRelease)],
       releaseProblem,
@@ -643,6 +1399,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
   }
 
   async function writeLaunchers(stage, payload) {
+    if (payload && payload.mode === 'windows-webview2') return;
     const executable = payload && payload.mode === 'windows-webview2';
     const shellLauncher = executable
       ? '@echo off\r\nstart "" "%~dp0ArcaneShell.exe" %*\r\n'
@@ -652,6 +1409,11 @@ ConvertTo-Json -InputObject @($records) -Compress`;
       : '@echo off\r\nnode "%~dp0arcane-provisioner.cjs" %*\r\n';
     await ctx.writeFile(ctx.path.join(stage, 'bin', 'arcane-shell.cmd'), shellLauncher);
     await ctx.writeFile(ctx.path.join(stage, 'bin', 'arcane-provisioner.cmd'), provisionerLauncher);
+  }
+
+  function verifyStagedInstallation(root, installed) {
+    const result = verifyInstalledApplicationSet(root, { installed: Boolean(installed) });
+    return { verified: true, securityMode: result.securityMode, applications: result.packages.length };
   }
 
   async function applyInstallPermissions(action) {
@@ -805,11 +1567,36 @@ foreach($target in $targets){
     await ctx.powershell(verifyScript, { action, purpose: 'verify-arcane-state-acl' });
   }
 
-  function shellCommand() {
+  function shellCommandForSecurityMode(securityMode) {
     const executable = ctx.path.join(paths.installRoot, 'bin', 'ArcaneShell.exe');
-    if (ctx.fs.existsSync(executable) || ctx.simulate) return `"${executable}" --shell`;
+    const unsignedArgument = securityMode === 'unsigned-local-test' ? ' --allow-unsigned-local-release' : '';
+    if (ctx.fs.existsSync(executable) || ctx.simulate) return `"${executable}" --shell${unsignedArgument}`;
     const launcher = ctx.path.join(paths.installRoot, 'bin', 'arcane-shell.cmd');
-    return `cmd.exe /d /c ""${launcher}" --shell"`;
+    return `cmd.exe /d /c ""${launcher}" --shell${unsignedArgument}"`;
+  }
+
+  function attestedShellSecurityMode() {
+    const claim = String(ctx.releaseSecurityModeClaim || env.ARCANE_RELEASE_SECURITY_MODE || '');
+    return ctx.allowUnsignedLocalRelease && claim === 'unsigned-local-test'
+      ? 'unsigned-local-test'
+      : 'publisher-verified';
+  }
+
+  function shellCommand() {
+    return shellCommandForSecurityMode(attestedShellSecurityMode());
+  }
+
+  function recoveryAssignedShell(recovery) {
+    if (!recovery.assignedShell) return shellCommand();
+    const signed = shellCommandForSecurityMode('publisher-verified');
+    const unsigned = shellCommandForSecurityMode('unsigned-local-test');
+    if (recovery.assignedShell !== signed && recovery.assignedShell !== unsigned) {
+      throw ctx.arcaneError('INVALID_SHELL_BACKUP', 'Arcane refused an unrecognized recorded shell command.', 'Review the protected Arcane user recovery record as an administrator.', 409);
+    }
+    if (recovery.securityMode && recovery.assignedShell !== shellCommandForSecurityMode(recovery.securityMode)) {
+      throw ctx.arcaneError('INVALID_SHELL_BACKUP', 'Arcane refused a recorded shell command whose security mode does not match.', 'Review the protected Arcane user recovery record as an administrator.', 409);
+    }
+    return recovery.assignedShell;
   }
 
   function usernamePolicy() {
@@ -1388,7 +2175,7 @@ try {
       const key = username.toLowerCase();
       const assigned = simulatedUsers.get(key);
       if (!assigned || !simulatedAccounts.has(key)) throw new Error('The simulated staged account is missing.');
-      const expectedShell = shellCommand();
+      const expectedShell = recoveryAssignedShell(stagedRecovery);
       const policy = simulatedShellValue(assigned, 'policyShell');
       const legacy = simulatedShellValue(assigned, 'legacyShell');
       if (!policy.present || policy.value !== expectedShell || !legacy.present || legacy.value !== expectedShell) {
@@ -1408,7 +2195,7 @@ try {
       }
       return { username, sid: staged.sid, enabled: true, activated: true };
     }
-    const expectedShell = shellCommand();
+    const expectedShell = recoveryAssignedShell(stagedRecovery);
     const script = `$ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
 $name=${ctx.psQuote(username)}
@@ -1557,7 +2344,7 @@ $adsi.SetInfo()
     if (ctx.simulate) {
       const key = username.toLowerCase();
       const binding = simulatedUsers.get(key) || { username, enabled: simulatedAccounts.has(key) };
-      const expected = shellCommand();
+      const expected = recoveryAssignedShell(recovery);
       if (recovery.dual) {
         const policy = simulatedShellValue(binding, 'policyShell');
         const legacy = simulatedShellValue(binding, 'legacyShell');
@@ -1605,7 +2392,7 @@ $adsi.SetInfo()
         verification: 'simulated',
       };
     }
-    const expectedShell = shellCommand();
+    const expectedShell = recoveryAssignedShell(recovery);
     if (recovery.dual) {
       const preparedRecovery = recovery.shellMutationPhase === 'prepared';
       const dualScript = `$ErrorActionPreference='Stop'
@@ -1912,6 +2699,13 @@ try {
     addMachinePath,
     installPayload,
     writeLaunchers,
+    verifyStagedInstallation,
+    releaseSecurityMode,
+    listInstalledApplications,
+    launchInstalledApplication,
+    acquireInstallLease,
+    releaseInstallLease,
+    assertNoRunningInstalledApplications,
     applyInstallPermissions,
     applyStatePermissions,
     shellCommand,
