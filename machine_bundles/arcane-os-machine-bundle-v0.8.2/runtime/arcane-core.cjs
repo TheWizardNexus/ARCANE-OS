@@ -2429,7 +2429,7 @@ Categories=System;Settings;
 
 
 const VERSION = "0.8.2";
-const BUNDLE_MANIFEST = {"name":"Arcane OS Machine Bundle","version":"0.8.2","protocolVersion":"arcane/1","description":"Native WebView Arcane shell and machine provisioner for Windows and Linux.","build":{"webview2SdkVersion":"1.0.4078.44","webview2SdkSha256":"dc4d1d9168df26b830398303e50210b6e1729f6ce5a7ac69d2c766852f489962"},"apps":{"provisioner":{"displayName":"Arcane Provisioner","type":"provisioner","entry":"provisioner/index.html","capabilities":["system.read","identity.read","system.metrics.read","network.status.read","requirements.read","installation.read","users.manage","diagnostics.read","provisioning.manage"]},"shell":{"displayName":"Arcane Shell","type":"shell","entry":"shell/index.html","capabilities":["system.read","identity.read","system.metrics.read","network.status.read","diagnostics.read","session.control","storage.read","storage.write","media.microphone"]}},"requirements":{"node":{"minimumVersion":"22.0.0","installMajor":24,"installPolicy":"optional; install separately from a trusted administrator-managed package channel"},"ollama":{"minimumVersion":"0.30.0","installPolicy":"optional; install separately from a trusted administrator-managed package channel"},"renderer":{"minimumVersion":null,"windows":"Microsoft Edge WebView2 Evergreen Runtime","linux":"WebKitGTK 6.0 / GTK 4 (WebKitGTK 2.40 or newer recommended)"},"session-control":{"minimumVersion":null,"installPolicy":"native Windows session control or supported Linux desktop/login manager"}}};
+const BUNDLE_MANIFEST = {"name":"Arcane OS Machine Bundle","version":"0.8.2","protocolVersion":"arcane/1","description":"Native WebView Arcane shell and machine provisioner for Windows and Linux.","build":{"webview2SdkVersion":"1.0.4078.44","webview2SdkSha256":"dc4d1d9168df26b830398303e50210b6e1729f6ce5a7ac69d2c766852f489962"},"apps":{"provisioner":{"displayName":"Arcane Provisioner","type":"provisioner","entry":"provisioner/index.html","capabilities":["system.read","identity.read","system.metrics.read","network.status.read","requirements.read","installation.read","users.manage","diagnostics.read","provisioning.manage"]},"shell":{"displayName":"Arcane Shell","type":"shell","entry":"shell/index.html","capabilities":["system.read","identity.read","system.metrics.read","network.status.read","diagnostics.read","applications.read","applications.launch","session.control","storage.read","storage.write","media.microphone"]}},"requirements":{"node":{"minimumVersion":"22.0.0","installMajor":24,"installPolicy":"optional; install separately from a trusted administrator-managed package channel"},"ollama":{"minimumVersion":"0.30.0","installPolicy":"optional; install separately from a trusted administrator-managed package channel"},"renderer":{"minimumVersion":null,"windows":"Microsoft Edge WebView2 Evergreen Runtime","linux":"WebKitGTK 6.0 / GTK 4 (WebKitGTK 2.40 or newer recommended)"},"session-control":{"minimumVersion":null,"installPolicy":"native Windows session control or supported Linux desktop/login manager"}}};
 const PROTOCOL = 'arcane/1';
 const argv = process.argv.slice(2);
 const args = new Set(argv);
@@ -2440,7 +2440,8 @@ const argValue = (prefix) => {
 const appMode = argValue('--app=') || process.env.ARCANE_APP || 'provisioner';
 const simulate = args.has('--simulate') || process.env.ARCANE_SIMULATE_PROVISIONING === '1';
 const simulateStandard = args.has('--simulate-standard') || process.env.ARCANE_SIMULATE_STANDARD === '1';
-const simulatedPlatform = argValue('--simulate-platform=') || process.env.ARCANE_SIMULATE_PLATFORM || '';
+const hostPlatform = process.platform;
+const simulatedPlatform = simulate && !process.pkg ? argValue('--simulate-platform=') || process.env.ARCANE_SIMULATE_PLATFORM || '' : '';
 const simulatedUserFailure = simulate ? argValue('--simulate-user-failure=') || '' : '';
 const simulatedCapabilityOverride = simulate && !process.pkg
   ? String(argValue('--simulate-capabilities=') || '').split(',').map((value) => value.trim()).filter(Boolean)
@@ -2449,7 +2450,7 @@ const simulatedExclusiveMutationDelayMs = simulate && !process.pkg
   ? Math.min(5000, Math.max(0, Number(argValue('--simulate-exclusive-mutation-delay-ms=') || 0) || 0))
   : 0;
 const sessionCommandSelfTest = simulate && !process.pkg ? argValue('--self-test-session-command=') || '' : '';
-const platform = ['win32', 'linux'].includes(simulatedPlatform) ? simulatedPlatform : process.platform;
+const platform = ['win32', 'linux'].includes(simulatedPlatform) ? simulatedPlatform : hostPlatform;
 const productionPackaged = Boolean(process.pkg) && !simulate;
 const noBrowser = true;
 const hideConsole = true;
@@ -2554,6 +2555,10 @@ const APP_CAPABILITIES = new Set(
     ? APP_DESCRIPTOR.capabilities.map((value) => String(value || '').trim()).filter(Boolean)
     : []
 );
+const APPLICATION_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const APPLICATION_ID_MAX_LENGTH = 64;
+const APPLICATION_CATALOG_MAX_RECORDS = 128;
+const RESERVED_APPLICATION_IDS = new Set(['provisioner','shell']);
 
 function stamp() { return new Date().toISOString(); }
 function log(message, details) {
@@ -4422,6 +4427,8 @@ const METHOD_POLICIES = Object.freeze({
   'users.list': Object.freeze({ capability:'users.manage', appTypes:['provisioner'] }),
   'diagnostics.recent': Object.freeze({ capability:'diagnostics.read' }),
   'diagnostics.get': Object.freeze({ capability:'diagnostics.read' }),
+  'apps.list': Object.freeze({ capability:'applications.read', appTypes:['shell'] }),
+  'apps.launch': Object.freeze({ capability:'applications.launch', appTypes:['shell'] }),
   'provisioning.plan': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'] }),
   'system.lock': Object.freeze({ capability:'session.control', appTypes:['shell'], exclusiveMutation:true }),
   'session.logout': Object.freeze({ capability:'session.control', appTypes:['shell'], exclusiveMutation:true }),
@@ -4441,7 +4448,20 @@ function publicAppDescriptor() {
     type:String(APP_DESCRIPTOR.type || 'app'),
     entry:APP_DESCRIPTOR.entry ? String(APP_DESCRIPTOR.entry):null,
     version:VERSION,
+    securityMode:releaseSecurityMode(),
   };
+}
+
+function releaseSecurityMode() {
+  if(allowUnsignedLocalRelease)return 'unsigned-local-test';
+  if(typeof native.releaseSecurityMode==='function'){
+    try{
+      if(native.releaseSecurityMode()==='publisher-verified')return 'publisher-verified';
+    }catch(error){
+      log('Arcane could not verify the installed release security mode.',{ code:error&&error.code||null,message:error&&error.message||String(error) });
+    }
+  }
+  return 'unverified';
 }
 
 function allowedMethods() {
@@ -4480,6 +4500,183 @@ function assertMethodAllowed(method) {
     );
   }
   return policy;
+}
+
+function applicationRequestParameters(request, expectedKeys) {
+  const parameters=request.parameters;
+  if(!parameters||typeof parameters!=='object'||Array.isArray(parameters)){
+    throw arcaneError(
+      'INVALID_APPLICATION_REQUEST',
+      'Arcane rejected an invalid application request.',
+      'Retry from the Arcane shell. Application requests must use the documented fields only.',
+      400
+    );
+  }
+  const keys=Object.keys(parameters).sort();
+  const expected=[...expectedKeys].sort();
+  if(keys.length!==expected.length||keys.some((key,index)=>key!==expected[index])){
+    throw arcaneError(
+      'INVALID_APPLICATION_REQUEST',
+      'Arcane rejected unsupported application request fields.',
+      'Launch an installed application by its Arcane application ID only.',
+      400,
+      { allowedFields:expected }
+    );
+  }
+  return parameters;
+}
+
+function isCanonicalApplicationId(input) {
+  return typeof input==='string'
+    &&input.length>=1
+    &&input.length<=APPLICATION_ID_MAX_LENGTH
+    &&APPLICATION_ID_PATTERN.test(input)
+    &&!RESERVED_APPLICATION_IDS.has(input);
+}
+
+function canonicalApplicationId(input) {
+  if(!isCanonicalApplicationId(input)){
+    throw arcaneError(
+      'INVALID_APPLICATION_ID',
+      'Arcane rejected an invalid application ID.',
+      'Choose an application from the verified Arcane shell catalog.',
+      400
+    );
+  }
+  return input;
+}
+
+function publicApplicationText(input, field, maximumLength, required) {
+  if(input===null||input===undefined||input===''){
+    if(!required)return null;
+    throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected an incomplete installed-app catalog.','Repair or reinstall Arcane OS.',500,{ field });
+  }
+  if(
+    typeof input!=='string'
+    ||input.trim()!==input
+    ||input.length>maximumLength
+    ||/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(input)
+  ){
+    throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected invalid installed-app metadata.','Repair or reinstall Arcane OS.',500,{ field });
+  }
+  return input;
+}
+
+function publicApplicationIcon(input, id) {
+  if(input===null||input===undefined||input==='')return null;
+  const icon=publicApplicationText(input,'iconUrl',320,false);
+  if(
+    !icon.startsWith('/')
+    ||icon.startsWith('//')
+    ||icon.includes('\\')
+    ||icon.includes('%')
+    ||icon.includes('?')
+    ||icon.includes('#')
+    ||icon.split('/').some((segment)=>segment==='.'||segment==='..')
+  ){
+    throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected an unsafe installed-app icon URL.','Repair or reinstall Arcane OS.',500,{ applicationId:id });
+  }
+  return icon;
+}
+
+function publicApplicationRecord(input) {
+  if(!input||typeof input!=='object'||Array.isArray(input)){
+    throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected an invalid installed-app record.','Repair or reinstall Arcane OS.',500);
+  }
+  if(!isCanonicalApplicationId(input.id)){
+    throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected an invalid installed application ID.','Repair or reinstall Arcane OS.',500);
+  }
+  const id=input.id;
+  const order=input.order;
+  if(!Number.isSafeInteger(order)||order<0||order>100000){
+    throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected invalid installed-app ordering metadata.','Repair or reinstall Arcane OS.',500,{ applicationId:id,field:'order' });
+  }
+  return Object.freeze({
+    id,
+    displayName:publicApplicationText(input.displayName,'displayName',80,true),
+    description:publicApplicationText(input.description,'description',240,false),
+    iconUrl:publicApplicationIcon(input.iconUrl,id),
+    version:publicApplicationText(input.version,'version',64,false),
+    order,
+    verified:true,
+  });
+}
+
+function assertApplicationAdapter(method) {
+  if(hostPlatform!=='win32'||platform!=='win32'){
+    throw arcaneError(
+      'APPLICATIONS_UNAVAILABLE',
+      'Installed Arcane applications are not available on this operating system.',
+      'Use a supported Windows Arcane installation.',
+      501
+    );
+  }
+  if(typeof native[method]!=='function'){
+    throw arcaneError(
+      'APPLICATION_ADAPTER_UNAVAILABLE',
+      'Arcane cannot verify the installed application catalog.',
+      'Repair or reinstall the complete Arcane OS release.',
+      503
+    );
+  }
+}
+
+async function listInstalledApplications(request) {
+  applicationRequestParameters(request,[]);
+  assertApplicationAdapter('listInstalledApplications');
+  let result;
+  try{
+    result=await native.listInstalledApplications();
+  }catch(error){
+    log('Installed application catalog adapter failed.',{ code:error&&error.code||null,message:error&&error.message||String(error) });
+    throw arcaneError('APPLICATION_CATALOG_UNAVAILABLE','Arcane could not read the verified installed application catalog.','Repair or reinstall the complete Arcane OS release.',503);
+  }
+  if(
+    !result
+    ||typeof result!=='object'
+    ||result.verified!==true
+    ||!Array.isArray(result.applications)
+    ||result.applications.length>APPLICATION_CATALOG_MAX_RECORDS
+  ){
+    throw arcaneError('APPLICATION_CATALOG_UNVERIFIED','Arcane could not verify the installed application catalog.','Repair or reinstall the complete Arcane OS release.',503);
+  }
+  const applications=result.applications.map(publicApplicationRecord);
+  const seen=new Set();
+  for(const application of applications){
+    if(seen.has(application.id)){
+      throw arcaneError('APPLICATION_CATALOG_INVALID','Arcane rejected a duplicate installed application ID.','Repair or reinstall Arcane OS.',500,{ applicationId:application.id });
+    }
+    seen.add(application.id);
+  }
+  applications.sort((left,right)=>left.order-right.order||left.displayName.localeCompare(right.displayName,'en')||left.id.localeCompare(right.id,'en'));
+  return Object.freeze({
+    verified:true,
+    securityMode:releaseSecurityMode(),
+    applications:Object.freeze(applications),
+  });
+}
+
+async function launchInstalledApplication(request) {
+  const parameters=applicationRequestParameters(request,['id']);
+  const id=canonicalApplicationId(parameters.id);
+  assertApplicationAdapter('launchInstalledApplication');
+  let result;
+  try{
+    result=await native.launchInstalledApplication(id);
+  }catch(error){
+    log('Installed application launch adapter failed.',{ applicationId:id,code:error&&error.code||null,message:error&&error.message||String(error) });
+    throw arcaneError('APPLICATION_LAUNCH_FAILED',`Arcane could not launch ${id}.`,'Retry from the verified Arcane shell catalog. If the problem continues, repair Arcane OS.',502,{ applicationId:id });
+  }
+  if(!result||typeof result!=='object'||result.accepted!==true){
+    throw arcaneError(
+      'APPLICATION_LAUNCH_REJECTED',
+      `Arcane could not launch ${id}.`,
+      'Retry from the verified Arcane shell catalog. If the problem continues, repair Arcane OS.',
+      502,
+      { applicationId:id }
+    );
+  }
+  return Object.freeze({ id,accepted:true });
 }
 
 function publicOperatingSystemInfo() {
@@ -4633,6 +4830,8 @@ async function dispatchMethod(request, options) {
       if (!item) throw arcaneError('DIAGNOSTIC_NOT_FOUND', 'That Arcane diagnostic record is no longer available.', 'Reproduce the failure and copy the new diagnostics.', 404);
       return item;
     }
+    case 'apps.list': return listInstalledApplications(request);
+    case 'apps.launch': return launchInstalledApplication(request);
     case 'provisioning.plan': return provisioningPlan(parameters.usernames || []);
     case 'system.lock': return launchSessionCommand(native.lockSpec(), 'lock');
     case 'session.logout': return launchSessionCommand(native.logoutSpec(), 'log out of');

@@ -7,10 +7,11 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const simulatedPlatform=process.platform==='win32'?'win32':'linux';
 
-function createClient(app){
+function createClient(app,options={}){
+  const platform=options.platform||simulatedPlatform;
   const child=spawn(
     process.execPath,
-    [path.join(root,'runtime/arcane-core.cjs'),`--app=${app}`,'--simulate',`--simulate-platform=${simulatedPlatform}`,`--bundle-root=${root}`],
+    [path.join(root,'runtime/arcane-core.cjs'),`--app=${app}`,'--simulate',`--simulate-platform=${platform}`,`--bundle-root=${root}`,...(options.extraArgs||[])],
     { stdio:['pipe','pipe','pipe'] }
   );
   let buffer=Buffer.alloc(0);
@@ -76,6 +77,22 @@ try{
   assert(metrics.logicalProcessors>0);
   assert(capabilities.grants.includes('storage.read'));
   assert(capabilities.grants.includes('storage.write'));
+  assert(capabilities.grants.includes('applications.read'));
+  assert(capabilities.grants.includes('applications.launch'));
+  assert(capabilities.methods.includes('apps.list'));
+  assert(capabilities.methods.includes('apps.launch'));
+  await assert.rejects(
+    shell.call('apps.list',{ path:'C:\\untrusted' }),
+    error=>error.code==='INVALID_APPLICATION_REQUEST'
+  );
+  await assert.rejects(
+    shell.call('apps.launch',{ id:'boss',args:['--unsafe'],env:{PATH:'untrusted'} }),
+    error=>error.code==='INVALID_APPLICATION_REQUEST'
+  );
+  await assert.rejects(
+    shell.call('apps.launch',{ id:'../boss' }),
+    error=>error.code==='INVALID_APPLICATION_ID'
+  );
   const saved=await shell.call('storage.set',{ key:'dashboard.chart.config',value:{ title:'Cases',series:['open','closed'] } });
   assert.equal(saved.value.title,'Cases');
   const loaded=await shell.call('storage.get',{ key:'dashboard.chart.config' });
@@ -109,15 +126,49 @@ try{
   assert(capabilities.methods.includes('installation.ensure'));
   assert(capabilities.methods.includes('provisioning.plan'));
   assert(!capabilities.methods.includes('storage.set'));
+  assert(!capabilities.methods.includes('apps.list'));
+  assert(!capabilities.methods.includes('apps.launch'));
   await assert.rejects(
     provisioner.call('storage.set',{ key:'nope',value:true }),
     error=>error.code==='METHOD_NOT_ALLOWED'&&error.method==='storage.set'
   );
+  for(const method of ['apps.list','apps.launch']){
+    await assert.rejects(
+      provisioner.call(method,method==='apps.launch'?{id:'boss'}:{}),
+      error=>error.code==='METHOD_NOT_ALLOWED'&&error.method===method
+    );
+  }
   const plan=await provisioner.call('provisioning.plan',{ usernames:['arcane-policy-test'] });
   assert.equal(plan.users[0].username,'arcane-policy-test');
   assert.equal(plan.simulation,true);
 }finally{
   provisioner.close();
+}
+
+const genericApp=createClient('boss',{ extraArgs:['--simulate-capabilities=applications.read,applications.launch'] });
+try{
+  const capabilities=await genericApp.call('capabilities.list');
+  assert(capabilities.grants.includes('applications.read'));
+  assert(!capabilities.methods.includes('apps.list'),'generic apps must remain denied even if a capability grant is injected');
+  for(const method of ['apps.list','apps.launch']){
+    await assert.rejects(
+      genericApp.call(method,method==='apps.launch'?{id:'precrisis'}:{}),
+      error=>error.code==='METHOD_NOT_ALLOWED'&&error.method===method
+    );
+  }
+}finally{
+  genericApp.close();
+}
+
+const linuxShell=createClient('shell',{ platform:'linux' });
+try{
+  await assert.rejects(
+    linuxShell.call('apps.list',{}),
+    error=>error.code==='APPLICATIONS_UNAVAILABLE',
+    'the Linux application adapter must fail closed'
+  );
+}finally{
+  linuxShell.close();
 }
 
 console.log('Arcane per-application capability policy smoke test passed.');

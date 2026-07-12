@@ -104,6 +104,38 @@ async function verifyBridgeFailureDiagnostics() {
   assert.equal(String(failure.hresult).toLowerCase(), '0x80020006');
 }
 
+async function verifyApplicationsApiContract() {
+  const requests = [];
+  const bridge = {
+    async Send(serializedRequest) {
+      requests.push(JSON.parse(serializedRequest));
+      return JSON.stringify({ accepted: true });
+    },
+  };
+  const harness = loadArcaneWithWebView2Bridge(bridge);
+
+  const listPromise = harness.window.Arcane.applications.list();
+  assert.equal(requests[0].method, 'apps.list');
+  assert.deepEqual(requests[0].parameters, {});
+  harness.window.__arcaneReceive({
+    protocol: 'arcane/1', type: 'response', id: requests[0].id, ok: true,
+    result: { verified: true, applications: [] },
+  });
+  assert.equal((await listPromise).verified, true);
+
+  const launchPromise = harness.window.Arcane.applications.launch('boss', {
+    path: 'C:\\untrusted.exe', args: ['--unsafe'], env: { PATH: 'untrusted' },
+  });
+  assert.equal(requests[1].method, 'apps.launch');
+  assert.deepEqual(requests[1].parameters, { id: 'boss' }, 'the frontend API must pass an application ID only');
+  harness.window.__arcaneReceive({
+    protocol: 'arcane/1', type: 'response', id: requests[1].id, ok: true,
+    result: { id: 'boss', accepted: true },
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(await launchPromise)), { id: 'boss', accepted: true });
+}
+
 await verifySendAndReceiveContract();
 await verifyBridgeFailureDiagnostics();
+await verifyApplicationsApiContract();
 console.log('Arcane frontend WebView2 bridge smoke test passed.');

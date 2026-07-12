@@ -211,6 +211,10 @@
     Error: ArcaneError,
     events: events,
     app: Object.freeze({ current: function () { return invoke('app.current'); } }),
+    applications: Object.freeze({
+      list: function () { return invoke('apps.list'); },
+      launch: function (id) { return invoke('apps.launch', { id: id }); },
+    }),
     capabilities: Object.freeze({ list: function () { return invoke('capabilities.list'); } }),
     platform: Object.freeze({ status: function () { return invoke('platform.status'); } }),
     permissions: Object.freeze({ status: function () { return invoke('permissions.status'); } }),
