@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' __ARCANE_SCRIPT_HASHES__; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'">
+  <meta http-equiv="Permissions-Policy" content="accelerometer=(), ambient-light-sensor=(), autoplay=(), bluetooth=(), camera=(), clipboard-read=(), clipboard-write=(self), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(self), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), usb=(), web-share=(), xr-spatial-tracking=()">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#03050a">
+  <link rel="icon" type="image/x-icon" href="../shared/arcane-sigil.ico">
+  <link rel="icon" type="image/png" sizes="512x512" href="../shared/arcane-sigil-512.png">
+  <link rel="apple-touch-icon" href="../shared/arcane-sigil-512.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Arcane OS</title>
+  <style>
+    :root{color-scheme:dark;--bg:#03050a;--panel:rgba(10,16,29,.82);--line:rgba(150,170,255,.18);--text:#eef2ff;--muted:#929bb5;--violet:#8f7cff;--amber:#e6ad63;--green:#71d7a2;--danger:#ff8d9a}
+    *{box-sizing:border-box}html,body{height:100%;margin:0}body{overflow:hidden;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% 15%,rgba(77,105,220,.18),transparent 30%),radial-gradient(circle at 50% 70%,rgba(113,76,220,.12),transparent 40%),linear-gradient(180deg,#02040a,#05070d 55%,#03050a)}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.42;background-image:radial-gradient(circle at 8% 20%,rgba(255,255,255,.28) 0 1px,transparent 1.6px),radial-gradient(circle at 21% 77%,rgba(255,255,255,.16) 0 1px,transparent 1.7px),radial-gradient(circle at 69% 17%,rgba(255,255,255,.2) 0 1px,transparent 1.5px),radial-gradient(circle at 88% 60%,rgba(255,255,255,.15) 0 1px,transparent 1.4px);background-size:260px 220px,320px 290px,400px 360px,500px 430px}
+    button{font:inherit}.frame{position:fixed;inset:22px;border:1px solid rgba(145,166,235,.13);border-radius:22px}.top,.bottom{position:fixed;left:46px;right:46px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);text-transform:uppercase;letter-spacing:.16em;font-size:11px}.top{top:34px}.bottom{bottom:34px}.brand,.actions,.status{display:flex;align-items:center;gap:12px}.mini{width:32px;height:32px;filter:drop-shadow(0 0 10px rgba(127,112,255,.4))}.mini img,.sigil img{display:block;width:100%;height:100%;object-fit:contain}.state{color:var(--amber)}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 18px rgba(113,215,162,.8)}
+    main{height:100%;display:grid;place-items:center;padding:92px 28px}.core{text-align:center;max-width:760px}.sigil{width:min(28vw,230px);height:min(28vw,230px);margin:auto;filter:drop-shadow(0 0 34px rgba(128,111,255,.34));animation:breathe 5s ease-in-out infinite}@keyframes breathe{50%{transform:scale(1.018);filter:drop-shadow(0 0 50px rgba(128,111,255,.5))}}h1{font-size:clamp(30px,5vw,64px);font-weight:300;letter-spacing:.18em;margin:28px 0 10px;text-transform:uppercase}.subtitle{color:var(--muted);font-size:clamp(13px,1.5vw,18px);line-height:1.7}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:34px}.card{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);backdrop-filter:blur(16px)}.label{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}.value{margin-top:8px;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .logout{border:1px solid rgba(255,141,154,.28);border-radius:999px;padding:10px 16px;color:#ffd8dc;background:rgba(48,13,24,.55);cursor:pointer;text-transform:uppercase;letter-spacing:.12em;font-size:10px}.logout:hover{border-color:rgba(255,141,154,.7);background:rgba(73,20,34,.8)}
+    dialog{border:1px solid rgba(165,180,255,.22);border-radius:20px;background:rgba(8,12,22,.97);color:var(--text);box-shadow:0 30px 120px #000;padding:24px;width:min(440px,calc(100vw - 36px))}dialog::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(8px)}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}.btn{padding:11px 15px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer}.btn.danger{border-color:rgba(255,141,154,.35);color:#ffd8dc;background:rgba(72,18,31,.65)}
+    .error{position:fixed;right:28px;bottom:74px;width:min(600px,calc(100vw - 56px));max-height:58vh;overflow:auto;border:1px solid rgba(255,141,154,.4);border-radius:16px;background:rgba(29,7,14,.96);padding:18px;box-shadow:0 22px 70px #000;display:none}.error.visible{display:block}.error p{color:#ffd8dc;line-height:1.5}.error details{margin-top:12px}.error pre{white-space:pre-wrap;color:#eebbc2;font-size:11px}.error-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.toast{position:fixed;left:50%;bottom:72px;transform:translateX(-50%) translateY(20px);opacity:0;padding:10px 14px;border:1px solid rgba(113,215,162,.35);border-radius:999px;background:rgba(11,38,29,.96);color:#d8ffea;transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media(max-width:760px){.cards{grid-template-columns:1fr}.top,.bottom{left:28px;right:28px}.identity{display:none}.sigil{width:180px;height:180px}}
+  </style>
+</head>
+<body>
+  <div class="frame"></div>
+  <header class="top">
+    <div class="brand"><div class="mini"><img src="../shared/arcane-sigil.svg" alt=""></div><span>Arcane OS</span><span class="state" id="version">starting</span></div>
+    <div class="actions"><span class="identity" id="identity">Detecting user</span><button class="logout" id="logout">Log out</button></div>
+  </header>
+  <main>
+    <section class="core">
+      <div class="sigil"><img src="../shared/arcane-sigil.svg" alt="Arcane"></div>
+      <h1>Arcane</h1>
+      <p class="subtitle">The operating environment is active. The host system owns authentication; Arcane owns the experience after sign-in.</p>
+      <div class="cards">
+        <div class="card"><div class="label">User</div><div class="value" id="userValue">—</div></div>
+        <div class="card"><div class="label">Operating system</div><div class="value" id="osValue">—</div></div>
+        <div class="card"><div class="label">Host</div><div class="value" id="hostValue">—</div></div>
+      </div>
+    </section>
+  </main>
+  <footer class="bottom"><div class="status"><span class="dot"></span><span id="status">Connecting to Arcane Core</span></div><span id="clock"></span></footer>
+
+  <dialog id="logoutDialog">
+    <h2>Log out of this machine?</h2>
+    <p id="logoutText">Arcane will ask the operating system to end the current user session.</p>
+    <div class="dialog-actions"><button class="btn" id="cancelLogout">Cancel</button><button class="btn danger" id="confirmLogout">Log out</button></div>
+  </dialog>
+
+  <section class="error" id="errorPanel" role="alert">
+    <h3 id="errorTitle">Arcane error</h3>
+    <p id="errorMessage"></p>
+    <p id="errorResolution"></p>
+    <details><summary>See full diagnostics</summary><pre id="errorBody"></pre></details>
+    <div class="error-actions"><button class="btn" id="copyError">Copy full diagnostics</button><button class="btn" id="dismissError">Dismiss</button></div>
+  </section>
+  <div class="toast" id="toast">Copied ✓</div>
+
+  <script src="../shared/arcane-api.js"></script>
+  <script>
+    'use strict';
+    const $ = (selector) => document.querySelector(selector);
+    let lastError = '';
+
+    function showToast(message) {
+      const node = $('#toast');
+      node.textContent = message || 'Copied ✓';
+      node.classList.add('visible');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => node.classList.remove('visible'), 1500);
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const area = document.createElement('textarea');
+        area.value = text; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove();
+      }
+      showToast('Full diagnostics copied ✓');
+    }
+
+    async function showError(title, error) {
+      let hostDiagnostic = null;
+      if (error && error.diagnosticId) {
+        try { hostDiagnostic = await Arcane.diagnostics.get(error.diagnosticId); } catch (_) {}
+      }
+      const details = {
+        time: new Date().toISOString(),
+        message: error && error.message ? error.message : String(error),
+        resolution: error && error.resolution ? error.resolution : null,
+        code: error && error.code ? error.code : null,
+        diagnosticId: error && error.diagnosticId ? error.diagnosticId : null,
+        hostDiagnostic,
+        stack: error && error.stack ? error.stack : null,
+      };
+      lastError = JSON.stringify(details, null, 2);
+      $('#errorTitle').textContent = title;
+      $('#errorMessage').textContent = details.message;
+      $('#errorResolution').textContent = details.resolution || 'Open full diagnostics for the technical cause, then correct the reported issue and try again.';
+      $('#errorBody').textContent = lastError;
+      $('#errorPanel').classList.add('visible');
+      $('#status').textContent = title;
+    }
+
+    window.addEventListener('error', (event) => showError('Arcane interface error', event.error || new Error(event.message)));
+    window.addEventListener('unhandledrejection', (event) => showError('Arcane interface error', event.reason instanceof Error ? event.reason : new Error(String(event.reason))));
+    $('#dismissError').addEventListener('click', () => $('#errorPanel').classList.remove('visible'));
+    $('#copyError').addEventListener('click', async () => { try { await copyText(lastError); } catch (error) { showToast('Clipboard access unavailable'); } });
+
+    function updateClock() { $('#clock').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+    setInterval(updateClock, 1000); updateClock();
+
+    Arcane.events.on('core.ready', (event) => {
+      $('#status').textContent = `Arcane Core ${event.version} connected`;
+    });
+    Arcane.events.on('operation.progress', (event) => {
+      if (event && event.message) $('#status').textContent = event.message;
+    });
+    Arcane.events.on('operation.failed', (event) => {
+      if (event && event.error) showError('Arcane operation failed', event.error);
+    });
+
+    async function initialize() {
+      try {
+        await Arcane.system.ping();
+        const [version, user, platform] = await Promise.all([
+          Arcane.version.current(), Arcane.user.current(), Arcane.platform.status()
+        ]);
+        $('#version').textContent = 'v' + (version.version || version);
+        $('#identity').textContent = user.accountName || user.username;
+        $('#userValue').textContent = user.displayName || user.username;
+        $('#osValue').textContent = platform.os && platform.os.displayName || platform.displayName || platform.platform;
+        $('#hostValue').textContent = platform.os && platform.os.hostname || platform.hostname || 'Local machine';
+        $('#status').textContent = 'Arcane host connected';
+      } catch (error) { showError('Unable to initialize Arcane', error); }
+    }
+
+    $('#logout').addEventListener('click', () => $('#logoutDialog').showModal());
+    $('#cancelLogout').addEventListener('click', () => $('#logoutDialog').close());
+    $('#confirmLogout').addEventListener('click', async () => {
+      $('#confirmLogout').disabled = true;
+      $('#cancelLogout').disabled = true;
+      $('#logoutText').textContent = 'Requesting operating-system logout…';
+      try {
+        const response = await Arcane.session.logout();
+        $('#logoutText').textContent = response && response.simulated ? 'Logout was simulated.' : 'The operating system accepted the logout request.';
+        if (response && response.simulated) setTimeout(() => location.reload(), 1200);
+      } catch (error) {
+        $('#logoutDialog').close();
+        $('#confirmLogout').disabled = false;
+        $('#cancelLogout').disabled = false;
+        showError('Operating-system logout failed', error);
+      }
+    });
+
+    initialize();
+  </script>
+</body>
+</html>

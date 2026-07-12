@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "workspaceRoot": "../..",
+  "sharedPayload": [
+    {
+      "source": "arcane",
+      "destination": "arcane",
+      "include": [
+        "components",
+        "css",
+        "entities",
+        "img",
+        "modules"
+      ]
+    },
+    {
+      "source": "node_modules/strong-type",
+      "destination": "node_modules/strong-type",
+      "include": [
+        "index.js",
+        "licence",
+        "package.json"
+      ]
+    }
+  ],
+  "apps": {
+    "precrisis": {
+      "displayName": "PreCrisis AI",
+      "type": "app",
+      "source": "apps/precrisis",
+      "entry": "index.html",
+      "capabilities": [
+        "diagnostics.read",
+        "identity.read",
+        "installation.read",
+        "media.microphone",
+        "network.status.read",
+        "requirements.read",
+        "storage.read",
+        "storage.write",
+        "system.metrics.read",
+        "system.read"
+      ],
+      "security": {
+        "connectOrigins": [
+          "http://127.0.0.1:8011",
+          "http://127.0.0.1:11431",
+          "https://api.openai.com"
+        ],
+        "mediaOrigins": [
+          "https://cdn.openai.com"
+        ]
+      },
+      "include": [
+        "admin.html",
+        "chat.html",
+        "components",
+        "dashboard-clinical.html",
+        "dashboard-leadership.html",
+        "dashboard.html",
+        "data.html",
+        "entities",
+        "export.html",
+        "img/1024.png",
+        "img/192.png",
+        "img/256.png",
+        "img/512.png",
+        "img/favicon.png",
+        "img/icon-16.ico",
+        "import-many.html",
+        "import.html",
+        "index.html",
+        "journal.html",
+        "manifest.json",
+        "modules",
+        "prev.html",
+        "service-worker.js",
+        "soc.html"
+      ]
+    },
+    "boss": {
+      "displayName": "BOSS",
+      "type": "app",
+      "source": "apps/boss",
+      "entry": "chat.html",
+      "capabilities": [
+        "diagnostics.read",
+        "identity.read",
+        "installation.read",
+        "network.status.read",
+        "requirements.read",
+        "storage.read",
+        "storage.write",
+        "system.metrics.read",
+        "system.read"
+      ],
+      "security": {
+        "connectOrigins": [
+          "http://127.0.0.1:8011",
+          "http://127.0.0.1:11431",
+          "https://api.openai.com"
+        ],
+        "mediaOrigins": [
+          "https://cdn.openai.com"
+        ]
+      },
+      "documentCatalog": {
+        "policy": "empty-unpublished",
+        "destination": "documents",
+        "manifest": "document-manifest.json"
+      },
+      "include": [
+        "Modelfile",
+        "admin.html",
+        "boss-library.js",
+        "boss.css",
+        "chat.html",
+        "components",
+        "export.html",
+        "img",
+        "import.html",
+        "library.html",
+        "manifest.json",
+        "prompts"
+      ]
+    }
+  }
+}

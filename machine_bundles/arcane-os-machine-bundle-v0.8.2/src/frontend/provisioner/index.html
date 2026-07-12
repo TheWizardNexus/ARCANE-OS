@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' __ARCANE_SCRIPT_HASHES__; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'">
+  <meta http-equiv="Permissions-Policy" content="accelerometer=(), ambient-light-sensor=(), autoplay=(), bluetooth=(), camera=(), clipboard-read=(), clipboard-write=(self), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), usb=(), web-share=(), xr-spatial-tracking=()">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#03050a">
+  <link rel="icon" type="image/x-icon" href="../shared/arcane-sigil.ico">
+  <link rel="icon" type="image/png" sizes="512x512" href="../shared/arcane-sigil-512.png">
+  <link rel="apple-touch-icon" href="../shared/arcane-sigil-512.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Arcane Machine Provisioner</title>
+  <style>
+    :root{color-scheme:dark;--bg:#03050a;--panel:rgba(10,16,29,.9);--panel2:rgba(17,24,42,.87);--line:rgba(150,170,255,.18);--line2:rgba(170,188,255,.38);--text:#eef2ff;--muted:#929bb5;--violet:#8f7cff;--blue:#91b7ff;--amber:#e6ad63;--green:#71d7a2;--danger:#ff8d9a;--shadow:0 24px 90px rgba(0,0,0,.5)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%}body{color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% 0,rgba(77,105,220,.2),transparent 30%),linear-gradient(180deg,#02040a,#05070d 55%,#03050a);background-attachment:fixed}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.34;background-image:radial-gradient(circle at 8% 20%,rgba(255,255,255,.28) 0 1px,transparent 1.6px),radial-gradient(circle at 69% 17%,rgba(255,255,255,.2) 0 1px,transparent 1.5px),radial-gradient(circle at 88% 60%,rgba(255,255,255,.15) 0 1px,transparent 1.4px);background-size:260px 220px,400px 360px,500px 430px}
+    button,input{font:inherit}.app{position:relative;max-width:1180px;margin:0 auto;padding:28px 28px 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:24px}.brand{display:flex;align-items:center;gap:16px}.logo{width:58px;height:58px;filter:drop-shadow(0 0 18px rgba(127,112,255,.42))}.logo img{width:100%;height:100%;display:block}.eyebrow{text-transform:uppercase;letter-spacing:.2em;color:var(--amber);font-size:10px}.title{font-size:clamp(25px,4vw,42px);font-weight:300;letter-spacing:.08em;margin:4px 0}.sub{color:var(--muted);line-height:1.6;max-width:760px}.version-pill{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:#cbd5f3;font-size:12px;white-space:nowrap}
+    .banner{display:none;margin-bottom:18px;padding:17px 18px;border-radius:16px;border:1px solid rgba(230,173,99,.35);background:rgba(62,40,10,.58);box-shadow:var(--shadow)}.banner.visible{display:block}.banner.danger{border-color:rgba(255,141,154,.42);background:rgba(54,12,23,.76)}.banner h2{margin:0 0 7px;font-size:17px}.banner p{margin:0;color:#d9c7ab;line-height:1.55}.banner.danger p{color:#eab7bd}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}.summary-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:rgba(255,255,255,.025)}.summary-card .label{text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-size:9px}.summary-card .value{margin-top:8px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ok{color:var(--green)}.warn{color:var(--amber)}.bad{color:var(--danger)}
+    .flow{display:grid;gap:18px}.panel{border:1px solid var(--line);border-radius:20px;background:var(--panel);backdrop-filter:blur(18px);box-shadow:var(--shadow);overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 22px;border-bottom:1px solid var(--line)}.panel-head h2{margin:0;font-size:18px;font-weight:520;letter-spacing:.03em}.step{display:inline-grid;place-items:center;width:28px;height:28px;margin-right:10px;border-radius:50%;border:1px solid rgba(143,124,255,.45);background:rgba(143,124,255,.13);color:#dcd8ff;font-size:12px}.panel-body{padding:20px 22px}.small{font-size:12px;color:var(--muted);line-height:1.55}.install-layout{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(420px,1.25fr);gap:18px}.install-card{display:flex;flex-direction:column;justify-content:space-between;gap:20px;border:1px solid var(--line);border-radius:16px;padding:20px;background:linear-gradient(145deg,rgba(97,78,205,.13),rgba(255,255,255,.02))}.install-kicker{text-transform:uppercase;letter-spacing:.13em;color:var(--muted);font-size:9px}.install-title{font-size:25px;font-weight:380;margin:8px 0 7px}.install-detail{color:var(--muted);line-height:1.55;font-size:13px}.status-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.badge{border-radius:999px;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;border:1px solid var(--line);color:var(--muted)}.badge.ready{color:var(--green);border-color:rgba(113,215,162,.3)}.badge.update,.badge.missing{color:var(--amber);border-color:rgba(230,173,99,.3)}.badge.blocked,.badge.failed{color:var(--danger);border-color:rgba(255,141,154,.35)}
+    .btn{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;transition:.18s ease;font-weight:520}.btn:hover:not(:disabled){border-color:var(--line2);transform:translateY(-1px)}.btn.primary{background:linear-gradient(135deg,rgba(97,78,205,.9),rgba(56,94,177,.9));border-color:rgba(151,145,255,.52)}.btn.danger{background:rgba(72,18,31,.65);border-color:rgba(255,141,154,.35);color:#ffd8dc}.btn:disabled{opacity:.38;cursor:not-allowed;transform:none}.btn.wide{width:100%;padding:14px 18px}.actions{display:flex;gap:9px;flex-wrap:wrap}.requirements{display:grid;gap:10px}.req{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.022)}.req-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-size:15px}.req-name{font-weight:600}.req-detail{font-size:11px;color:var(--muted);margin-top:4px}
+    .users-layout{display:grid;grid-template-columns:1fr .7fr;gap:18px}.user-entry{display:flex;gap:9px;margin-bottom:10px}.user-entry input{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:rgba(0,0,0,.2);color:var(--text);outline:none}.user-entry input:focus{border-color:rgba(143,124,255,.7);box-shadow:0 0 0 3px rgba(143,124,255,.12)}.remove{width:46px;padding:0}.user-explainer{border:1px solid var(--line);border-radius:16px;padding:18px;background:rgba(255,255,255,.022)}.user-explainer h3{font-size:14px;margin:0 0 10px}.user-explainer p{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 12px}.user-explainer p:last-child{margin-bottom:0}.hint{color:var(--muted);font-size:11px;line-height:1.55;margin:8px 0 15px}.credentials{display:none;margin-top:14px;border:1px solid rgba(230,173,99,.28);background:rgba(68,45,13,.34);border-radius:14px;padding:14px}.credentials.visible{display:block}.credentials h3{margin:0 0 7px;font-size:14px}.credentials p{margin:0 0 10px;color:#e8c99e;font-size:11px;line-height:1.55}.credentials pre{white-space:pre-wrap;font:12px/1.6 ui-monospace,Consolas,monospace;color:#ffe1b5}.success-panel{display:none;margin:0 0 14px;padding:13px 14px;border:1px solid rgba(113,215,162,.3);border-radius:13px;background:rgba(12,54,39,.42);color:#d3ffe6;font-size:12px;line-height:1.55}.success-panel.visible{display:block}.machine-users{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}.machine-users-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.machine-users-head h3{margin:0 0 4px;font-size:15px}.machine-users-list{display:grid;gap:10px}.machine-user{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:14px;background:rgba(255,255,255,.022)}.machine-user-name{font-weight:650;font-size:14px}.machine-user-meta{margin-top:5px;color:var(--muted);font-size:11px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-line}.machine-user-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.mini-badge{border:1px solid var(--line);border-radius:999px;padding:5px 8px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.mini-badge.ready{color:var(--green);border-color:rgba(113,215,162,.3)}.mini-badge.warn{color:var(--amber);border-color:rgba(230,173,99,.3)}.mini-badge.bad{color:var(--danger);border-color:rgba(255,141,154,.3)}.empty-users{padding:14px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);font-size:12px}.machine-user-actions{display:grid;gap:10px;justify-items:end}.machine-user-action{display:grid;justify-items:end}.user-action-note{margin-top:6px;color:var(--muted);font-size:10px;max-width:220px;text-align:right}.btn.compact{padding:9px 11px;font-size:11px}
+    .console{height:300px;overflow:auto;background:#020309;border:1px solid rgba(139,156,220,.14);border-radius:14px;padding:14px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:#b9c6ec;white-space:pre-wrap}.progress{height:7px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:13px}.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--violet),var(--blue));transition:width .25s ease}.inline-error{display:none;margin:8px 0 13px;padding:10px 12px;border:1px solid rgba(255,141,154,.3);border-radius:10px;background:rgba(64,12,24,.35);color:#ffc6cc;font-size:12px;line-height:1.5}.inline-error.visible{display:block}.error-panel{position:fixed;right:26px;bottom:26px;width:min(650px,calc(100vw - 52px));max-height:72vh;overflow:auto;display:none;border:1px solid rgba(255,141,154,.45);border-radius:18px;background:rgba(25,8,15,.985);padding:20px;box-shadow:0 30px 100px #000;z-index:20}.error-panel.visible{display:block}.error-label{text-transform:uppercase;letter-spacing:.14em;color:var(--danger);font-size:9px}.error-panel h3{margin:5px 0 10px;font-size:18px}.error-message{margin:0;color:#ffe5e8;font-size:14px;line-height:1.55}.error-resolution{margin:10px 0 0;color:#e7bac1;font-size:12px;line-height:1.55}.diagnostics{margin-top:14px;border-top:1px solid rgba(255,141,154,.18);padding-top:12px}.diagnostics summary{cursor:pointer;color:#ffd1d7;font-size:12px;font-weight:600}.diagnostics pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#dcb7bd;font-size:10px;line-height:1.5;max-height:34vh;overflow:auto;background:rgba(0,0,0,.26);border-radius:10px;padding:11px}.error-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,16px);opacity:0;pointer-events:none;padding:10px 14px;border:1px solid rgba(113,215,162,.38);border-radius:999px;background:rgba(9,34,25,.97);color:#c9ffe1;font-size:12px;z-index:30;transition:.18s ease}.toast.visible{opacity:1;transform:translate(-50%,0)}.busy .btn{pointer-events:none}.busy-indicator{display:none;color:var(--amber);font-size:12px}.busy .busy-indicator{display:block}
+    @media(max-width:900px){.install-layout,.users-layout{grid-template-columns:1fr}.machine-user{grid-template-columns:1fr}.user-action-note{text-align:left;max-width:none}.summary{grid-template-columns:1fr}.top{align-items:flex-start}.version-pill{display:none}.app{padding:20px 16px 50px}.panel-head,.panel-body{padding-left:17px;padding-right:17px}}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="top">
+      <div class="brand"><div class="logo"><img src="../shared/arcane-sigil.svg" alt="Arcane"></div><div><div class="eyebrow">Machine creation and provisioning</div><h1 class="title">Arcane Provisioner</h1><div class="sub">Install Arcane OS, verify its requirements, and create standard Arcane user accounts through a guided machine setup flow.</div></div></div>
+      <div class="version-pill" id="versionPill">Loading…</div>
+    </header>
+
+    <section class="banner danger" id="downgradeBanner"><h2>Downgrade protection is active</h2><p id="downgradeText"></p></section>
+    <section class="banner" id="accessBanner"><h2>Administrator approval will be requested when needed</h2><p>Choose an installation or user action normally. Arcane keeps this window open and authorizes a temporary privileged worker for protected changes. The interface itself does not restart or elevate.</p></section>
+
+    <div class="summary">
+      <div class="summary-card"><div class="label">Operating system</div><div class="value" id="osSummary">—</div></div>
+      <div class="summary-card"><div class="label">Arcane OS</div><div class="value" id="installedSummary">Checking…</div></div>
+      <div class="summary-card"><div class="label">Permission scope</div><div class="value" id="modeSummary">—</div></div>
+    </div>
+
+    <main class="flow">
+      <section class="panel">
+        <div class="panel-head"><div><h2><span class="step">1</span>Install Arcane OS</h2><div class="small">One action verifies every requirement, installs anything missing or outdated, and installs or updates Arcane globally.</div></div><button class="btn" id="refreshAll">Check again</button></div>
+        <div class="panel-body install-layout">
+          <div class="install-card">
+            <div>
+              <div class="install-kicker">Global installation</div>
+              <div class="install-title" id="installTitle">Checking Arcane OS…</div>
+              <div class="install-detail" id="installDetail">Reading the global Arcane installation and machine requirements.</div>
+            </div>
+            <div>
+              <div class="status-line" style="margin-bottom:13px"><span class="badge" id="installBadge">Checking</span><span class="busy-indicator" id="busyIndicator">Operation in progress…</span></div>
+              <button class="btn primary wide" id="installArcaneButton">Install Arcane OS</button>
+            </div>
+          </div>
+          <div>
+            <div class="small" style="margin-bottom:10px">Arcane requirements</div>
+            <div class="requirements" id="requirements"><div class="small">Checking requirements…</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2><span class="step">2</span>Add Arcane users</h2><div class="small">Adding a user creates a standard local account when necessary and assigns Arcane as that account’s shell.</div></div><button class="btn" id="addUserRow">Add another username</button></div>
+        <div class="panel-body">
+          <div class="success-panel" id="userSuccess" role="status" aria-live="polite"></div>
+          <div class="users-layout">
+            <div>
+              <div id="userEntries"></div>
+              <div class="hint" id="usernamePolicyHint">Arcane will load the account-name rules for this operating system.</div>
+              <div class="inline-error" id="userValidationHint"></div>
+              <div class="hint" id="userReadiness">Arcane OS must be installed and ready before users can be added.</div>
+              <div class="hint" id="protectedUserHint">The account running this provisioner is protected and will remain untouched.</div>
+              <button class="btn primary wide" id="createUsersButton">Add Arcane user</button>
+              <div class="credentials" id="credentials">
+                <h3>Save these temporary credentials now</h3>
+                <p>Arcane only keeps these passwords in this running provisioner session. Each user must change the password at first sign-in.</p>
+                <pre id="credentialsText"></pre>
+                <div class="actions">
+                  <button class="btn" id="copyCredentials">Copy temporary credentials</button>
+                  <button class="btn primary" id="activateCredentials" style="display:none">I saved these — activate accounts</button>
+                  <button class="btn primary" id="applyPasswordCredentials" style="display:none">I saved this — apply password</button>
+                </div>
+              </div>
+            </div>
+            <aside class="user-explainer">
+              <h3>What “Add Arcane user” does</h3>
+              <p>Creates the username as a standard local user when it does not already exist.</p>
+              <p>Assigns Arcane as that user’s login shell. The provisioning administrator is always excluded.</p>
+              <p>New accounts receive a temporary password. Existing accounts keep their current password unless you explicitly issue a new temporary password below.</p>
+            </aside>
+          </div>
+          <div class="machine-users">
+            <div class="machine-users-head">
+              <div><h3>Arcane users on this machine</h3><div class="small">Collected through <code>Arcane.users.list()</code>; the native adapter verifies the account and shell assignment for this operating system.</div></div>
+              <button class="btn compact" id="refreshUsers">Refresh users</button>
+            </div>
+            <div class="machine-users-list" id="arcaneUsersList"><div class="empty-users">Checking for Arcane users…</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2><span class="step">3</span>Operation output</h2><div class="small" id="actionStatus">Ready. Choose the next action above.</div></div><button class="btn" id="copyOutput">Copy output</button></div>
+        <div class="panel-body"><div class="progress"><div id="progressBar"></div></div><div class="console" id="console">Arcane Provisioner ready.</div></div>
+      </section>
+    </main>
+  </div>
+
+  <section class="error-panel" id="errorPanel" role="alert" aria-live="assertive">
+    <div class="error-label">Arcane could not complete the action</div>
+    <h3 id="errorTitle">Provisioning error</h3>
+    <p class="error-message" id="errorMessage"></p>
+    <p class="error-resolution" id="errorResolution"></p>
+    <details class="diagnostics" id="diagnosticsDetails">
+      <summary>See full diagnostics</summary>
+      <pre id="errorBody"></pre>
+    </details>
+    <div class="error-actions"><button class="btn" id="copyError">Copy full diagnostics</button><button class="btn" id="dismissError">Dismiss</button></div>
+  </section>
+  <div class="toast" id="copyToast" role="status" aria-live="polite">Copied to clipboard</div>
+
+  <script src="../shared/arcane-api.js"></script>
+  <script>
+'use strict';
+const $ = (selector) => document.querySelector(selector);
+const state = {
+  machine: null,
+  users: [],
+  busy: false,
+  credentials: [],
+  pendingActivations: [],
+  pendingPasswordApplications: [],
+  lastDiagnostic: null,
+  validationTimer: null,
+};
+
+function setBusy(value, status) {
+  state.busy = Boolean(value);
+  $('#app').classList.toggle('busy', state.busy);
+  if (status) $('#actionStatus').textContent = status;
+  renderControls();
+}
+
+function appendOutput(message, level, details) {
+  if (!message) return;
+  const time = new Date().toLocaleTimeString([], { hour12: false });
+  const prefix = String(level || 'info').toUpperCase();
+  const suffix = details ? '\n' + JSON.stringify(details, null, 2) : '';
+  const consoleNode = $('#console');
+  consoleNode.textContent += `\n[${time}] ${prefix} ${message}${suffix}`;
+  consoleNode.scrollTop = consoleNode.scrollHeight;
+}
+
+function showToast(message) {
+  const toast = $('#copyToast');
+  toast.textContent = message || 'Copied to clipboard';
+  toast.classList.add('visible');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove('visible'), 1800);
+}
+
+async function copyText(button, text, message) {
+  const original = button.textContent;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+    else {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+    }
+    button.textContent = 'Copied ✓';
+    showToast(message || 'Copied to clipboard');
+  } catch (error) {
+    button.textContent = 'Copy failed';
+    showToast('Clipboard access was unavailable');
+  }
+  setTimeout(() => { button.textContent = original; }, 1600);
+}
+
+function diagnosticFrom(error, hostDiagnostic) {
+  const payload = {
+    time: new Date().toISOString(),
+    message: error && error.message || String(error),
+    code: error && error.code || null,
+    resolution: error && error.resolution || null,
+    diagnosticId: error && error.diagnosticId || null,
+    method: error && error.method || null,
+    technicalMessage: error && error.technicalMessage || null,
+    status: error && error.status || null,
+    command: error && error.command || null,
+    args: error && error.args || null,
+    exitCode: error && error.exitCode !== undefined ? error.exitCode : null,
+    stdout: error && error.stdout || null,
+    stderr: error && error.stderr || null,
+    readableStderr: error && error.readableStderr || null,
+    field: error && error.field || null,
+    input: error && error.input !== undefined ? error.input : null,
+    policy: error && error.policy || null,
+    causeName: error && error.causeName || null,
+    hresult: error && error.hresult || null,
+    transport: error && error.transport || null,
+    hostDiagnostic: hostDiagnostic || null,
+    stack: error && error.stack || null,
+  };
+  return payload;
+}
+
+async function showError(title, error) {
+  const panel = $('#errorPanel');
+  $('#errorTitle').textContent = title || 'Arcane operation failed';
+  $('#errorMessage').textContent = error && error.message || String(error);
+  $('#errorResolution').textContent = error && error.resolution || 'See full diagnostics for the technical cause, then correct the reported issue and try again.';
+  let hostDiagnostic = null;
+  if (error && error.diagnosticId) {
+    try { hostDiagnostic = await Arcane.diagnostics.get(error.diagnosticId); } catch (_) {}
+  }
+  state.lastDiagnostic = diagnosticFrom(error, hostDiagnostic);
+  $('#errorBody').textContent = JSON.stringify(state.lastDiagnostic, null, 2);
+  $('#diagnosticsDetails').open = false;
+  panel.classList.add('visible');
+  appendOutput(error && error.message || String(error), 'error', { code: error && error.code, diagnosticId: error && error.diagnosticId });
+}
+
+function hideError() { $('#errorPanel').classList.remove('visible'); }
+
+function requirementReady(requirement) { return requirement && requirement.status === 'ready'; }
+
+function renderRequirements(requirements) {
+  const root = $('#requirements');
+  root.textContent = '';
+  for (const requirement of requirements || []) {
+    const row = document.createElement('div');
+    row.className = 'req';
+    const icon = requirement.status === 'ready' ? '✓' : requirement.status === 'blocked' ? '!' : '↻';
+    const statusClass = requirement.status === 'ready' ? 'ready' : requirement.status === 'blocked' ? 'blocked' : 'missing';
+    row.innerHTML = `<div class="req-icon">${icon}</div><div><div class="req-name"></div><div class="req-detail"></div></div><span class="badge ${statusClass}"></span>`;
+    row.querySelector('.req-name').textContent = requirement.name;
+    row.querySelector('.req-detail').textContent = requirement.message || requirement.description || '';
+    row.querySelector('.badge').textContent = requirement.status.replaceAll('-', ' ');
+    root.appendChild(row);
+  }
+}
+
+function installReady() {
+  if (!state.machine) return false;
+  const installation = state.machine.installation;
+  return Boolean(installation.present && !installation.blocked && !installation.payloadRepairRequired && (state.machine.requirements || []).every(requirementReady));
+}
+
+function renderMachine(machine) {
+  state.machine = machine;
+  const installation = machine.installation;
+  const requirements = machine.requirements || [];
+  const permissions = machine.permissions || {};
+  $('#versionPill').textContent = `Package ${machine.version}`;
+  $('#osSummary').textContent = `${machine.os.displayName} · ${machine.os.architecture}`;
+  $('#modeSummary').textContent = permissions.elevated ? `${permissions.level} scope` : `Standard scope · ${permissions.mechanism || 'authorization'} on demand`;
+  $('#modeSummary').className = 'value ' + (permissions.elevated ? 'ok' : 'warn');
+  $('#protectedUserHint').textContent = `Protected provisioning account${machine.protectedUsernames.length > 1 ? 's' : ''}: ${machine.protectedUsernames.join(', ')}. ${machine.protectedUsernames.length > 1 ? 'These accounts' : 'This account'} will not be assigned Arcane as a shell.`;
+  $('#usernamePolicyHint').textContent = machine.usernamePolicy.description;
+
+  const banner = $('#downgradeBanner');
+  banner.classList.toggle('visible', installation.blocked);
+  if (installation.blocked) $('#downgradeText').textContent = `Installed Arcane OS ${installation.installedVersion} is newer than package ${installation.packageVersion}. This package will not change the machine.`;
+  $('#accessBanner').classList.toggle('visible', !permissions.elevated && !machine.simulation);
+
+  const allReady = requirements.every(requirementReady);
+  const badge = $('#installBadge');
+  let title;
+  let detail;
+  let button;
+  let status;
+  if (installation.blocked) {
+    title = `Arcane OS ${installation.installedVersion} is newer`;
+    detail = 'Downgrades are blocked. Use an equal or newer Arcane package.';
+    button = 'Changes blocked';
+    status = 'blocked';
+  } else if (!installation.present) {
+    title = 'Arcane OS is not installed';
+    detail = 'Install Arcane OS and automatically install or update every required dependency.';
+    button = `Install Arcane OS ${installation.packageVersion}`;
+    status = 'missing';
+  } else if (installation.action === 'update') {
+    title = `Arcane OS ${installation.installedVersion} is installed`;
+    detail = `Update the global installation to ${installation.packageVersion}; requirements are checked automatically.`;
+    button = `Update Arcane OS to ${installation.packageVersion}`;
+    status = 'update';
+  } else if (installation.payloadRepairRequired || !installation.payload.releaseReady) {
+    title = `Arcane OS ${installation.installedVersion} needs repair`;
+    detail = installation.payload.description || 'Replace the incomplete installation with the current native release payload.';
+    button = 'Repair Arcane installation';
+    status = 'update';
+  } else if (!allReady) {
+    title = `Arcane OS ${installation.installedVersion} is installed`;
+    detail = 'One or more requirements are missing or below the minimum version.';
+    button = 'Repair Arcane requirements';
+    status = 'update';
+  } else {
+    title = `Arcane OS ${installation.installedVersion} is installed`;
+    detail = 'The native Arcane shell, provisioner, core, renderer, and machine requirements are ready.';
+    button = `Arcane OS ${installation.installedVersion} is ready`;
+    status = 'ready';
+  }
+  $('#installTitle').textContent = title;
+  $('#installDetail').textContent = detail;
+  $('#installArcaneButton').textContent = button;
+  badge.textContent = status;
+  badge.className = `badge ${status}`;
+  $('#installedSummary').textContent = installation.present ? `Version ${installation.installedVersion}` : 'Not installed';
+  $('#installedSummary').className = 'value ' + (status === 'ready' ? 'ok' : status === 'blocked' ? 'bad' : 'warn');
+  renderRequirements(requirements);
+  renderControls();
+}
+
+function renderControls() {
+  if (!state.machine) return;
+  const installation = state.machine.installation;
+  const ready = installReady();
+  $('#installArcaneButton').disabled = state.busy || installation.blocked || (ready && installation.action === 'repair' && !installation.payloadRepairRequired);
+  $('#refreshAll').disabled = state.busy;
+  $('#refreshUsers').disabled = state.busy;
+  $('#addUserRow').disabled = state.busy || installation.blocked;
+  $('#createUsersButton').disabled = state.busy || installation.blocked;
+  $('#userReadiness').textContent = ready
+    ? 'Arcane OS is ready. Adding a user will create the account when needed and assign Arcane as its shell.'
+    : 'Arcane will ensure the installation and dependencies are ready as part of adding the user.';
+}
+
+function addUserRow(value) {
+  const row = document.createElement('div');
+  row.className = 'user-entry';
+  row.innerHTML = '<input type="text" autocomplete="off" spellcheck="false" aria-label="Arcane username"><button class="btn remove" type="button" aria-label="Remove username">×</button>';
+  row.querySelector('input').value = value || '';
+  row.querySelector('input').addEventListener('input', scheduleValidation);
+  row.querySelector('.remove').addEventListener('click', () => {
+    if ($('#userEntries').children.length === 1) row.querySelector('input').value = '';
+    else row.remove();
+    scheduleValidation();
+  });
+  $('#userEntries').appendChild(row);
+}
+
+function usernames() {
+  return [...document.querySelectorAll('#userEntries input')].map((input) => input.value.trim()).filter(Boolean);
+}
+
+function scheduleValidation() {
+  clearTimeout(state.validationTimer);
+  state.validationTimer = setTimeout(async () => {
+    const list = usernames();
+    const hint = $('#userValidationHint');
+    if (!list.length) { hint.classList.remove('visible'); hint.textContent = ''; return; }
+    try {
+      const validation = await Arcane.users.validate(list);
+      if (validation.valid) { hint.classList.remove('visible'); hint.textContent = ''; }
+      else {
+        const first = validation.errors[0];
+        hint.textContent = `${first.message}${first.resolution ? ' ' + first.resolution : ''}`;
+        hint.classList.add('visible');
+      }
+    } catch (error) { /* validation is repeated by the final operation */ }
+  }, 300);
+}
+
+function renderCredentials(credentials) {
+  state.credentials = credentials || [];
+  state.pendingActivations = state.credentials.filter((item) => item.activationRequired).map((item) => item.username);
+  state.pendingPasswordApplications = state.credentials.filter((item) => item.applyPasswordRequired).map((item) => ({ username: item.username, temporaryPassword: item.temporaryPassword }));
+  const box = $('#credentials');
+  const activate = $('#activateCredentials');
+  const applyPassword = $('#applyPasswordCredentials');
+  activate.style.display = state.pendingActivations.length ? '' : 'none';
+  applyPassword.style.display = state.pendingPasswordApplications.length ? '' : 'none';
+  if (!state.credentials.length) { box.classList.remove('visible'); $('#credentialsText').textContent = ''; return; }
+  $('#credentialsText').textContent = state.credentials.map((item) => `${item.username}\nTemporary password: ${item.temporaryPassword}\nChange required at next sign-in: ${item.mustChangeAtNextSignIn ? 'Yes' : 'No'}`).join('\n\n');
+  box.classList.add('visible');
+}
+
+function showUserSuccess(message) {
+  const panel = $('#userSuccess');
+  panel.textContent = message || '';
+  panel.classList.toggle('visible', Boolean(message));
+}
+
+function renderUsers(payload) {
+  state.users = payload && payload.users || [];
+  const root = $('#arcaneUsersList');
+  root.textContent = '';
+  if (!state.users.length) {
+    root.innerHTML = '<div class="empty-users">No local users are currently verified with Arcane as their shell.</div>';
+    return;
+  }
+  for (const user of state.users) {
+    const row = document.createElement('div');
+    row.className = 'machine-user';
+    const left = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'machine-user-name';
+    name.textContent = user.username;
+    const meta = document.createElement('div');
+    meta.className = 'machine-user-meta';
+    meta.textContent = [user.profile ? `Profile: ${user.profile}` : null, user.shell ? `Shell: ${user.shell}` : null, user.activationRequired ? 'Staged disabled. Activate only from the credentials panel; if those credentials were lost, re-add this username to recreate it safely.' : user.passwordStatus === 'existing-password-unchanged' ? 'Existing password unchanged; Arcane does not know it.' : user.passwordStatus === 'temporary-issued' ? 'Temporary password issued.' : 'Password not known to Arcane.'].filter(Boolean).join('\n');
+    const badges = document.createElement('div');
+    badges.className = 'machine-user-badges';
+    badges.innerHTML = `<span class="mini-badge ${user.shellAssigned ? 'ready' : 'bad'}">${user.shellAssigned ? 'Arcane shell assigned' : 'Shell not verified'}</span><span class="mini-badge ${user.activationRequired ? 'warn' : user.enabled === false ? 'bad' : 'ready'}">${user.activationRequired ? 'Awaiting activation' : user.enabled === false ? 'Disabled' : 'Enabled'}</span>`;
+    left.append(name, meta, badges);
+    const right = document.createElement('div');
+    right.className = 'machine-user-actions';
+    const passwordAction = document.createElement('div');
+    passwordAction.className = 'machine-user-action';
+    const button = document.createElement('button');
+    button.className = 'btn compact';
+    button.textContent = 'Set temporary password';
+    button.disabled = state.busy || !user.shellAssigned || user.activationRequired;
+    button.addEventListener('click', () => resetPassword(user.username));
+    const note = document.createElement('div');
+    note.className = 'user-action-note';
+    note.textContent = 'Replaces the current OS password and requires a change at next sign-in.';
+    passwordAction.append(button, note);
+    right.append(passwordAction);
+    if (user.canRestoreShell && !user.activationRequired) {
+      const restoreAction = document.createElement('div');
+      restoreAction.className = 'machine-user-action';
+      const restoreButton = document.createElement('button');
+      restoreButton.className = 'btn compact danger';
+      restoreButton.textContent = 'Restore previous shell';
+      restoreButton.disabled = state.busy || !user.shellAssigned;
+      restoreButton.addEventListener('click', () => restoreShell(user.username));
+      const restoreNote = document.createElement('div');
+      restoreNote.className = 'user-action-note';
+      restoreNote.textContent = user.previousShellPresent && user.previousShell
+        ? `Restores ${user.previousShell}.`
+        : 'Removes the per-user override and returns to the Windows default shell.';
+      restoreAction.append(restoreButton, restoreNote);
+      right.append(restoreAction);
+    }
+    row.append(left, right);
+    root.appendChild(row);
+  }
+}
+
+async function refreshUsers() {
+  const payload = await Arcane.users.list();
+  renderUsers(payload);
+  return payload;
+}
+
+async function refreshAll() {
+  const [machine, users] = await Promise.all([Arcane.machine.status(), Arcane.users.list()]);
+  renderMachine(machine);
+  renderUsers(users);
+  return machine;
+}
+
+async function installArcane() {
+  hideError();
+  renderCredentials([]);
+  setBusy(true, 'Installing Arcane OS and checking dependencies…');
+  appendOutput('Starting Arcane installation. The window will remain open; a temporary privileged worker will be authorized only if required.', 'step');
+  try {
+    const result = await Arcane.installation.ensure();
+    appendOutput(`Arcane OS ${result.installation.installedVersion || result.installation.packageVersion} is ready.`, 'info');
+    showUserSuccess('Arcane OS installation completed successfully.');
+    await refreshAll();
+  } catch (error) { await showError('Unable to install Arcane OS', error); }
+  finally { setBusy(false, 'Ready. Choose the next action above.'); }
+}
+
+async function addUsers() {
+  const list = usernames();
+  if (!list.length) { await showError('Username required', Object.assign(new Error('Enter at least one local username.'), { code: 'USERNAME_REQUIRED', resolution: 'Use the username field in step 2.' })); return; }
+  hideError();
+  renderCredentials([]);
+  showUserSuccess('');
+  setBusy(true, 'Adding Arcane users…');
+  try {
+    const validation = await Arcane.users.validate(list);
+    if (!validation.valid) {
+      const first = validation.errors[0];
+      throw Object.assign(new Error(first.message), first);
+    }
+    const result = await Arcane.users.add(validation.users.map((item) => item.username));
+    renderCredentials(result.credentials || []);
+    const created = (result.users || []).filter((user) => user.created).map((user) => user.username);
+    const existing = (result.users || []).filter((user) => !user.created).map((user) => user.username);
+    const messages = [];
+    if (created.length) messages.push(`Created and configured disabled account${created.length > 1 ? 's' : ''}: ${created.join(', ')}. Save the temporary credentials, then explicitly activate the account${created.length > 1 ? 's' : ''}.`);
+    if (existing.length) messages.push(`Configured existing account${existing.length > 1 ? 's' : ''}: ${existing.join(', ')}. Existing passwords were preserved; use Set temporary password when needed.`);
+    showUserSuccess(messages.join(' ') || 'Arcane user provisioning completed successfully.');
+    $('#userEntries').textContent = '';
+    addUserRow('');
+    await refreshAll();
+  } catch (error) { await showError(error.code === 'INVALID_USERNAME' ? 'Choose a valid account username' : 'Unable to add Arcane users', error); }
+  finally { setBusy(false, 'Ready. Choose the next action above.'); }
+}
+
+async function activatePendingAccounts() {
+  if (!state.pendingActivations.length) return;
+  hideError();
+  const usernames = [...state.pendingActivations];
+  const activated = [];
+  setBusy(true, 'Activating staged Arcane users…');
+  try {
+    for (const username of usernames) {
+      await Arcane.users.activate(username);
+      activated.push(username);
+      state.credentials = state.credentials.map((item) => String(item.username).toLowerCase() === String(username).toLowerCase()
+        ? { ...item, activationRequired: false }
+        : item);
+      renderCredentials(state.credentials);
+    }
+    showUserSuccess(`Activated ${usernames.join(', ')}. The temporary credentials remain visible until you leave this provisioner.`);
+    await refreshUsers();
+  } catch (error) {
+    if (activated.length) {
+      showUserSuccess(`Activated ${activated.join(', ')}. Credentials for the remaining staged accounts are still visible and can be retried.`);
+      await refreshUsers().catch(() => {});
+    }
+    await showError('Unable to activate staged Arcane users', error);
+  } finally {
+    setBusy(false, 'Ready. Choose the next action above.');
+  }
+}
+
+async function resetPassword(username) {
+  hideError();
+  renderCredentials([]);
+  showUserSuccess('');
+  setBusy(true, `Setting a temporary password for ${username}…`);
+  try {
+    const result = await Arcane.users.resetPassword(username);
+    renderCredentials(result.credentials || []);
+    showUserSuccess(`A temporary password was generated for ${username}, but the operating-system password has not changed yet. Save it, then explicitly apply it below.`);
+    await refreshUsers();
+  } catch (error) { await showError(`Unable to set a temporary password for ${username}`, error); }
+  finally { setBusy(false, 'Ready. Choose the next action above.'); }
+}
+
+async function applyPendingPasswords() {
+  if (!state.pendingPasswordApplications.length) return;
+  hideError();
+  const pending = [...state.pendingPasswordApplications];
+  const applied = [];
+  setBusy(true, 'Applying saved temporary password…');
+  try {
+    for (const item of pending) {
+      await Arcane.users.applyPassword(item.username, item.temporaryPassword);
+      applied.push(item.username);
+      state.credentials = state.credentials.map((credential) => String(credential.username).toLowerCase() === String(item.username).toLowerCase()
+        ? { ...credential, applyPasswordRequired: false }
+        : credential);
+      renderCredentials(state.credentials);
+    }
+    showUserSuccess(`Applied the saved temporary password for ${pending.map((item) => item.username).join(', ')}. The credentials remain visible until you leave this provisioner.`);
+    await refreshUsers();
+  } catch (error) {
+    if (applied.length) {
+      showUserSuccess(`Applied the saved temporary password for ${applied.join(', ')}. Credentials for the remaining accounts are still visible and can be retried.`);
+      await refreshUsers().catch(() => {});
+    }
+    await showError('Unable to apply the saved temporary password', error);
+  } finally {
+    setBusy(false, 'Ready. Choose the next action above.');
+  }
+}
+
+async function restoreShell(username) {
+  if (!window.confirm(`Restore the previous login shell for ${username}? Arcane will stop being this account's default shell.`)) return;
+  hideError();
+  renderCredentials([]);
+  showUserSuccess('');
+  setBusy(true, `Restoring the previous login shell for ${username}…`);
+  try {
+    await Arcane.users.restoreShell(username);
+    showUserSuccess(`The previous login shell for ${username} was restored and verified.`);
+    await refreshUsers();
+  } catch (error) { await showError(`Unable to restore the previous shell for ${username}`, error); }
+  finally { setBusy(false, 'Ready. Choose the next action above.'); }
+}
+
+Arcane.events.on('core.ready', (event) => appendOutput(`Arcane Core ${event.version} connected through native IPC.`, 'info', { platform: event.platform && event.platform.displayName, elevated: event.elevated }));
+Arcane.events.on('operation.started', (event) => appendOutput(`Started ${event.operationType}.`, 'step'));
+Arcane.events.on('operation.progress', (event) => {
+  $('#progressBar').style.width = `${Math.max(0, Math.min(100, Number(event.progress || 0)))}%`;
+  $('#actionStatus').textContent = event.message || 'Operation in progress…';
+});
+Arcane.events.on('operation.log', (event) => appendOutput(event.message, event.level, event.details));
+Arcane.events.on('operation.completed', () => { $('#progressBar').style.width = '100%'; });
+Arcane.events.on('operation.failed', (event) => appendOutput(event.error && event.error.message || 'Operation failed.', 'error', event.error));
+
+$('#addUserRow').addEventListener('click', () => addUserRow(''));
+$('#refreshAll').addEventListener('click', async () => { try { await refreshAll(); showToast('Machine status refreshed'); } catch (error) { await showError('Unable to refresh machine status', error); } });
+$('#refreshUsers').addEventListener('click', async () => { try { await refreshUsers(); showToast('Arcane user list refreshed'); } catch (error) { await showError('Unable to refresh Arcane users', error); } });
+$('#installArcaneButton').addEventListener('click', installArcane);
+$('#createUsersButton').addEventListener('click', addUsers);
+$('#copyOutput').addEventListener('click', () => copyText($('#copyOutput'), $('#console').textContent, 'Provisioning output copied'));
+$('#copyCredentials').addEventListener('click', () => copyText($('#copyCredentials'), $('#credentialsText').textContent, 'Temporary credentials copied'));
+$('#activateCredentials').addEventListener('click', activatePendingAccounts);
+$('#applyPasswordCredentials').addEventListener('click', applyPendingPasswords);
+$('#copyError').addEventListener('click', () => copyText($('#copyError'), JSON.stringify(state.lastDiagnostic, null, 2), 'Full diagnostics copied'));
+$('#dismissError').addEventListener('click', hideError);
+
+window.addEventListener('error', (event) => showError('Arcane interface error', event.error || new Error(event.message)));
+window.addEventListener('unhandledrejection', (event) => showError('Arcane interface error', event.reason instanceof Error ? event.reason : new Error(String(event.reason))));
+
+async function initialize() {
+  addUserRow('');
+  try {
+    await Arcane.system.ping();
+    await refreshAll();
+    appendOutput('Arcane Provisioner is ready.', 'info');
+  } catch (error) { await showError('Unable to initialize Arcane Provisioner', error); }
+}
+initialize();
+  </script>
+</body>
+</html>
