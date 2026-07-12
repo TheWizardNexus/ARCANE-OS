@@ -28,6 +28,13 @@ const simulate = args.has('--simulate') || process.env.ARCANE_SIMULATE_PROVISION
 const simulateStandard = args.has('--simulate-standard') || process.env.ARCANE_SIMULATE_STANDARD === '1';
 const simulatedPlatform = argValue('--simulate-platform=') || process.env.ARCANE_SIMULATE_PLATFORM || '';
 const simulatedUserFailure = simulate ? argValue('--simulate-user-failure=') || '' : '';
+const simulatedCapabilityOverride = simulate && !process.pkg
+  ? String(argValue('--simulate-capabilities=') || '').split(',').map((value) => value.trim()).filter(Boolean)
+  : [];
+const simulatedExclusiveMutationDelayMs = simulate && !process.pkg
+  ? Math.min(5000, Math.max(0, Number(argValue('--simulate-exclusive-mutation-delay-ms=') || 0) || 0))
+  : 0;
+const sessionCommandSelfTest = simulate && !process.pkg ? argValue('--self-test-session-command=') || '' : '';
 const platform = ['win32', 'linux'].includes(simulatedPlatform) ? simulatedPlatform : process.platform;
 const productionPackaged = Boolean(process.pkg) && !simulate;
 const noBrowser = true;
@@ -127,7 +134,9 @@ const APP_DESCRIPTOR = APP_REGISTRY[appMode] && typeof APP_REGISTRY[appMode] ===
   ? APP_REGISTRY[appMode]
   : { displayName: appMode, type: 'app', entry: null, capabilities: [] };
 const APP_CAPABILITIES = new Set(
-  Array.isArray(APP_DESCRIPTOR.capabilities)
+  simulatedCapabilityOverride.length
+    ? simulatedCapabilityOverride
+    : Array.isArray(APP_DESCRIPTOR.capabilities)
     ? APP_DESCRIPTOR.capabilities.map((value) => String(value || '').trim()).filter(Boolean)
     : []
 );
@@ -211,6 +220,8 @@ function normalizeError(error) {
     method: error && error.method ? error.method : null,
     application: error && error.application ? error.application : null,
     requiredCapability: error && error.requiredCapability ? error.requiredCapability : null,
+    activeOperation: error && error.activeOperation ? error.activeOperation : null,
+    retryable: Boolean(error && error.retryable),
   };
 }
 function recordError(scope, error, details) {
@@ -622,6 +633,12 @@ async function updateArcaneUserRecord(username, patch) {
 
 const APP_STORAGE_VALUE_MAX_BYTES = 128 * 1024;
 const APP_STORAGE_TOTAL_MAX_BYTES = 1024 * 1024;
+let appStorageMutationQueue = Promise.resolve();
+function withAppStorageMutation(work) {
+  const result = appStorageMutationQueue.then(work, work);
+  appStorageMutationQueue = result.catch(() => {});
+  return result;
+}
 function validateStorageKey(input) {
   const key = String(input || '').trim();
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
@@ -718,18 +735,22 @@ function getAppStorage(keyInput) {
 async function setAppStorage(keyInput, inputValue) {
   const key = validateStorageKey(keyInput);
   const normalized = normalizeStorageValue(inputValue);
-  const entries = readAppStorage();
-  entries[key] = normalized.value;
-  const totalBytes = await writeAppStorage(entries);
-  return { key, value: normalized.value, bytes: normalized.bytes, totalBytes, maximumBytes: APP_STORAGE_TOTAL_MAX_BYTES };
+  return withAppStorageMutation(async () => {
+    const entries = readAppStorage();
+    entries[key] = normalized.value;
+    const totalBytes = await writeAppStorage(entries);
+    return { key, value: normalized.value, bytes: normalized.bytes, totalBytes, maximumBytes: APP_STORAGE_TOTAL_MAX_BYTES };
+  });
 }
 async function deleteAppStorage(keyInput) {
   const key = validateStorageKey(keyInput);
-  const entries = readAppStorage();
-  const deleted = Object.prototype.hasOwnProperty.call(entries, key);
-  if (deleted) delete entries[key];
-  const totalBytes = deleted ? await writeAppStorage(entries) : Buffer.byteLength(storagePayload(entries), 'utf8');
-  return { key, deleted, totalBytes, maximumBytes: APP_STORAGE_TOTAL_MAX_BYTES };
+  return withAppStorageMutation(async () => {
+    const entries = readAppStorage();
+    const deleted = Object.prototype.hasOwnProperty.call(entries, key);
+    if (deleted) delete entries[key];
+    const totalBytes = deleted ? await writeAppStorage(entries) : Buffer.byteLength(storagePayload(entries), 'utf8');
+    return { key, deleted, totalBytes, maximumBytes: APP_STORAGE_TOTAL_MAX_BYTES };
+  });
 }
 async function listArcaneUsers() {
   const state = readArcaneUsersState();
@@ -1938,6 +1959,34 @@ function rendererStatus() {
   return { id: native.id === 'windows' ? 'webview2' : 'webkitgtk', available: Boolean(executable), executable, version: null };
 }
 
+let activeExclusiveMutation = null;
+function acquireExclusiveMutation(method, requestId) {
+  if (activeExclusiveMutation) {
+    const activeOperation = {
+      method: activeExclusiveMutation.method,
+      requestId: activeExclusiveMutation.requestId,
+      startedAt: activeExclusiveMutation.startedAt,
+    };
+    throw arcaneError(
+      'OPERATION_BUSY',
+      `Arcane is already completing ${activeOperation.method}.`,
+      'Wait for the active machine operation to finish, then try again.',
+      409,
+      { activeOperation, retryable: true }
+    );
+  }
+  const token = Symbol('exclusive-mutation');
+  activeExclusiveMutation = {
+    token,
+    method: String(method || 'machine mutation'),
+    requestId: requestId || null,
+    startedAt: stamp(),
+  };
+  return () => {
+    if (activeExclusiveMutation && activeExclusiveMutation.token === token) activeExclusiveMutation = null;
+  };
+}
+
 const METHOD_POLICIES = Object.freeze({
   'system.ping': Object.freeze({}),
   'version.current': Object.freeze({}),
@@ -1960,15 +2009,15 @@ const METHOD_POLICIES = Object.freeze({
   'diagnostics.recent': Object.freeze({ capability:'diagnostics.read' }),
   'diagnostics.get': Object.freeze({ capability:'diagnostics.read' }),
   'provisioning.plan': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'] }),
-  'system.lock': Object.freeze({ capability:'session.control', appTypes:['shell'] }),
-  'session.logout': Object.freeze({ capability:'session.control', appTypes:['shell'] }),
-  'requirements.ensure': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'], privileged:true }),
-  'installation.ensure': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'], privileged:true }),
-  'users.add': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true }),
-  'users.activate': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true }),
-  'users.resetPassword': Object.freeze({ capability:'users.manage', appTypes:['provisioner'] }),
-  'users.applyPassword': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true }),
-  'users.restoreShell': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true }),
+  'system.lock': Object.freeze({ capability:'session.control', appTypes:['shell'], exclusiveMutation:true }),
+  'session.logout': Object.freeze({ capability:'session.control', appTypes:['shell'], exclusiveMutation:true }),
+  'requirements.ensure': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
+  'installation.ensure': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
+  'users.add': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
+  'users.activate': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
+  'users.resetPassword': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], exclusiveMutation:true }),
+  'users.applyPassword': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
+  'users.restoreShell': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
 });
 
 function publicAppDescriptor() {
@@ -2019,15 +2068,19 @@ function assertMethodAllowed(method) {
   return policy;
 }
 
+function publicOperatingSystemInfo() {
+  const { hostname: _hostname, ...operatingSystem } = osInfo();
+  return operatingSystem;
+}
+
 function platformStatus() {
   const permissions = permissionStatus(true);
   const renderer = rendererStatus();
   return {
-    ...osInfo(),
+    ...publicOperatingSystemInfo(),
     version: VERSION,
     protocol: PROTOCOL,
     application: appMode,
-    identity: currentIdentity(),
     renderer,
     permissions,
     capabilities: capabilityStatus(),
@@ -2075,12 +2128,61 @@ function machineStatus() {
   };
 }
 
-function launchSessionCommand(spec, label) {
+async function launchSessionCommand(spec, label, options) {
   if (!spec) throw arcaneError('SESSION_COMMAND_UNAVAILABLE', `Arcane cannot ${label} this session on the detected operating system.`, 'Install or enable a supported desktop session controller.');
-  if (simulate) return { requested: true, simulated: true, command: spec[0], args: spec[1] };
-  const child = spawn(spec[0], spec[1] || [], { detached: true, stdio: 'ignore', windowsHide: true });
+  const forceDispatch = Boolean(options && options.forceDispatch);
+  if (simulate && !forceDispatch) return { requested: true, accepted: true, simulated: true, command: spec[0], args: spec[1] };
+  let child;
+  try {
+    child = spawn(spec[0], spec[1] || [], {
+      cwd: safeSubprocessCwd,
+      env: safeSubprocessEnvironment,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+  } catch (error) {
+    throw arcaneError(
+      'SESSION_COMMAND_DISPATCH_FAILED',
+      `Arcane could not ${label} this session.`,
+      'Verify that the operating-system session controller is installed and permitted, then try again.',
+      503,
+      { reason: error && (error.code || error.message) || 'spawn-failed' }
+    );
+  }
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.removeListener('spawn', onSpawn);
+      child.removeListener('error', onError);
+      callback(value);
+    };
+    const onSpawn = () => finish(resolve);
+    const onError = (error) => finish(reject, arcaneError(
+      'SESSION_COMMAND_DISPATCH_FAILED',
+      `Arcane could not ${label} this session.`,
+      'Verify that the operating-system session controller is installed and permitted, then try again.',
+      503,
+      { reason: error && (error.code || error.message) || 'spawn-failed' }
+    ));
+    const timer = setTimeout(() => {
+      try { child.kill(); } catch (_) {}
+      finish(reject, arcaneError(
+        'SESSION_COMMAND_DISPATCH_TIMEOUT',
+        `Arcane could not confirm that the request to ${label} this session was accepted.`,
+        'Verify that the operating-system session controller is responsive, then try again.',
+        504,
+        { reason: 'spawn-timeout' }
+      ));
+    }, 10000);
+    child.once('spawn', onSpawn);
+    child.once('error', onError);
+  });
   child.unref();
-  return { requested: true, simulated: false, command: spec[0] };
+  return { requested: true, accepted: true, simulated: false, command: spec[0], pid: child.pid || null };
 }
 
 async function dispatchMethod(request, options) {
@@ -2181,8 +2283,13 @@ async function handleRequest(request, options) {
   if (!request || request.protocol !== PROTOCOL || request.type !== 'request' || !request.id) {
     throw arcaneError('INVALID_RPC_REQUEST', 'Arcane received an invalid native request.', 'Restart the Arcane application.', 400);
   }
+  let releaseExclusiveMutation = null;
   try {
     const policy=assertMethodAllowed(String(request.method || ''));
+    if (policy.exclusiveMutation) {
+      releaseExclusiveMutation = acquireExclusiveMutation(request.method, request.id);
+      if (simulatedExclusiveMutationDelayMs) await delay(simulatedExclusiveMutationDelayMs);
+    }
     if (policy.privileged && !isElevated()) {
       if (options && options.worker) {
         throw arcaneError('ELEVATION_NOT_GRANTED', 'The privileged Arcane worker did not receive administrator access.', 'Approve the operating-system authorization prompt and try again.', 403);
@@ -2195,6 +2302,8 @@ async function handleRequest(request, options) {
   } catch (error) {
     const failure = normalizeResponseError(request.method, request.id, error);
     await emitFrame({ protocol: PROTOCOL, type: 'response', id: request.id, ok: false, error: failure, time: stamp() });
+  } finally {
+    if (releaseExclusiveMutation) releaseExclusiveMutation();
   }
 }
 
@@ -3045,8 +3154,26 @@ function startStandardCore() {
   process.stdin.on('data', (chunk) => decoder.push(chunk));
   process.stdin.on('end', () => process.exit(0));
   process.stdin.resume();
-  emitEvent('core.ready', { pid: process.pid, version: VERSION, app: appMode, platform: osInfo(), elevated: isElevated(), simulation: simulate });
+  emitEvent('core.ready', { pid: process.pid, version: VERSION, app: appMode, platform: publicOperatingSystemInfo(), elevated: isElevated(), simulation: simulate });
 }
 
-if (privilegedWorker) startPrivilegedWorker();
+async function startSessionCommandSelfTest() {
+  if (!['accepted', 'error'].includes(sessionCommandSelfTest)) {
+    console.error('Arcane session-command self-test mode must be accepted or error.');
+    process.exit(10);
+  }
+  const spec = sessionCommandSelfTest === 'accepted'
+    ? [process.execPath, ['-e', 'setTimeout(() => process.exit(0), 5000)']]
+    : [path.join(os.tmpdir(), `arcane-missing-session-command-${process.pid}-${crypto.randomBytes(8).toString('hex')}`), []];
+  try {
+    const result = await launchSessionCommand(spec, 'run the session-command self-test for', { forceDispatch: true });
+    process.stdout.write(`${JSON.stringify({ ok: true, result })}\n`);
+  } catch (error) {
+    process.stdout.write(`${JSON.stringify({ ok: false, error: normalizeError(error) })}\n`);
+  }
+  process.exit(0);
+}
+
+if (sessionCommandSelfTest) startSessionCommandSelfTest();
+else if (privilegedWorker) startPrivilegedWorker();
 else startStandardCore();
