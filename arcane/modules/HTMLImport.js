@@ -1,3 +1,12 @@
+const htmlImportHostRegistryKey=Symbol.for('arcane.html-import.hosts');
+const htmlImportHostRegistry=globalThis[htmlImportHostRegistryKey] instanceof Map
+  ?globalThis[htmlImportHostRegistryKey]
+  :new Map();
+
+globalThis[htmlImportHostRegistryKey]=htmlImportHostRegistry;
+
+let htmlImportScriptId=0;
+
 class HTMLImport extends HTMLElement {
   constructor() {
       super();
@@ -88,13 +97,21 @@ class HTMLImport extends HTMLElement {
             return `import(${JSON.stringify(new URL(specifier,import.meta.url).href)})`;
           }
         );
-        script.parentNode.removeChild(script);
-        const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
-        const execute=new AsyncFunction(source);
+        const executable=document.createElement('script');
+        const hostToken=`html-import-${Date.now()}-${htmlImportScriptId++}`;
 
-        execute.call(this).catch(
-          error=>console.error('Error executing HTML component script:',error)
-        );
+        executable.dataset.arcaneHostToken=hostToken;
+        executable.textContent=`(async function(){${source}}).call((()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const host=registry instanceof Map&&token?registry.get(token):null;if(!host)throw new Error('HTML import host binding is unavailable.');return host;})())`;
+        script.parentNode.removeChild(script);
+
+        htmlImportHostRegistry.set(hostToken,this);
+        try{
+          document.head.appendChild(executable);
+        }finally{
+          executable.remove();
+          htmlImportHostRegistry.delete(hostToken);
+          delete executable.dataset.arcaneHostToken;
+        }
       }
     );
   }

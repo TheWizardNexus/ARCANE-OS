@@ -80,8 +80,10 @@ describe('BOSS Libraries chat integration',()=>{
     });
 
     it('executes imported component scripts with their host on repeat loads',()=>{
-        assert.match(htmlImport,/new AsyncFunction\(source\)/);
-        assert.match(htmlImport,/execute\.call\(this\)/);
-        assert.doesNotMatch(htmlImport,/document\.currentScript/);
+        assert.match(htmlImport,/document\.createElement\('script'\)/);
+        assert.match(htmlImport,/document\.head\.appendChild\(executable\)/);
+        assert.match(htmlImport,/arcaneHostToken/);
+        assert.match(htmlImport,/htmlImportHostRegistry\.set\(hostToken,this\)/);
+        assert.doesNotMatch(htmlImport,/\beval\s*\(|new AsyncFunction/);
     });
 });
