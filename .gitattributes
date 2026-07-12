@@ -1,2 +1,4 @@
 local/vendors/whisper_cpp/models/ggml-small.bin filter=lfs diff=lfs merge=lfs -text
-pwa/nelson/local/vendors/whisper_cpp/models/*.bin filter=lfs diff=lfs merge=lfs -text
+.githooks/* text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf

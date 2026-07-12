@@ -1,9 +1,16 @@
 {
-  "name": "twin",
+  "name": "arcane-os",
   "version": "0.1.0",
-  "description": "This is the documentation on the framework.",
+  "type": "module",
+  "description": "Shared browser runtime and application workspace for Arcane OS.",
   "scripts": {
-    "test": "node --test test/errors.test.mjs test/mail-server.test.mjs test/mail-transport.test.mjs"
+    "test": "node --test test/ai.test.mjs test/boss-chat-integration.test.mjs test/boss-library-manifest.test.mjs test/boss-library-page.test.mjs test/boss-library-runtime.test.mjs test/boss-modelfile.test.mjs test/component-contracts.test.mjs test/errors.test.mjs test/mail-transport.test.mjs test/machine-check-order.test.mjs",
+    "test:machine": "npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2 run check",
+    "check": "npm test && npm run test:machine",
+    "check:windows": "npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2 run check:windows",
+    "prepush": "npm run check && npm run check:windows",
+    "hooks:install": "node tools/install-git-hooks.mjs",
+    "prepare": "node tools/install-git-hooks.mjs"
   },
   "author": "",
   "license": "ISC",

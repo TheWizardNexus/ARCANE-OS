@@ -1,0 +1,34 @@
+name: Arcane checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            machine_bundles/arcane-os-machine-bundle-v0.8.2/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
+      - name: Run portable mandatory checks
+        run: npm run check
+      - name: Build Windows release and acquire pinned WebView2 SDK
+        run: npm run build:win --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
+      - name: Build Windows native targeted apps
+        run: npm run build:apps:windows --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
+      - name: Verify Windows native targeted apps
+        run: npm run verify:apps --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
+      - name: Verify compiled Windows dispatch contracts
+        run: npm run verify:windispatch --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
