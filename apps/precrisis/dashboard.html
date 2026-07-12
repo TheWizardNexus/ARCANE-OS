@@ -170,7 +170,7 @@
                 <html-import
                     id="dashboardConfig"
                     class="dashboard-config"
-                    href="./arcane/components/dashboard-config.html?v=3"
+                    href="./arcane/components/dashboard-config.html?v=4"
                 ></html-import>
             </section>
 
@@ -357,6 +357,7 @@
             chart.className='dashboard-chart';
             chart.dataset.chartKey=definition.key;
             chart.dataset.title=definition.title;
+            chart.dataset.info=definition.description||'';
             chart.dataset.chartStyle=definition.style;
             chart.dataset.min=`${definition.min}`;
             chart.dataset.max=`${definition.max}`;
@@ -365,7 +366,7 @@
             chart.dataset.timeLabel=definition.timeLabel;
             chart.dataset.removable=`${definition.removable===true}`;
             chart.dataset.removeLabel=`Remove ${definition.title} from dashboard`;
-            chart.setAttribute('href','./arcane/components/chart.html?v=4');
+            chart.setAttribute('href','./arcane/components/chart.html?v=5');
 
             if(definition.fullWidth){
                 chart.classList.add('full-width');

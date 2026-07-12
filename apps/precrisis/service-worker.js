@@ -1,4 +1,4 @@
-const CACHE_NAME = 'PreCrisis-cache-v37';
+const CACHE_NAME = 'PreCrisis-cache-v38';
 const urlsToCache = [
     './',
     './index.html',
@@ -20,6 +20,7 @@ const urlsToCache = [
     '../../arcane/css/layout.css?v=3',
     '../../arcane/css/dashboard-config.css',
     '../../arcane/css/dashboard-config.css?v=1',
+    '../../arcane/css/dashboard-config.css?v=2',
     
     './img/1024.png',
     './img/512.png',
@@ -41,6 +42,7 @@ const urlsToCache = [
     './modules/AssessmentTools.js',
     '../../arcane/modules/ChatRecords.js',
     '../../arcane/modules/ChartLibrary.js',
+    '../../arcane/modules/ComponentContracts.js',
     './modules/CrisisModal.js',
     './modules/DashboardCharts.js',
     './modules/DashboardData.js',
@@ -74,10 +76,12 @@ const urlsToCache = [
     '../../arcane/components/chart.html?v=2',
     '../../arcane/components/chart.html?v=3',
     '../../arcane/components/chart.html?v=4',
+    '../../arcane/components/chart.html?v=5',
     '../../arcane/components/dashboard-config.html',
     '../../arcane/components/dashboard-config.html?v=1',
     '../../arcane/components/dashboard-config.html?v=2',
     '../../arcane/components/dashboard-config.html?v=3',
+    '../../arcane/components/dashboard-config.html?v=4',
     '../../arcane/components/data-maintenance.html',
     '../../arcane/components/data-maintenance.html?v=1',
     '../../arcane/components/data-maintenance.html?v=2',
@@ -112,6 +116,7 @@ const urlsToCache = [
     '../../arcane/components/markdown-editor.html?v=5',
     '../../arcane/components/markdown-editor.html?v=6',
     '../../arcane/components/markdown-editor.html?v=7',
+    '../../arcane/components/markdown-editor.html?v=8',
     '../../arcane/components/modal.html',
     '../../arcane/components/modal.html?v=3',
     '../../arcane/components/modal.html?v=4',
@@ -138,6 +143,7 @@ const urlsToCache = [
     '../../arcane/components/voice-transcription.html?v=5',
     '../../arcane/components/voice-transcription.html?v=6',
     '../../arcane/components/voice-transcription.html?v=7',
+    '../../arcane/components/voice-transcription.html?v=8',
     '../../arcane/entities/Chat.js',
     '../../arcane/entities/File.js',
     './entities/Journal.js',

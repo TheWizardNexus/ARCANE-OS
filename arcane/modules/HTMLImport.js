@@ -4,7 +4,7 @@ class HTMLImport extends HTMLElement {
       this.attachShadow({ mode: 'open' });
   }
 
-  #cacheVersion=2;
+  #cacheVersion=3;
 
   async connectedCallback() {
     const href = this.getAttribute('href');
@@ -81,10 +81,20 @@ class HTMLImport extends HTMLElement {
           return;
           //newScript.src = script.src;
         }
-        
-        let newScript=script.innerText;
+
+        const source=(script.textContent||'').replace(
+          /\bimport\s*\(\s*(['"])(\.{1,2}\/[^'"]+)\1\s*\)/g,
+          (_match,_quote,specifier)=>{
+            return `import(${JSON.stringify(new URL(specifier,import.meta.url).href)})`;
+          }
+        );
         script.parentNode.removeChild(script);
-        eval(`(async ()=>{${newScript}})()`);
+        const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+        const execute=new AsyncFunction(source);
+
+        execute.call(this).catch(
+          error=>console.error('Error executing HTML component script:',error)
+        );
       }
     );
   }

@@ -4,6 +4,12 @@
     grid-template-columns:repeat(auto-fit,minmax(16em,1fr));
 }
 
+.chart-option-group{
+    font-size:1em;
+    grid-column:1 / -1;
+    margin:.5em 0 0;
+}
+
 .chart-option{
     align-items:flex-start;
     border:1px solid var(--border-color);
@@ -28,4 +34,12 @@
 .chart-option p{
     font-size:.9em;
     opacity:.75;
+}
+
+.chart-option.disabled{
+    opacity:.55;
+}
+
+.dashboard-config-empty{
+    opacity:.7;
 }

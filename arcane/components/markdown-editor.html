@@ -60,31 +60,35 @@
     .status{
         margin-right:auto;
     }
+
+    .hidden{
+        display:none;
+    }
 </style>
 
 <section class="markdown-editor">
-    <input id="entryTitle" class="entry-title" type="text" placeholder="Title (optional)">
-    <section id="preview" class="preview" aria-label="Markdown preview" data-empty-label="Markdown preview"></section>
-    <section id="toolbar" class="toolbar" aria-label="Markdown formatting">
-        <button type="button" data-format="heading" title="Heading">Heading</button>
-        <button type="button" data-format="bold" title="Bold">B</button>
-        <button type="button" data-format="italic" title="Italic"><em>I</em></button>
-        <button type="button" data-format="strike" title="Strikethrough"><s>S</s></button>
-        <button type="button" data-format="code" title="Inline code">Code</button>
-        <button type="button" data-format="link" title="Link">Link</button>
-        <button type="button" data-format="quote" title="Quote">Quote</button>
-        <button type="button" data-format="list" title="Bulleted list">List</button>
-    </section>
-    <textarea id="entryMarkdown" class="entry-markdown" placeholder="Write in Markdown..."></textarea>
+    <input id="entryTitle" class="entry-title" type="text">
+    <section id="preview" class="preview"></section>
+    <section id="toolbar" class="toolbar"></section>
+    <textarea id="entryMarkdown" class="entry-markdown"></textarea>
     <section class="actions">
-        <span id="status" class="status" aria-live="polite">Loading editor...</span>
-        <button id="save" type="button" disabled>Save</button>
+        <span id="status" class="status" aria-live="polite"></span>
+        <button id="save" type="button" disabled></button>
     </section>
 </section>
 
 <script type="module">
     const host=this;
-    const {default:MD}=await import('../modules/MD.js?v=2');
+    const componentURL=new URL(
+        host.getAttribute('href')||'./arcane/components/markdown-editor.html',
+        document.baseURI
+    );
+    const moduleURL=name=>new URL(`../modules/${name}`,componentURL).href;
+    const {default:MD}=await import(moduleURL('MD.js?v=2'));
+    const {
+        applyMarkdownFormat,
+        normalizeMarkdownOptions
+    }=await import(moduleURL('ComponentContracts.js'));
     const titleInput=host.shadowRoot.querySelector('#entryTitle');
     const preview=host.shadowRoot.querySelector('#preview');
     const toolbar=host.shadowRoot.querySelector('#toolbar');
@@ -93,75 +97,144 @@
     const status=host.shadowRoot.querySelector('#status');
 
     let previewFrame=0;
+    let options=normalizeMarkdownOptions(optionsFromDataset());
 
     host.clear=clear;
     host.configure=configure;
     host.focus=()=>textarea.focus();
+    host.saveEntry=saveEntry;
 
-    Object.defineProperty(
+    Object.defineProperties(
         host,
-        'value',
         {
-            get:()=>textarea.value,
-            set:value=>{
-                textarea.value=`${value||''}`;
-                updatePreview();
-            }
+            entryTitle:{
+                get:()=>titleInput.value,
+                set:value=>setTitle(value)
+            },
+            options:{get:getOptions,set:configure},
+            value:{get:()=>textarea.value,set:setValue}
         }
     );
 
-    Object.defineProperty(
-        host,
-        'entryTitle',
-        {
-            get:()=>titleInput.value,
-            set:value=>titleInput.value=`${value||''}`
-        }
-    );
-
-    textarea.addEventListener('input',schedulePreview);
+    textarea.addEventListener('input',contentChanged);
+    titleInput.addEventListener('input',contentChanged);
     toolbar.addEventListener('click',formatMarkdown);
     saveButton.addEventListener('click',saveEntry);
 
-    function configure(options={}){
-        if(!options||typeof options!=='object'){
-            return false;
-        }
-
-        const labels={
-            bodyPlaceholder:[textarea,'placeholder'],
-            previewLabel:[preview,'aria-label'],
-            saveLabel:[saveButton,'textContent'],
-            titlePlaceholder:[titleInput,'placeholder']
-        };
-
-        for(const [key,[element,property]] of Object.entries(labels)){
-            if(typeof options[key]==='string'&&options[key]){
-                if(property==='textContent'){
-                    element.textContent=options[key];
-                }else{
-                    element.setAttribute(property,options[key]);
-                }
+    function optionsFromDataset(){
+        const dataset=host.dataset||{};
+        const mapped={};
+        const fields=[
+            'bodyPlaceholder',
+            'previewLabel',
+            'saveLabel',
+            'titlePlaceholder',
+            'toolbarLabel'
+        ];
+        for(const field of fields){
+            if(dataset[field]!==undefined){
+                mapped[field]=dataset[field];
             }
         }
+        for(const field of [
+            'clearOnSave',
+            'readOnly',
+            'showPreview',
+            'showSave',
+            'showTitle',
+            'showToolbar'
+        ]){
+            if(dataset[field]!==undefined){
+                mapped[field]=dataset[field]==='true';
+            }
+        }
+        return mapped;
+    }
 
-        const previewLabel=options.previewLabel||preview.getAttribute('aria-label');
-        preview.dataset.emptyLabel=previewLabel;
-        return true;
+    function configure(input={}){
+        const setInitialValue=Object.prototype.hasOwnProperty.call(
+            input||{},
+            'initialValue'
+        );
+        const setInitialTitle=Object.prototype.hasOwnProperty.call(
+            input||{},
+            'initialTitle'
+        );
+        options=normalizeMarkdownOptions(input,options);
+        renderOptions();
+        if(setInitialTitle){
+            titleInput.value=options.initialTitle;
+        }
+        if(setInitialValue){
+            textarea.value=options.initialValue;
+        }
+        updatePreview();
+        return getOptions();
+    }
+
+    function renderOptions(){
+        titleInput.placeholder=options.labels.titlePlaceholder;
+        textarea.placeholder=options.labels.bodyPlaceholder;
+        preview.setAttribute('aria-label',options.labels.preview);
+        preview.dataset.emptyLabel=options.labels.preview;
+        toolbar.setAttribute('aria-label',options.labels.toolbar);
+        saveButton.innerText=options.labels.save;
+        titleInput.classList.toggle('hidden',!options.showTitle);
+        preview.classList.toggle('hidden',!options.showPreview);
+        toolbar.classList.toggle('hidden',!options.showToolbar);
+        saveButton.classList.toggle('hidden',!options.showSave);
+        titleInput.readOnly=options.readOnly;
+        textarea.readOnly=options.readOnly;
+        renderToolbar();
+        syncSaveButton();
+    }
+
+    function renderToolbar(){
+        const fragment=document.createDocumentFragment();
+        for(const format of options.formats){
+            const button=document.createElement('button');
+            button.type='button';
+            button.dataset.format=format.id;
+            button.title=format.title;
+            button.innerText=format.label;
+            button.disabled=options.readOnly;
+            fragment.append(button);
+        }
+        toolbar.replaceChildren(fragment);
+    }
+
+    function contentChanged(){
+        schedulePreview();
+        const detail={
+            markdown:textarea.value,
+            title:titleInput.value
+        };
+        host.dispatchEvent(
+            new CustomEvent(
+                'markdown-editor-change',
+                {bubbles:true,composed:true,detail}
+            )
+        );
+        if(options.onChange){
+            Promise.resolve(options.onChange(detail)).catch(
+                error=>console.error('Markdown change callback failed:',error)
+            );
+        }
     }
 
     function schedulePreview(){
         if(previewFrame){
             cancelAnimationFrame(previewFrame);
         }
-
         previewFrame=requestAnimationFrame(updatePreview);
     }
 
     function updatePreview(){
+        if(previewFrame){
+            cancelAnimationFrame(previewFrame);
+        }
         previewFrame=0;
         preview.innerHTML=new MD(textarea.value).safeRendered;
-
         preview.querySelectorAll('a').forEach(
             link=>{
                 link.target='_blank';
@@ -170,101 +243,75 @@
         );
     }
 
-    function formatMarkdown(e){
-        const button=e.target.closest('[data-format]');
-
-        if(!button){
+    function formatMarkdown(event){
+        if(options.readOnly){
+            return;
+        }
+        const button=event.target.closest('[data-format]');
+        const format=options.formats.find(
+            candidate=>candidate.id===button?.dataset.format
+        );
+        if(!button||!format){
             return;
         }
 
-        const formats={
-            heading:{prefix:'## ',placeholder:'Heading'},
-            bold:{before:'**',after:'**',placeholder:'bold text'},
-            italic:{before:'_',after:'_',placeholder:'italic text'},
-            strike:{before:'~~',after:'~~',placeholder:'strikethrough text'},
-            code:{before:'`',after:'`',placeholder:'code'},
-            link:{before:'[',after:'](https://)',placeholder:'link text'},
-            quote:{prefix:'> ',placeholder:'Quote'},
-            list:{prefix:'- ',placeholder:'List item'}
-        };
-        const format=formats[button.dataset.format];
-
-        if(!format){
-            return;
-        }
-
-        const start=textarea.selectionStart;
-        const end=textarea.selectionEnd;
-        const selected=textarea.value.slice(start,end);
-        const value=selected||format.placeholder;
-        let replacement='';
-        let selectionStart=start;
-        let selectionEnd=start;
-
-        if(format.prefix){
-            replacement=value.split(/\r?\n/).map(
-                line=>format.prefix+line
-            ).join('\n');
-            selectionStart=start+format.prefix.length;
-            selectionEnd=selectionStart+value.length;
-        }else{
-            replacement=format.before+value+format.after;
-            selectionStart=start+format.before.length;
-            selectionEnd=selectionStart+value.length;
-        }
-
-        textarea.setRangeText(replacement,start,end,'end');
+        const result=applyMarkdownFormat(
+            textarea.value,
+            textarea.selectionStart,
+            textarea.selectionEnd,
+            format
+        );
+        textarea.value=result.value;
         textarea.focus();
-        textarea.setSelectionRange(selectionStart,selectionEnd);
-        schedulePreview();
+        textarea.setSelectionRange(result.selectionStart,result.selectionEnd);
+        contentChanged();
     }
 
     async function saveEntry(){
+        if(options.readOnly||!options.showSave){
+            return false;
+        }
         const markdown=textarea.value;
         const entryTitle=titleInput.value.trim();
-
         if(!markdown.trim()){
-            status.innerText='Write content before saving.';
+            status.innerText=options.labels.emptyError;
             textarea.focus();
             return false;
         }
 
-        if(typeof host.save!=='function'){
-            status.innerText='Saving is unavailable.';
+        const save=options.onSave||(
+            typeof host.save==='function'?host.save.bind(host):null
+        );
+        if(!save){
+            status.innerText=options.labels.unavailable;
             return false;
         }
 
         saveButton.disabled=true;
-        status.innerText='Saving...';
-
+        status.innerText=options.labels.saving;
         try{
-            await host.save(
-                {
-                    title:entryTitle,
-                    markdown:markdown
-                }
-            );
-
-            clear();
-            status.innerText='Saved.';
+            await save({title:entryTitle,markdown});
+            if(options.clearOnSave){
+                clear();
+            }
+            status.innerText=options.labels.saved;
             host.dispatchEvent(
                 new CustomEvent(
                     'markdown-editor-saved',
                     {
-                        detail:{
-                            title:entryTitle,
-                            markdown:markdown
-                        }
+                        bubbles:true,
+                        composed:true,
+                        detail:{title:entryTitle,markdown}
                     }
                 )
             );
             return true;
         }catch(error){
-            status.innerText='Unable to save.';
+            status.innerText=options.labels.saveError;
             console.error('Unable to save Markdown content:',error);
             return false;
         }finally{
-            saveButton.disabled=false;
+            syncSaveButton();
         }
     }
 
@@ -272,19 +319,42 @@
         titleInput.value='';
         textarea.value='';
         updatePreview();
+        return true;
     }
 
-    configure({
-        bodyPlaceholder:host.dataset.bodyPlaceholder,
-        previewLabel:host.dataset.previewLabel,
-        saveLabel:host.dataset.saveLabel,
-        titlePlaceholder:host.dataset.titlePlaceholder
-    });
+    function setValue(value=''){
+        textarea.value=`${value??''}`;
+        updatePreview();
+        return textarea.value;
+    }
+
+    function setTitle(value=''){
+        titleInput.value=`${value??''}`;
+        return titleInput.value;
+    }
+
+    function syncSaveButton(){
+        saveButton.disabled=options.readOnly||!options.showSave;
+    }
+
+    function getOptions(){
+        return {
+            ...options,
+            labels:{...options.labels},
+            formats:options.formats.map(format=>({...format}))
+        };
+    }
+
+    renderOptions();
+    titleInput.value=options.initialTitle;
+    textarea.value=options.initialValue;
     updatePreview();
     status.innerText='';
-    saveButton.disabled=false;
     host.ready=true;
     host.dispatchEvent(
-        new CustomEvent('markdown-editor-ready')
+        new CustomEvent(
+            'markdown-editor-ready',
+            {bubbles:true,composed:true}
+        )
     );
 </script>

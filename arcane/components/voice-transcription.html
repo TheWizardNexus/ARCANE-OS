@@ -48,20 +48,29 @@
 </style>
 
 <section class="voice-transcription">
-    <p class="description">Record one or more segments. Each segment is transcribed after you press Stop.</p>
-    <section id="transcript" class="transcript" aria-label="Voice transcription" data-empty-label="Your transcription will appear here after you stop recording."></section>
-    <p id="status" class="status" aria-live="polite">Loading recorder...</p>
+    <p id="description" class="description"></p>
+    <section id="transcript" class="transcript"></section>
+    <p id="status" class="status" aria-live="polite"></p>
     <section class="controls">
-        <button id="start" type="button" disabled>Start</button>
-        <button id="stop" type="button" disabled>Stop</button>
-        <button id="complete" type="button" disabled>Complete Transcription</button>
+        <button id="start" type="button" disabled></button>
+        <button id="stop" type="button" disabled></button>
+        <button id="complete" type="button" disabled></button>
     </section>
 </section>
 
 <script type="module">
     const host=this;
-    await import('../modules/AI.js?v=3');
-    const {default:MD}=await import('../modules/MD.js?v=2');
+    const componentURL=new URL(
+        host.getAttribute('href')||'./arcane/components/voice-transcription.html',
+        document.baseURI
+    );
+    const moduleURL=name=>new URL(`../modules/${name}`,componentURL).href;
+    const {default:MD}=await import(moduleURL('MD.js?v=2'));
+    const {
+        appendTranscription,
+        normalizeVoiceOptions
+    }=await import(moduleURL('ComponentContracts.js'));
+    const description=host.shadowRoot.querySelector('#description');
     const transcriptElement=host.shadowRoot.querySelector('#transcript');
     const status=host.shadowRoot.querySelector('#status');
     const startButton=host.shadowRoot.querySelector('#start');
@@ -73,14 +82,23 @@
     let recorder=null;
     let state='idle';
     let transcript='';
+    let sessionGeneration=0;
+    let options=normalizeVoiceOptions(optionsFromDataset());
 
+    host.clear=clear;
+    host.completeTranscription=completeStream;
     host.configure=configure;
+    host.destroy=destroy;
+    host.reset=clear;
+    host.startRecording=startRecording;
+    host.stopRecording=stopRecording;
 
-    Object.defineProperty(
+    Object.defineProperties(
         host,
-        'value',
         {
-            get:()=>transcript
+            options:{get:getOptions,set:configure},
+            state:{get:()=>state},
+            value:{get:()=>transcript,set:setValue}
         }
     );
 
@@ -88,96 +106,99 @@
     stopButton.addEventListener('click',stopRecording);
     completeButton.addEventListener('click',completeStream);
 
-    function configure(options={}){
-        if(!options||typeof options!=='object'){
-            return false;
+    function optionsFromDataset(){
+        const dataset=host.dataset||{};
+        const mapped={};
+        const fields=[
+            'completeLabel',
+            'description',
+            'emptyLabel',
+            'startLabel',
+            'stopLabel',
+            'transcriptionLabel'
+        ];
+        for(const field of fields){
+            if(dataset[field]!==undefined){
+                mapped[field]=dataset[field];
+            }
         }
+        if(dataset.persist!==undefined){
+            mapped.persist=dataset.persist!=='false';
+        }
+        return mapped;
+    }
 
-        if(typeof options.description==='string'&&options.description){
-            host.shadowRoot.querySelector('.description').innerText=options.description;
+    function configure(input={}){
+        const setInitial=Object.prototype.hasOwnProperty.call(input||{},'initialValue');
+        options=normalizeVoiceOptions(input,options);
+        renderOptions();
+        if(setInitial){
+            setValue(options.initialValue);
+        }else{
+            setState(state,status.innerText);
         }
-        if(typeof options.transcriptionLabel==='string'&&options.transcriptionLabel){
-            transcriptElement.setAttribute('aria-label',options.transcriptionLabel);
-        }
-        if(typeof options.emptyLabel==='string'&&options.emptyLabel){
-            transcriptElement.dataset.emptyLabel=options.emptyLabel;
-        }
-        if(typeof options.completeLabel==='string'&&options.completeLabel){
-            completeButton.innerText=options.completeLabel;
-        }
-
-        return true;
+        return getOptions();
     }
 
     async function startRecording(){
         if(!['idle','error'].includes(state)){
             return false;
         }
-
         if(
             typeof MediaRecorder==='undefined'
-            || !navigator.mediaDevices?.getUserMedia
+            ||!navigator.mediaDevices?.getUserMedia
         ){
-            setState('error','Audio recording is not supported by this browser.');
+            setState('error',options.messages.unsupported);
             return false;
         }
 
-        setState('starting','Requesting microphone access...');
+        setState('starting',options.messages.requesting);
         chunks=[];
-
+        const generation=++sessionGeneration;
         try{
-            mediaStream=await navigator.mediaDevices.getUserMedia(
-                {audio:true}
+            const stream=await navigator.mediaDevices.getUserMedia(
+                options.mediaConstraints
             );
+            if(generation!==sessionGeneration){
+                for(const track of stream.getTracks()){
+                    track.stop();
+                }
+                return false;
+            }
+            mediaStream=stream;
             recorder=createRecorder(mediaStream);
-
             recorder.addEventListener('dataavailable',collectAudio);
             recorder.addEventListener('stop',finishRecording,{once:true});
             recorder.addEventListener('error',recordingError,{once:true});
-
-            const tracks=mediaStream.getAudioTracks();
-
-            for(let i=0;i<tracks.length;i++){
-                tracks[i].addEventListener(
-                    'ended',
-                    recordingInterrupted,
-                    {once:true}
-                );
+            for(const track of mediaStream.getAudioTracks()){
+                track.addEventListener('ended',recordingInterrupted,{once:true});
             }
-
             recorder.start();
-            setState('recording','Recording...');
+            setState('recording',options.messages.recording);
             return true;
         }catch(error){
+            if(generation!==sessionGeneration){
+                return false;
+            }
             releaseMicrophone();
-            setState('error','Unable to start recording. Check microphone permission and try again.');
+            setState('error',options.messages.startError);
             console.error('Unable to start recording:',error);
             return false;
         }
     }
 
     function createRecorder(stream){
-        const candidates=[
-            'audio/webm;codecs=opus',
-            'audio/mp4',
-            'audio/webm'
-        ];
-
-        for(let i=0;i<candidates.length;i++){
-            if(MediaRecorder.isTypeSupported?.(candidates[i])){
-                return new MediaRecorder(
-                    stream,
-                    {mimeType:candidates[i]}
-                );
+        for(const mimeType of options.mimeTypes){
+            if(MediaRecorder.isTypeSupported?.(mimeType)){
+                return new MediaRecorder(stream,{mimeType});
             }
         }
-
         return new MediaRecorder(stream);
     }
 
-    function collectAudio(e){
-        if(e.data?.size){
-            chunks.push(e.data);
+    function collectAudio(event){
+        if(event.data?.size){
+            chunks.push(event.data);
         }
     }
 
@@ -185,8 +206,7 @@
         if(state!=='recording'||recorder?.state!=='recording'){
             return false;
         }
-
-        setState('transcribing','Transcribing this segment...');
+        setState('transcribing',options.messages.transcribing);
         recorder.stop();
         return true;
     }
@@ -194,11 +214,9 @@
     async function finishRecording(){
         const mimeType=recorder?.mimeType||chunks[0]?.type||'audio/webm';
         const audio=new Blob(chunks,{type:mimeType});
-
         releaseMicrophone();
-
         if(!audio.size){
-            setState('error','No audio was captured. Try recording again.');
+            setState('error',options.messages.emptyAudio);
             return false;
         }
 
@@ -208,125 +226,202 @@
                 `audio.${fileExtension(mimeType)}`,
                 {type:mimeType}
             );
-            const segment=(await ai.fetchSTT(file)).trim();
-
-            if(!segment){
-                setState('idle','No speech was transcribed. You can try another segment.');
-                return false;
-            }
-
-            transcript=transcript
-                ?`${transcript}\n\n${segment}`
-                :segment;
-            renderTranscript();
-            setState('saving','Saving transcription...');
-
-            try{
-                if(typeof host.save!=='function'){
-                    throw new Error('Transcription saving is unavailable.');
+            const transcribe=await getTranscriber();
+            const result=await transcribe(
+                file,
+                {
+                    audio,
+                    mimeType,
+                    transcript
                 }
-
-                await host.save(
-                    {
-                        transcript:transcript,
-                        segment:segment
-                    }
-                );
-            }catch(error){
-                setState('error','Transcribed, but unable to save.');
-                console.error('Unable to save transcription:',error);
+            );
+            const segment=typeof result==='string'?result.trim():'';
+            if(!segment){
+                setState('idle',options.messages.noSpeech);
                 return false;
             }
 
+            transcript=appendTranscription(
+                transcript,
+                segment,
+                options.separator
+            );
+            renderTranscript();
+
+            if(options.persist){
+                const save=options.onSave||(
+                    typeof host.save==='function'?host.save.bind(host):null
+                );
+                if(!save){
+                    setState('error',options.messages.saveError);
+                    return false;
+                }
+                setState('saving',options.messages.saving);
+                try{
+                    await save({transcript,segment});
+                }catch(error){
+                    setState('error',options.messages.saveError);
+                    console.error('Unable to save transcription:',error);
+                    return false;
+                }
+            }
+
+            const detail={text:segment,transcript};
             host.dispatchEvent(
                 new CustomEvent(
                     'speech-transcription-complete',
-                    {detail:{text:segment}}
+                    {bubbles:true,composed:true,detail}
                 )
             );
             host.dispatchEvent(
                 new CustomEvent(
                     'voice-transcription-segment',
-                    {
-                        bubbles:true,
-                        composed:true,
-                        detail:{text:segment}
-                    }
+                    {bubbles:true,composed:true,detail}
                 )
             );
-            setState('idle','Transcription saved. Record another segment or complete.');
+            setState(
+                'idle',
+                options.persist?options.messages.saved:options.messages.transcribed
+            );
             return true;
         }catch(error){
-            setState('error','Unable to transcribe this recording.');
+            setState('error',options.messages.transcribeError);
             console.error('Unable to transcribe recording:',error);
             return false;
         }
+    }
+
+    async function getTranscriber(){
+        if(options.transcribe){
+            return options.transcribe;
+        }
+        if(typeof globalThis.ai?.fetchSTT!=='function'){
+            await import(moduleURL('AI.js?v=3'));
+        }
+        if(typeof globalThis.ai?.fetchSTT!=='function'){
+            throw new Error('Speech transcription is not configured.');
+        }
+        return globalThis.ai.fetchSTT.bind(globalThis.ai);
     }
 
     function fileExtension(mimeType=''){
         if(mimeType.includes('mp4')){
             return 'm4a';
         }
-
         if(mimeType.includes('ogg')){
             return 'ogg';
         }
-
         return 'webm';
     }
 
     function recordingInterrupted(){
         if(state==='recording'){
-            setState('transcribing','Recording ended. Transcribing captured audio...');
-
+            setState('transcribing',options.messages.recordingEnded);
             if(recorder?.state==='recording'){
                 recorder.stop();
             }
         }
     }
 
-    function recordingError(e){
-        setState('error','Recording was interrupted. Your completed transcription is still available.');
+    function recordingError(event){
+        setState('error',options.messages.interrupted);
         releaseMicrophone();
-        console.error('Audio recorder error:',e.error||e);
+        console.error('Audio recorder error:',event.error||event);
     }
 
     async function completeStream(){
         if(!transcript.trim()||!['idle','error'].includes(state)){
             return false;
         }
-
-        if(typeof host.complete!=='function'){
-            setState('error','Completion is unavailable.');
-            return false;
-        }
-
-        setState('completing','Completing transcription...');
-
+        setState('completing',options.messages.completing);
         try{
-            await host.complete({transcript:transcript});
-            setState('complete','Complete.');
+            const complete=options.onComplete||(
+                typeof host.complete==='function'?host.complete.bind(host):null
+            );
+            if(complete){
+                await complete({transcript});
+            }
+            host.dispatchEvent(
+                new CustomEvent(
+                    'voice-transcription-complete',
+                    {
+                        bubbles:true,
+                        composed:true,
+                        detail:{transcript}
+                    }
+                )
+            );
+            setState('complete',options.messages.complete);
             return true;
         }catch(error){
-            setState('error','Unable to complete this transcription.');
+            setState('error',options.messages.completeError);
             console.error('Unable to complete transcription:',error);
             return false;
         }
     }
 
+    function setValue(value=''){
+        transcript=`${value??''}`;
+        renderTranscript();
+        if(state!=='recording'){
+            setState('idle',options.messages.ready);
+        }
+        host.dispatchEvent(
+            new CustomEvent(
+                'voice-transcription-change',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{transcript}
+                }
+            )
+        );
+        return transcript;
+    }
+
+    function clear(){
+        if(!['complete','error','idle'].includes(state)){
+            return false;
+        }
+        transcript='';
+        renderTranscript();
+        setState('idle',options.messages.ready);
+        return true;
+    }
+
     function renderTranscript(){
         transcriptElement.innerHTML=new MD(transcript).safeRendered;
+        transcriptElement.querySelectorAll('a').forEach(
+            link=>{
+                link.target='_blank';
+                link.rel='noopener noreferrer';
+            }
+        );
+    }
+
+    function renderOptions(){
+        description.innerText=options.labels.description;
+        transcriptElement.setAttribute(
+            'aria-label',
+            options.labels.transcription
+        );
+        transcriptElement.dataset.emptyLabel=options.labels.empty;
+        startButton.innerText=options.labels.start;
+        stopButton.innerText=options.labels.stop;
+        completeButton.innerText=options.labels.complete;
     }
 
     function releaseMicrophone(){
         const tracks=mediaStream?.getTracks?.()||[];
-
+        recorder?.removeEventListener('dataavailable',collectAudio);
+        recorder?.removeEventListener('stop',finishRecording);
+        recorder?.removeEventListener('error',recordingError);
         mediaStream=null;
         recorder=null;
         chunks=[];
-
-        for(let i=0;i<tracks.length;i++){
-            tracks[i].stop();
+        for(const track of tracks){
+            track.removeEventListener('ended',recordingInterrupted);
+            track.stop();
         }
     }
 
@@ -334,21 +429,43 @@
         state=nextState;
         status.innerText=message||nextState;
         status.classList.toggle('recording',state==='recording');
-
         startButton.disabled=!['idle','error'].includes(state);
         stopButton.disabled=state!=='recording';
         completeButton.disabled=!transcript.trim()
-            || !['idle','error'].includes(state);
+            ||!['idle','error'].includes(state);
+        host.dispatchEvent(
+            new CustomEvent(
+                'voice-transcription-state',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{message:status.innerText,state}
+                }
+            )
+        );
     }
 
-    configure({
-        completeLabel:host.dataset.completeLabel,
-        description:host.dataset.description,
-        emptyLabel:host.dataset.emptyLabel,
-        transcriptionLabel:host.dataset.transcriptionLabel
-    });
+    function getOptions(){
+        return {
+            ...options,
+            labels:{...options.labels},
+            messages:{...options.messages},
+            mediaConstraints:{...options.mediaConstraints},
+            mimeTypes:options.mimeTypes.slice()
+        };
+    }
+
+    function destroy(){
+        sessionGeneration++;
+        releaseMicrophone();
+        setState('idle',options.messages.ready);
+        return true;
+    }
+
+    renderOptions();
+    transcript=options.initialValue;
     renderTranscript();
-    setState('idle','Ready.');
+    setState('idle',options.messages.ready);
     host.ready=true;
     host.dispatchEvent(
         new CustomEvent(
