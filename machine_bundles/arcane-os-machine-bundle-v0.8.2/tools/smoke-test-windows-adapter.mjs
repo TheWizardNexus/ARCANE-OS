@@ -39,6 +39,34 @@ assert.equal(
   'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
 );
 
+{
+  const elevationScripts=[];
+  const elevationAdapter=sandbox.createAdapter({
+    simulate:false,
+    production:true,
+    processPkg:true,
+    allowUnsignedLocalRelease:true,
+    releaseSecurityModeClaim:'unsigned-local-test',
+    path:path.win32,
+    psQuote(value){ return `'${String(value).replaceAll("'","''")}'`; },
+    powershell:async(script,options)=>{
+      elevationScripts.push({script,options});
+      return {stdout:'4242\n'};
+    },
+  });
+  const elevated=await elevationAdapter.launchElevated(
+    'C:\\Arcane\\ArcaneCore.exe',
+    ['--privileged-worker','--allow-unsigned-local-release'],
+    {},
+  );
+  assert.equal(elevated.launcherPid,4242);
+  assert.match(elevationScripts[0].script,/\$env:ARCANE_RELEASE_SECURITY_MODE='unsigned-local-test'/);
+
+  elevationScripts.length=0;
+  await elevationAdapter.launchElevated('C:\\Arcane\\ArcaneCore.exe',['--privileged-worker'],{});
+  assert.match(elevationScripts[0].script,/Remove-Item -LiteralPath 'Env:ARCANE_RELEASE_SECURITY_MODE'/);
+}
+
 const scripts=[];
 const hardened=sandbox.createAdapter({
   simulate:false,
@@ -80,6 +108,11 @@ assert.equal(provisionCall.options.input,'secret-password\n');
 assert.match(provisionCall.script,/expectedPolicyPresent/);
 assert.match(provisionCall.script,/expectedLegacyPresent/);
 assert.match(provisionCall.script,/New-LocalUser[^\r\n]+-Disabled/);
+assert.match(
+  provisionCall.script,
+  /if\(\$created\)\{\s*\$usersGroupSid='S-1-5-32-545'[\s\S]+?Add-LocalGroupMember[\s\S]+?\n\}/,
+  'Arcane must add only an account created by this transaction to the built-in Users group',
+);
 assert.match(provisionCall.script,/ARCANE_PROVISION_ROLLBACK:/);
 assert.match(provisionCall.script,/Remove-LocalUser/);
 assert.match(provisionCall.script,/could not release the temporary Arcane registry hive/);

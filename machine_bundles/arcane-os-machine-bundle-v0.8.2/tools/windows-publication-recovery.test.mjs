@@ -55,7 +55,8 @@ $verify = {
   param([string]$Path, [bool]$RequireSigned)
   $status = Get-Content -Raw -LiteralPath (Join-Path $Path 'status.txt')
   Add-Content -LiteralPath $log -Value "$([IO.Path]::GetFileName($Path))|$RequireSigned|$status"
-  if ($status -cne 'valid') { throw "invalid artifact $Path" }
+  if ($status -cne 'valid' -and $status -cne 'unsigned') { throw "invalid artifact $Path" }
+  if ($RequireSigned -and $status -ceq 'unsigned') { throw "unsigned artifact $Path" }
   if ((Test-Path -LiteralPath (Join-Path $Path 'fail-after-publish.txt')) -and ([IO.Path]::GetFileName($Path) -eq 'target')) {
     throw "injected post-rename verification failure $Path"
   }
@@ -80,7 +81,7 @@ function New-Scenario([string]$Name) {
 $paths = New-Scenario 'missing-target'
 Write-Artifact $paths.Backup 'old' $true
 Write-Artifact $paths.Stage 'stale' $false
-Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify
+Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
 Assert-True (Test-Path -LiteralPath $paths.Target) 'missing target was not restored'
 Assert-True (-not (Test-Path -LiteralPath $paths.Backup)) 'restored backup still exists'
 Assert-True (-not (Test-Path -LiteralPath $paths.Stage)) 'stale stage still exists'
@@ -88,13 +89,26 @@ Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt'
 
 $paths = New-Scenario 'verified-stage-only'
 Write-Artifact $paths.Stage 'new' $true
-Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify
+Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
 Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'new') 'verified stage was not promoted after interruption'
 Assert-True (-not (Test-Path -LiteralPath $paths.Stage)) 'promoted stage still exists'
 
+$paths = New-Scenario 'unsigned-stage-local-recovery'
+Write-Artifact $paths.Stage 'local' $true
+Set-Content -LiteralPath (Join-Path $paths.Stage 'status.txt') -Value 'unsigned' -NoNewline
+Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'local') 'explicit local recovery rejected a verified unsigned stage'
+
+$paths = New-Scenario 'unsigned-stage-production-recovery'
+Write-Artifact $paths.Stage 'local' $true
+Set-Content -LiteralPath (Join-Path $paths.Stage 'status.txt') -Value 'unsigned' -NoNewline
+Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $true
+Assert-True (-not (Test-Path -LiteralPath $paths.Target)) 'production recovery promoted an unsigned stage'
+Assert-True (-not (Test-Path -LiteralPath $paths.Stage)) 'production recovery retained the rejected unsigned stage'
+
 $paths = New-Scenario 'incomplete-stage-only'
 Write-Artifact $paths.Stage 'partial' $false
-Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify
+Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
 Assert-True (-not (Test-Path -LiteralPath $paths.Target)) 'incomplete stage was promoted'
 Assert-True (-not (Test-Path -LiteralPath $paths.Stage)) 'incomplete stage was not cleaned'
 
@@ -102,19 +116,81 @@ $paths = New-Scenario 'completed-target'
 Write-Artifact $paths.Target 'new' $true
 Write-Artifact $paths.Backup 'old' $true
 Write-Artifact $paths.Stage 'stale' $false
-Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify
+Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
 Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'new') 'completed target was replaced'
 Assert-True (-not (Test-Path -LiteralPath $paths.Backup)) 'accepted target retained its backup'
 Assert-True (-not (Test-Path -LiteralPath $paths.Stage)) 'accepted target retained stale stage'
+
+$paths = New-Scenario 'completed-target-locked-backup'
+Write-Artifact $paths.Target 'new' $true
+Write-Artifact $paths.Backup 'old' $true
+$lockedBackupFile = Join-Path $paths.Backup 'value.txt'
+$lockedBackupStream = [IO.File]::Open($lockedBackupFile, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+try {
+  Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
+} finally {
+  $lockedBackupStream.Dispose()
+}
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'new') 'backup cleanup failure replaced the verified target'
+Assert-True (Test-Path -LiteralPath $paths.Backup) 'backup cleanup failure did not preserve the locked backup'
 
 $paths = New-Scenario 'invalid-target'
 Write-Artifact $paths.Target 'bad-new' $false
 Write-Artifact $paths.Backup 'old' $true
 Write-Artifact $paths.Stage 'stale' $false
-Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify
+Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
 Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'old') 'invalid target did not roll back'
 Assert-True (-not (Test-Path -LiteralPath $paths.Backup)) 'rollback backup was not consumed'
 Assert-True (-not (Test-Path -LiteralPath $paths.Stage)) 'rollback retained stale stage'
+
+$paths = New-Scenario 'invalid-target-locked-backup'
+Write-Artifact $paths.Target 'bad-new' $false
+Write-Artifact $paths.Backup 'old' $true
+Write-Artifact $paths.Stage 'stale' $false
+$lockedRollbackStream = [IO.File]::Open((Join-Path $paths.Backup 'value.txt'), [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+$rollbackRejected = $false
+try {
+  Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
+} catch {
+  $rollbackRejected = $_.Exception.Message -like 'Arcane could not restore the verified rollback publication*'
+} finally {
+  $lockedRollbackStream.Dispose()
+}
+Assert-True $rollbackRejected 'locked recovery rollback was not surfaced'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'bad-new') 'locked recovery rollback left the canonical target missing'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Backup 'value.txt')) -ceq 'old') 'locked recovery rollback mutated the preserved backup'
+Assert-True (-not (Test-Path -LiteralPath ($paths.Target + '.rejected'))) 'locked recovery rollback left an unnecessary quarantine after restoring the target'
+
+$paths = New-Scenario 'restart-after-target-quarantine'
+Write-Artifact ($paths.Target + '.rejected') 'bad-new' $false
+Write-Artifact $paths.Backup 'old' $true
+$lockedRestartBackup = [IO.File]::Open((Join-Path $paths.Backup 'value.txt'), [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+$restartRejected = $false
+try {
+  Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
+} catch {
+  $restartRejected = $_.Exception.Message -like 'Arcane could not restore the verified rollback publication*'
+} finally {
+  $lockedRestartBackup.Dispose()
+}
+Assert-True $restartRejected 'restart with a locked rollback was not surfaced'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'bad-new') 'restart left the canonical target missing despite a restorable rejected publication'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Backup 'value.txt')) -ceq 'old') 'restart mutated the locked rollback'
+
+$paths = New-Scenario 'unresolved-partial-rollback'
+Write-Artifact $paths.Target 'current' $true
+Write-Artifact $paths.Backup 'old' $true
+Write-Artifact ($paths.Backup + '.partial') 'partial' $false
+$partialRejected = $false
+try {
+  Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
+} catch {
+  $partialRejected = $_.Exception.Message -like 'Arcane preserved an unresolved partial rollback*'
+}
+Assert-True $partialRejected 'an unresolved partial rollback did not block later publication'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'current') 'partial rollback handling mutated the canonical target'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Backup 'value.txt')) -ceq 'old') 'partial rollback handling mutated the backup'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path ($paths.Backup + '.partial') 'value.txt')) -ceq 'partial') 'partial rollback handling discarded diagnostic state'
 
 $paths = New-Scenario 'both-invalid'
 Write-Artifact $paths.Target 'bad-new' $false
@@ -122,9 +198,9 @@ Write-Artifact $paths.Backup 'bad-old' $false
 Write-Artifact $paths.Stage 'stale' $false
 $rejected = $false
 try {
-  Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify
+  Recover-ArcanePublication -Target $paths.Target -Stage $paths.Stage -Backup $paths.Backup -Verify $verify -RequireSigned $false
 } catch {
-  $rejected = $_.Exception.Message -like 'Neither interrupted Arcane publication can be accepted*'
+  $rejected = $_.Exception.Message -like 'Arcane could not restore the verified rollback publication*'
 }
 Assert-True $rejected 'two invalid publications were not rejected'
 Assert-True (Test-Path -LiteralPath $paths.Target) 'invalid target was not preserved for diagnosis'
@@ -137,6 +213,44 @@ Write-Artifact $paths.Stage 'new' $true
 Publish-VerifiedArcaneDirectory -Stage $paths.Stage -Target $paths.Target -Backup $paths.Backup -Verify $verify -RequireSigned $true
 Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'new') 'verified publication did not replace target'
 Assert-True (-not (Test-Path -LiteralPath $paths.Backup)) 'backup was not removed after final target verification'
+
+$paths = New-Scenario 'publish-success-locked-backup'
+Write-Artifact $paths.Target 'old' $true
+Write-Artifact $paths.Stage 'new' $true
+$script:basePublicationVerify = $verify
+$script:publicationBackupLock = $null
+$verifyAndLockBackup = {
+  param([string]$Path, [bool]$RequireSigned)
+  & $script:basePublicationVerify $Path $RequireSigned
+  if ([IO.Path]::GetFileName($Path) -eq 'target' -and (Test-Path -LiteralPath $paths.Backup) -and -not $script:publicationBackupLock) {
+    $script:publicationBackupLock = [IO.File]::Open((Join-Path $paths.Backup 'value.txt'), [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+  }
+}
+$cleanupRejected = $false
+try {
+  Publish-VerifiedArcaneDirectory -Stage $paths.Stage -Target $paths.Target -Backup $paths.Backup -Verify $verifyAndLockBackup -RequireSigned $true
+} catch {
+  $cleanupRejected = $true
+} finally {
+  if ($script:publicationBackupLock) { $script:publicationBackupLock.Dispose(); $script:publicationBackupLock = $null }
+}
+Assert-True $cleanupRejected 'locked publication backup cleanup did not surface an error'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'new') 'backup cleanup failure deleted the verified new publication'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Backup 'value.txt')) -ceq 'old') 'backup cleanup failure mutated the preserved rollback'
+
+$paths = New-Scenario 'production-refuses-unsigned-rollback'
+Write-Artifact $paths.Target 'local-old' $true
+Set-Content -LiteralPath (Join-Path $paths.Target 'status.txt') -Value 'unsigned' -NoNewline
+Write-Artifact $paths.Stage 'signed-new' $true
+$rejected = $false
+try {
+  Publish-VerifiedArcaneDirectory -Stage $paths.Stage -Target $paths.Target -Backup $paths.Backup -Verify $verify -RequireSigned $true
+} catch {
+  $rejected = $_.Exception.Message -like 'unsigned artifact*'
+}
+Assert-True $rejected 'production publication accepted an unsigned rollback candidate'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'local-old') 'rejected unsigned rollback candidate was mutated'
+Assert-True (Test-Path -LiteralPath $paths.Stage) 'signed stage was removed after rejecting an unsigned rollback candidate'
 
 $paths = New-Scenario 'portable-to-native'
 Write-Artifact $paths.Target 'portable' $false
@@ -171,6 +285,33 @@ try {
 Assert-True $rejected 'post-rename verification failure was not surfaced'
 Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'old') 'failed publication did not restore verified rollback'
 Assert-True (-not (Test-Path -LiteralPath $paths.Backup)) 'failed publication left backup after rollback'
+
+$paths = New-Scenario 'publish-failure-locked-rollback'
+Write-Artifact $paths.Target 'old' $true
+Write-Artifact $paths.Stage 'bad-new' $true $true
+$script:lockedRollbackStream = $null
+$verifyAndLockFailedRollback = {
+  param([string]$Path, [bool]$RequireSigned)
+  $status = Get-Content -Raw -LiteralPath (Join-Path $Path 'status.txt')
+  if ($status -cne 'valid' -and $status -cne 'unsigned') { throw "invalid artifact $Path" }
+  if ($RequireSigned -and $status -ceq 'unsigned') { throw "unsigned artifact $Path" }
+  if ((Test-Path -LiteralPath (Join-Path $Path 'fail-after-publish.txt')) -and ([IO.Path]::GetFileName($Path) -eq 'target')) {
+    $script:lockedRollbackStream = [IO.File]::Open((Join-Path $paths.Backup 'value.txt'), [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+    throw "injected locked post-rename verification failure $Path"
+  }
+}
+$rejected = $false
+try {
+  Publish-VerifiedArcaneDirectory -Stage $paths.Stage -Target $paths.Target -Backup $paths.Backup -Verify $verifyAndLockFailedRollback -RequireSigned $true
+} catch {
+  $rejected = $_.Exception.Message -like 'The new Arcane publication failed and its rollback could not be restored*'
+} finally {
+  if ($script:lockedRollbackStream) { $script:lockedRollbackStream.Dispose(); $script:lockedRollbackStream = $null }
+}
+Assert-True $rejected 'locked post-publication rollback failure was not surfaced'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Target 'value.txt')) -ceq 'bad-new') 'locked post-publication rollback left the canonical target missing'
+Assert-True ((Get-Content -Raw -LiteralPath (Join-Path $paths.Backup 'value.txt')) -ceq 'old') 'locked post-publication rollback mutated the preserved backup'
+Assert-True (-not (Test-Path -LiteralPath ($paths.Target + '.rejected'))) 'locked post-publication rollback left an unnecessary quarantine after restoring the target'
 
 Write-Host 'Arcane publication recovery interruption matrix passed.'
 `;

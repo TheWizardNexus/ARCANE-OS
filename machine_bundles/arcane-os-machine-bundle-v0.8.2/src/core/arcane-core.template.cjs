@@ -1607,7 +1607,7 @@ async function provisionUsers(usernames, action) {
   const results = [];
   const changed = [];
   const assignedShell = native.shellCommand();
-  const assignedSecurityMode = native.id === 'windows' && simulate ? 'publisher-verified' : releaseSecurityMode();
+  const assignedSecurityMode = native.id === 'windows' && simulate ? 'publisher-verified' : installedReleaseSecurityMode();
   if (native.id === 'windows' && !simulate) {
     const unsignedCommand = assignedShell.endsWith(' --allow-unsigned-local-release');
     if (!['publisher-verified','unsigned-local-test'].includes(assignedSecurityMode)
@@ -2389,17 +2389,25 @@ function publicAppDescriptor() {
     type:String(APP_DESCRIPTOR.type || 'app'),
     entry:APP_DESCRIPTOR.entry ? String(APP_DESCRIPTOR.entry):null,
     version:VERSION,
-    securityMode:releaseSecurityMode(),
+    securityMode:activeReleaseSecurityMode(),
   };
 }
 
-let corroboratedReleaseSecurityMode=null;
-function releaseSecurityMode() {
+function activeReleaseSecurityMode() {
+  if(typeof native.hostReleaseSecurityMode==='function'){
+    const mode=native.hostReleaseSecurityMode();
+    if(mode==='publisher-verified'||mode==='unsigned-local-test')return mode;
+  }
+  return 'unverified';
+}
+
+let corroboratedInstalledReleaseSecurityMode=null;
+function installedReleaseSecurityMode() {
   if(typeof native.releaseSecurityMode==='function'){
     try{
       const mode=native.releaseSecurityMode();
       if(mode==='publisher-verified'||mode==='unsigned-local-test'){
-        corroboratedReleaseSecurityMode=mode;
+        corroboratedInstalledReleaseSecurityMode=mode;
         return mode;
       }
     }catch(error){
@@ -2604,10 +2612,10 @@ async function listInstalledApplications(request) {
     seen.add(application.id);
   }
   applications.sort((left,right)=>left.order-right.order||left.displayName.localeCompare(right.displayName,'en')||left.id.localeCompare(right.id,'en'));
-  if(corroboratedReleaseSecurityMode&&result.securityMode!==corroboratedReleaseSecurityMode){
+  if(corroboratedInstalledReleaseSecurityMode&&result.securityMode!==corroboratedInstalledReleaseSecurityMode){
     throw arcaneError('APPLICATION_CATALOG_UNVERIFIED','Arcane could not corroborate the installed application security mode.','Repair or reinstall the complete Arcane OS release.',503);
   }
-  corroboratedReleaseSecurityMode=result.securityMode;
+  corroboratedInstalledReleaseSecurityMode=result.securityMode;
   return Object.freeze({
     verified:true,
     securityMode:result.securityMode,
@@ -2687,6 +2695,7 @@ function networkStatus() {
 }
 
 function machineStatus() {
+  const installation = installationState();
   return {
     version: VERSION,
     protocol: PROTOCOL,
@@ -2697,10 +2706,12 @@ function machineStatus() {
     protectedUsername: protectedProvisioningUsername(),
     protectedUsernames: protectedProvisioningUsernames(),
     usernamePolicy: native.usernamePolicy(),
-    installation: installationState(),
+    installation,
     requirements: checkRequirements(),
     permissions: permissionStatus(true),
     renderer: rendererStatus(),
+    securityMode: activeReleaseSecurityMode(),
+    installedSecurityMode: installation.present ? installedReleaseSecurityMode() : 'not-installed',
     paths: PATHS,
     simulation: simulate,
     bundleRoot: bundleRoot(),
@@ -3191,6 +3202,7 @@ function workerLaunchSpec(endpoint, token, brokerSession, brokerPublicKey) {
     `--protected-user=${protectedProvisioningUsername()}`,
   ];
   if (allowSourceInstall) workerArgs.push('--allow-source-install');
+  if (allowUnsignedLocalRelease) workerArgs.push('--allow-unsigned-local-release');
   if (simulate) workerArgs.push('--simulate');
   if (simulatedPlatform) workerArgs.push(`--simulate-platform=${simulatedPlatform}`);
   if (process.pkg) return { executable: native.elevationTarget(process.execPath), args: workerArgs };

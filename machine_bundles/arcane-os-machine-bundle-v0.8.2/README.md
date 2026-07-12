@@ -40,6 +40,8 @@ The web UI never calls PowerShell, registry tools, `useradd`, `pkexec`, UAC, or 
 ```js
 await Arcane.app.current();
 await Arcane.capabilities.list();
+await Arcane.version.current();
+await Arcane.system.ping();
 
 await Arcane.platform.status();
 await Arcane.permissions.status();
@@ -65,6 +67,13 @@ await Arcane.storage.list();
 await Arcane.storage.get("editor.document.current");
 await Arcane.storage.set("editor.document.current", { markdown: "# Draft" });
 await Arcane.storage.delete("editor.document.current");
+
+const applications = await Arcane.applications.list();
+await Arcane.applications.launch(applications.applications[0].id);
+
+await Arcane.provisioning.plan(["arcane1"]);
+const recent = await Arcane.diagnostics.recentErrors();
+await Arcane.diagnostics.get(recent[0].id);
 
 await Arcane.system.lock();
 await Arcane.session.logout();
@@ -128,12 +137,12 @@ build-windows.bat
 The build:
 
 1. Generates the shared Arcane Core and local app payload.
-2. Packages Arcane Core as `dist\windows\ArcaneCore.exe`.
+2. Packages Arcane Core as `dist\windows\bin\ArcaneCore.exe`.
 3. Acquires the exact pinned Microsoft WebView2 SDK from NuGet when it is not already cached and verifies its configured SHA-256 before use.
 4. Compiles icon-bearing native GUI applications:
-   - `dist\windows\ArcaneProvisioner.exe`
-   - `dist\windows\ArcaneShell.exe`
-5. Compiles `dist\windows\ArcanePipeGuard.exe` and runs a real named-pipe adversarial test proving that a client which merely claims the expected PID is rejected while the kernel-matched client is relayed.
+   - `dist\windows\bin\ArcaneProvisioner.exe`
+   - `dist\windows\bin\ArcaneShell.exe`
+5. Compiles `dist\windows\bin\ArcanePipeGuard.exe` and runs a real named-pipe adversarial test proving that a client which merely claims the expected PID is rejected while the kernel-matched client is relayed.
 6. Copies the WebView2 loader and managed assemblies.
 7. Writes `dist\windows\arcane-release.json` with the exact release inventory, byte sizes, and SHA-256 hashes for every executable, library, manifest, and application asset.
 
@@ -151,7 +160,9 @@ start-provisioner-simulation.bat
 
 Runtime prerequisites are administrator-managed. Arcane verifies the installed WebView2 Runtime and native session-control capability, but all declared third-party requirements are `installable: false`; `requirements.ensure` reports a blocked prerequisite instead of downloading or executing an installer. The packaged Core does not require a separately installed Node.js, and Ollama is optional. Install missing components manually from a trusted operating-system or vendor channel, then choose **Check again**.
 
-Local builds are unsigned unless `ARCANE_SIGNING_CERT_THUMBPRINT` is set. `ARCANE_REQUIRE_SIGNED_RELEASE=1` makes a Windows build fail unless both a usable signing certificate and `ARCANE_TIMESTAMP_SERVER` are configured, and it verifies that every resulting signature contains a timestamp. Before starting the pipe guard, Arcane requires `ArcaneCore.exe` and `ArcanePipeGuard.exe` to have valid Authenticode signatures from the same certificate. Unsigned artifacts are suitable only for controlled local testing and privileged operations refuse them by default; explicitly launch `dist\windows\ArcaneProvisioner.exe --allow-unsigned-local-release` for a local privilege test. That switch accepts only an unsigned Core/guard pair whose sibling files still match the exact schema-2 release manifest. Never distribute a build using this override. Production/distribution builds must Authenticode-sign and timestamp `ArcaneProvisioner.exe`, `ArcaneShell.exe`, `ArcaneCore.exe`, `ArcanePipeGuard.exe`, and every distributed `ArcaneApp-<id>.exe` with a trusted publisher certificate.
+Production builds require `ARCANE_SIGNING_CERT_THUMBPRINT` and `ARCANE_TIMESTAMP_SERVER`; the build fails unless every executable is signed by the same publisher and timestamped. Before starting the pipe guard, Arcane requires `ArcaneCore.exe` and `ArcanePipeGuard.exe` to have valid Authenticode signatures from the same certificate. Unsigned artifacts are suitable only for controlled local testing and privileged operations refuse them by default; use `npm run build:distribution:windows:unsigned-local-test`, then explicitly launch `dist\windows\bin\ArcaneProvisioner.exe --allow-unsigned-local-release`. That switch accepts only an unsigned Core/guard pair whose sibling files still match the exact schema-2 release manifest. Never distribute a build using this override. Production/distribution builds must Authenticode-sign and timestamp `ArcaneProvisioner.exe`, `ArcaneShell.exe`, `ArcaneCore.exe`, `ArcanePipeGuard.exe`, and every distributed `ArcaneApp-<id>.exe` with a trusted publisher certificate.
+
+Production publisher identity is independently anchored with `ARCANE_EXPECTED_PUBLISHER_THUMBPRINT`. It must be configured separately and exactly match `ARCANE_SIGNING_CERT_THUMBPRINT`; signed builds and verification fail if the trust anchor is absent or different.
 
 ## Linux build
 
@@ -230,7 +241,7 @@ npm run build:apps:windows
 
 Packages are written atomically to `dist/targets/<app-id>/`. Each target contains only its allowlisted app and shared payload, an injected Arcane runtime API, an app-specific Core and bundle descriptor, and `arcane-app-package.json` with an exact deterministic SHA-256 inventory. The packager rejects unknown apps, unsafe or escaping paths, symbolic links, overlapping payload rules, privileged app types, and capabilities outside the approved non-privileged set. It also rewrites package-relative URLs, verifies all local dependencies, injects the target CSP/Permissions Policy into every navigable document, and records the navigation allowlist.
 
-`build:apps`, `build:apps:portable`, and `--platform=portable` produce cross-platform verification packages without a native executable. On Windows, `build:app` defaults to `--platform=windows`; `build:apps:windows` produces actual `ArcaneApp-<id>.exe` WebView2 launchers, packaged `ArcaneCore.exe` and `ArcanePipeGuard.exe`, WebView2 assemblies, and `start-<id>.bat`. The launcher permits only the generated exact navigation entries and applies the target's CSP, Permissions Policy, and microphone grant. Build the Windows release first so the pinned, verified WebView2 SDK is present in the build cache.
+`build:apps`, `build:apps:portable`, and `--platform=portable` produce cross-platform verification packages without a native executable. On Windows, `build:app` defaults to `--platform=windows`; `build:apps:windows` produces actual `ArcaneApp-<id>.exe` WebView2 launchers, packaged `ArcaneCore.exe` and `ArcanePipeGuard.exe`, and the WebView2 assemblies. Each native target package has an exact root inventory and intentionally contains no mutable batch launcher. The launcher permits only the generated exact navigation entries and applies the target's CSP, Permissions Policy, and microphone grant. Build the Windows release first so the pinned, verified WebView2 SDK is present in the build cache.
 
 Application source corpora are outside the default target boundary. In 0.8.2, the BOSS package emits an `empty-unpublished` document catalog with zero records and no Markdown documents. A later corpus export may include only records that receive separate publication authorization and are both public and non-sensitive; classification metadata alone is not publication permission.
 

@@ -5,40 +5,104 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # ARCANE_PUBLICATION_HELPERS_BEGIN
+function Restore-ArcanePublicationBackup(
+  [string]$Target,
+  [string]$Backup,
+  [scriptblock]$Verify,
+  [bool]$RequireSigned
+) {
+  $quarantine = "$Target.rejected"
+  if (Test-Path -LiteralPath $quarantine) { throw "Arcane preserved an unresolved rejected publication at $quarantine." }
+  & $Verify $Backup $RequireSigned
+  $movedTarget = $false
+  if (Test-Path -LiteralPath $Target) {
+    Move-Item -LiteralPath $Target -Destination $quarantine
+    $movedTarget = $true
+  }
+  try {
+    Move-Item -LiteralPath $Backup -Destination $Target
+    & $Verify $Target $RequireSigned
+  } catch {
+    $restoreFailure = $_
+    $partialRollback = "$Backup.partial"
+    if ((Test-Path -LiteralPath $Target) -and $movedTarget -and (Test-Path -LiteralPath $quarantine)) {
+      try {
+        if (Test-Path -LiteralPath $partialRollback) { throw "Arcane preserved an unresolved partial rollback at $partialRollback." }
+        if (Test-Path -LiteralPath $Backup) {
+          Move-Item -LiteralPath $Target -Destination $partialRollback
+        } else {
+          Move-Item -LiteralPath $Target -Destination $Backup
+        }
+      } catch {
+        throw "Arcane preserved the rejected publication, but could not move the partial rollback away from the canonical path. Rollback: $($restoreFailure.Exception.Message) Partial: $($_.Exception.Message)"
+      }
+    }
+    if (-not (Test-Path -LiteralPath $Target) -and $movedTarget -and (Test-Path -LiteralPath $quarantine)) {
+      try {
+        Move-Item -LiteralPath $quarantine -Destination $Target
+      } catch {
+        throw "Arcane could not restore the rejected publication to the canonical path. Rollback: $($restoreFailure.Exception.Message) Original: $($_.Exception.Message)"
+      }
+    }
+    throw $restoreFailure
+  }
+  if ($movedTarget -and (Test-Path -LiteralPath $quarantine)) {
+    try { Remove-Item -LiteralPath $quarantine -Recurse -Force }
+    catch { Write-Warning "The verified rollback is active, but its rejected replacement remains at $($quarantine): $($_.Exception.Message)" }
+  }
+}
+
 function Recover-ArcanePublication(
   [string]$Target,
   [string]$Stage,
   [string]$Backup,
-  [scriptblock]$Verify
+  [scriptblock]$Verify,
+  [bool]$RequireSigned
 ) {
+  $quarantine = "$Target.rejected"
+  $partialRollback = "$Backup.partial"
   try {
+    if (-not (Test-Path -LiteralPath $Target) -and (Test-Path -LiteralPath $quarantine)) {
+      Move-Item -LiteralPath $quarantine -Destination $Target
+      Write-Warning "Restored the rejected Arcane publication before examining its rollback state."
+    }
+    if (Test-Path -LiteralPath $partialRollback) {
+      throw "Arcane preserved an unresolved partial rollback at $partialRollback. Review it before publishing again."
+    }
     if (-not (Test-Path -LiteralPath $Target) -and (Test-Path -LiteralPath $Backup)) {
-      & $Verify $Backup $false
+      & $Verify $Backup $RequireSigned
       Move-Item -LiteralPath $Backup -Destination $Target
-      & $Verify $Target $false
+      & $Verify $Target $RequireSigned
       Write-Warning "Recovered the previous verified Arcane publication at $Target."
     } elseif ((Test-Path -LiteralPath $Target) -and (Test-Path -LiteralPath $Backup)) {
+      $targetVerified = $false
+      $targetFailure = $null
       try {
-        & $Verify $Target $false
-        Remove-Item -LiteralPath $Backup -Recurse -Force
-        Write-Host "Accepted the completed Arcane publication at $Target after interruption recovery."
+        & $Verify $Target $RequireSigned
+        $targetVerified = $true
       } catch {
         $targetFailure = $_.Exception.Message
+      }
+      if ($targetVerified) {
         try {
-          & $Verify $Backup $false
+          Remove-Item -LiteralPath $Backup -Recurse -Force
+          Write-Host "Accepted the completed Arcane publication at $Target after interruption recovery."
         } catch {
-          throw "Neither interrupted Arcane publication can be accepted. Target: $targetFailure Backup: $($_.Exception.Message)"
+          Write-Warning "The verified Arcane publication at $Target was preserved, but its stale backup could not be removed: $($_.Exception.Message)"
         }
-        Remove-Item -LiteralPath $Target -Recurse -Force
-        Move-Item -LiteralPath $Backup -Destination $Target
-        & $Verify $Target $false
+      } else {
+        try {
+          Restore-ArcanePublicationBackup -Target $Target -Backup $Backup -Verify $Verify -RequireSigned $RequireSigned
+        } catch {
+          throw "Arcane could not restore the verified rollback publication. Target: $targetFailure Rollback: $($_.Exception.Message)"
+        }
         Write-Warning "Rolled back an incomplete Arcane publication at $Target."
       }
     } elseif (-not (Test-Path -LiteralPath $Target) -and -not (Test-Path -LiteralPath $Backup) -and (Test-Path -LiteralPath $Stage)) {
       try {
-        & $Verify $Stage $false
+        & $Verify $Stage $RequireSigned
         Move-Item -LiteralPath $Stage -Destination $Target
-        & $Verify $Target $false
+        & $Verify $Target $RequireSigned
         Write-Warning "Recovered a fully verified staged Arcane publication at $Target."
       } catch {
         $stageFailure = $_.Exception.Message
@@ -50,6 +114,19 @@ function Recover-ArcanePublication(
     if (Test-Path -LiteralPath $Stage) {
       Remove-Item -LiteralPath $Stage -Recurse -Force
       Write-Host "Removed stale Arcane publication stage $Stage."
+    }
+    $quarantine = "$Target.rejected"
+    if ((Test-Path -LiteralPath $quarantine) -and (Test-Path -LiteralPath $Target) -and -not (Test-Path -LiteralPath $Backup)) {
+      try {
+        & $Verify $Target $RequireSigned
+        Remove-Item -LiteralPath $quarantine -Recurse -Force
+        Write-Host "Removed a stale rejected Arcane publication at $quarantine."
+      } catch {
+        Write-Warning "Arcane preserved unresolved publication state at $($quarantine): $($_.Exception.Message)"
+      }
+    } elseif ((Test-Path -LiteralPath $quarantine) -and -not (Test-Path -LiteralPath $Target)) {
+      Move-Item -LiteralPath $quarantine -Destination $Target
+      Write-Warning "Restored the rejected Arcane publication so the canonical path would not remain missing."
     }
   }
 }
@@ -68,38 +145,39 @@ function Publish-VerifiedArcaneDirectory(
     throw "Arcane publication backup still exists after recovery: $Backup"
   }
   if (Test-Path -LiteralPath $Target) {
+    $targetVerified = $false
     try {
-      & $Verify $Target $false
-      Move-Item -LiteralPath $Target -Destination $Backup
-      $hasRollback = $true
+      & $Verify $Target $RequireSigned
+      $targetVerified = $true
     } catch {
       if (-not $ReplaceReproducibleTarget) { throw }
       & $ReplaceReproducibleTarget $Target
       Remove-Item -LiteralPath $Target -Recurse -Force
       Write-Host "Replaced a verified reproducible Arcane build target without treating it as a native rollback."
     }
+    if ($targetVerified) {
+      Move-Item -LiteralPath $Target -Destination $Backup
+      $hasRollback = $true
+    }
   }
   try {
     Move-Item -LiteralPath $Stage -Destination $Target
     & $Verify $Target $RequireSigned
-    if (Test-Path -LiteralPath $Backup) {
-      Remove-Item -LiteralPath $Backup -Recurse -Force
-    }
   } catch {
     $publicationFailure = $_
     if ($hasRollback -and (Test-Path -LiteralPath $Backup)) {
       try {
-        & $Verify $Backup $false
+        Restore-ArcanePublicationBackup -Target $Target -Backup $Backup -Verify $Verify -RequireSigned $RequireSigned
       } catch {
-        throw "The new Arcane publication failed and its rollback copy is not verifiable; both trees were preserved. Publication: $($publicationFailure.Exception.Message) Rollback: $($_.Exception.Message)"
+        throw "The new Arcane publication failed and its rollback could not be restored; all recoverable trees were preserved. Publication: $($publicationFailure.Exception.Message) Rollback: $($_.Exception.Message)"
       }
-      if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Recurse -Force }
-      Move-Item -LiteralPath $Backup -Destination $Target
-      & $Verify $Target $false
     } elseif (Test-Path -LiteralPath $Target) {
       Remove-Item -LiteralPath $Target -Recurse -Force
     }
     throw $publicationFailure
+  }
+  if (Test-Path -LiteralPath $Backup) {
+    Remove-Item -LiteralPath $Backup -Recurse -Force
   }
 }
 # ARCANE_PUBLICATION_HELPERS_END
@@ -109,6 +187,8 @@ $distRoot = Join-Path $root 'dist'
 $target = Join-Path $distRoot 'windows'
 $stage = Join-Path $distRoot '.windows.stage'
 $backup = Join-Path $distRoot '.windows.backup'
+$rejected = "$target.rejected"
+$partialRollback = "$backup.partial"
 $lockPath = Join-Path $distRoot '.windows.publish.lock'
 $pkg = Join-Path $root 'node_modules\.bin\pkg.cmd'
 $runtime = Join-Path $root 'runtime\arcane-core.cjs'
@@ -117,7 +197,7 @@ $generatedBundle = Join-Path $distRoot 'arcane-bundle.json'
 $generatedApps = Join-Path $distRoot 'apps'
 
 $expectedParent = [IO.Path]::GetFullPath($distRoot).TrimEnd('\')
-foreach ($candidate in @($target, $stage, $backup, $lockPath)) {
+foreach ($candidate in @($target, $stage, $backup, $rejected, $partialRollback, $lockPath)) {
   $resolved = [IO.Path]::GetFullPath($candidate)
   $resolvedParent = [IO.Path]::GetFullPath((Split-Path -Parent $resolved)).TrimEnd('\')
   if ($resolvedParent -ne $expectedParent) { throw "Refusing to build outside $expectedParent." }
@@ -154,6 +234,24 @@ $verifyDistribution = {
   Assert-WindowsDistribution -ReleaseRoot $Path -RequireSigned $RequireSigned
 }
 
+function Assert-ReproducibleUnsignedDistribution([string]$ReleaseRoot) {
+  & node (Join-Path $root 'tools\verify-built-release.mjs') $ReleaseRoot
+  if ($LASTEXITCODE -ne 0) { throw 'The existing Windows build is not an exact reproducible Arcane distribution.' }
+  $bundle = Get-Content -Raw -LiteralPath (Join-Path $ReleaseRoot 'arcane-bundle.json') | ConvertFrom-Json
+  $contentHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $ReleaseRoot 'arcane-machine-content.json')).Hash.ToLowerInvariant()
+  & node (Join-Path $root 'tools\verify-content-bindings.mjs') machine $ReleaseRoot ([string]$bundle.version) $contentHash
+  if ($LASTEXITCODE -ne 0) { throw 'The existing Windows build does not retain its exact native content binding.' }
+  $executables = @(Get-ChildItem -LiteralPath $ReleaseRoot -Recurse -File -Filter '*.exe')
+  if (-not $executables.Count) { throw 'The existing Windows build contains no executables.' }
+  $nonLocal = @($executables | Where-Object { (Get-AuthenticodeSignature -LiteralPath $_.FullName).Status -ne 'NotSigned' })
+  if ($nonLocal.Count) { throw 'Only a complete unsigned reproducible build output may bypass native rollback migration.' }
+}
+
+$replaceReproducibleDistribution = {
+  param([string]$Path)
+  Assert-ReproducibleUnsignedDistribution -ReleaseRoot $Path
+}
+
 New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 $lockStream = $null
 try {
@@ -165,13 +263,24 @@ try {
   [Environment]::SetEnvironmentVariable('ARCANE_REQUIRE_SIGNED_RELEASE', $requiredSigningPolicy, 'Process')
   Write-Host "Arcane Windows distribution flavor: $releaseFlavor."
 
-  Recover-ArcanePublication -Target $target -Stage $stage -Backup $backup -Verify $verifyDistribution
+  Recover-ArcanePublication -Target $target -Stage $stage -Backup $backup -Verify $verifyDistribution -RequireSigned $requireSignedRelease
 
   if ($requireSignedRelease -and [string]::IsNullOrWhiteSpace([string]$env:ARCANE_SIGNING_CERT_THUMBPRINT)) {
     throw 'Production Windows distribution requires ARCANE_SIGNING_CERT_THUMBPRINT. Use the explicit unsigned-local-test build only for local verification.'
   }
   if ($requireSignedRelease -and [string]::IsNullOrWhiteSpace([string]$env:ARCANE_TIMESTAMP_SERVER)) {
     throw 'Production Windows distribution requires ARCANE_TIMESTAMP_SERVER.'
+  }
+  $configuredSigningThumbprint = ([string]$env:ARCANE_SIGNING_CERT_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
+  $configuredExpectedPublisher = ([string]$env:ARCANE_EXPECTED_PUBLISHER_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
+  if ($requireSignedRelease -and [string]::IsNullOrWhiteSpace($configuredExpectedPublisher)) {
+    throw 'Production Windows distribution requires ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.'
+  }
+  if ($requireSignedRelease -and $configuredSigningThumbprint -cne $configuredExpectedPublisher) {
+    throw 'ARCANE_SIGNING_CERT_THUMBPRINT must match the independent ARCANE_EXPECTED_PUBLISHER_THUMBPRINT trust anchor.'
+  }
+  if (-not $requireSignedRelease -and $configuredExpectedPublisher) {
+    throw 'Unsigned local-test builds conflict with ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.'
   }
 
   if (-not (Test-Path -LiteralPath $pkg -PathType Leaf)) { throw 'The pinned pkg build tool is missing. Run npm ci first.' }
@@ -202,7 +311,7 @@ try {
   & node (Join-Path $root 'tools\write-release-manifest.mjs') windows $stage
   if ($LASTEXITCODE -ne 0) { throw 'Writing the outer Windows release manifest failed.' }
 
-  Publish-VerifiedArcaneDirectory -Stage $stage -Target $target -Backup $backup -Verify $verifyDistribution -RequireSigned $requireSignedRelease
+  Publish-VerifiedArcaneDirectory -Stage $stage -Target $target -Backup $backup -Verify $verifyDistribution -RequireSigned $requireSignedRelease -ReplaceReproducibleTarget $replaceReproducibleDistribution
   Write-Host "Published $releaseFlavor bound Windows distribution to $target"
 } finally {
   if (Test-Path -LiteralPath $stage) {

@@ -72,6 +72,7 @@ try{
   assert.equal(app.id,'shell');
   const capabilities=await shell.call('capabilities.list');
   assert(capabilities.methods.includes('session.logout'));
+  assert(capabilities.methods.includes('system.lock'));
   assert(!capabilities.methods.includes('installation.ensure'));
   const metrics=await shell.call('system.metrics');
   assert(metrics.logicalProcessors>0);
@@ -108,6 +109,8 @@ try{
   );
   const logout=await shell.call('session.logout');
   assert.equal(logout.simulated,true);
+  const locked=await shell.call('system.lock');
+  assert.equal(locked.simulated,true);
   for(const method of ['installation.ensure','requirements.ensure','users.add','users.activate','users.resetPassword','users.applyPassword']){
     await assert.rejects(
       shell.call(method,method==='users.add'?{usernames:['arcane-policy-test']}:{username:'arcane-policy-test'}),

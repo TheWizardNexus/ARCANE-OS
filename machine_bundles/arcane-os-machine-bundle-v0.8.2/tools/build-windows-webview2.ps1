@@ -89,15 +89,26 @@ using System.Reflection;
 
   $requireSignedRelease = $env:ARCANE_REQUIRE_SIGNED_RELEASE -eq '1'
   $timestampServer = ([string]$env:ARCANE_TIMESTAMP_SERVER).Trim()
-  $signingThumbprint = ([string]$env:ARCANE_SIGNING_CERT_THUMBPRINT).Replace(' ', '')
+  $signingThumbprint = ([string]$env:ARCANE_SIGNING_CERT_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
+  $expectedPublisherThumbprint = ([string]$env:ARCANE_EXPECTED_PUBLISHER_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
+  if ($expectedPublisherThumbprint -and $expectedPublisherThumbprint -cnotmatch '^[A-F0-9]{40,128}$') { throw 'ARCANE_EXPECTED_PUBLISHER_THUMBPRINT must be a 40-128 character hexadecimal certificate thumbprint.' }
   $certificate = $null
   if ($signingThumbprint) {
     if (-not $timestampServer) { throw 'ARCANE_TIMESTAMP_SERVER is required whenever an Arcane signing certificate is configured.' }
     $certificate = Get-ChildItem -Path Cert:\CurrentUser\My,Cert:\LocalMachine\My -CodeSigningCert |
       Where-Object { $_.Thumbprint -eq $signingThumbprint } | Select-Object -First 1
     if (-not $certificate -or -not $certificate.HasPrivateKey) { throw 'ARCANE_SIGNING_CERT_THUMBPRINT does not identify an available code-signing certificate with a private key.' }
+    if (-not $expectedPublisherThumbprint) { throw 'Signed Arcane builds require the independent ARCANE_EXPECTED_PUBLISHER_THUMBPRINT trust anchor.' }
+    if (([string]$certificate.Thumbprint).Replace(' ', '').ToUpperInvariant() -cne $expectedPublisherThumbprint) { throw 'The Arcane signing certificate does not match ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.' }
   } elseif ($requireSignedRelease) {
     throw 'A signed release is required, but ARCANE_SIGNING_CERT_THUMBPRINT was not provided.'
+  } elseif ($expectedPublisherThumbprint) {
+    throw 'Unsigned local-test builds conflict with ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.'
+  }
+  $publisherBinding = if ($certificate) {
+    'ARCANE-PUBLISHER|1|' + $expectedPublisherThumbprint
+  } else {
+    'ARCANE-PUBLISHER|1|UNSIGNED-LOCAL-TEST'
   }
   function Sign-ArcaneFile([string]$path) {
     if (-not $certificate) { return }
@@ -130,6 +141,7 @@ using System.Reflection;
 [assembly: AssemblyFileVersion("$numericVersion")]
 [assembly: AssemblyInformationalVersion("$($bundle.version)")]
 [assembly: AssemblyMetadata("ArcaneContentBinding", "$machineBinding")]
+[assembly: AssemblyMetadata("ArcanePublisherBinding", "$publisherBinding")]
 "@
     [IO.File]::WriteAllText($assemblyInfo, $assemblySource, $utf8)
     $arguments = @(

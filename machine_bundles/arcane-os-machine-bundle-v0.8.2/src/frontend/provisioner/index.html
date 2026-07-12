@@ -34,6 +34,7 @@
     </header>
 
     <section class="banner danger" id="downgradeBanner"><h2>Downgrade protection is active</h2><p id="downgradeText"></p></section>
+    <section class="banner danger" id="securityBanner" role="status" aria-live="polite"><h2 id="securityTitle">Release trust is not production-ready</h2><p id="securityText">Arcane is checking the publisher identity of this release.</p></section>
     <section class="banner" id="accessBanner"><h2>Administrator approval will be requested when needed</h2><p>Choose an installation or user action normally. Arcane keeps this window open and authorizes a temporary privileged worker for protected changes. The interface itself does not restart or elevate.</p></section>
 
     <div class="summary">
@@ -44,7 +45,7 @@
 
     <main class="flow">
       <section class="panel">
-        <div class="panel-head"><div><h2><span class="step">1</span>Install Arcane OS</h2><div class="small">One action verifies every requirement, installs anything missing or outdated, and installs or updates Arcane globally.</div></div><button class="btn" id="refreshAll">Check again</button></div>
+        <div class="panel-head"><div><h2><span class="step">1</span>Install Arcane OS</h2><div class="small">One action checks every machine requirement, then installs, updates, or repairs the verified Arcane OS payload. Third-party requirements remain administrator-managed.</div></div><button class="btn" id="refreshAll">Check again</button></div>
         <div class="panel-body install-layout">
           <div class="install-card">
             <div>
@@ -262,7 +263,9 @@ function renderMachine(machine) {
   const installation = machine.installation;
   const requirements = machine.requirements || [];
   const permissions = machine.permissions || {};
-  $('#versionPill').textContent = `Package ${machine.version}`;
+  const securityMode = machine.securityMode || 'unverified';
+  const simulation = Boolean(machine.simulation);
+  $('#versionPill').textContent = `Package ${machine.version}${securityMode === 'unsigned-local-test' ? ' (local test)' : ''}`;
   $('#osSummary').textContent = `${machine.os.displayName} · ${machine.os.architecture}`;
   $('#modeSummary').textContent = permissions.elevated ? `${permissions.level} scope` : `Standard scope · ${permissions.mechanism || 'authorization'} on demand`;
   $('#modeSummary').className = 'value ' + (permissions.elevated ? 'ok' : 'warn');
@@ -272,6 +275,14 @@ function renderMachine(machine) {
   const banner = $('#downgradeBanner');
   banner.classList.toggle('visible', installation.blocked);
   if (installation.blocked) $('#downgradeText').textContent = `Installed Arcane OS ${installation.installedVersion} is newer than package ${installation.packageVersion}. This package will not change the machine.`;
+  const securityBanner = $('#securityBanner');
+  securityBanner.classList.toggle('visible', simulation || securityMode !== 'publisher-verified');
+  $('#securityTitle').textContent = simulation ? 'Simulation mode is active' : securityMode === 'unsigned-local-test' ? 'Unsigned local-test mode is active' : 'Release trust could not be verified';
+  $('#securityText').textContent = simulation
+    ? 'This session simulates provisioning and cannot change Windows accounts, passwords, shells, or the global Arcane installation.'
+    : securityMode === 'unsigned-local-test'
+    ? 'This release is content-bound and intended only for controlled local acceptance testing. It is not publisher-signed and must not be treated as a production installation.'
+    : 'Arcane has not verified this release as publisher-signed. Machine-changing actions remain unavailable until release trust is restored.';
   $('#accessBanner').classList.toggle('visible', !permissions.elevated && !machine.simulation);
 
   const allReady = requirements.every(requirementReady);
@@ -287,7 +298,7 @@ function renderMachine(machine) {
     status = 'blocked';
   } else if (!installation.present) {
     title = 'Arcane OS is not installed';
-    detail = 'Install Arcane OS and automatically install or update every required dependency.';
+    detail = 'Install the verified Arcane OS payload after checking administrator-managed machine requirements.';
     button = `Install Arcane OS ${installation.packageVersion}`;
     status = 'missing';
   } else if (installation.action === 'update') {
@@ -302,8 +313,8 @@ function renderMachine(machine) {
     status = 'update';
   } else if (!allReady) {
     title = `Arcane OS ${installation.installedVersion} is installed`;
-    detail = 'One or more requirements are missing or below the minimum version.';
-    button = 'Repair Arcane requirements';
+    detail = 'One or more administrator-managed requirements are missing or below the minimum version.';
+    button = 'Check Arcane requirements';
     status = 'update';
   } else {
     title = `Arcane OS ${installation.installedVersion} is installed`;
@@ -326,14 +337,17 @@ function renderControls() {
   if (!state.machine) return;
   const installation = state.machine.installation;
   const ready = installReady();
-  $('#installArcaneButton').disabled = state.busy || installation.blocked || (ready && installation.action === 'repair' && !installation.payloadRepairRequired);
+  const releaseTrusted = Boolean(state.machine.simulation) || ['publisher-verified', 'unsigned-local-test'].includes(state.machine.securityMode);
+  $('#installArcaneButton').disabled = state.busy || !releaseTrusted || installation.blocked || (ready && installation.action === 'repair' && !installation.payloadRepairRequired);
   $('#refreshAll').disabled = state.busy;
   $('#refreshUsers').disabled = state.busy;
-  $('#addUserRow').disabled = state.busy || installation.blocked;
-  $('#createUsersButton').disabled = state.busy || installation.blocked;
-  $('#userReadiness').textContent = ready
+  $('#addUserRow').disabled = state.busy || !releaseTrusted || installation.blocked;
+  $('#createUsersButton').disabled = state.busy || !releaseTrusted || installation.blocked;
+  $('#userReadiness').textContent = !releaseTrusted
+    ? 'Arcane will not make machine changes until the active release trust is verified.'
+    : ready
     ? 'Arcane OS is ready. Adding a user will create the account when needed and assign Arcane as its shell.'
-    : 'Arcane will ensure the installation and dependencies are ready as part of adding the user.';
+    : 'Arcane will verify the installation and stop before account changes if administrator-managed requirements are not ready.';
 }
 
 function addUserRow(value) {
@@ -465,7 +479,7 @@ async function refreshAll() {
 async function installArcane() {
   hideError();
   renderCredentials([]);
-  setBusy(true, 'Installing Arcane OS and checking dependencies…');
+  setBusy(true, 'Installing Arcane OS and checking requirements…');
   appendOutput('Starting Arcane installation. The window will remain open; a temporary privileged worker will be authorized only if required.', 'step');
   try {
     const result = await Arcane.installation.ensure();

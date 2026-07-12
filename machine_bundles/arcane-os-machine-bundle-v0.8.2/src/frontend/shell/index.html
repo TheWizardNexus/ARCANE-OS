@@ -20,7 +20,7 @@
     main{min-height:100vh;padding:132px 58px 104px}.workspace{width:min(1180px,100%);margin:0 auto;display:grid;grid-template-columns:minmax(280px,.8fr) minmax(420px,1.4fr);gap:28px;align-items:start}.core{text-align:center;padding:24px 10px}.sigil{width:min(19vw,170px);height:min(19vw,170px);margin:auto;filter:drop-shadow(0 0 34px rgba(128,111,255,.34));animation:breathe 5s ease-in-out infinite}@keyframes breathe{50%{transform:scale(1.018);filter:drop-shadow(0 0 50px rgba(128,111,255,.5))}}h1{font-size:clamp(30px,4vw,54px);font-weight:300;letter-spacing:.18em;margin:24px 0 10px;text-transform:uppercase}.subtitle{color:var(--muted);font-size:clamp(13px,1.3vw,16px);line-height:1.7}.cards{display:grid;grid-template-columns:1fr;gap:10px;margin-top:28px;text-align:left}.card{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);backdrop-filter:blur(16px)}.label{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}.value{margin-top:7px;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .security-warning{position:fixed;z-index:4;top:76px;left:50%;transform:translateX(-50%);width:min(720px,calc(100vw - 72px));padding:10px 16px;border:1px solid rgba(230,173,99,.48);border-radius:12px;background:rgba(49,31,9,.96);color:#ffe1b6;text-align:center;font-size:12px;line-height:1.45;box-shadow:0 14px 44px rgba(0,0,0,.4)}.security-warning[hidden]{display:none}
     .launcher{min-height:430px;border:1px solid var(--line);border-radius:22px;background:rgba(8,13,24,.78);backdrop-filter:blur(18px);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.22)}.launcher-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:20px}.launcher h2{font-size:23px;font-weight:450;letter-spacing:.04em;margin:0}.launcher-intro{color:var(--muted);font-size:12px;line-height:1.55;margin:6px 0 0}.catalog-badge{white-space:nowrap;border:1px solid rgba(113,215,162,.27);border-radius:999px;padding:7px 10px;color:#bdf3d4;background:rgba(15,52,38,.55);font-size:10px;text-transform:uppercase;letter-spacing:.12em}.catalog-state{min-height:52px;display:grid;place-items:center;text-align:center;color:var(--muted);line-height:1.55;padding:12px}.catalog-state.error-state{color:#ffd1d7;border:1px solid rgba(255,141,154,.25);border-radius:14px;background:rgba(53,13,24,.44)}.catalog-state[hidden]{display:none}.app-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.app-grid[aria-busy="true"]{opacity:.76}.app-card{position:relative;min-height:146px;width:100%;display:grid;grid-template-columns:48px minmax(0,1fr);gap:14px;align-content:start;text-align:left;padding:17px;border:1px solid var(--line);border-radius:16px;color:var(--text);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));cursor:pointer;transition:transform .16s,border-color .16s,background .16s}.app-card:hover:not([aria-disabled="true"]),.app-card:focus-visible{transform:translateY(-2px);border-color:rgba(143,124,255,.7);background:linear-gradient(145deg,rgba(143,124,255,.14),rgba(255,255,255,.025));outline:none}.app-card:focus-visible{box-shadow:0 0 0 3px rgba(143,124,255,.25)}.app-card[aria-disabled="true"]{cursor:wait}.app-icon,.app-icon-fallback{grid-row:1 / span 3;width:48px;height:48px;border-radius:13px;background:rgba(3,5,10,.72);border:1px solid rgba(155,173,255,.16);object-fit:contain;padding:7px}.app-icon-fallback{display:grid;place-items:center;color:#c8c0ff;font-size:19px;font-weight:600;padding:0}.app-name{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis}.app-description{color:var(--muted);font-size:12px;line-height:1.48;min-height:36px}.app-meta{color:#aeb7d2;font-size:10px;text-transform:uppercase;letter-spacing:.1em}.retry{margin-top:10px}
-    .logout{border:1px solid rgba(255,141,154,.28);border-radius:999px;padding:10px 16px;color:#ffd8dc;background:rgba(48,13,24,.55);cursor:pointer;text-transform:uppercase;letter-spacing:.12em;font-size:10px}.logout:hover{border-color:rgba(255,141,154,.7);background:rgba(73,20,34,.8)}
+    .session-button{border-radius:999px;padding:10px 16px;cursor:pointer;text-transform:uppercase;letter-spacing:.12em;font-size:10px}.session-button:disabled{opacity:.45;cursor:wait}.lock{border:1px solid rgba(143,124,255,.32);color:#e0dcff;background:rgba(36,29,73,.58)}.lock:hover:not(:disabled){border-color:rgba(143,124,255,.74);background:rgba(52,42,101,.78)}.logout{border:1px solid rgba(255,141,154,.28);color:#ffd8dc;background:rgba(48,13,24,.55)}.logout:hover:not(:disabled){border-color:rgba(255,141,154,.7);background:rgba(73,20,34,.8)}
     dialog{border:1px solid rgba(165,180,255,.22);border-radius:20px;background:rgba(8,12,22,.97);color:var(--text);box-shadow:0 30px 120px #000;padding:24px;width:min(440px,calc(100vw - 36px))}dialog::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(8px)}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}.btn{padding:11px 15px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer}.btn.danger{border-color:rgba(255,141,154,.35);color:#ffd8dc;background:rgba(72,18,31,.65)}
     .error{position:fixed;right:28px;bottom:74px;width:min(600px,calc(100vw - 56px));max-height:58vh;overflow:auto;border:1px solid rgba(255,141,154,.4);border-radius:16px;background:rgba(29,7,14,.96);padding:18px;box-shadow:0 22px 70px #000;display:none}.error.visible{display:block}.error p{color:#ffd8dc;line-height:1.5}.error details{margin-top:12px}.error pre{white-space:pre-wrap;color:#eebbc2;font-size:11px}.error-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.toast{position:fixed;left:50%;bottom:72px;transform:translateX(-50%) translateY(20px);opacity:0;padding:10px 14px;border:1px solid rgba(113,215,162,.35);border-radius:999px;background:rgba(11,38,29,.96);color:#d8ffea;transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
     @media(max-width:900px){main{padding:120px 38px 104px}.workspace{grid-template-columns:1fr}.core{display:grid;grid-template-columns:130px 1fr;gap:20px;text-align:left;align-items:center}.sigil{width:130px;height:130px}.core h1{margin-top:0}.cards{grid-column:1/-1;grid-template-columns:repeat(3,1fr)}}
@@ -31,7 +31,7 @@
   <div class="frame"></div>
   <header class="top">
     <div class="brand"><div class="mini"><img src="../shared/arcane-sigil.svg" alt=""></div><span>Arcane OS</span><span class="state" id="version">starting</span></div>
-    <div class="actions"><span class="identity" id="identity">Detecting user</span><button class="logout" id="logout">Log out</button></div>
+    <div class="actions"><span class="identity" id="identity">Detecting user</span><button class="session-button lock" id="lock">Lock</button><button class="session-button logout" id="logout">Log out</button></div>
   </header>
   <div class="security-warning" id="securityWarning" role="status" aria-live="polite">Arcane has not yet verified this release as publisher-signed. Do not treat this session as a production installation.</div>
   <main>
@@ -76,6 +76,7 @@
     let lastError = '';
     let installedApplications = [];
     let launchingApplicationId = null;
+    let sessionActionPending = false;
 
     function showToast(message) {
       const node = $('#toast');
@@ -295,9 +296,31 @@
       } catch (error) { showError('Unable to initialize Arcane', error); }
     }
 
-    $('#logout').addEventListener('click', () => $('#logoutDialog').showModal());
+    function setSessionActionPending(value) {
+      sessionActionPending = Boolean(value);
+      $('#lock').disabled = sessionActionPending;
+      $('#logout').disabled = sessionActionPending;
+    }
+
+    $('#lock').addEventListener('click', async () => {
+      if (sessionActionPending) return;
+      setSessionActionPending(true);
+      $('#status').textContent = 'Requesting operating-system lock…';
+      try {
+        const response = await Arcane.system.lock();
+        $('#status').textContent = response && response.simulated ? 'Lock was simulated' : 'Operating-system lock accepted';
+      } catch (error) {
+        await showError('Operating-system lock failed', error);
+      } finally {
+        setSessionActionPending(false);
+      }
+    });
+
+    $('#logout').addEventListener('click', () => { if (!sessionActionPending) $('#logoutDialog').showModal(); });
     $('#cancelLogout').addEventListener('click', () => $('#logoutDialog').close());
     $('#confirmLogout').addEventListener('click', async () => {
+      if (sessionActionPending) return;
+      setSessionActionPending(true);
       $('#confirmLogout').disabled = true;
       $('#cancelLogout').disabled = true;
       $('#logoutText').textContent = 'Requesting operating-system logout…';
@@ -307,6 +330,7 @@
         if (response && response.simulated) setTimeout(() => location.reload(), 1200);
       } catch (error) {
         $('#logoutDialog').close();
+        setSessionActionPending(false);
         $('#confirmLogout').disabled = false;
         $('#cancelLogout').disabled = false;
         showError('Operating-system logout failed', error);

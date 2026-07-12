@@ -13,6 +13,7 @@ const runtimePath=path.join(temporaryRoot,'arcane-core.cjs');
 const marker='const PATHS = native.paths;';
 const injectedAdapter=`
 let applicationsListCallCount=0;
+native.hostReleaseSecurityMode=()=> 'publisher-verified';
 native.releaseSecurityMode=()=> 'publisher-verified';
 native.listInstalledApplications=async function(){
   if(arguments.length!==0)throw new Error('list contract received arguments');

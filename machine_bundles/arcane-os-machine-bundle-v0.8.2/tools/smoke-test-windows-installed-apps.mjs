@@ -274,7 +274,7 @@ function createAdapter(fixture, options = {}) {
     production: false,
     path: path.win32,
     fs: fsSync,
-    fsp: fs,
+    fsp: options.fsp || fs,
     crypto,
     os,
     bundleVersion: version,
@@ -317,6 +317,10 @@ function createAdapter(fixture, options = {}) {
 
 async function writeLease(fixture, lease) {
   await writeJson(fixture.stateRoot, 'installation-operation.json', lease);
+}
+
+async function writeUniqueLease(fixture, lease) {
+  await writeJson(fixture.stateRoot, 'installation-operation-' + lease.nonce + '.json', lease);
 }
 
 function validLease() {
@@ -435,6 +439,84 @@ try {
   const stale = createAdapter(staleFixture, { processIdentityProbe: () => ({ state: 'not-found' }) });
   await stale.adapter.launchInstalledApplication('boss');
   assert.equal(stale.spawnCalls.length, 1, 'a protected stale lease must not block applications forever');
+  await assert.rejects(
+    stale.adapter.acquireInstallLease({}),
+    (error) => error && error.code === 'INSTALL_BUSY' && error.details && error.details.legacyRecoveryRequired === true,
+    'a stale legacy lease must fail closed instead of racing an older Provisioner during recovery',
+  );
+
+  const leaseRaceFixture = await buildFixture('stale-lease-race');
+  await writeUniqueLease(leaseRaceFixture, validLease());
+  let candidateWrites = 0;
+  let releaseCandidateWrites;
+  const candidateWriteBarrier = new Promise((resolve) => { releaseCandidateWrites = resolve; });
+  const gatedFsp = new Proxy(fs, {
+    get(target, property) {
+      if (property !== 'writeFile') {
+        const value = target[property];
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return async (...writeArgs) => {
+        if (path.basename(String(writeArgs[0])).startsWith('installation-operation-')) {
+          candidateWrites += 1;
+          if (candidateWrites === 2) releaseCandidateWrites();
+          await candidateWriteBarrier;
+        }
+        return fs.writeFile(...writeArgs);
+      };
+    },
+  });
+  const currentTicks = '638900000000000111';
+  const leaseIdentity = (pid) => Number(pid) === process.pid
+    ? { state: 'alive', startTicks: currentTicks }
+    : { state: 'not-found' };
+  const leaseRacerOne = createAdapter(leaseRaceFixture, { fsp: gatedFsp, processIdentityProbe: leaseIdentity });
+  const leaseRacerTwo = createAdapter(leaseRaceFixture, { fsp: gatedFsp, processIdentityProbe: leaseIdentity });
+  const raced = await Promise.allSettled([
+    leaseRacerOne.adapter.acquireInstallLease({}),
+    leaseRacerTwo.adapter.acquireInstallLease({}),
+  ]);
+  const acquired = raced.filter((result) => result.status === 'fulfilled');
+  assert(acquired.length <= 1, 'concurrent stale recovery must never grant two installation leases');
+  for (const result of acquired) await leaseRacerOne.adapter.releaseInstallLease(result.value);
+  const retryLease = await leaseRacerOne.adapter.acquireInstallLease({});
+  const legacyLeasePath = path.join(leaseRaceFixture.stateRoot, 'installation-operation.json');
+  const legacyLease = JSON.parse(await fs.readFile(legacyLeasePath, 'utf8'));
+  assert.equal(legacyLease.nonce, retryLease.nonce, 'new leases must publish the legacy fixed-path exclusion beacon');
+  await assert.rejects(
+    fs.writeFile(legacyLeasePath, canonicalJson(validLease()), { encoding: 'utf8', flag: 'wx' }),
+    (error) => error && error.code === 'EEXIST',
+    'an older Provisioner must observe the active fixed-path exclusion beacon',
+  );
+  await leaseRacerOne.adapter.releaseInstallLease(retryLease);
+  await assert.rejects(fs.access(legacyLeasePath), (error) => error && error.code === 'ENOENT');
+
+  const cleanupFailureFixture = await buildFixture('stale-cleanup-failure');
+  const staleCleanupLease = validLease();
+  await writeUniqueLease(cleanupFailureFixture, staleCleanupLease);
+  const staleCleanupName = 'installation-operation-' + staleCleanupLease.nonce + '.json';
+  const cleanupFailureFsp = new Proxy(fs, {
+    get(target, property) {
+      const value = target[property];
+      if (property !== 'unlink') return typeof value === 'function' ? value.bind(target) : value;
+      return async (targetPath) => {
+        if (path.basename(String(targetPath)) === staleCleanupName) {
+          const error = new Error('injected stale cleanup failure');
+          error.code = 'EACCES';
+          throw error;
+        }
+        return fs.unlink(targetPath);
+      };
+    },
+  });
+  const cleanupFailure = createAdapter(cleanupFailureFixture, {
+    fsp: cleanupFailureFsp,
+    processIdentityProbe: leaseIdentity,
+  });
+  await assert.rejects(cleanupFailure.adapter.acquireInstallLease({}), /injected stale cleanup failure/);
+  const remainingLeaseNames = (await fs.readdir(cleanupFailureFixture.stateRoot))
+    .filter((name) => name.startsWith('installation-operation'));
+  assert.deepEqual(remainingLeaseNames, [staleCleanupName], 'failed stale cleanup must release its newly created active lease');
 
   const reusedFixture = await buildFixture('reused-pid-lease');
   await writeLease(reusedFixture, validLease());

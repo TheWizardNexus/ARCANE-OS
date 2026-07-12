@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const [guard, core, windows, linux, host, windowsBuild, targetBuild, releaseIntegrity, machineContent, targetFinalizer] = await Promise.all([
+const [guard, core, windows, linux, host, windowsBuild, targetBuild, releaseIntegrity, machineContent, targetFinalizer, windowsSecurity] = await Promise.all([
   fs.readFile(path.join(root, 'src/hosts/windows/ArcanePipeGuard.cs'), 'utf8'),
   fs.readFile(path.join(root, 'src/core/arcane-core.template.cjs'), 'utf8'),
   fs.readFile(path.join(root, 'src/native/windows.cjs'), 'utf8'),
@@ -15,6 +15,7 @@ const [guard, core, windows, linux, host, windowsBuild, targetBuild, releaseInte
   fs.readFile(path.join(root, 'tools/release-integrity.mjs'), 'utf8'),
   fs.readFile(path.join(root, 'tools/machine-content.mjs'), 'utf8'),
   fs.readFile(path.join(root, 'tools/finalize-app-package.mjs'), 'utf8'),
+  fs.readFile(path.join(root, 'tools/verify-windows-release-security.ps1'), 'utf8'),
 ]);
 
 assert.match(guard, /GetNamedPipeClientProcessId\s*\(/);
@@ -40,6 +41,7 @@ assert.match(core, /if \(!simulate && platform === 'linux'\)/);
 assert.match(core, /PRIVILEGE_PEER_VERIFICATION_UNAVAILABLE/);
 assert.match(core, /verifyPrivilegePipeGuardTrust/);
 assert.match(core, /verifyUnsignedLocalPipeGuardBinding/);
+assert.match(core, /if \(allowUnsignedLocalRelease\) workerArgs\.push\('--allow-unsigned-local-release'\);/);
 assert.match(core, /'EXTERNAL_PROVISIONER_REQUIRED'/);
 assert.match(core, /payload\.selfHosted/);
 const selfHostedCheck = core.indexOf('if (!simulate && payload.selfHosted)');
@@ -49,12 +51,25 @@ assert(selfHostedCheck >= 0 && missingPayloadCheck > selfHostedCheck,
 assert.match(windows, /Get-AuthenticodeSignature/);
 assert.match(windows, /guardThumbprint === coreThumbprint/);
 assert.match(windows, /allowUnsignedLocalRelease/);
+assert.match(windows, /const forwardUnsignedClaim = Boolean\(ctx\.allowUnsignedLocalRelease\)/);
+assert.match(windows, /relaunchArgs\.includes\('--allow-unsigned-local-release'\)/);
+assert.match(windows, /\$env:ARCANE_RELEASE_SECURITY_MODE='unsigned-local-test'/);
+assert.match(windows, /Remove-Item -LiteralPath 'Env:ARCANE_RELEASE_SECURITY_MODE'/);
 assert.match(windows, /runningInstalledArcaneProcesses/);
 assert.match(windows, /relativePath: normalizeInstalledPath\(record\.relativePath/);
+assert.match(windows, /function hostReleaseSecurityMode\(\)/);
+assert.match(windows, /function legacyInstallLeasePath\(\)/);
+assert.match(windows, /writeFile\(legacyTarget, canonicalJson\(lease, true\), \{ encoding: 'utf8', flag: 'wx'/);
+assert.match(windows, /legacyRecoveryRequired: true/);
+assert.match(windows, /releaseOwnedInstallLeaseFile\(target, lease\)\.catch/);
 assert.match(host, /bool allowUnsigned = HasExactArgument\(args, "--allow-unsigned-local-release"\);/);
-assert.match(host, /string securityMode = VerifyExecutableSignatures\(executables, allowUnsigned\);/);
+assert.match(host, /string securityMode = VerifyExecutableSignatures\(executables, allowUnsigned, publisherMarker\);/);
 assert.match(host, /internal bool IsUnsignedLocalTest \{ get \{ return String\.Equals\(SecurityMode, "unsigned-local-test", StringComparison\.Ordinal\); \} \}/);
 assert.match(host, /start\.EnvironmentVariables\["ARCANE_RELEASE_SECURITY_MODE"\] = releaseSecurity\.SecurityMode;/);
+assert.match(host, /private const string PublisherMetadataKey = "ArcanePublisherBinding";/);
+assert.match(host, /private static readonly string UnsignedPublisherMarker = String\.Concat\(PublisherMarkerPrefix, "UNSIGNED-", "LOCAL-", "TEST"\);/);
+assert.doesNotMatch(host, /"ARCANE-PUBLISHER\|1\|UNSIGNED-LOCAL-TEST"/);
+assert.match(host, /not signed by its configured publisher certificate/);
 const buildArguments = host.match(/private static string BuildArguments\([\s\S]+?(?=\n\s*private static string Quote\()/)?.[0] || '';
 assert.match(buildArguments, /if \(releaseSecurity\.IsUnsignedLocalTest\) result\.Append\(" --allow-unsigned-local-release"\);/);
 assert.doesNotMatch(buildArguments, /arg == "--allow-unsigned-local-release"/);
@@ -64,6 +79,7 @@ assert.match(host, /string expectedPrefix = "ARCANE-MACHINE-BINDING\|1\|";/);
 assert.match(host, /if \(!FixedTimeEquals\(markerParts\[3\], manifestHash\)\) throw new InvalidDataException/);
 assert.match(host, /RequireInventoryFile\(files, "apps\/catalog\.json"\);/);
 assert.match(host, /RequireEmbeddedMarker\(retainedByPath\[Path\.GetFullPath\(otherHostPath\)\], marker\);/);
+assert.match(host, /RequireEmbeddedMarker\(retainedByPath\[Path\.GetFullPath\(otherHostPath\)\], publisherMarker\);/);
 
 assert.match(core, /\^\[A-Za-z0-9_-\]\{22\}\$/);
 assert.match(core, /authTag\.length !== 16/);
@@ -87,6 +103,10 @@ for (const build of [windowsBuild, targetBuild]) {
   assert.match(build, /if \(\$signingThumbprint\) \{\s*if \(-not \$timestampServer\)/);
   assert.match(build, /elseif \(\$requireSignedRelease\)/);
   assert.match(build, /TimeStamperCertificate/);
+  assert.match(build, /ARCANE_EXPECTED_PUBLISHER_THUMBPRINT/);
+  assert.match(build, /signing certificate does not match ARCANE_EXPECTED_PUBLISHER_THUMBPRINT/);
+  assert.match(build, /ARCANE-PUBLISHER\|1\|UNSIGNED-LOCAL-TEST/);
+  assert.match(build, /AssemblyMetadata\("ArcanePublisherBinding", "\$publisherBinding"\)/);
 }
 assert.match(windowsBuild, /\$bin = Join-Path \$release 'bin'/);
 assert.match(windowsBuild, /machine-content\.mjs'\) write \$release/);
@@ -107,5 +127,9 @@ assert.match(machineContent, /enumerateMachineContent\(root, \{ phase: 'write' \
 assert.match(machineContent, /enumerateMachineContent\(root, \{ phase: 'verify' \}\)/);
 assert.match(machineContent, /manifest does not exactly match the release payload/);
 assert.match(targetFinalizer, /pipeGuard: 'ArcanePipeGuard\.exe'/);
+assert.match(windowsSecurity, /ARCANE_EXPECTED_PUBLISHER_THUMBPRINT/);
+assert.match(windowsSecurity, /actualPublisherThumbprint -cne \$normalizedExpectedPublisherThumbprint/);
+assert.match(windowsSecurity, /expectedPublisherMarker = 'ARCANE-PUBLISHER\|1\|' \+ \$normalizedExpectedPublisherThumbprint/);
+assert.match(windowsSecurity, /Get-ArcaneMarkerCount/);
 
 console.log('Arcane kernel-bound privilege boundary source and build contracts passed.');

@@ -306,6 +306,11 @@ namespace ArcaneOS
     internal static class ReleaseSecurityVerifier
     {
         private const string BindingMetadataKey = "ArcaneContentBinding";
+        private const string PublisherMetadataKey = "ArcanePublisherBinding";
+        private const string PublisherMarkerPrefix = "ARCANE-PUBLISHER|1|";
+        // Construct the local-test sentinel at runtime so the complete publisher
+        // marker appears exactly once in the binary: in AssemblyMetadata.
+        private static readonly string UnsignedPublisherMarker = String.Concat(PublisherMarkerPrefix, "UNSIGNED-", "LOCAL-", "TEST");
         private const string MachineManifestName = "arcane-machine-content.json";
         private const string TargetManifestName = "arcane-app-content.json";
         private static readonly Regex HashPattern = new Regex("^[a-f0-9]{64}$", RegexOptions.CultureInvariant);
@@ -372,7 +377,8 @@ namespace ArcaneOS
 #endif
             root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             AssertRegularDirectory(root, "release root");
-            string marker = ReadOwnBindingMarker(expectedPrefix);
+            string marker = ReadOwnMetadataMarker(BindingMetadataKey, expectedPrefix, "content binding");
+            string publisherMarker = ReadOwnMetadataMarker(PublisherMetadataKey, PublisherMarkerPrefix, "publisher binding");
             string[] markerParts = marker.Split('|');
             if (markerParts.Length != 4 || markerParts[1] != "1" || !HashPattern.IsMatch(markerParts[3])) {
                 throw new InvalidDataException("Arcane rejected its malformed native content binding.");
@@ -425,9 +431,10 @@ namespace ArcaneOS
                 VerifyRetainedDirectoryIdentities(retainedDirectories);
 #if !ARCANE_TARGET_APP
                 RequireEmbeddedMarker(retainedByPath[Path.GetFullPath(otherHostPath)], marker);
+                RequireEmbeddedMarker(retainedByPath[Path.GetFullPath(otherHostPath)], publisherMarker);
 #endif
                 bool allowUnsigned = HasExactArgument(args, "--allow-unsigned-local-release");
-                string securityMode = VerifyExecutableSignatures(executables, allowUnsigned);
+                string securityMode = VerifyExecutableSignatures(executables, allowUnsigned, publisherMarker);
                 return new ReleaseSecurityResult(root, securityMode, retained, retainedDirectories);
             }
             catch
@@ -792,7 +799,7 @@ namespace ArcaneOS
             return result;
         }
 
-        private static string VerifyExecutableSignatures(List<string> executables, bool allowUnsigned)
+        private static string VerifyExecutableSignatures(List<string> executables, bool allowUnsigned, string publisherMarker)
         {
             if (executables == null || executables.Count == 0) throw new InvalidDataException("Arcane release contains no native executables to authenticate.");
             HashSet<string> unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -817,22 +824,37 @@ namespace ArcaneOS
                 else if (!String.Equals(signer, evidence.SignerThumbprint, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Arcane rejected a release containing executables from different publishers.");
             }
             if (sawValid && sawUnsigned) throw new InvalidDataException("Arcane rejected a release that mixes signed and unsigned executables.");
-            if (sawValid) return "publisher-verified";
-            if (sawUnsigned && allowUnsigned) return "unsigned-local-test";
+            if (sawValid)
+            {
+                string expectedPrefix = PublisherMarkerPrefix;
+                if (String.IsNullOrWhiteSpace(publisherMarker) || !publisherMarker.StartsWith(expectedPrefix, StringComparison.Ordinal))
+                    throw new InvalidDataException("Arcane rejected a missing native publisher binding.");
+                string expectedSigner = publisherMarker.Substring(expectedPrefix.Length);
+                if (!Regex.IsMatch(expectedSigner, "^[A-Fa-f0-9]{40,128}$", RegexOptions.CultureInvariant)
+                    || !String.Equals(expectedSigner, signer, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Arcane rejected a release that is not signed by its configured publisher certificate.");
+                return "publisher-verified";
+            }
+            if (sawUnsigned && allowUnsigned)
+            {
+                if (!String.Equals(publisherMarker, UnsignedPublisherMarker, StringComparison.Ordinal))
+                    throw new InvalidDataException("Arcane rejected an unsigned release without its explicit local-test publisher binding.");
+                return "unsigned-local-test";
+            }
             throw new InvalidDataException("Arcane requires a publisher-signed release. The unsigned local override must be passed explicitly for controlled testing.");
         }
 
-        private static string ReadOwnBindingMarker(string expectedPrefix)
+        private static string ReadOwnMetadataMarker(string metadataKey, string expectedPrefix, string label)
         {
             string marker = null;
             object[] attributes = Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyMetadataAttribute), false);
             foreach (AssemblyMetadataAttribute attribute in attributes)
             {
-                if (!String.Equals(attribute.Key, BindingMetadataKey, StringComparison.Ordinal)) continue;
-                if (marker != null) throw new InvalidDataException("Arcane native host contains duplicate content bindings.");
+                if (!String.Equals(attribute.Key, metadataKey, StringComparison.Ordinal)) continue;
+                if (marker != null) throw new InvalidDataException("Arcane native host contains a duplicate " + label + ".");
                 marker = attribute.Value;
             }
-            if (String.IsNullOrWhiteSpace(marker) || !marker.StartsWith(expectedPrefix, StringComparison.Ordinal)) throw new InvalidDataException("Arcane native host is missing its release content binding.");
+            if (String.IsNullOrWhiteSpace(marker) || !marker.StartsWith(expectedPrefix, StringComparison.Ordinal)) throw new InvalidDataException("Arcane native host is missing its release " + label + ".");
             return marker;
         }
 

@@ -6,6 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'src', 'frontend', 'provisioner', 'index.html'), 'utf8');
+assert.match(source,/id="securityBanner"/,'the Provisioner must reserve a visible release-trust warning');
+assert.match(source,/securityMode !== 'publisher-verified'/,'only publisher verification may hide the Provisioner warning');
+assert.match(source,/Unsigned local-test mode is active/);
+assert.doesNotMatch(source,/automatically install or update every required dependency|Repair Arcane requirements|installation and dependencies are ready/);
 
 function functionSource(start, end) {
   const from = source.indexOf(start);
@@ -25,8 +29,15 @@ function element(id) {
       classList: {
         add: (...names) => names.forEach((name) => classes.add(name)),
         remove: (...names) => names.forEach((name) => classes.delete(name)),
+        toggle: (name, force) => {
+          const enabled = force === undefined ? !classes.has(name) : Boolean(force);
+          if (enabled) classes.add(name); else classes.delete(name);
+          return enabled;
+        },
         contains: (name) => classes.has(name),
       },
+      className: '',
+      disabled: false,
     });
   }
   return elements.get(id);
@@ -46,6 +57,8 @@ const context = vm.createContext({
   hideError() {},
   setBusy() {},
   showUserSuccess() {},
+  requirementReady() { return true; },
+  renderRequirements() {},
   async showError() {},
   async refreshUsers() {},
   Arcane: {
@@ -63,10 +76,57 @@ const context = vm.createContext({
 });
 
 vm.runInContext([
+  functionSource('function installReady()', 'function renderMachine'),
+  functionSource('function renderMachine(machine)', 'function renderControls'),
+  functionSource('function renderControls()', 'function addUserRow'),
   functionSource('function renderCredentials(credentials)', 'function showUserSuccess'),
   functionSource('async function activatePendingAccounts()', 'async function resetPassword'),
   functionSource('async function applyPendingPasswords()', 'async function restoreShell'),
 ].join('\n'), context);
+
+const machineFixture = {
+  version: '0.8.2',
+  os: { displayName: 'Windows', architecture: 'x64' },
+  permissions: { elevated: false, level: 'standard', mechanism: 'UAC' },
+  protectedUsernames: ['codex'],
+  usernamePolicy: { description: 'Use a standard Windows account name.' },
+  requirements: [],
+  simulation: false,
+  installation: {
+    present: false,
+    blocked: false,
+    installedVersion: null,
+    packageVersion: '0.8.2',
+    action: 'install',
+    payloadRepairRequired: false,
+    payload: { releaseReady: true },
+  },
+};
+context.machineFixture = machineFixture;
+for (const securityMode of ['publisher-verified', 'unsigned-local-test', 'unverified']) {
+  context.machineFixture = { ...machineFixture, securityMode };
+  vm.runInContext('renderMachine(machineFixture)', context);
+  const warningVisible = element('securityBanner').classList.contains('visible');
+  assert.equal(warningVisible, securityMode !== 'publisher-verified');
+  assert.equal(element('installArcaneButton').disabled, securityMode === 'unverified');
+  assert.equal(element('createUsersButton').disabled, securityMode === 'unverified');
+  if (securityMode === 'unsigned-local-test') {
+    assert.equal(element('securityTitle').textContent, 'Unsigned local-test mode is active');
+    assert.match(element('securityText').textContent, /controlled local acceptance testing/);
+    assert.match(element('versionPill').textContent, /local test/);
+  }
+  if (securityMode === 'unverified') {
+    assert.match(element('securityText').textContent, /Machine-changing actions remain unavailable/);
+    assert.match(element('userReadiness').textContent, /will not make machine changes/);
+  }
+}
+context.machineFixture = { ...machineFixture, securityMode: 'unverified', simulation: true };
+vm.runInContext('renderMachine(machineFixture)', context);
+assert.equal(element('securityBanner').classList.contains('visible'), true);
+assert.equal(element('securityTitle').textContent, 'Simulation mode is active');
+assert.match(element('securityText').textContent, /cannot change Windows accounts/);
+assert.equal(element('installArcaneButton').disabled, false);
+assert.equal(element('createUsersButton').disabled, false);
 
 context.state.credentials = [
   { username: 'arcane-one', temporaryPassword: 'one', activationRequired: true },

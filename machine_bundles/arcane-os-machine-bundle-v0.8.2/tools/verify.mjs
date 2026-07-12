@@ -38,4 +38,34 @@ const apiText = await fs.readFile(path.join(root,'dist/app/shared/arcane-api.js'
 for (const token of ['hostObjects.arcaneBridge','messageHandlers.arcane','DevelopmentHttpTransport']) if (!apiText.includes(token)) throw new Error(`Transport missing: ${token}`);
 if (!apiText.includes('this.bridge.Send(JSON.stringify(request))')) throw new Error('Generated WebView2 transport must call ArcaneBridge.Send.');
 if (apiText.includes('this.bridge.Invoke(JSON.stringify(request))')) throw new Error('Generated WebView2 transport still calls COM-reserved Invoke.');
+
+function methodLiterals(text, expression, label, allowAliases = false) {
+  const values = [...text.matchAll(expression)].map((match) => match[1]);
+  if (!values.length) throw new Error(label + ' exposes no Arcane API methods.');
+  if (!allowAliases && new Set(values).size !== values.length) throw new Error(label + ' repeats an Arcane API method.');
+  return [...new Set(values)].sort();
+}
+const policyStart = coreText.indexOf('const METHOD_POLICIES = Object.freeze({');
+const policyEnd = coreText.indexOf('\n});', policyStart);
+const dispatchStart = coreText.indexOf('async function dispatchMethod(request, options)');
+const dispatchEnd = coreText.indexOf('\nfunction normalizeResponseError', dispatchStart);
+if (policyStart < 0 || policyEnd < 0 || dispatchStart < 0 || dispatchEnd < 0) throw new Error('Arcane API policy or dispatch boundary is missing.');
+const frontendMethods = methodLiterals(apiText, /\binvoke\('([^']+)'/g, 'Frontend API', true);
+const policyMethods = methodLiterals(coreText.slice(policyStart, policyEnd), /^\s*'([^']+)'\s*:/gm, 'Core policy');
+const dispatchMethods = methodLiterals(coreText.slice(dispatchStart, dispatchEnd), /\bcase '([^']+)':/g, 'Core dispatch');
+if (JSON.stringify(frontendMethods) !== JSON.stringify(policyMethods) || JSON.stringify(frontendMethods) !== JSON.stringify(dispatchMethods)) {
+  throw new Error('Arcane frontend, capability policy, and Core dispatch method sets have drifted.');
+}
+
+for (const launcher of ['start-provisioner.bat','start-provisioner-debug.bat','start-shell.bat']) {
+  const launcherText = await fs.readFile(path.join(root, launcher), 'utf8');
+  if (!launcherText.includes('dist\\windows\\bin\\Arcane')) throw new Error(`${launcher} does not target the sealed Windows bin directory.`);
+}
+for (const launcher of ['start-provisioner-simulation.bat','start-shell-simulation.bat']) {
+  const launcherText = await fs.readFile(path.join(root, launcher), 'utf8');
+  if (!launcherText.includes('dist\\windows\\bin\\Arcane')) throw new Error(launcher + ' does not target the sealed Windows bin directory.');
+  if (!launcherText.includes('--simulate') || !launcherText.includes('--allow-unsigned-local-release')) {
+    throw new Error(launcher + ' does not explicitly contain simulation inside the unsigned-local release boundary.');
+  }
+}
 console.log('Arcane source and generated payload verification passed.');

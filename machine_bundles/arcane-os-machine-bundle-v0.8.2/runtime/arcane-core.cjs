@@ -109,6 +109,8 @@ function createWindowsNativeAdapter(ctx) {
     'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll',
   ]);
   const INSTALL_LEASE_FILE = 'installation-operation.json';
+  const INSTALL_LEASE_PREFIX = 'installation-operation-';
+  const INSTALL_LEASE_SUFFIX = '.json';
 
   function failInstalledApps(code, message, resolution, details, statusCode) {
     if (typeof ctx.arcaneError === 'function') {
@@ -670,6 +672,13 @@ function createWindowsNativeAdapter(ctx) {
     return verifyInstalledApplicationSet(paths.installRoot, { installed: true }).securityMode;
   }
 
+  function hostReleaseSecurityMode() {
+    const claim = String(ctx.releaseSecurityModeClaim || env.ARCANE_RELEASE_SECURITY_MODE || '');
+    if (claim === 'publisher-verified') return claim;
+    if (claim === 'unsigned-local-test' && ctx.allowUnsignedLocalRelease) return claim;
+    return 'unverified';
+  }
+
   async function listInstalledApplications() {
     const verified = verifyInstalledApplicationSet(paths.installRoot, { installed: true });
     return {
@@ -679,8 +688,24 @@ function createWindowsNativeAdapter(ctx) {
     };
   }
 
-  function installLeasePath() {
+  function installLeasePath(nonce) {
+    if (typeof nonce !== 'string' || !/^[a-f0-9]{48}$/.test(nonce)) throw new Error('The Arcane installation lease nonce is invalid.');
+    return ctx.path.join(paths.stateRoot, `${INSTALL_LEASE_PREFIX}${nonce}${INSTALL_LEASE_SUFFIX}`);
+  }
+
+  function legacyInstallLeasePath() {
     return ctx.path.join(paths.stateRoot, INSTALL_LEASE_FILE);
+  }
+
+  function installLeaseTargets() {
+    if (!ctx.fs.existsSync(paths.stateRoot)) return [];
+    const names = ctx.fs.readdirSync(paths.stateRoot).filter((name) => (
+      name === INSTALL_LEASE_FILE
+      || (name.startsWith(INSTALL_LEASE_PREFIX)
+        && name.endsWith(INSTALL_LEASE_SUFFIX)
+        && /^[a-f0-9]{48}$/.test(name.slice(INSTALL_LEASE_PREFIX.length, -INSTALL_LEASE_SUFFIX.length)))
+    ));
+    return names.sort().map((name) => ctx.path.join(paths.stateRoot, name));
   }
 
   function validateInstallLease(value) {
@@ -738,8 +763,7 @@ function createWindowsNativeAdapter(ctx) {
     return { state: 'unqueryable' };
   }
 
-  function readInstallLeaseStatus() {
-    const target = installLeasePath();
+  function readInstallLeaseStatus(target) {
     if (!ctx.fs.existsSync(target)) return { state: 'absent', target };
     try {
       const stat = ctx.fs.lstatSync(target);
@@ -758,8 +782,8 @@ function createWindowsNativeAdapter(ctx) {
   }
 
   function assertNoInstallLease() {
-    const status = readInstallLeaseStatus();
-    if (status.state !== 'absent' && status.state !== 'stale') {
+    const blocking = installLeaseTargets().map(readInstallLeaseStatus).find((status) => status.state !== 'absent' && status.state !== 'stale');
+    if (blocking) {
       failInstalledApps(
         'APPLICATION_INSTALL_BUSY',
         'Arcane applications are temporarily unavailable while installation is active.',
@@ -779,15 +803,18 @@ function createWindowsNativeAdapter(ctx) {
     if (ctx.simulate) return { simulated: true, nonce: 'simulation' };
     await ctx.ensureDir(paths.stateRoot);
     await applyStatePermissions(action);
-    const target = installLeasePath();
-    if (ctx.fs.existsSync(target)) {
-      const status = readInstallLeaseStatus();
-      if (status.state !== 'stale') {
-        failInstalledApps('INSTALL_BUSY', 'Another Arcane installation operation is already active.', 'Wait for it to finish, then try again.', { retryable: true }, 409);
-      }
-      await ctx.fsp.unlink(target).catch((error) => {
-        if (error && error.code !== 'ENOENT') throw error;
-      });
+    const before = installLeaseTargets().map(readInstallLeaseStatus);
+    if (before.some((status) => status.state !== 'absent' && status.state !== 'stale')) {
+      failInstalledApps('INSTALL_BUSY', 'Another Arcane installation operation is already active.', 'Wait for it to finish, then try again.', { retryable: true }, 409);
+    }
+    if (before.some((status) => status.state === 'stale' && ctx.path.basename(status.target) === INSTALL_LEASE_FILE)) {
+      failInstalledApps(
+        'INSTALL_BUSY',
+        'A previous Arcane version left an interrupted installation lease.',
+        'Close every Arcane Provisioner, then have an administrator remove the stale installation-operation.json lease before retrying.',
+        { retryable: false, legacyRecoveryRequired: true },
+        409
+      );
     }
     const startTicks = processStartTicks(process.pid);
     if (!startTicks) throw new Error('Arcane could not bind its installation lease to this process.');
@@ -798,6 +825,7 @@ function createWindowsNativeAdapter(ctx) {
       nonce: ctx.crypto.randomBytes(24).toString('hex'),
       createdAt: new Date().toISOString(),
     };
+    const target = installLeasePath(lease.nonce);
     try {
       await ctx.fsp.writeFile(target, canonicalJson(lease, true), { encoding: 'utf8', flag: 'wx', mode: 0o600 });
     } catch (error) {
@@ -809,22 +837,82 @@ function createWindowsNativeAdapter(ctx) {
     try {
       await applyStatePermissions(action);
     } catch (error) {
-      await ctx.fsp.unlink(target).catch(() => {});
+      await releaseOwnedInstallLeaseFile(target, lease).catch(() => {});
+      throw error;
+    }
+    const after = installLeaseTargets().map(readInstallLeaseStatus);
+    const own = after.find((status) => ctx.path.resolve(status.target).toLowerCase() === ctx.path.resolve(target).toLowerCase());
+    const contenders = after.filter((status) => (
+      ctx.path.resolve(status.target).toLowerCase() !== ctx.path.resolve(target).toLowerCase()
+      && status.state !== 'absent'
+      && status.state !== 'stale'
+    ));
+    if (!own || own.state !== 'active' || contenders.length) {
+      await releaseOwnedInstallLeaseFile(target, lease).catch(() => {});
+      failInstalledApps('INSTALL_BUSY', 'Another Arcane installation operation is already active.', 'Wait for it to finish, then try again.', { retryable: true }, 409);
+    }
+    try {
+      for (const status of after) {
+        if (status.state !== 'stale' || ctx.path.basename(status.target) === INSTALL_LEASE_FILE) continue;
+        await ctx.fsp.unlink(status.target).catch((error) => {
+          if (error && error.code !== 'ENOENT') throw error;
+        });
+      }
+    } catch (error) {
+      await releaseOwnedInstallLeaseFile(target, lease).catch(() => {});
+      throw error;
+    }
+    const legacyTarget = legacyInstallLeasePath();
+    try {
+      await ctx.fsp.writeFile(legacyTarget, canonicalJson(lease, true), { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    } catch (error) {
+      await releaseOwnedInstallLeaseFile(target, lease).catch(() => {});
+      if (error && error.code === 'EEXIST') {
+        failInstalledApps('INSTALL_BUSY', 'Another Arcane installation operation is already active.', 'Wait for it to finish, then try again.', { retryable: true }, 409);
+      }
+      throw error;
+    }
+    try {
+      await applyStatePermissions(action);
+      const legacy = readInstallLeaseStatus(legacyTarget);
+      if (legacy.state !== 'active' || !legacy.lease || legacy.lease.nonce !== lease.nonce
+        || legacy.lease.pid !== lease.pid || legacy.lease.processStartTicks !== lease.processStartTicks) {
+        throw new Error('Arcane could not prove ownership of its cross-version installation lease.');
+      }
+    } catch (error) {
+      await releaseOwnedInstallLeaseFile(legacyTarget, lease).catch(() => {});
+      await releaseOwnedInstallLeaseFile(target, lease).catch(() => {});
       throw error;
     }
     return lease;
   }
 
-  async function releaseInstallLease(lease) {
-    if (!lease || lease.simulated) return;
-    const target = installLeasePath();
+  async function releaseOwnedInstallLeaseFile(target, lease) {
     let current;
     try { current = readCanonicalJson(target, INSTALL_LEASE_FILE, { maximumBytes: 16 * 1024, finalNewline: true }).value; }
-    catch (error) { if (error && error.code === 'ENOENT') return; throw error; }
+    catch (error) { if (error && error.code === 'ENOENT') return false; throw error; }
     if (!isPlainObject(current) || current.nonce !== lease.nonce || current.pid !== lease.pid || current.processStartTicks !== lease.processStartTicks) {
       throw new Error('Arcane refused to release an installation lease owned by another operation.');
     }
     await ctx.fsp.unlink(target);
+    return true;
+  }
+
+  async function releaseInstallLease(lease) {
+    if (!lease || lease.simulated) return;
+    let primaryError = null;
+    try {
+      const released = await releaseOwnedInstallLeaseFile(legacyInstallLeasePath(), lease);
+      if (!released) primaryError = new Error('Arcane cross-version installation lease disappeared before release.');
+    } catch (error) {
+      primaryError = error;
+    }
+    try {
+      await releaseOwnedInstallLeaseFile(installLeasePath(lease.nonce), lease);
+    } catch (error) {
+      if (!primaryError) primaryError = error;
+    }
+    if (primaryError) throw primaryError;
   }
 
   function runningInstalledArcaneProcesses() {
@@ -2021,9 +2109,11 @@ if(-not $user){
 $adminGroupSid='S-1-5-32-544'
 $adminMember=Get-LocalGroupMember -SID $adminGroupSid -ErrorAction SilentlyContinue | Where-Object { $_.SID -eq $user.SID }
 if($adminMember){ throw "Arcane will not replace the login shell of administrator account '$name'." }
-$usersGroupSid='S-1-5-32-545'
-$alreadyMember=Get-LocalGroupMember -SID $usersGroupSid -ErrorAction SilentlyContinue | Where-Object { $_.SID -eq $user.SID }
-if(-not $alreadyMember){ Add-LocalGroupMember -SID $usersGroupSid -Member $user -ErrorAction Stop }
+if($created){
+  $usersGroupSid='S-1-5-32-545'
+  $alreadyMember=Get-LocalGroupMember -SID $usersGroupSid -ErrorAction SilentlyContinue | Where-Object { $_.SID -eq $user.SID }
+  if(-not $alreadyMember){ Add-LocalGroupMember -SID $usersGroupSid -Member $user -ErrorAction Stop }
+}
 $sid=(New-Object System.Security.Principal.NTAccount($env:COMPUTERNAME,$name)).Translate([System.Security.Principal.SecurityIdentifier]).Value
 $profilePath=(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue).LocalPath
 if(-not $profilePath){
@@ -2661,6 +2751,13 @@ $restoredShell=if($previousPresent){$previous}else{$null}
     }
 
     const argumentLine = relaunchArgs.map(quoteWindowsArgument).join(' ');
+    const claimedSecurityMode = String(ctx.releaseSecurityModeClaim || env.ARCANE_RELEASE_SECURITY_MODE || '');
+    const forwardUnsignedClaim = Boolean(ctx.allowUnsignedLocalRelease)
+      && claimedSecurityMode === 'unsigned-local-test'
+      && relaunchArgs.includes('--allow-unsigned-local-release');
+    const releaseSecurityEnvironment = forwardUnsignedClaim
+      ? `$env:ARCANE_RELEASE_SECURITY_MODE='unsigned-local-test'`
+      : `Remove-Item -LiteralPath 'Env:ARCANE_RELEASE_SECURITY_MODE' -ErrorAction SilentlyContinue`;
     const script = `$ErrorActionPreference='Stop'
 foreach($name in @('NODE_OPTIONS','NODE_PATH','DOTNET_STARTUP_HOOKS')){Remove-Item -LiteralPath ("Env:"+$name) -ErrorAction SilentlyContinue}
 Get-ChildItem Env: | Where-Object { $_.Name -like 'COR_*' -or $_.Name -like 'CORECLR_*' } | ForEach-Object { Remove-Item -LiteralPath ("Env:"+$_.Name) -ErrorAction SilentlyContinue }
@@ -2673,6 +2770,7 @@ $env:PATH='C:\\Windows\\System32;C:\\Windows;C:\\Windows\\System32\\WindowsPower
 $env:PATHEXT='.COM;.EXE;.BAT;.CMD'
 $env:ComSpec='C:\\Windows\\System32\\cmd.exe'
 $env:PSModulePath='C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules'
+${releaseSecurityEnvironment}
 try {
   $process=Start-Process -FilePath ${ctx.psQuote(executable)} -ArgumentList ${ctx.psQuote(argumentLine)} -Verb RunAs -WindowStyle Hidden -PassThru
   [Console]::Out.WriteLine($process.Id)
@@ -2731,9 +2829,10 @@ try {
     installRenderer,
     addMachinePath,
     installPayload,
-    writeLaunchers,
-    verifyStagedInstallation,
-    releaseSecurityMode,
+      writeLaunchers,
+      verifyStagedInstallation,
+      hostReleaseSecurityMode,
+      releaseSecurityMode,
     listInstalledApplications,
     launchInstalledApplication,
     acquireInstallLease,
@@ -5189,7 +5288,7 @@ async function provisionUsers(usernames, action) {
   const results = [];
   const changed = [];
   const assignedShell = native.shellCommand();
-  const assignedSecurityMode = native.id === 'windows' && simulate ? 'publisher-verified' : releaseSecurityMode();
+  const assignedSecurityMode = native.id === 'windows' && simulate ? 'publisher-verified' : installedReleaseSecurityMode();
   if (native.id === 'windows' && !simulate) {
     const unsignedCommand = assignedShell.endsWith(' --allow-unsigned-local-release');
     if (!['publisher-verified','unsigned-local-test'].includes(assignedSecurityMode)
@@ -5971,17 +6070,25 @@ function publicAppDescriptor() {
     type:String(APP_DESCRIPTOR.type || 'app'),
     entry:APP_DESCRIPTOR.entry ? String(APP_DESCRIPTOR.entry):null,
     version:VERSION,
-    securityMode:releaseSecurityMode(),
+    securityMode:activeReleaseSecurityMode(),
   };
 }
 
-let corroboratedReleaseSecurityMode=null;
-function releaseSecurityMode() {
+function activeReleaseSecurityMode() {
+  if(typeof native.hostReleaseSecurityMode==='function'){
+    const mode=native.hostReleaseSecurityMode();
+    if(mode==='publisher-verified'||mode==='unsigned-local-test')return mode;
+  }
+  return 'unverified';
+}
+
+let corroboratedInstalledReleaseSecurityMode=null;
+function installedReleaseSecurityMode() {
   if(typeof native.releaseSecurityMode==='function'){
     try{
       const mode=native.releaseSecurityMode();
       if(mode==='publisher-verified'||mode==='unsigned-local-test'){
-        corroboratedReleaseSecurityMode=mode;
+        corroboratedInstalledReleaseSecurityMode=mode;
         return mode;
       }
     }catch(error){
@@ -6186,10 +6293,10 @@ async function listInstalledApplications(request) {
     seen.add(application.id);
   }
   applications.sort((left,right)=>left.order-right.order||left.displayName.localeCompare(right.displayName,'en')||left.id.localeCompare(right.id,'en'));
-  if(corroboratedReleaseSecurityMode&&result.securityMode!==corroboratedReleaseSecurityMode){
+  if(corroboratedInstalledReleaseSecurityMode&&result.securityMode!==corroboratedInstalledReleaseSecurityMode){
     throw arcaneError('APPLICATION_CATALOG_UNVERIFIED','Arcane could not corroborate the installed application security mode.','Repair or reinstall the complete Arcane OS release.',503);
   }
-  corroboratedReleaseSecurityMode=result.securityMode;
+  corroboratedInstalledReleaseSecurityMode=result.securityMode;
   return Object.freeze({
     verified:true,
     securityMode:result.securityMode,
@@ -6269,6 +6376,7 @@ function networkStatus() {
 }
 
 function machineStatus() {
+  const installation = installationState();
   return {
     version: VERSION,
     protocol: PROTOCOL,
@@ -6279,10 +6387,12 @@ function machineStatus() {
     protectedUsername: protectedProvisioningUsername(),
     protectedUsernames: protectedProvisioningUsernames(),
     usernamePolicy: native.usernamePolicy(),
-    installation: installationState(),
+    installation,
     requirements: checkRequirements(),
     permissions: permissionStatus(true),
     renderer: rendererStatus(),
+    securityMode: activeReleaseSecurityMode(),
+    installedSecurityMode: installation.present ? installedReleaseSecurityMode() : 'not-installed',
     paths: PATHS,
     simulation: simulate,
     bundleRoot: bundleRoot(),
@@ -6773,6 +6883,7 @@ function workerLaunchSpec(endpoint, token, brokerSession, brokerPublicKey) {
     `--protected-user=${protectedProvisioningUsername()}`,
   ];
   if (allowSourceInstall) workerArgs.push('--allow-source-install');
+  if (allowUnsignedLocalRelease) workerArgs.push('--allow-unsigned-local-release');
   if (simulate) workerArgs.push('--simulate');
   if (simulatedPlatform) workerArgs.push(`--simulate-platform=${simulatedPlatform}`);
   if (process.pkg) return { executable: native.elevationTarget(process.execPath), args: workerArgs };

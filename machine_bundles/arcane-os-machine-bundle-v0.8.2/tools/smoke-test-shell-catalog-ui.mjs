@@ -17,6 +17,8 @@ assert.match(shell,/warning\.hidden = mode === 'publisher-verified'/,'only affir
 assert.match(shell,/setSecurityMode\(application\.securityMode\)/,'the unsigned warning must be set before catalog loading can fail');
 assert.match(shell,/Arcane\.applications\.list\(\)/);
 assert.match(shell,/Arcane\.applications\.launch\(application\.id\)/,'the shell must pass the canonical catalog ID only');
+assert.match(shell,/id="lock"/,'the default shell must expose a lock control');
+assert.match(shell,/Arcane\.system\.lock\(\)/,'the lock control must use the capability-gated Arcane API');
 assert.match(shell,/document\.createElement\('button'\)/);
 assert.match(shell,/button\.setAttribute\('aria-label'/);
 assert.match(shell,/textContent = application\.displayName/);
@@ -94,7 +96,7 @@ class FakeElement {
 }
 
 function shellHarness(){
-  const ids=['toast','errorTitle','errorMessage','errorResolution','errorBody','errorPanel','status','dismissError','copyError','clock','securityWarning','catalogState','catalogBadge','appGrid','version','identity','userValue','osValue','hostValue','logout','logoutDialog','cancelLogout','confirmLogout','logoutText'];
+  const ids=['toast','errorTitle','errorMessage','errorResolution','errorBody','errorPanel','status','dismissError','copyError','clock','securityWarning','catalogState','catalogBadge','appGrid','version','identity','userValue','osValue','hostValue','lock','logout','logoutDialog','cancelLogout','confirmLogout','logoutText'];
   const document={activeElement:null,elements:new Map()};
   document.createElement=(tagName)=>new FakeElement(tagName,document);
   document.querySelector=(selector)=>selector.startsWith('#')?document.elements.get(selector.slice(1))||null:null;
@@ -105,9 +107,10 @@ function shellHarness(){
   let resolveLaunch;
   const launchCalls=[];
   const launchPromise=new Promise((resolve)=>{resolveLaunch=resolve;});
+  const lockCalls=[];
   const Arcane={
     events:{on(){}},
-    system:{ping:async()=>({ok:true})},
+    system:{ping:async()=>({ok:true}),lock:async()=>{lockCalls.push(true);return {simulated:true};}},
     version:{current:async()=>({version:'0.8.2'})},
     user:{current:async()=>({username:'arcane-test',displayName:'Arcane Test'})},
     platform:{status:async()=>({platform:'win32',displayName:'Windows'})},
@@ -123,7 +126,7 @@ function shellHarness(){
   const window={document,Arcane,location,addEventListener(){}};
   const context=vm.createContext({window,document,Arcane,location,navigator:{},URL,console,setTimeout,clearTimeout,setInterval(){return 0;},Date,Error,Promise,JSON});
   vm.runInContext(scriptMatches[0][1],context,{filename:'shell.behavior.js'});
-  return {document,launchCalls,resolveLaunch};
+  return {document,launchCalls,resolveLaunch,lockCalls};
 }
 
 async function flushTasks(){for(let index=0;index<8;index+=1)await new Promise((resolve)=>setImmediate(resolve));}
@@ -134,6 +137,9 @@ assert.equal(grid.children.length,1,'a verified app must render as one launch bu
 const appButton=grid.children[0];
 assert.equal(appButton.getAttribute('aria-label'),'Open BOSS');
 assert.equal(behavior.document.elements.get('securityWarning').hidden,false,'unsigned local test warning must remain visible');
+behavior.document.elements.get('lock').listeners.get('click')();
+await flushTasks();
+assert.equal(behavior.lockCalls.length,1,'the Lock control must dispatch exactly one capability-gated request');
 appButton.focus();
 appButton.listeners.get('click')();
 assert.deepEqual(behavior.launchCalls,['boss'],'the behavior layer must send the ID only');

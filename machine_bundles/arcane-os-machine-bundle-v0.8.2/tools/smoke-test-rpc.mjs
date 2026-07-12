@@ -48,8 +48,32 @@ function call(method, parameters={}) {
 try {
   const ping = await call('system.ping');
   if (!ping.ok || ping.version !== manifest.version) throw new Error('Ping failed');
+  const currentVersion = await call('version.current');
+  if (currentVersion !== manifest.version) throw new Error('Version API failed');
+  const network = await call('network.status');
+  if (typeof network.online !== 'boolean' || !Number.isSafeInteger(network.interfaceCount)) throw new Error('Network status API failed');
+  const requirements = await call('requirements.list');
+  if (!Array.isArray(requirements) || !requirements.some((item) => item.id === 'renderer')) throw new Error('Requirements API failed');
+  const validation = await call('users.validate', { usernames: ['arcane-valid','invalid name'] });
+  if (validation.valid || validation.users.length !== 1 || validation.errors.length !== 1) throw new Error('Username validation API failed');
+  let diagnosticId = null;
+  try {
+    await call('unsupported.test.method');
+    throw new Error('Unsupported method was accepted');
+  } catch (error) {
+    if (error.code !== 'METHOD_NOT_ALLOWED' || !error.diagnosticId) throw error;
+    diagnosticId = error.diagnosticId;
+  }
+  const recentDiagnostics = await call('diagnostics.recent');
+  if (!Array.isArray(recentDiagnostics) || !recentDiagnostics.some((item) => item.id === diagnosticId)) throw new Error('Recent diagnostics API failed');
+  const diagnostic = await call('diagnostics.get', { diagnosticId });
+  if (!diagnostic || diagnostic.id !== diagnosticId || diagnostic.code !== 'METHOD_NOT_ALLOWED') throw new Error('Diagnostic lookup API failed');
   const machine = await call('machine.status');
   if (!machine.simulation || machine.protocol !== 'arcane/1') throw new Error('Machine status failed');
+  if (!['publisher-verified','unsigned-local-test','unverified'].includes(machine.securityMode)) throw new Error('Machine status omitted release security mode');
+  if (machine.installedSecurityMode !== 'not-installed') throw new Error('Machine status conflated active-package trust with a missing installed release');
+  const ensuredRequirements = await call('requirements.ensure');
+  if (!Array.isArray(ensuredRequirements.requirements) || !ensuredRequirements.requirements.some((item) => item.id === 'renderer')) throw new Error('Requirements ensure API failed');
   const install = await call('installation.ensure');
   if (!install.installation.present || install.installation.installedVersion !== manifest.version) throw new Error('Installation simulation failed');
   const users = await call('users.add', { usernames: ['arcane-test'] });
