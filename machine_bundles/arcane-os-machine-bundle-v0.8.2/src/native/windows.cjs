@@ -813,30 +813,46 @@ function createWindowsNativeAdapter(ctx) {
     await ctx.fsp.unlink(target);
   }
 
-  function runningInstalledApplicationIds() {
-    if (!ctx.production && typeof ctx.runningApplicationIds === 'function') return ctx.runningApplicationIds();
-    const appsRoot = ctx.path.join(paths.installRoot, 'apps');
-    if (!ctx.fs.existsSync(appsRoot)) return [];
-    const script = `$ErrorActionPreference='Stop'\n$root=([IO.Path]::GetFullPath(${powershellLiteral(appsRoot)})).TrimEnd('\\')+'\\'\n$ids=@()\nforeach($process in (Get-CimInstance Win32_Process -ErrorAction Stop)){\n  $file=[string]$process.ExecutablePath\n  if(-not $file){continue}\n  $full=[IO.Path]::GetFullPath($file)\n  if(-not $full.StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){continue}\n  $relative=$full.Substring($root.Length)\n  $id=($relative -split '\\\\')[0]\n  if($id){$ids+=$id}\n}\nConvertTo-Json -InputObject @($ids|Sort-Object -Unique) -Compress`;
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
-    const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
-      encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
+  function runningInstalledArcaneProcesses() {
+    let records = null;
+    if (!ctx.production && typeof ctx.runningInstalledProcesses === 'function') {
+      records = JSON.parse(JSON.stringify(ctx.runningInstalledProcesses()));
+    }
+    if (!ctx.production && typeof ctx.runningApplicationIds === 'function') {
+      records = ctx.runningApplicationIds().map((id, index) => ({
+        processId: index + 1,
+        relativePath: `apps/${validateCanonicalAppId(id, 'running application id')}/ArcaneApp-${id}.exe`,
+      }));
+    }
+    if (records === null) {
+      if (!ctx.fs.existsSync(paths.installRoot)) return [];
+      const script = `$ErrorActionPreference='Stop'\n$root=([IO.Path]::GetFullPath(${powershellLiteral(paths.installRoot)})).TrimEnd('\\')+'\\'\n$records=@()\nforeach($process in (Get-CimInstance Win32_Process -ErrorAction Stop)){\n  $file=[string]$process.ExecutablePath\n  if(-not $file){continue}\n  $full=[IO.Path]::GetFullPath($file)\n  if(-not $full.StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){continue}\n  $relative=$full.Substring($root.Length).Replace('\\','/')\n  $records += [pscustomobject]@{processId=[int]$process.ProcessId;relativePath=$relative}\n}\nConvertTo-Json -InputObject @($records|Sort-Object relativePath,processId -Unique) -Compress`;
+      const encoded = Buffer.from(script, 'utf16le').toString('base64');
+      const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
+        encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
+      });
+      if (!result || result.status !== 0) throw new Error('Windows could not determine whether installed Arcane processes are running.');
+      try { records = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid running-process result.'); }
+    }
+    if (!Array.isArray(records)) records = [records];
+    return records.map((record) => {
+      assertExactKeys(record, new Set(['processId', 'relativePath']), 'running Arcane process');
+      if (!Number.isSafeInteger(record.processId) || record.processId < 1) throw new Error('Windows returned an invalid Arcane process id.');
+      return {
+        processId: record.processId,
+        relativePath: normalizeInstalledPath(record.relativePath, 'running Arcane process path'),
+      };
     });
-    if (!result || result.status !== 0) throw new Error('Windows could not determine whether installed Arcane applications are running.');
-    let ids;
-    try { ids = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid running-application result.'); }
-    if (!Array.isArray(ids)) ids = [ids];
-    return ids.map((id) => validateCanonicalAppId(id, 'running application id'));
   }
 
   function assertNoRunningInstalledApplications() {
-    const ids = runningInstalledApplicationIds();
-    if (ids.length) {
+    const processes = runningInstalledArcaneProcesses();
+    if (processes.length) {
       failInstalledApps(
         'APPLICATIONS_BUSY',
-        'One or more Arcane applications are still running.',
-        'Close the listed Arcane applications, then retry the installation.',
-        { applicationIds: ids, retryable: true },
+        'One or more installed Arcane processes are still running.',
+        'Close the listed Arcane Shell, Provisioner, Core, or application processes, then retry the installation from the external Provisioner.',
+        { processes, retryable: true },
         409
       );
     }
@@ -1317,6 +1333,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
   }
 
   function installPayload(root) {
+    const sourceIsInstalled = ctx.path.resolve(root).toLowerCase() === ctx.path.resolve(paths.installRoot).toLowerCase();
     const candidates = [root, ctx.path.join(root, 'dist', 'windows'), ctx.path.join(root, 'dist')];
     const dist = candidates.find((candidate) => (
       ctx.fs.existsSync(ctx.path.join(candidate, 'arcane-release.json'))
@@ -1369,6 +1386,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
         releaseReady: true,
         verified: true,
         securityMode: verified.securityMode,
+        selfHosted: sourceIsInstalled || ctx.path.resolve(dist).toLowerCase() === ctx.path.resolve(paths.installRoot).toLowerCase(),
         releaseManifest: verified.release,
         integrity: {
           schemaVersion: 2,
@@ -1388,6 +1406,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
     const sourceCore = ctx.path.join(root, 'runtime', 'arcane-core.cjs');
     return {
       mode: 'source',
+      selfHosted: sourceIsInstalled,
       releaseReady: false,
       verified: false,
       description: releaseProblem || 'The source Arcane Core is available, but a verified Windows WebView2 release has not been built.',

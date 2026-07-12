@@ -1365,10 +1365,17 @@ async function installArcaneGlobally(action) {
   let primaryError = null;
   try {
     if (native.acquireInstallLease) lease = await native.acquireInstallLease(action);
-    if (!simulate && native.assertNoRunningInstalledApplications) native.assertNoRunningInstalledApplications();
-    await recoverInterruptedInstallation(action);
     const root = bundleRoot();
     const payload = native.installPayload(root);
+    if (!simulate && payload.selfHosted) {
+      throw arcaneError(
+        'EXTERNAL_PROVISIONER_REQUIRED',
+        'The installed Arcane Provisioner cannot replace the verified installation that is currently running it.',
+        'Close installed Arcane processes, then run the new verified Arcane Provisioner from a release folder outside the Arcane installation directory.',
+        409,
+        { installRoot: PATHS.installRoot }
+      );
+    }
     if (!payload.files || !payload.files.length) {
       throw arcaneError('ARCANE_PAYLOAD_MISSING', 'The Arcane runtime files are missing from this bundle.', `Use a complete Arcane package. Bundle root: ${root}`);
     }
@@ -1381,6 +1388,8 @@ async function installArcaneGlobally(action) {
         { payloadMode: payload.mode, missingRelease: payload.missingRelease || [] }
       );
     }
+    if (!simulate && native.assertNoRunningInstalledApplications) native.assertNoRunningInstalledApplications();
+    await recoverInterruptedInstallation(action);
     actionLog(action, 'info', `Installing Arcane ${VERSION} globally from ${root}.`, { payloadMode: payload.mode });
     const stage = `${PATHS.installRoot}.stage-${process.pid}-${Date.now()}`;
     if (!simulate) {

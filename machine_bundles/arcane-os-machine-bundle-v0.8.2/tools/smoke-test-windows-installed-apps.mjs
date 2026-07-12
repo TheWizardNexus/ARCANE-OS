@@ -283,6 +283,7 @@ function createAdapter(fixture, options = {}) {
     reparsePointProbe: options.reparsePointProbe || (() => []),
     installLeaseProtectionProbe: options.installLeaseProtectionProbe || (() => true),
     processIdentityProbe: options.processIdentityProbe || (() => ({ state: 'not-found' })),
+    runningInstalledProcesses: options.runningInstalledProcesses,
     authenticodeInspector: (files) => signatureRecords(files, options.signatureMode || 'signed'),
     spawn(executable, args, spawnOptions) {
       const child = new EventEmitter();
@@ -332,6 +333,7 @@ try {
   const signedFixture = await buildFixture('signed');
   const signed = createAdapter(signedFixture);
   assert.equal(signed.adapter.releaseSecurityMode(), 'publisher-verified');
+  assert.equal(signed.adapter.installPayload(signedFixture.root).selfHosted, true);
   const listed = await signed.adapter.listInstalledApplications();
   assert.deepEqual(JSON.parse(JSON.stringify(listed)), {
     verified: true,
@@ -348,6 +350,15 @@ try {
   const launched = await signed.adapter.launchInstalledApplication('boss');
   assert.deepEqual(JSON.parse(JSON.stringify(launched)), { id: 'boss', accepted: true });
   assert.equal(signed.spawnCalls.length, 1);
+
+  const busyHost = createAdapter(signedFixture, {
+    runningInstalledProcesses: () => [{ processId: 412, relativePath: 'bin/ArcaneShell.exe' }],
+  });
+  assert.throws(
+    () => busyHost.adapter.assertNoRunningInstalledApplications(),
+    (error) => error && error.code === 'APPLICATIONS_BUSY'
+      && error.details.processes[0].relativePath === 'bin/ArcaneShell.exe',
+  );
   assert.equal(signed.spawnCalls[0].executable, path.join(signedFixture.appRoot, launcherName));
   assert.deepEqual(signed.spawnCalls[0].args, []);
   assert.equal(signed.spawnCalls[0].options.cwd, signedFixture.appRoot);
