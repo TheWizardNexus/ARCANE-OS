@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -41,12 +42,15 @@ namespace ArcaneOS
         [STAThread]
         private static void Main(string[] args)
         {
+            if (ShellWatchdog.TryRun(args)) return;
+
             bool created;
             instanceMutex = new Mutex(true, "Local\\" + AppId + ".SingleInstance", out created);
             if (!created) return;
 
             try
             {
+                if (AppMode == "shell") ShellWatchdog.Start();
                 try { SetCurrentProcessExplicitAppUserModelID(AppId); } catch { }
                 Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
                 Application.ThreadException += delegate(object sender, ThreadExceptionEventArgs eventArgs)
@@ -72,6 +76,132 @@ namespace ArcaneOS
         }
     }
 
+    internal static class ShellWatchdog
+    {
+        private const string WatchdogArgument = "--arcane-shell-watchdog";
+        private const string EventPrefix = "Local\\Arcane.OS.Shell.Watchdog.";
+        private static EventWaitHandle disarmEvent;
+        private static Process watchdogProcess;
+        private static int disarmed;
+
+        internal static bool TryRun(string[] args)
+        {
+            if (Program.AppMode != "shell" || args == null || args.Length == 0
+                || !String.Equals(args[0], WatchdogArgument, StringComparison.Ordinal)) return false;
+
+            try { Run(args); }
+            catch { }
+            return true;
+        }
+
+        internal static void Start()
+        {
+            if (Program.AppMode != "shell" || disarmEvent != null) return;
+
+            string token = Guid.NewGuid().ToString("N");
+            string disarmName = EventPrefix + token + ".Disarm";
+            string readyName = EventPrefix + token + ".Ready";
+            bool disarmCreated;
+            bool readyCreated;
+            EventWaitHandle localDisarm = null;
+            EventWaitHandle ready = null;
+            Process child = null;
+            try
+            {
+                using (Process current = Process.GetCurrentProcess())
+                {
+                    localDisarm = new EventWaitHandle(false, EventResetMode.ManualReset, disarmName, out disarmCreated);
+                    ready = new EventWaitHandle(false, EventResetMode.ManualReset, readyName, out readyCreated);
+                    if (!disarmCreated || !readyCreated) throw new InvalidOperationException("Arcane could not create private shell-watchdog synchronization events.");
+
+                    ProcessStartInfo start = new ProcessStartInfo(Application.ExecutablePath)
+                    {
+                        Arguments = WatchdogArgument + " "
+                            + current.Id.ToString(CultureInfo.InvariantCulture) + " "
+                            + current.StartTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture) + " "
+                            + disarmName + " " + readyName,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory
+                    };
+                    child = Process.Start(start);
+                    if (child == null) throw new InvalidOperationException("Windows did not start the Arcane shell watchdog.");
+                    if (!ready.WaitOne(TimeSpan.FromSeconds(5)) || child.HasExited)
+                        throw new InvalidOperationException("The Arcane shell watchdog did not confirm that it is monitoring this shell.");
+
+                    disarmEvent = localDisarm;
+                    watchdogProcess = child;
+                    localDisarm = null;
+                    child = null;
+                    watchdogProcess.EnableRaisingEvents = true;
+                    watchdogProcess.Exited += delegate
+                    {
+                        if (Volatile.Read(ref disarmed) == 0) EmergencyDesktop.TryStart();
+                    };
+                    if (watchdogProcess.HasExited)
+                        throw new InvalidOperationException("The Arcane shell watchdog exited immediately after its startup handshake.");
+                }
+            }
+            finally
+            {
+                if (child != null)
+                {
+                    try { if (!child.HasExited) child.Kill(); } catch { }
+                    try { child.Dispose(); } catch { }
+                }
+                if (localDisarm != null) localDisarm.Dispose();
+                if (ready != null) ready.Dispose();
+            }
+        }
+
+        internal static void Disarm()
+        {
+            if (Interlocked.Exchange(ref disarmed, 1) != 0) return;
+            try { if (disarmEvent != null) disarmEvent.Set(); } catch { }
+            try { if (disarmEvent != null) disarmEvent.Dispose(); } catch { }
+            try { if (watchdogProcess != null) watchdogProcess.Dispose(); } catch { }
+            disarmEvent = null;
+            watchdogProcess = null;
+        }
+
+        private static void Run(string[] args)
+        {
+            if (args.Length != 5) throw new ArgumentException("Invalid Arcane shell watchdog arguments.");
+            int parentId;
+            long expectedStartTicks;
+            if (!Int32.TryParse(args[1], NumberStyles.None, CultureInfo.InvariantCulture, out parentId) || parentId <= 0)
+                throw new ArgumentException("Invalid Arcane shell watchdog parent process.");
+            if (!Int64.TryParse(args[2], NumberStyles.None, CultureInfo.InvariantCulture, out expectedStartTicks) || expectedStartTicks <= 0)
+                throw new ArgumentException("Invalid Arcane shell watchdog process identity.");
+            ValidateEventName(args[3]);
+            ValidateEventName(args[4]);
+
+            using (EventWaitHandle disarm = EventWaitHandle.OpenExisting(args[3]))
+            using (EventWaitHandle ready = EventWaitHandle.OpenExisting(args[4]))
+            using (Process parent = Process.GetProcessById(parentId))
+            {
+                if (parent.StartTime.ToUniversalTime().Ticks != expectedStartTicks)
+                    throw new InvalidOperationException("Arcane shell watchdog rejected a reused process identifier.");
+                ready.Set();
+                while (true)
+                {
+                    if (disarm.WaitOne(250)) return;
+                    if (!parent.WaitForExit(0)) continue;
+                    if (!disarm.WaitOne(0)) EmergencyDesktop.TryStart();
+                    return;
+                }
+            }
+        }
+
+        private static void ValidateEventName(string value)
+        {
+            if (String.IsNullOrWhiteSpace(value) || !value.StartsWith(EventPrefix, StringComparison.Ordinal)
+                || value.Length > 160 || !Regex.IsMatch(value, @"^Local\\Arcane[.]OS[.]Shell[.]Watchdog[.][a-f0-9]{32}[.](Disarm|Ready)$", RegexOptions.CultureInvariant))
+                throw new ArgumentException("Invalid Arcane shell watchdog event name.");
+        }
+    }
+
     internal static class EmergencyDesktop
     {
         private static int started;
@@ -79,6 +209,7 @@ namespace ArcaneOS
         internal static void TryStart()
         {
             if (Program.AppMode != "shell" || Interlocked.Exchange(ref started, 1) != 0) return;
+            bool launched = false;
             try
             {
                 string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
@@ -90,8 +221,13 @@ namespace ArcaneOS
                     WorkingDirectory = windows,
                     CreateNoWindow = false
                 });
+                launched = true;
             }
             catch { }
+            finally
+            {
+                if (launched) ShellWatchdog.Disarm();
+            }
         }
     }
 
@@ -292,8 +428,9 @@ namespace ArcaneOS
         private void OnFormClosing(object sender, FormClosingEventArgs eventArgs)
         {
             if (core != null) core.Dispose();
-            if (Program.AppMode == "shell" && eventArgs.CloseReason != CloseReason.WindowsShutDown)
-                EmergencyDesktop.TryStart();
+            if (Program.AppMode != "shell") return;
+            if (eventArgs.CloseReason == CloseReason.WindowsShutDown) ShellWatchdog.Disarm();
+            else EmergencyDesktop.TryStart();
         }
 
         private void ShowFatal(string title, string details)

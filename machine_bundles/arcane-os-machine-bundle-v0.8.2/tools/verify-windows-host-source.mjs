@@ -43,13 +43,33 @@ if (!source.includes('if (Program.AppMode == "shell") EmergencyDesktop.TryStart(
   throw new Error('Shell fatal startup paths must activate the emergency Windows desktop.');
 }
 if (!source.includes('eventArgs.CloseReason != CloseReason.WindowsShutDown')) {
-  throw new Error('The shell emergency desktop must stay disabled during an intentional Windows shutdown or logout.');
+  if (!source.includes('eventArgs.CloseReason == CloseReason.WindowsShutDown) ShellWatchdog.Disarm();')) {
+    throw new Error('The shell watchdog and emergency desktop must stay disabled during an intentional Windows shutdown or logout.');
+  }
 }
 if (source.includes('Process.Start("explorer.exe")')) {
   throw new Error('The shell fallback must never launch Explorer by a bare executable name.');
 }
 if (!source.includes('Program.AllowedNavigationPaths') || source.includes('uri.AbsolutePath.StartsWith("/" + Program.AppMode + "/"')) {
   throw new Error('Target hosts must exact-match generated full-document navigation paths and must not allow an app-wide path prefix.');
+}
+if (source.indexOf('if (ShellWatchdog.TryRun(args)) return;') > source.indexOf('instanceMutex = new Mutex')) {
+  throw new Error('The external shell watchdog mode must run before the single-instance shell mutex is acquired.');
+}
+for (const watchdogContract of [
+  'child = Process.Start(start);',
+  'if (!ready.WaitOne(TimeSpan.FromSeconds(5)) || child.HasExited)',
+  'parent.StartTime.ToUniversalTime().Ticks != expectedStartTicks',
+  'if (disarm.WaitOne(250)) return;',
+  'if (!parent.WaitForExit(0)) continue;',
+  'if (!disarm.WaitOne(0)) EmergencyDesktop.TryStart();',
+  'if (launched) ShellWatchdog.Disarm();',
+  'if (Volatile.Read(ref disarmed) == 0) EmergencyDesktop.TryStart();',
+]) {
+  if (!source.includes(watchdogContract)) throw new Error(`Windows shell watchdog contract is missing: ${watchdogContract}`);
+}
+if (!source.includes('Regex.IsMatch(value, @"^Local\\\\Arcane[.]OS[.]Shell[.]Watchdog[.][a-f0-9]{32}[.](Disarm|Ready)$"')) {
+  throw new Error('The external shell watchdog must accept only its randomized, local synchronization event names.');
 }
 
 console.log('Windows WebView2 host source and bridge contract preflight passed.');

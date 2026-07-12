@@ -872,7 +872,7 @@ foreach($user in (Get-LocalUser -ErrorAction Stop)){
       ${unloadTemporaryHiveScript('user-shell discovery')}
     }
   }
-  $assigned=[bool]($shellValue -and (($shellValue -eq $expected) -or (($shellValue -match 'ArcaneShell\\.exe') -and ($shellValue -match '--shell'))))
+  $assigned=[bool]($verified -and [String]::Equals([string]$shellValue,[string]$expected,[StringComparison]::Ordinal))
   if($assigned -or ($recorded -contains $user.Name)){
     $results += [pscustomobject]@{
       username=$user.Name
@@ -1107,14 +1107,14 @@ try {
   $key="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
   $previous=Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue
   if($null -ne $previous){$previousShellPresent=$true;$previousShell=$previous.Shell}
-  if($previousShellPresent -ne $expectedPreviousPresent -or ($previousShellPresent -and $previousShell -ne $expectedPrevious)){
+  if($previousShellPresent -ne $expectedPreviousPresent -or ($previousShellPresent -and -not [String]::Equals([string]$previousShell,[string]$expectedPrevious,[StringComparison]::Ordinal))){
     throw "The login shell for '$name' changed after Arcane saved its recovery record. No shell change was made."
   }
   try {
     New-Item -Path $key -Force | Out-Null
     New-ItemProperty -Path $key -Name Shell -PropertyType String -Value $shell -Force | Out-Null
     $assigned=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop).Shell
-    if($assigned -ne $shell){ throw "Windows did not retain the Arcane shell assignment for '$name'." }
+    if(-not [String]::Equals([string]$assigned,[string]$shell,[StringComparison]::Ordinal)){ throw "Windows did not retain the Arcane shell assignment for '$name'." }
   } catch {
     if($previousShellPresent){
       New-ItemProperty -Path $key -Name Shell -PropertyType String -Value $previousShell -Force | Out-Null
@@ -1258,7 +1258,7 @@ if(-not (Test-Path "Registry::HKEY_USERS\\$expectedSid")){
 try {
   $key="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
   $currentShell=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue).Shell
-  if($currentShell -ne $expectedShell){throw "Arcane refused to activate '$name' because its staged shell no longer matches Arcane."}
+  if(-not [String]::Equals([string]$currentShell,[string]$expectedShell,[StringComparison]::Ordinal)){throw "Arcane refused to activate '$name' because its staged shell no longer matches Arcane."}
 } finally {
   if($temporary){${unloadTemporaryHiveScript('staged account activation')}}
 }
@@ -1404,14 +1404,14 @@ if(-not $loaded){
 try {
   $key="Registry::HKEY_USERS\\$hive\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
   $current=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue).Shell
-  if($current -ne $expected){
+  if(-not [String]::Equals([string]$current,[string]$expected,[StringComparison]::Ordinal)){
     throw "Arcane refused to overwrite the current shell for '$name' because it no longer matches the installed Arcane shell."
   }
   if($previousPresent){
     New-Item -Path $key -Force | Out-Null
     New-ItemProperty -Path $key -Name Shell -PropertyType String -Value $previous -Force | Out-Null
     $verified=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop).Shell
-    if($verified -ne $previous){ throw "Windows did not retain the restored shell for '$name'." }
+    if(-not [String]::Equals([string]$verified,[string]$previous,[StringComparison]::Ordinal)){ throw "Windows did not retain the restored shell for '$name'." }
   } else {
     Remove-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop
     $remaining=Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue
