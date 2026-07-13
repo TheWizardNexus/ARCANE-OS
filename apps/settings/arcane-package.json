@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "settings",
+  "displayName": "Arcane Settings",
+  "version": "0.2.0",
+  "entry": "index.html",
+  "strategy": "static",
+  "include": ["ai-settings.css", "img", "index.html", "manifest.json", "modules", "provider-settings.css", "settings.css"],
+  "exclude": [],
+  "shared": ["browser-runtime"]
+}

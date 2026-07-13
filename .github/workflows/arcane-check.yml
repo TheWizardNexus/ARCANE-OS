@@ -19,10 +19,10 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            machine_bundles/arcane-os-machine-bundle-v0.8.2/package-lock.json
+            machine_bundles/arcane-os-machine-bundle-v0.8.3/package-lock.json
       - run: npm ci
-      - run: npm ci --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
+      - run: npm ci --prefix machine_bundles/arcane-os-machine-bundle-v0.8.3
       - name: Run portable mandatory checks
         run: npm run check
       - name: Build and verify unified Windows distribution
-        run: npm run check:windows --prefix machine_bundles/arcane-os-machine-bundle-v0.8.2
+        run: npm run check:windows --prefix machine_bundles/arcane-os-machine-bundle-v0.8.3

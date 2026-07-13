@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "files",
+  "displayName": "Arcane Files",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "strategy": "static",
+  "include": ["files.css", "img", "index.html", "manifest.json", "modules"],
+  "exclude": [],
+  "shared": ["browser-runtime"]
+}

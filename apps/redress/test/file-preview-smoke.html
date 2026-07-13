@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Redress file preview smoke</title>
+    <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+    <style>
+        body{max-width:48rem;margin:3rem auto;padding:0 1rem;font:16px/1.55 system-ui,sans-serif}
+        main{display:grid;gap:1rem;padding:1.5rem;border:1px solid #aaa;border-radius:.75rem}
+        h1,p{margin:0}
+        .actions{display:flex;flex-wrap:wrap;gap:.65rem}
+        button,a{display:inline-flex;align-items:center;min-height:2.5rem;padding:.55rem .8rem;border:1px solid #777;border-radius:.45rem;color:inherit;background:#fff;font:inherit;text-decoration:none;cursor:pointer}
+        #status{padding:.75rem;border-left:.25rem solid #6b512b;background:#f5f0e8}
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Redress file preview smoke</h1>
+        <p>This local-only fixture creates a disposable case containing PDF, Markdown, text, and unsupported-format samples in browser-private storage.</p>
+        <div class="actions">
+            <button id="seed" type="button">Seed smoke case</button>
+            <a id="openApp" href="./apps/redress/index.html">Open Redress</a>
+            <button id="cleanup" type="button">Clean smoke case</button>
+        </div>
+        <p id="status" role="status">Ready.</p>
+    </main>
+
+    <script type="module">
+        import CaseRepository,{
+            ACTIVE_CASE_FILE,
+            CASES_TABLE,
+            STATE_TABLE
+        } from './apps/redress/modules/CaseRepository.js';
+
+        const STATE_KEY='redress-file-preview-smoke';
+        const status=document.querySelector('#status');
+        const seedButton=document.querySelector('#seed');
+        const cleanupButton=document.querySelector('#cleanup');
+        const repository=new CaseRepository();
+
+        function pdfBlob(){
+            const stream='BT /F1 18 Tf 72 720 Td (Redress native PDF preview) Tj ET';
+            const objects=[
+                '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+                '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+                '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n',
+                `4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
+                '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n'
+            ];
+            const encoder=new TextEncoder();
+            let pdf='%PDF-1.4\n';
+            const offsets=[];
+            for(const object of objects){
+                offsets.push(encoder.encode(pdf).length);
+                pdf+=object;
+            }
+            const xrefOffset=encoder.encode(pdf).length;
+            pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+            pdf+=offsets.map(offset=>`${String(offset).padStart(10,'0')} 00000 n \n`).join('');
+            pdf+=`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+            return new Blob([pdf],{type:'application/pdf'});
+        }
+
+        function readState(){
+            try{
+                return JSON.parse(sessionStorage.getItem(STATE_KEY)||'null');
+            }catch{
+                return null;
+            }
+        }
+
+        async function cleanup({announce=true}={}){
+            const state=readState();
+            if(!state?.smokeCaseId){
+                if(announce){
+                    status.textContent='No smoke case is registered in this browser tab.';
+                }
+                return;
+            }
+            const smoke=await repository.getCase(state.smokeCaseId);
+            for(const record of smoke?.files||[]){
+                await repository.removeFile(smoke,record);
+            }
+            await globalThis.dbopfs.delete(CASES_TABLE,`${state.smokeCaseId}.json`);
+            if(state.previousCaseId){
+                await repository.setActiveCase(state.previousCaseId);
+            }else{
+                await globalThis.dbopfs.delete(STATE_TABLE,ACTIVE_CASE_FILE);
+            }
+            sessionStorage.removeItem(STATE_KEY);
+            if(announce){
+                status.textContent='Smoke case removed and the prior active case restored.';
+            }
+        }
+
+        async function seed(){
+            seedButton.disabled=true;
+            cleanupButton.disabled=true;
+            status.textContent='Creating disposable preview files...';
+            try{
+                await cleanup({announce:false});
+                const previous=await repository.getActiveCase();
+                const smoke=await repository.createCase({
+                    caseName:'Redress Preview Smoke',
+                    caseNumber:`SMOKE-${Date.now()}`,
+                    matterType:'civil',
+                    status:'testing'
+                });
+                const probeToken=`markdown-probe-${Date.now()}`;
+                sessionStorage.setItem(STATE_KEY,JSON.stringify({
+                    previousCaseId:previous?.id||'',
+                    smokeCaseId:smoke.id,
+                    probeToken
+                }));
+
+                await repository.putFile(smoke,{
+                    file:pdfBlob(),
+                    path:'Evidence/Raw/Browser PDF.pdf',
+                    kind:'evidence',
+                    originalName:'Browser PDF.pdf',
+                    originalPath:'Evidence/Raw/Browser PDF.pdf'
+                });
+                await repository.putGeneratedMarkdown(
+                    smoke,
+                    'Evidence/MD/Browser Notes.md',
+                    [
+                        '# Formatted Markdown Preview',
+                        '',
+                        'Open the paired [Browser PDF](<../Raw/Browser PDF.pdf>).',
+                        '',
+                        '## Findings',
+                        '',
+                        '| Item | Result |',
+                        '| --- | --- |',
+                        '| Arcane Markdown | **Rendered** |',
+                        '| Remote media | Omitted |',
+                        '',
+                        `<table background="/apps/redress/test/${probeToken}-remote.png"><tbody><tr><td background="/apps/redress/test/${probeToken}-cell.png">Legacy URL attributes removed</td></tr></tbody></table>`,
+                        '',
+                        `<redress-probe src="/apps/redress/test/${probeToken}-custom.png">Unknown loading elements unwrapped</redress-probe>`,
+                        '',
+                        `<video poster="/apps/redress/test/${probeToken}-poster.png"><source src="/apps/redress/test/${probeToken}-source.mp4"></video>`,
+                        '',
+                        `![Remote Markdown image](/apps/redress/test/${probeToken}-markdown-image.png)`,
+                        '',
+                        `<span id="unsafe-id" class="unsafe-class" autofocus onclick="location.href='/apps/redress/test/${probeToken}-event'">Unsafe attributes removed</span>`,
+                        '',
+                        '[File URL disabled](file:///C:/private-case.txt) · [Custom URL disabled](redress-test:private-case)',
+                        '',
+                        `<scr`+`ipt>location.href="/apps/redress/test/${probeToken}-script"</scr`+`ipt><svg><image href="/apps/redress/test/${probeToken}-svg.png"></image></svg>`,
+                        '',
+                        '> This is disposable browser-smoke data.',
+                        '',
+                        '```text',
+                        'Native dialog + native browser viewer',
+                        '```'
+                    ].join('\n'),
+                    {kind:'description',status:'ready'}
+                );
+                await repository.putFile(smoke,{
+                    file:new Blob(['Plain text preview\nSecond line'],{type:'text/plain'}),
+                    path:'Evidence/Raw/Browser Notes.txt',
+                    kind:'evidence',
+                    originalName:'Browser Notes.txt',
+                    originalPath:'Evidence/Raw/Browser Notes.txt'
+                });
+                await repository.putFile(smoke,{
+                    file:new Blob(['Synthetic office-package bytes'],{
+                        type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    }),
+                    path:'Evidence/Raw/Browser Unsupported.docx',
+                    kind:'evidence',
+                    originalName:'Browser Unsupported.docx',
+                    originalPath:'Evidence/Raw/Browser Unsupported.docx'
+                });
+                await repository.saveCase(smoke);
+                status.textContent=`Smoke case ready. Security probe: ${probeToken}. Open Redress, exercise the four files, then return here to clean it up.`;
+            }catch(error){
+                status.textContent=`Unable to seed smoke case: ${error.message}`;
+            }finally{
+                seedButton.disabled=false;
+                cleanupButton.disabled=false;
+            }
+        }
+
+        await repository.ready();
+        seedButton.addEventListener('click',seed);
+        cleanupButton.addEventListener('click',()=>cleanup());
+    </script>
+</body>
+</html>

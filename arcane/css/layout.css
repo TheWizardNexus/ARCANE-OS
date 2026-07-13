@@ -21,7 +21,7 @@
 }
 
 /* Warm Theme */
-body.warm {
+:root:not([data-color-scheme]):not([data-arcane-skin]) body.warm {
     --background:#F8EFE5;
     --modal-background:#FFF9F3;
     --text-color:#352A24;
@@ -35,7 +35,7 @@ body.warm {
 }
 
 /* Curious Theme */
-body.curious {
+:root:not([data-color-scheme]):not([data-arcane-skin]) body.curious {
     --background:#EAF5EE;
     --modal-background:#F8FCF9;
     --text-color:#1E3327;
@@ -49,7 +49,7 @@ body.curious {
 }
 
 /* Hopeful Theme */
-body.hopeful {
+:root:not([data-color-scheme]):not([data-arcane-skin]) body.hopeful {
     --background:#EAF3F9;
     --modal-background:#F8FCFF;
     --text-color:#203247;
@@ -63,7 +63,7 @@ body.hopeful {
 }
 
 /* Harmony Theme */
-body.harmony {
+:root:not([data-color-scheme]):not([data-arcane-skin]) body.harmony {
     --background:#F2F0E5;
     --modal-background:#FCFAF4;
     --text-color:#303328;
@@ -80,7 +80,7 @@ body.harmony {
    Source cues: steel/gunmetal, ember heart, flame orange
    Design intent: calm, confident neutrals with a hopeful flame CTA
 */
-body.warrior {
+:root:not([data-color-scheme]):not([data-arcane-skin]) body.warrior {
     /* Surfaces */
     --background: #F5F7FA;          /* cool off‑white “steel light” */
     --modal-background: #EFF2F6;    /* panel on the main surface */
@@ -339,7 +339,7 @@ pre code{
 
 @media (prefers-color-scheme: dark) {
     /* Base Dark Mode Variables */
-    :root {
+    :root:not([data-color-scheme]) {
         color-scheme:dark;
         --background:#0F1220;
         --modal-background:#191D31;
@@ -359,7 +359,7 @@ pre code{
     }
 
     /* Dark Mode - Warm Theme */
-    body.warm {
+    :root:not([data-color-scheme]):not([data-arcane-skin]) body.warm {
         --background:#1D1613;
         --modal-background:#2B211C;
         --text-color:#F1E6DD;
@@ -373,7 +373,7 @@ pre code{
     }
 
     /* Dark Mode - Curious Theme */
-    body.curious {
+    :root:not([data-color-scheme]):not([data-arcane-skin]) body.curious {
         --background:#101B16;
         --modal-background:#1B2A22;
         --text-color:#DFF1E6;
@@ -387,7 +387,7 @@ pre code{
     }
 
     /* Dark Mode - Hopeful Theme */
-    body.hopeful {
+    :root:not([data-color-scheme]):not([data-arcane-skin]) body.hopeful {
         --background:#111821;
         --modal-background:#1D2935;
         --text-color:#E1EBF4;
@@ -401,7 +401,7 @@ pre code{
     }
 
     /* Dark Mode - Harmony Theme */
-    body.harmony {
+    :root:not([data-color-scheme]):not([data-arcane-skin]) body.harmony {
         --background:#191A14;
         --modal-background:#282A21;
         --text-color:#ECEBDB;
@@ -415,7 +415,7 @@ pre code{
     } 
     
     /* Warrior Spirit — Dark */
-    body.warrior {
+    :root:not([data-color-scheme]):not([data-arcane-skin]) body.warrior {
         --background: #0E1216;          /* night steel */
         --modal-background: #151A20;    /* panel against night steel */
         --text-color: #E9EEF3;          /* soft steel-white for text */

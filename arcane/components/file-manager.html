@@ -19,8 +19,8 @@
     }
 
     .directory.open{
-        max-height: 80em;
-        /*overflow-y: auto;*/
+        max-height:none;
+        overflow:visible;
     }
 
     .file{
@@ -232,6 +232,109 @@
         opacity:.65;
     }
 
+    :host([data-layout="tree"]){
+        overflow:auto;
+    }
+
+    :host([data-layout="tree"]) .file-manager{
+        box-sizing:border-box;
+        min-height:0;
+        padding:.25em;
+    }
+
+    .tree-root,
+    .tree-group{
+        list-style:none;
+        margin:0;
+        padding:0;
+    }
+
+    .tree-group{
+        margin-left:.7em;
+        padding-left:.7em;
+        border-left:1px solid var(--border-color);
+    }
+
+    .tree-item{
+        position:relative;
+        margin:.08em 0;
+        border-radius:.35em;
+        outline:none;
+    }
+
+    .tree-item-row{
+        box-sizing:border-box;
+        min-height:2em;
+        display:grid;
+        grid-template-columns:.8em 1.35em minmax(0,1fr) auto;
+        align-items:center;
+        gap:.35em;
+        padding:.3em .4em;
+        border:1px solid transparent;
+        border-radius:inherit;
+        color:var(--text-color);
+        cursor:pointer;
+    }
+
+    .tree-item:hover>.tree-item-row,
+    .tree-item:focus>.tree-item-row{
+        border-color:var(--border-color);
+        background:var(--secondary-color);
+    }
+
+    .tree-item[aria-selected="true"]>.tree-item-row{
+        border-color:var(--focus-color,var(--accent-color));
+        background:color-mix(in srgb,var(--secondary-color) 70%,transparent);
+    }
+
+    .tree-item[data-status="needs-review"]>.tree-item-row{
+        box-shadow:inset .2em 0 var(--danger-color);
+    }
+
+    .tree-disclosure{
+        width:.7em;
+        color:var(--platinum,var(--text-color));
+        text-align:center;
+        transition:transform 120ms ease-out;
+    }
+
+    .tree-item[aria-expanded="true"]>.tree-item-row .tree-disclosure{
+        transform:rotate(90deg);
+    }
+
+    .tree-item[data-kind="file"]>.tree-item-row .tree-disclosure{
+        visibility:hidden;
+    }
+
+    .tree-entry-icon{
+        width:1.25em;
+        height:1.25em;
+        filter:var(--file-icon-filter,none);
+    }
+
+    .tree-entry-name{
+        min-width:0;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+    }
+
+    .tree-file-count{
+        color:var(--platinum,var(--text-color));
+        font-size:.75em;
+        white-space:nowrap;
+    }
+
+    .tree-empty,
+    .tree-error{
+        margin:.75em;
+        color:var(--platinum,var(--text-color));
+    }
+
+    .tree-error{
+        color:var(--danger-color);
+    }
+
 </style>
 
 <div class="file-manager">
@@ -240,17 +343,15 @@
 
 <input id="fileUpload" type="file" hidden multiple>
 
-<html-import id="directoryModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
-<html-import id="fileModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
-<html-import id="deleteModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
+<html-import id="directoryModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
+<html-import id="fileModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
+<html-import id="deleteModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
 
 <script type="module">
     import('../modules/DBOPFS.js');
     //importing Document at the end of the file to avoid blocking;
 
     const host=this;
-    host.loadAll=loadAll;
-
     const {default:waitForComponent}=await import('../modules/WaitForComponent.js');
 
     const fileManager=host.shadowRoot.querySelector('.file-manager');
@@ -260,6 +361,9 @@
     const fileModal=host.shadowRoot.querySelector('#fileModal');
     const deleteModal=host.shadowRoot.querySelector('#deleteModal');
     const layout=host.dataset.layout||'';
+    const openMode=host.dataset.openMode||(
+        host.hasAttribute('data-event-only-open')?'event':''
+    );
     const dirs=host.dataset.dirs?.split(',').map(
         directory=>directory.trim()
     ).filter(Boolean);
@@ -268,9 +372,69 @@
     let activeFileURL='';
     let uploadDirectory='';
     let initialized=false;
+    let provider=null;
+    let filter=null;
+    let selectedPath='';
+    let treeItems=new Map();
+    let treeLoadSequence=0;
+
+    host.ready=false;
+    host.loadAll=loadAll;
+    host.setProvider=setProvider;
+    host.setFilter=setFilter;
+    host.select=select;
+    host.clearSelection=clearSelection;
+
+    Object.defineProperty(
+        host,
+        'selectedPath',
+        {
+            configurable:true,
+            enumerable:true,
+            get:()=>selectedPath
+        }
+    );
+
+    Object.defineProperty(
+        host,
+        'provider',
+        {
+            configurable:true,
+            enumerable:true,
+            get:()=>provider
+        }
+    );
+
+    function configuredHiddenPrefixes(){
+        if(host.hasAttribute('data-show-hidden')){
+            return [];
+        }
+
+        const configured=host.dataset.hiddenPrefixes;
+
+        if(configured!==undefined){
+            return configured.split(',').map(value=>value.trim()).filter(Boolean);
+        }
+
+        return [];
+    }
+
+    function isVisibleEntry(entry={}){
+        const normalized=typeof entry==='string'
+            ?{name:entry,path:entry,kind:'file'}
+            :entry;
+        const activeFilter=filter||provider?.filter;
+
+        if(typeof activeFilter==='function'){
+            return activeFilter(normalized)!==false;
+        }
+
+        const name=String(normalized.name||'');
+        return !configuredHiddenPrefixes().some(prefix=>name.startsWith(prefix));
+    }
 
     function isVisibleFileName(fileName=''){
-        return !String(fileName).startsWith('.boss-library-');
+        return isVisibleEntry({name:fileName,path:fileName,kind:'file'});
     }
 
     window.addEventListener(
@@ -312,6 +476,697 @@
 
         }
     );
+
+    fileManager.addEventListener('keydown',onTreeKeydown);
+
+    function emit(name,detail={},cancelable=false){
+        return host.dispatchEvent(
+            new CustomEvent(
+                name,
+                {
+                    bubbles:true,
+                    cancelable:cancelable,
+                    composed:true,
+                    detail:detail
+                }
+            )
+        );
+    }
+
+    function emitAction(action,entry={},detail={},cancelable=false){
+        return emit(
+            'file-manager-action',
+            {
+                action:action,
+                path:entry.path||'',
+                entry:entry,
+                ...detail
+            },
+            cancelable
+        );
+    }
+
+    async function setProvider(nextProvider=null){
+        if(nextProvider!==null&&typeof nextProvider?.list!=='function'){
+            throw new TypeError('File manager providers must expose list(path).');
+        }
+
+        provider=nextProvider;
+
+        if(layout==='tree'){
+            if(!initialized){
+                await init();
+            }else{
+                await loadAll();
+            }
+        }
+
+        return provider;
+    }
+
+    async function setFilter(nextFilter=null){
+        if(nextFilter!==null&&typeof nextFilter!=='function'){
+            throw new TypeError('File manager filters must be functions or null.');
+        }
+
+        filter=nextFilter;
+
+        if(initialized){
+            await loadAll();
+        }
+
+        return filter;
+    }
+
+    function normalizeProviderPath(path=''){
+        return String(path||'')
+            .replaceAll('\\','/')
+            .split('/')
+            .filter(segment=>segment&&segment!=='.')
+            .join('/');
+    }
+
+    function joinProviderPath(parentPath='',name=''){
+        return [normalizeProviderPath(parentPath),normalizeProviderPath(name)]
+            .filter(Boolean)
+            .join('/');
+    }
+
+    function normalizeProviderEntry(candidate={},parentPath=''){
+        if(!candidate||typeof candidate!=='object'){
+            return null;
+        }
+
+        const kind=candidate.kind==='directory'?'directory':'file';
+        const rawPath=normalizeProviderPath(candidate.path||'');
+        const name=String(
+            candidate.name
+            ||rawPath.split('/').pop()
+            ||''
+        ).trim();
+
+        if(!name){
+            return null;
+        }
+
+        const path=rawPath||joinProviderPath(parentPath,name);
+
+        if(!path||path===normalizeProviderPath(parentPath)){
+            return null;
+        }
+
+        return {
+            ...candidate,
+            name:name,
+            path:path,
+            kind:kind,
+            size:Number.isFinite(Number(candidate.size))?Number(candidate.size):0,
+            mimeType:String(candidate.mimeType||''),
+            lastModified:candidate.lastModified||'',
+            status:String(candidate.status||''),
+            hasChildren:kind==='directory'&&candidate.hasChildren!==false
+        };
+    }
+
+    function normalizeProviderEntries(entries=[],parentPath=''){
+        if(!Array.isArray(entries)){
+            throw new TypeError('File manager provider list(path) must return an array.');
+        }
+
+        const unique=new Map();
+
+        for(const candidate of entries){
+            const entry=normalizeProviderEntry(candidate,parentPath);
+
+            if(entry&&isVisibleEntry(entry)&&!unique.has(entry.path)){
+                unique.set(entry.path,entry);
+            }
+        }
+
+        return Array.from(unique.values()).sort((left,right)=>{
+            if(left.kind!==right.kind){
+                return left.kind==='directory'?-1:1;
+            }
+
+            return left.name.localeCompare(right.name,undefined,{numeric:true,sensitivity:'base'});
+        });
+    }
+
+    const dbopfsTreeProvider={
+        async list(path=''){
+            const normalizedPath=normalizeProviderPath(path);
+
+            if(!normalizedPath){
+                let tableNames=dirs;
+
+                if(!tableNames?.length){
+                    tableNames=await dbopfs.getTableNames(true);
+                }
+
+                return tableNames.map(tableName=>({
+                    name:tableName,
+                    path:tableName,
+                    kind:'directory',
+                    hasChildren:true
+                }));
+            }
+
+            const files=(await dbopfs.getAllKeys(normalizedPath))
+                .filter(isVisibleFileName)
+                .sort();
+            const metadata=await getFilesMetadata(normalizedPath,files);
+
+            return files.map((fileName,index)=>({
+                name:fileName,
+                path:joinProviderPath(normalizedPath,fileName),
+                kind:'file',
+                size:metadata[index]?.size,
+                mimeType:metadata[index]?.type||metadata[index]?.mimeType||'',
+                lastModified:metadata[index]?.lastModified,
+                directory:normalizedPath,
+                fileName:fileName
+            }));
+        },
+        async open(entry={}){
+            if(entry.directory&&entry.fileName){
+                return openFile(entry.directory,entry.fileName);
+            }
+        }
+    };
+
+    function activeTreeProvider(){
+        return provider||dbopfsTreeProvider;
+    }
+
+    async function loadTree(){
+        const sequence=++treeLoadSequence;
+        fileManager.replaceChildren();
+        fileManager.setAttribute('role','tree');
+        fileManager.setAttribute(
+            'aria-label',
+            host.getAttribute('aria-label')||'Files'
+        );
+        fileManager.setAttribute('aria-busy','true');
+        treeItems=new Map();
+
+        if(!provider&&!window.dbopfs?.ready){
+            const waiting=document.createElement('p');
+            waiting.className='tree-empty';
+            waiting.innerText='Files will appear when storage is ready.';
+            fileManager.append(waiting);
+            fileManager.setAttribute('aria-busy','false');
+            return [];
+        }
+
+        try{
+            const entries=normalizeProviderEntries(
+                await activeTreeProvider().list(''),
+                ''
+            );
+
+            if(sequence!==treeLoadSequence){
+                return [];
+            }
+
+            const root=document.createElement('ul');
+            root.className='tree-root';
+            root.setAttribute('role','group');
+            appendTreeEntries(root,entries);
+            fileManager.append(root);
+
+            if(!entries.length){
+                const empty=document.createElement('p');
+                empty.className='tree-empty';
+                empty.innerText=host.dataset.emptyLabel||'No files are available.';
+                fileManager.append(empty);
+            }
+
+            const restoredPath=selectedPath;
+            const firstItem=treeItems.values().next().value;
+
+            if(firstItem){
+                setRovingTreeItem(firstItem,false);
+            }
+
+            if(restoredPath){
+                const restored=await select(
+                    restoredPath,
+                    {emit:false,focus:false}
+                );
+
+                if(!restored){
+                    selectedPath='';
+                }
+            }
+
+            return entries;
+        }catch(error){
+            if(sequence!==treeLoadSequence){
+                return [];
+            }
+
+            const message=document.createElement('p');
+            message.className='tree-error';
+            message.innerText='Unable to list files.';
+            fileManager.append(message);
+            emitAction('error',{}, {error:error});
+            throw error;
+        }finally{
+            if(sequence===treeLoadSequence){
+                fileManager.setAttribute('aria-busy','false');
+            }
+        }
+    }
+
+    function appendTreeEntries(group,entries=[]){
+        const size=entries.length;
+
+        entries.forEach((entry,index)=>{
+            group.append(createTreeItem(entry,index+1,size));
+        });
+    }
+
+    function createTreeItem(entry,position=1,setSize=1){
+        const item=document.createElement('li');
+        const row=document.createElement('div');
+        const disclosure=document.createElement('span');
+        const icon=document.createElement('img');
+        const name=document.createElement('span');
+        const count=document.createElement('span');
+
+        item.className='tree-item';
+        item.dataset.kind=entry.kind;
+        item.dataset.path=entry.path;
+        item.dataset.status=entry.status||'';
+        item.tabIndex=-1;
+        item.setAttribute('role','treeitem');
+        item.setAttribute('aria-selected',String(entry.path===selectedPath));
+        item.setAttribute('aria-posinset',String(position));
+        item.setAttribute('aria-setsize',String(setSize));
+        item._fileManagerEntry=entry;
+
+        row.className='tree-item-row';
+        row.title=entry.path;
+        disclosure.className='tree-disclosure';
+        disclosure.setAttribute('aria-hidden','true');
+        disclosure.innerText='>';
+        icon.className='tree-entry-icon';
+        icon.alt='';
+        icon.src=entry.kind==='directory'
+            ?'./arcane/img/folder.svg'
+            :'./arcane/img/doc.svg';
+        name.className='tree-entry-name';
+        name.innerText=entry.name;
+        count.className='tree-file-count';
+
+        if(Number.isFinite(Number(entry.fileCount))){
+            setFileCountLabel(count,Number(entry.fileCount),false);
+            item.dataset.fileCount=String(Number(entry.fileCount));
+        }
+
+        row.append(disclosure,icon,name,count);
+        item.append(row);
+        treeItems.set(entry.path,item);
+
+        if(entry.kind==='directory'&&entry.hasChildren){
+            const group=document.createElement('ul');
+            group.className='tree-group';
+            group.hidden=true;
+            group.setAttribute('role','group');
+            item.setAttribute('aria-expanded','false');
+            item.append(group);
+        }else if(entry.kind==='directory'){
+            setFileCountLabel(count,0,false);
+            item.dataset.fileCount='0';
+        }
+
+        row.addEventListener('click',async()=>{
+            await select(entry.path,{entry:entry,focus:true});
+
+            if(entry.kind==='directory'){
+                await toggleTreeItem(item);
+            }
+        });
+        row.addEventListener('dblclick',async event=>{
+            if(entry.kind==='file'){
+                event.preventDefault();
+                await openTreeItem(item,'double-click');
+            }
+        });
+        item.addEventListener('focus',()=>setRovingTreeItem(item,false));
+
+        return item;
+    }
+
+    function setFileCountLabel(element,count=0,partial=false){
+        const suffix=partial?'+':'';
+        element.innerText=`${count}${suffix} ${count===1&&!partial?'file':'files'}`;
+    }
+
+    function updateTreeCounts(item){
+        let current=item;
+
+        while(current){
+            if(current.dataset.kind==='directory'){
+                const exact=Number(current._fileManagerEntry?.fileCount);
+                const countElement=current.querySelector(':scope>.tree-item-row>.tree-file-count');
+
+                if(Number.isFinite(exact)){
+                    current.dataset.fileCount=String(exact);
+                    setFileCountLabel(countElement,exact,false);
+                }else if(current.dataset.loaded==='true'){
+                    const group=current.querySelector(':scope>.tree-group');
+                    const count=group
+                        ?group.querySelectorAll('.tree-item[data-kind="file"]').length
+                        :0;
+                    const partial=Boolean(
+                        group&&Array.from(
+                            group.querySelectorAll('.tree-item[data-kind="directory"]')
+                        ).some(directory=>
+                            directory._fileManagerEntry?.hasChildren
+                            &&directory.dataset.loaded!=='true'
+                        )
+                    );
+                    current.dataset.fileCount=String(count);
+                    setFileCountLabel(countElement,count,partial);
+                }
+            }
+
+            current=current.parentElement?.closest('.tree-item')||null;
+        }
+    }
+
+    async function expandTreeItem(item,{emitEvent=true}={}){
+        if(!item||item.dataset.kind!=='directory'){
+            return false;
+        }
+
+        const group=item.querySelector(':scope>.tree-group');
+
+        if(!group){
+            return false;
+        }
+
+        if(item.dataset.loaded!=='true'){
+            const entry=item._fileManagerEntry;
+            const sequence=treeLoadSequence;
+            item.setAttribute('aria-busy','true');
+
+            try{
+                const entries=normalizeProviderEntries(
+                    await activeTreeProvider().list(entry.path),
+                    entry.path
+                );
+
+                if(sequence!==treeLoadSequence||!fileManager.contains(item)){
+                    return false;
+                }
+
+                group.replaceChildren();
+                appendTreeEntries(group,entries);
+
+                if(!entries.length){
+                    const empty=document.createElement('li');
+                    empty.className='tree-empty';
+                    empty.setAttribute('role','none');
+                    empty.innerText='Empty';
+                    group.append(empty);
+                }
+
+                item.dataset.loaded='true';
+                updateTreeCounts(item);
+            }catch(error){
+                group.replaceChildren();
+                const message=document.createElement('li');
+                message.className='tree-error';
+                message.setAttribute('role','none');
+                message.innerText='Unable to list this folder.';
+                group.append(message);
+                emitAction('error',entry,{error:error});
+                return false;
+            }finally{
+                item.removeAttribute('aria-busy');
+            }
+        }
+
+        group.hidden=false;
+        item.setAttribute('aria-expanded','true');
+
+        if(emitEvent){
+            emitAction('expand',item._fileManagerEntry);
+        }
+
+        return true;
+    }
+
+    function collapseTreeItem(item,{emitEvent=true}={}){
+        const group=item?.querySelector(':scope>.tree-group');
+
+        if(!group){
+            return false;
+        }
+
+        group.hidden=true;
+        item.setAttribute('aria-expanded','false');
+
+        if(emitEvent){
+            emitAction('collapse',item._fileManagerEntry);
+        }
+
+        return true;
+    }
+
+    async function toggleTreeItem(item){
+        if(item?.getAttribute('aria-expanded')==='true'){
+            return collapseTreeItem(item);
+        }
+
+        return expandTreeItem(item);
+    }
+
+    function setRovingTreeItem(item,focus=true){
+        if(!item){
+            return;
+        }
+
+        for(const treeItem of treeItems.values()){
+            treeItem.tabIndex=treeItem===item?0:-1;
+        }
+
+        if(focus){
+            item.focus();
+        }
+    }
+
+    function visibleTreeItems(){
+        return Array.from(
+            fileManager.querySelectorAll('.tree-item[role="treeitem"]')
+        ).filter(
+            item=>!item.closest('.tree-group[hidden]')
+        );
+    }
+
+    async function revealTreePath(path=''){
+        const normalizedPath=normalizeProviderPath(path);
+        let item=treeItems.get(normalizedPath)||null;
+
+        if(item){
+            return item;
+        }
+
+        const segments=normalizedPath.split('/').filter(Boolean);
+
+        for(let i=1;i<segments.length;i++){
+            const parentPath=segments.slice(0,i).join('/');
+            const parent=treeItems.get(parentPath);
+
+            if(parent?.dataset.kind==='directory'){
+                await expandTreeItem(parent,{emitEvent:false});
+                item=treeItems.get(normalizedPath)||null;
+
+                if(item){
+                    return item;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    async function select(path='',options={}){
+        const normalizedPath=normalizeProviderPath(path);
+
+        if(!normalizedPath){
+            return clearSelection(options);
+        }
+
+        let item=null;
+        let entry=options.entry||null;
+
+        if(layout==='tree'){
+            item=await revealTreePath(normalizedPath);
+
+            if(!item){
+                return false;
+            }
+
+            entry=item._fileManagerEntry;
+        }
+
+        selectedPath=normalizedPath;
+
+        if(layout==='tree'){
+            for(const treeItem of treeItems.values()){
+                treeItem.setAttribute(
+                    'aria-selected',
+                    String(treeItem===item)
+                );
+            }
+            setRovingTreeItem(item,options.focus===true);
+        }else{
+            fileManager.querySelectorAll('[data-file-path]').forEach(element=>{
+                element.setAttribute(
+                    'aria-selected',
+                    String(element.dataset.filePath===selectedPath)
+                );
+            });
+        }
+
+        if(options.emit!==false){
+            emit('file-manager-select',{path:selectedPath,entry:entry});
+        }
+
+        return true;
+    }
+
+    function clearSelection(options={}){
+        const changed=Boolean(selectedPath);
+        selectedPath='';
+
+        if(layout==='tree'){
+            for(const treeItem of treeItems.values()){
+                treeItem.setAttribute('aria-selected','false');
+            }
+        }else{
+            fileManager.querySelectorAll('[data-file-path]').forEach(element=>{
+                element.setAttribute('aria-selected','false');
+            });
+        }
+
+        if(options.emit===true){
+            emit('file-manager-select',{path:'',entry:null});
+        }
+
+        return changed;
+    }
+
+    async function openTreeItem(item,trigger='open'){
+        const entry=item?._fileManagerEntry;
+
+        if(!entry||entry.kind!=='file'){
+            return false;
+        }
+
+        await select(entry.path,{entry:entry,focus:true});
+        const detail={path:entry.path,entry:entry,trigger:trigger};
+        const openAllowed=emit('file-manager-open',detail,true);
+        const actionAllowed=emitAction('open',entry,{trigger:trigger},true);
+
+        if(!openAllowed||!actionAllowed||openMode==='event'){
+            return true;
+        }
+
+        if(typeof activeTreeProvider().open==='function'){
+            try{
+                await activeTreeProvider().open(entry);
+            }catch(error){
+                emitAction('error',entry,{error:error});
+                console.error('Unable to open file:',error);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    async function onTreeKeydown(event){
+        if(layout!=='tree'){
+            return;
+        }
+
+        const item=event.target.closest?.('.tree-item[role="treeitem"]');
+
+        if(!item||!fileManager.contains(item)){
+            return;
+        }
+
+        const items=visibleTreeItems();
+        const index=items.indexOf(item);
+        const focusAt=nextIndex=>{
+            const next=items[nextIndex];
+            if(next){
+                setRovingTreeItem(next,true);
+            }
+        };
+
+        switch(event.key){
+            case 'ArrowDown':
+                event.preventDefault();
+                focusAt(Math.min(items.length-1,index+1));
+                break;
+            case 'ArrowUp':
+                event.preventDefault();
+                focusAt(Math.max(0,index-1));
+                break;
+            case 'Home':
+                event.preventDefault();
+                focusAt(0);
+                break;
+            case 'End':
+                event.preventDefault();
+                focusAt(items.length-1);
+                break;
+            case 'ArrowRight':
+                if(item.dataset.kind!=='directory'){
+                    break;
+                }
+                event.preventDefault();
+                if(item.getAttribute('aria-expanded')!=='true'){
+                    await expandTreeItem(item);
+                }else{
+                    const firstChild=item.querySelector(':scope>.tree-group>.tree-item');
+                    if(firstChild){
+                        setRovingTreeItem(firstChild,true);
+                    }
+                }
+                break;
+            case 'ArrowLeft':{
+                event.preventDefault();
+                if(item.dataset.kind==='directory'&&item.getAttribute('aria-expanded')==='true'){
+                    collapseTreeItem(item);
+                }else{
+                    const parent=item.parentElement?.closest('.tree-item');
+                    if(parent){
+                        setRovingTreeItem(parent,true);
+                    }
+                }
+                break;
+            }
+            case 'Enter':
+                event.preventDefault();
+                if(item.dataset.kind==='directory'){
+                    await toggleTreeItem(item);
+                    await select(item.dataset.path,{entry:item._fileManagerEntry});
+                }else{
+                    await openTreeItem(item,'keyboard');
+                }
+                break;
+            case ' ':
+                event.preventDefault();
+                await select(item.dataset.path,{entry:item._fileManagerEntry});
+                break;
+        }
+    }
 
     async function openDirectory(directory=''){
         const modal=await waitForComponent(
@@ -550,6 +1405,16 @@
         const fileMetadata=document.createElement('small');
         const deleteButton=document.createElement('button');
         const deleteIcon=document.createElement('img');
+        const entry={
+            name:fileName,
+            path:joinProviderPath(directory,fileName),
+            kind:'file',
+            size:Number(metadata.size)||0,
+            mimeType:String(metadata.type||metadata.mimeType||''),
+            lastModified:metadata.lastModified||'',
+            directory:directory,
+            fileName:fileName
+        };
 
         file.className='file file-row';
 
@@ -559,6 +1424,8 @@
         openButton.dataset.fileAction='open';
         openButton.dataset.directory=directory;
         openButton.dataset.file=fileName;
+        openButton.dataset.filePath=entry.path;
+        openButton.setAttribute('aria-selected',String(entry.path===selectedPath));
 
         fileIcon.alt='';
         fileIcon.className='icon file-icon';
@@ -589,15 +1456,32 @@
 
         openButton.addEventListener(
             'click',
-            ()=>openFile(directory,fileName).catch(
-                error=>console.error('Unable to open file:',error)
-            )
+            async()=>{
+                await select(entry.path,{entry:entry});
+                const detail={path:entry.path,entry:entry,trigger:'click'};
+                const openAllowed=emit('file-manager-open',detail,true);
+                const actionAllowed=emitAction('open',entry,{trigger:'click'},true);
+
+                if(!openAllowed||!actionAllowed||openMode==='event'){
+                    return;
+                }
+
+                openFile(directory,fileName).catch(
+                    error=>console.error('Unable to open file:',error)
+                );
+            }
         );
         deleteButton.addEventListener(
             'click',
-            ()=>confirmDelete(directory,fileName).catch(
-                error=>console.error('Unable to delete file:',error)
-            )
+            ()=>{
+                if(!emitAction('delete',entry,{},true)){
+                    return;
+                }
+
+                confirmDelete(directory,fileName).catch(
+                    error=>console.error('Unable to delete file:',error)
+                );
+            }
         );
 
         openButton.append(fileIcon,fileDetails);
@@ -732,7 +1616,9 @@
         initialized=true;
 
         try{
-            await fileEntityPromise;
+            if(layout!=='tree'){
+                await fileEntityPromise;
+            }
             await loadAll();
             host.ready=true;
             host.dispatchEvent(
@@ -745,6 +1631,10 @@
     }
 
     async function loadAll(){
+        if(layout==='tree'){
+            return loadTree();
+        }
+
         let tableNames=dirs;
 
         if(!tableNames?.length){

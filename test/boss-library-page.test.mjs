@@ -9,7 +9,7 @@ describe('BOSS Libraries document page',()=>{
     it('uses the shared Arcane shell and BOSS Libraries navigation',()=>{
         assert.match(page,/<base href="\.\.\/\.\.\/">/);
         assert.match(page,/href="\.\/arcane\/components\/header\.html\?v=3"/);
-        assert.match(page,/href="\.\/apps\/boss\/components\/nav\.html\?v=2"/);
+        assert.match(page,/href="\.\/apps\/boss\/components\/nav\.html\?v=10"/);
         assert.match(page,/BOSS Libraries \| Document Library/);
     });
 
@@ -31,6 +31,32 @@ describe('BOSS Libraries document page',()=>{
         }
 
         assert.match(page,/id="restrictedOption" value="restricted" disabled/);
+    });
+
+    it('offers a simple editable handoff to the BOSS Librarian',()=>{
+        assert.match(page,/id="askLibrarian"[\s\S]*?>Ask the BOSS Librarian</);
+        assert.match(page,/Not sure what terms to use\?/);
+        assert.match(page,/id="askLibrarianEmpty"[\s\S]*?>Ask the BOSS Librarian about this search</);
+        assert.match(page,/new URL\('\.\/apps\/boss\/chat\.html',document\.baseURI\)/);
+        assert.match(page,/\.trim\(\)\.slice\(0,500\)/);
+        assert.match(page,/chatUrl\.searchParams\.set\('q',query\)/);
+        assert.doesNotMatch(page,/searchParams\.set\(['"]includeRestricted/);
+        assert.match(
+            page,
+            /class="empty-state-message" role="status" aria-live="polite">[\s\S]*?<\/div>\s*<a id="askLibrarianEmpty"/
+        );
+    });
+
+    it('shows locally available original documents without unsafe HTML rendering',()=>{
+        assert.match(page,/function localOriginalUrl\(record\)/);
+        assert.match(page,/record\.originalUrl/);
+        assert.match(page,/text:kind==='download'\?'Get original':'View original'/);
+        assert.match(page,/async function openOriginal\(record,trigger,originalUrl\)/);
+        assert.match(page,/kind==='pdf'/);
+        assert.match(page,/kind==='image'/);
+        assert.match(page,/kind==='video'/);
+        assert.match(page,/kind==='download'/);
+        assert.match(page,/textPreview\.textContent=/);
     });
 
     it('keeps Markdown preview content in text-only DOM sinks',()=>{

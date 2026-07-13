@@ -1,0 +1,153 @@
+<style>
+    :host{
+        --ink:var(--text-color,#172238);
+        --paper:var(--modal-background,#F3EFE7);
+        --brass:var(--secondary-color,#C49A52);
+        --nav-start:var(--primary-color,#172238);
+        --nav-end:color-mix(in srgb,var(--primary-color,#172238) 78%,var(--background,#0F1220));
+        --nav-on:var(--button-text-color,#FFF);
+        --nav-accent-text:var(--background,#172238);
+        display:block;
+    }
+
+    #appBar{
+        --app-bar-surface:linear-gradient(110deg,var(--nav-start),var(--nav-end));
+        --app-bar-text:var(--nav-on);
+        --app-bar-accent:var(--brass);
+        --app-bar-active-text:var(--nav-accent-text);
+    }
+
+    #appBar::part(nav){
+        min-height:4.75rem;
+        border-bottom-width:.18rem;
+    }
+
+    #appBar::part(brand-mark){
+        width:2.65rem;
+        height:2.65rem;
+        border-radius:.48rem .48rem 1rem .48rem;
+        color:var(--nav-accent-text);
+        background:linear-gradient(145deg,color-mix(in srgb,var(--brass) 62%,var(--paper)),var(--brass));
+        box-shadow:inset 0 1px color-mix(in srgb,var(--nav-on) 50%,transparent),0 .28rem .65rem var(--shadow-color,rgba(0,0,0,.24));
+        font:800 1.35rem/1 Georgia,"Times New Roman",serif;
+    }
+
+    #appBar::part(product-name){
+        overflow:visible;
+    }
+
+    .brand-copy{
+        display:grid;
+        gap:.08rem;
+    }
+
+    .brand-copy strong{
+        font:800 1.13rem/1 Georgia,"Times New Roman",serif;
+        letter-spacing:.13em;
+    }
+
+    .brand-copy small{
+        color:color-mix(in srgb,var(--nav-on) 78%,transparent);
+        font:650 .63rem/1.2 Inter,"Segoe UI",sans-serif;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+    }
+
+    .section-link{
+        font-family:Inter,"Segoe UI",sans-serif;
+        letter-spacing:.025em;
+    }
+
+    .status{
+        display:flex;
+        align-items:center;
+        gap:.42rem;
+        color:color-mix(in srgb,var(--nav-on) 82%,transparent);
+        font:650 .68rem/1.2 Inter,"Segoe UI",sans-serif;
+        white-space:nowrap;
+    }
+
+    .status-dot{
+        width:.52rem;
+        height:.52rem;
+        border-radius:50%;
+        background:var(--danger-color,#DB7B70);
+        box-shadow:0 0 0 .18rem color-mix(in srgb,var(--danger-color,#DB7B70) 18%,transparent);
+    }
+
+    .status[data-ready="true"] .status-dot{
+        background:var(--success-color,#78B792);
+        box-shadow:0 0 0 .18rem color-mix(in srgb,var(--success-color,#78B792) 18%,transparent);
+    }
+
+    #aiSettings{
+        min-height:2.25rem;
+        border:1px solid color-mix(in srgb,var(--nav-on) 23%,transparent);
+        border-radius:999px;
+        padding:.48rem .7rem;
+        color:var(--nav-on);
+        background:color-mix(in srgb,var(--nav-on) 7%,transparent);
+        cursor:pointer;
+        font:700 .72rem/1 Inter,"Segoe UI",sans-serif;
+    }
+
+    #aiSettings:focus-visible{
+        outline:.18rem solid var(--focus-color,var(--brass));
+        outline-offset:.16rem;
+    }
+
+    @media(max-width:62rem){
+        .brand-copy small{display:none}
+        #aiSettings{font-size:0;padding:.55rem}
+        #aiSettings::after{content:'AI';font-size:.72rem}
+        .status-label{display:none}
+    }
+</style>
+
+<html-import id="appBar" href="./arcane/components/app-bar.html?v=3" data-label="Redress primary navigation" data-brand-href="./apps/redress/index.html#workspace">
+    <span slot="brand-mark" aria-hidden="true">R</span>
+    <span slot="product-name" class="brand-copy"><strong>REDRESS</strong><small>Legal Workbench</small></span>
+    <a slot="navigation" class="section-link" href="./apps/redress/index.html#workspace" data-route="workspace">Workspace</a>
+    <a slot="navigation" class="section-link" href="./apps/redress/index.html#analyze" data-route="analyze">Analyze</a>
+    <a slot="navigation" class="section-link" href="./apps/redress/index.html#draft" data-route="draft">Draft</a>
+    <a slot="navigation" class="section-link" href="./apps/redress/index.html#research" data-route="research">Research</a>
+    <a slot="navigation" class="section-link" href="./apps/redress/index.html#argue" data-route="argue">Argue</a>
+    <span slot="status" class="status" data-ready="false" title="AI needs configuration"><span class="status-dot" aria-hidden="true"></span><span class="status-label">AI setup needed</span></span>
+    <button slot="trailing" id="aiSettings" type="button" aria-label="AI settings">AI settings</button>
+</html-import>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const appBar=root.querySelector('#appBar');
+    const status=root.querySelector('.status');
+    const statusLabel=root.querySelector('.status-label');
+
+    function updateRoute(){
+        const route=location.hash.replace(/^#/,'')||'workspace';
+        if(typeof appBar.setActiveRoute==='function'){
+            appBar.setActiveRoute(route);
+        }else{
+            appBar.dataset.activeRoute=route;
+        }
+    }
+
+    function updateAI(event){
+        const ai=event?.detail?.ai||globalThis.ai;
+        const configured=Boolean(ai?.configured);
+        status.dataset.ready=String(configured);
+        status.title=configured?'AI is configured':'AI needs configuration';
+        statusLabel.textContent=configured?'AI ready':'AI setup needed';
+        appBar.dataset.statusTone=configured?'success':'warning';
+    }
+
+    root.querySelector('#aiSettings').addEventListener('click',()=>{
+        window.dispatchEvent(new CustomEvent('redress-open-ai-settings'));
+    });
+    window.addEventListener('ai-ready',updateAI);
+    window.addEventListener('redress-ai-status',updateAI);
+    window.addEventListener('hashchange',updateRoute);
+    appBar.addEventListener('app-bar-ready',updateRoute);
+    updateRoute();
+    updateAI();
+</script>

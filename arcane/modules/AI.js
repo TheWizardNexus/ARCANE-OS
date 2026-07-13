@@ -8,7 +8,7 @@ class AI {
     // This is the enum section for inference configuration
     #service = {
         baseURL: {
-            OLLAMA: 'http://127.0.0.1:11431/v1',
+            OLLAMA: 'http://127.0.0.1:11434/v1',
             OPENAI: 'https://api.openai.com/v1'
         },
         sttURL: {

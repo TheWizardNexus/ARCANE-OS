@@ -2,21 +2,12 @@ function waitForComponent(element,options={}){
     const {
         methods=[],
         property='',
-        event='',
-        retries=100,
-        interval=50
+        event=''
     }=options;
 
     return new Promise(
         function waitForComponentPromise(resolve,reject){
-            let checks=0;
-            let timer;
-
             function cleanup(){
-                if(timer){
-                    clearTimeout(timer);
-                }
-
                 if(event){
                     element.removeEventListener(event,eventHandler);
                 }
@@ -40,18 +31,9 @@ function waitForComponent(element,options={}){
             function check(){
                 if(isReady()){
                     complete();
-                    return;
+                    return true;
                 }
-
-                checks++;
-
-                if(checks>retries){
-                    cleanup();
-                    reject(new Error('Component did not become ready.'));
-                    return;
-                }
-
-                timer=setTimeout(check,interval);
+                return false;
             }
 
             function eventHandler(){
@@ -67,6 +49,9 @@ function waitForComponent(element,options={}){
 
             if(event){
                 element.addEventListener(event,eventHandler);
+            }else if(!isReady()){
+                reject(new Error('A component readiness event is required.'));
+                return;
             }
 
             check();

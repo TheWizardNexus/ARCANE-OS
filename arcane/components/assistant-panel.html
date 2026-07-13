@@ -1,0 +1,715 @@
+<style>
+    :host{
+        --assistant-panel-width:24rem;
+        --assistant-surface:var(--modal-background,#fff);
+        --assistant-text:var(--text-color,#172238);
+        --assistant-border:var(--border-color,rgba(23,34,56,.18));
+        --assistant-accent:var(--primary-color,#315b8a);
+        --assistant-muted:color-mix(in srgb,var(--assistant-text) 66%,transparent);
+        box-sizing:border-box;
+        display:block;
+        min-width:0;
+        color:var(--assistant-text);
+    }
+
+    :host(:not([data-open])){
+        display:none;
+    }
+
+    *,*::before,*::after{
+        box-sizing:border-box;
+    }
+
+    .assistant-shell{
+        display:flex;
+        min-width:0;
+        height:100%;
+    }
+
+    .backdrop{
+        display:none;
+    }
+
+    .panel{
+        display:flex;
+        flex:1 1 auto;
+        flex-direction:column;
+        min-width:0;
+        width:100%;
+        height:100%;
+        overflow:hidden;
+        color:var(--assistant-text);
+        background:var(--assistant-surface);
+        border-inline-start:1px solid var(--assistant-border);
+        box-shadow:-.4rem 0 1.4rem var(--shadow-color,rgba(0,0,0,.16));
+    }
+
+    .header{
+        display:grid;
+        grid-template-columns:auto minmax(0,1fr) auto;
+        align-items:center;
+        gap:.75rem;
+        padding:1rem;
+        border-bottom:1px solid var(--assistant-border);
+    }
+
+    .identity:empty{
+        display:none;
+    }
+
+    .heading{
+        min-width:0;
+    }
+
+    h2{
+        margin:0;
+        font:700 1rem/1.25 system-ui,sans-serif;
+    }
+
+    .subtitle{
+        margin:.18rem 0 0;
+        overflow:hidden;
+        color:var(--assistant-muted);
+        font:.78rem/1.35 system-ui,sans-serif;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+    }
+
+    .subtitle:empty{
+        display:none;
+    }
+
+    button{
+        min-height:2.25rem;
+        border:1px solid var(--assistant-border);
+        border-radius:.48rem;
+        padding:.48rem .7rem;
+        color:inherit;
+        background:transparent;
+        cursor:pointer;
+        font:650 .78rem/1 system-ui,sans-serif;
+    }
+
+    button:hover{
+        background:color-mix(in srgb,var(--assistant-accent) 10%,transparent);
+    }
+
+    button:focus-visible,
+    textarea:focus-visible{
+        outline:.18rem solid var(--focus-color,var(--assistant-accent));
+        outline-offset:.14rem;
+    }
+
+    .close-button{
+        width:2.25rem;
+        padding:0;
+        font-size:1.15rem;
+    }
+
+    .body{
+        display:flex;
+        flex:1 1 auto;
+        flex-direction:column;
+        min-height:0;
+    }
+
+    .state{
+        margin:.85rem 1rem 0;
+        border:1px solid var(--assistant-border);
+        border-radius:.55rem;
+        padding:.72rem .8rem;
+        color:var(--assistant-muted);
+        background:color-mix(in srgb,var(--assistant-accent) 5%,transparent);
+        font:.82rem/1.4 system-ui,sans-serif;
+    }
+
+    .state[hidden],
+    .state-view{
+        display:none;
+    }
+
+    .assistant-shell[data-state="empty"] [data-state-view="empty"],
+    .assistant-shell[data-state="pending"] [data-state-view="pending"],
+    .assistant-shell[data-state="streaming"] [data-state-view="streaming"],
+    .assistant-shell[data-state="error"] [data-state-view="error"]{
+        display:block;
+    }
+
+    .assistant-shell[data-state="pending"] .state,
+    .assistant-shell[data-state="streaming"] .state{
+        border-color:color-mix(in srgb,var(--assistant-accent) 38%,var(--assistant-border));
+    }
+
+    .assistant-shell[data-state="error"] .state{
+        color:var(--danger-color,#a52d26);
+        border-color:color-mix(in srgb,var(--danger-color,#a52d26) 42%,var(--assistant-border));
+        background:color-mix(in srgb,var(--danger-color,#a52d26) 7%,transparent);
+    }
+
+    .messages{
+        flex:1 1 auto;
+        min-height:0;
+        overflow:auto;
+        padding:1rem;
+    }
+
+    .composer-region{
+        padding:.8rem 1rem;
+        border-top:1px solid var(--assistant-border);
+    }
+
+    .composer{
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        align-items:end;
+        gap:.55rem;
+        margin:0;
+    }
+
+    textarea{
+        width:100%;
+        min-height:2.7rem;
+        max-height:10rem;
+        resize:vertical;
+        border:1px solid var(--assistant-border);
+        border-radius:.55rem;
+        padding:.7rem .75rem;
+        color:inherit;
+        background:var(--assistant-surface);
+        font:inherit;
+    }
+
+    .send-button{
+        color:var(--button-text-color,#fff);
+        background:var(--assistant-accent);
+        border-color:var(--assistant-accent);
+    }
+
+    .actions{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:.5rem;
+        padding:0 1rem .8rem;
+    }
+
+    .footer{
+        padding:.7rem 1rem;
+        color:var(--assistant-muted);
+        border-top:1px solid var(--assistant-border);
+        font:.72rem/1.35 system-ui,sans-serif;
+    }
+
+    .footer:empty{
+        display:none;
+    }
+
+    :host([data-layout="overlay"]){
+        position:fixed;
+        inset:0;
+        z-index:1000;
+        width:auto;
+        height:auto;
+    }
+
+    :host([data-layout="overlay"]) .assistant-shell{
+        justify-content:flex-end;
+    }
+
+    :host([data-layout="overlay"]) .backdrop{
+        position:absolute;
+        inset:0;
+        display:block;
+        border:0;
+        border-radius:0;
+        padding:0;
+        background:rgba(0,0,0,.48);
+    }
+
+    :host([data-layout="overlay"]) .panel{
+        position:relative;
+        flex:0 1 var(--assistant-panel-width);
+        width:min(100%,var(--assistant-panel-width));
+        max-width:100%;
+    }
+
+    @media(max-width:34rem){
+        :host([data-layout="overlay"]) .panel{
+            flex-basis:100%;
+        }
+
+        .header,.messages,.composer-region{
+            padding-inline:.75rem;
+        }
+
+        .actions{
+            padding-inline:.75rem;
+        }
+    }
+
+    @media(prefers-reduced-motion:no-preference){
+        :host([data-layout="overlay"]) .panel{
+            animation:assistant-panel-enter 160ms ease-out;
+        }
+
+        @keyframes assistant-panel-enter{
+            from{transform:translateX(1rem);opacity:.7}
+            to{transform:none;opacity:1}
+        }
+    }
+</style>
+
+<section class="assistant-shell" data-state="empty" part="container">
+    <button class="backdrop" type="button" tabindex="-1" aria-label="Close assistant" part="backdrop"></button>
+    <aside class="panel" role="complementary" aria-labelledby="assistant-title" aria-hidden="true" tabindex="-1" part="panel">
+        <header class="header" part="header">
+            <div class="identity" part="identity"><slot name="identity"></slot></div>
+            <div class="heading" part="heading">
+                <h2 id="assistant-title" part="title"><slot name="title"><span id="defaultTitle">Assistant</span></slot></h2>
+                <p class="subtitle" part="subtitle"><slot name="subtitle"><span id="defaultSubtitle"></span></slot></p>
+            </div>
+            <button class="close-button" type="button" aria-label="Close assistant" title="Close assistant" part="close-button">&times;</button>
+        </header>
+
+        <div class="body" part="body">
+            <div class="state" role="status" aria-live="polite" part="state">
+                <div class="state-view" data-state-view="empty" part="empty-state"><slot name="empty"><span id="emptyMessage">No messages yet.</span></slot></div>
+                <div class="state-view" data-state-view="pending" part="pending-state"><slot name="pending"><span id="pendingMessage">Working…</span></slot></div>
+                <div class="state-view" data-state-view="streaming" part="streaming-state"><slot name="streaming"><span id="streamingMessage">Responding…</span></slot></div>
+                <div class="state-view" data-state-view="error" part="error-state"><slot name="error"><span id="errorMessage">The assistant could not complete that request.</span></slot></div>
+            </div>
+            <div class="messages" part="messages"><slot name="messages" id="messagesSlot"></slot></div>
+        </div>
+
+        <div class="composer-region" part="composer">
+            <slot name="composer" id="composerSlot">
+                <form class="composer" id="defaultComposer">
+                    <textarea name="message" aria-label="Message" placeholder="Write a message…" rows="1"></textarea>
+                    <button class="send-button" type="submit" part="send-button">Send</button>
+                </form>
+            </slot>
+        </div>
+
+        <div class="actions" part="actions">
+            <slot name="actions"><button class="clear-button" type="button" part="clear-button">Clear</button></slot>
+        </div>
+        <footer class="footer" part="footer"><slot name="footer"></slot></footer>
+    </aside>
+</section>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const shell=root.querySelector('.assistant-shell');
+    const panel=root.querySelector('.panel');
+    const stateRegion=root.querySelector('.state');
+    const messagesSlot=root.querySelector('#messagesSlot');
+    const composerSlot=root.querySelector('#composerSlot');
+    const defaultComposer=root.querySelector('#defaultComposer');
+    const closeButton=root.querySelector('.close-button');
+    const clearButton=root.querySelector('.clear-button');
+    const backdrop=root.querySelector('.backdrop');
+    const validStates=new Set(['ready','empty','pending','streaming','error']);
+    const handledSubmits=new WeakSet();
+    const pendingDisabledState=new WeakMap();
+
+    let previousFocus=null;
+    let opened=host.hasAttribute('data-open');
+
+    host.open=open;
+    host.close=close;
+    host.toggle=toggle;
+    host.send=send;
+    host.clear=clear;
+    host.setState=setState;
+    host.focusComposer=focusComposer;
+    host.scrollToEnd=scrollToEnd;
+
+    Object.defineProperties(
+        host,
+        {
+            opened:{
+                configurable:true,
+                get:()=>opened,
+                set:value=>setOpened(Boolean(value))
+            },
+            layout:{
+                configurable:true,
+                get:()=>host.getAttribute('data-layout')||'docked',
+                set:value=>{
+                    host.setAttribute('data-layout',value==='overlay'?'overlay':'docked');
+                    syncLayout();
+                }
+            },
+            state:{
+                configurable:true,
+                get:()=>shell.dataset.state,
+                set:value=>setState(value)
+            }
+        }
+    );
+
+    closeButton.addEventListener('click',()=>close());
+    clearButton.addEventListener('click',()=>clear());
+    backdrop.addEventListener('click',()=>close());
+    root.addEventListener('submit',onComposerSubmit);
+    host.addEventListener('submit',onComposerSubmit);
+    host.addEventListener('click',onHostAction);
+    document.addEventListener('keydown',onDocumentKeydown);
+    messagesSlot.addEventListener('slotchange',syncState);
+    composerSlot.addEventListener('slotchange',syncComposerState);
+
+    const observer=new MutationObserver(
+        records=>{
+            const attributes=new Set(records.map(record=>record.attributeName));
+
+            if(attributes.has('data-open')){
+                applyOpenedAttribute();
+            }
+            if(attributes.has('data-layout')){
+                syncLayout();
+            }
+            if(attributes.has('data-state')||attributes.has('data-error')||attributes.has('data-state-message')){
+                syncState();
+            }
+            if(attributes.has('data-title')||attributes.has('data-subtitle')){
+                syncLabels();
+            }
+        }
+    );
+
+    observer.observe(
+        host,
+        {
+            attributes:true,
+            attributeFilter:['data-open','data-layout','data-state','data-error','data-state-message','data-title','data-subtitle']
+        }
+    );
+
+    function open(options={}){
+        return setOpened(true,options);
+    }
+
+    function close(options={}){
+        return setOpened(false,options);
+    }
+
+    function toggle(force,options={}){
+        const next=typeof force==='boolean'?force:!opened;
+        return setOpened(next,options);
+    }
+
+    function setOpened(next,options={}){
+        const changed=next!==opened;
+
+        if(next&&changed){
+            const active=document.activeElement;
+            previousFocus=active&&active!==document.body?active:null;
+        }
+
+        opened=next;
+        host.toggleAttribute('data-open',next);
+        syncOpenedState();
+
+        if(!changed){
+            return false;
+        }
+
+        host.dispatchEvent(
+            new CustomEvent(
+                next?'assistant-opened':'assistant-closed',
+                {
+                    detail:{assistant:host,layout:host.layout},
+                    bubbles:true,
+                    composed:true
+                }
+            )
+        );
+
+        if(next&&options.focus!==false){
+            requestAnimationFrame(()=>focusComposer());
+        }else if(!next&&options.returnFocus!==false){
+            returnFocus();
+        }
+
+        return true;
+    }
+
+    function applyOpenedAttribute(){
+        const next=host.hasAttribute('data-open');
+
+        if(next===opened){
+            syncOpenedState();
+            return;
+        }
+
+        setOpened(next);
+    }
+
+    function syncOpenedState(){
+        panel.setAttribute('aria-hidden',String(!opened));
+        host.setAttribute('aria-expanded',String(opened));
+        host.setAttribute('aria-hidden',String(!opened));
+    }
+
+    function syncLayout(){
+        const layout=host.getAttribute('data-layout')==='overlay'?'overlay':'docked';
+
+        if(host.getAttribute('data-layout')!==layout){
+            host.setAttribute('data-layout',layout);
+        }
+
+        panel.setAttribute('role',layout==='overlay'?'dialog':'complementary');
+        if(layout==='overlay'){
+            panel.setAttribute('aria-modal','true');
+        }else{
+            panel.removeAttribute('aria-modal');
+        }
+    }
+
+    function syncLabels(){
+        root.querySelector('#defaultTitle').textContent=host.dataset.title||'Assistant';
+        root.querySelector('#defaultSubtitle').textContent=host.dataset.subtitle||'';
+    }
+
+    function assignedMessageContent(){
+        return messagesSlot.assignedNodes({flatten:true}).some(
+            node=>node.nodeType===Node.ELEMENT_NODE||Boolean(node.textContent?.trim())
+        );
+    }
+
+    function syncState(){
+        const requested=host.getAttribute('data-state');
+        const next=validStates.has(requested)?requested:(assignedMessageContent()?'ready':'empty');
+        const message=host.dataset.stateMessage||'';
+
+        shell.dataset.state=next;
+        panel.setAttribute('aria-busy',String(next==='pending'||next==='streaming'));
+        stateRegion.hidden=next==='ready';
+        stateRegion.setAttribute('role',next==='error'?'alert':'status');
+
+        if(message){
+            const target=root.querySelector(`#${next}Message`);
+            if(target){
+                target.textContent=message;
+            }
+        }
+
+        if(next==='error'&&host.dataset.error){
+            root.querySelector('#errorMessage').textContent=host.dataset.error;
+        }
+
+        syncComposerState();
+    }
+
+    function setState(next='ready',message=''){
+        if(next==='auto'||next===null){
+            host.removeAttribute('data-state');
+            host.removeAttribute('data-state-message');
+        }else{
+            const normalized=validStates.has(next)?next:'ready';
+            host.setAttribute('data-state',normalized);
+            if(message){
+                host.setAttribute('data-state-message',String(message));
+            }else{
+                host.removeAttribute('data-state-message');
+            }
+        }
+
+        syncState();
+        return shell.dataset.state;
+    }
+
+    function syncComposerState(){
+        const disabled=shell.dataset.state==='pending';
+        const controls=composerControls();
+        controls.forEach(control=>{
+            if(control.matches('button,input,textarea,select')){
+                if(disabled&&!pendingDisabledState.has(control)){
+                    pendingDisabledState.set(control,control.disabled);
+                    control.disabled=true;
+                    control.setAttribute('aria-disabled','true');
+                }else if(!disabled&&pendingDisabledState.has(control)){
+                    control.disabled=pendingDisabledState.get(control);
+                    control.toggleAttribute('aria-disabled',control.disabled);
+                    pendingDisabledState.delete(control);
+                }
+            }
+        });
+    }
+
+    function composerControls(){
+        const assigned=composerSlot.assignedElements({flatten:true});
+        const roots=assigned.length?assigned:[defaultComposer];
+        const controls=[];
+
+        roots.forEach(element=>{
+            controls.push(element);
+            controls.push(...element.querySelectorAll('button,input,textarea,select,[tabindex]'));
+        });
+
+        return controls;
+    }
+
+    function focusComposer(){
+        const controls=composerControls();
+        const target=controls.find(
+            element=>element.matches?.('textarea,input:not([type="hidden"]),[contenteditable="true"]')&&!element.disabled
+        )||closeButton;
+
+        target.focus({preventScroll:true});
+        return target;
+    }
+
+    function scrollToEnd(options={}){
+        const messages=root.querySelector('.messages');
+        messages.scrollTo({
+            top:messages.scrollHeight,
+            behavior:options.behavior==='smooth'?'smooth':'auto'
+        });
+        return messages.scrollTop;
+    }
+
+    function returnFocus(){
+        if(previousFocus?.isConnected&&typeof previousFocus.focus==='function'){
+            previousFocus.focus({preventScroll:true});
+        }
+        previousFocus=null;
+    }
+
+    function onComposerSubmit(event){
+        if(handledSubmits.has(event)){
+            return;
+        }
+
+        handledSubmits.add(event);
+        event.preventDefault();
+        const form=event.target;
+        const input=form.querySelector('[data-assistant-input],[name="message"],textarea,input[type="text"]');
+        const message=input?.value??input?.textContent??'';
+        const accepted=send(message,{form:form,submitter:event.submitter||null});
+
+        if(accepted&&input&&'value' in input){
+            input.value='';
+        }
+    }
+
+    function send(message='',context={}){
+        const normalized=String(message??'').trim();
+
+        if(!normalized){
+            return false;
+        }
+
+        return host.dispatchEvent(
+            new CustomEvent(
+                'assistant-send',
+                {
+                    detail:{...context,message:normalized,assistant:host},
+                    bubbles:true,
+                    composed:true,
+                    cancelable:true
+                }
+            )
+        );
+    }
+
+    function clear(detail={}){
+        return host.dispatchEvent(
+            new CustomEvent(
+                'assistant-clear',
+                {
+                    detail:{...detail,assistant:host},
+                    bubbles:true,
+                    composed:true,
+                    cancelable:true
+                }
+            )
+        );
+    }
+
+    function onHostAction(event){
+        const action=event.target.closest?.('[data-assistant-toggle],[data-assistant-close],[data-assistant-clear]');
+
+        if(!action||!host.contains(action)){
+            return;
+        }
+
+        if(action.hasAttribute('data-assistant-toggle')){
+            toggle();
+        }else if(action.hasAttribute('data-assistant-close')){
+            close();
+        }else if(action.hasAttribute('data-assistant-clear')){
+            clear({source:action});
+        }
+    }
+
+    function focusableElements(){
+        const selector='a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+        const elements=[...root.querySelectorAll(selector),...host.querySelectorAll(selector)];
+        return elements.filter(element=>!element.hidden&&element.getAttribute('aria-hidden')!=='true');
+    }
+
+    function onDocumentKeydown(event){
+        if(!opened){
+            return;
+        }
+
+        if(event.key==='Escape'){
+            const modalOpen=Boolean(
+                document.querySelector('dialog[open]')
+                ||globalThis.modalStack?.length
+            );
+            const focusInside=document.activeElement===host
+                ||host.contains(document.activeElement)
+                ||Boolean(root.activeElement);
+            if(host.layout!=='overlay'||modalOpen||!focusInside){
+                return;
+            }
+            event.preventDefault();
+            close();
+            return;
+        }
+
+        if(event.key!=='Tab'||host.layout!=='overlay'){
+            return;
+        }
+
+        const focusable=focusableElements();
+        if(!focusable.length){
+            event.preventDefault();
+            panel.focus();
+            return;
+        }
+
+        const first=focusable[0];
+        const last=focusable[focusable.length-1];
+        const active=root.activeElement||document.activeElement;
+
+        if(event.shiftKey&&active===first){
+            event.preventDefault();
+            last.focus();
+        }else if(!event.shiftKey&&active===last){
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
+    syncLabels();
+    syncLayout();
+    syncOpenedState();
+    syncState();
+    syncComposerState();
+
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent(
+            'assistant-ready',
+            {
+                detail:{assistant:host},
+                bubbles:true,
+                composed:true
+            }
+        )
+    );
+</script>

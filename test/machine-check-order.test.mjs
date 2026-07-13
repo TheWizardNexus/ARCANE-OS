@@ -5,7 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const bundlePath = 'machine_bundles/arcane-os-machine-bundle-v0.8.2';
+const bundlePath = 'machine_bundles/arcane-os-machine-bundle-v0.8.3';
 const bundleRoot = path.join(repositoryRoot, ...bundlePath.split('/'));
 
 function commandPositions(command, expected) {
@@ -111,12 +111,28 @@ test('Windows CI runs the portable gate before the unified Windows distribution 
   assert.doesNotMatch(workflow, /run: npm run build:win --prefix/, 'CI must enter Windows release work through check:windows');
 });
 
-test('pre-push runs portable and compiled Windows gates including the real pipe guard', async () => {
+test('pre-push runs public-package, portable, and compiled Windows gates including the real pipe guard', async () => {
   const rootPackage = JSON.parse(await fs.readFile(path.join(repositoryRoot, 'package.json'), 'utf8'));
   const hook = await fs.readFile(path.join(repositoryRoot, '.githooks/pre-push'), 'utf8');
   const windowsBuild = await fs.readFile(path.join(bundleRoot, 'tools/build-windows-webview2.ps1'), 'utf8');
 
   assert.equal(rootPackage.scripts['check:windows'], `npm --prefix ${bundlePath} run check:windows`);
+  assert.equal(
+    rootPackage.scripts['check:public-apps'],
+    'npm run test:boss-public && node tools/package-app.mjs check --all',
+  );
+  const rootCheck = rootPackage.scripts.check || '';
+  const rootCheckPositions = commandPositions(rootCheck, [
+    'npm test',
+    'npm run test:redress',
+    'npm run check:public-apps',
+    'npm run test:machine',
+  ]);
+  for (const operation of Object.keys(rootCheckPositions)) {
+    assert.notEqual(rootCheckPositions[operation], -1, `root check is missing ${operation}`);
+  }
+  assert(rootCheckPositions['npm run check:public-apps'] < rootCheckPositions['npm run test:machine']);
+  assert.doesNotMatch(rootCheck, /check:windows/, 'the portable root check must not duplicate the long Windows gate');
   assert.equal(rootPackage.scripts.prepush, 'npm run check && npm run check:windows');
   assert.match(hook, /exec npm run prepush/);
   assert.match(windowsBuild, /smoke-test-windows-pipe-guard\.mjs/);

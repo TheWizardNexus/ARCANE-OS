@@ -1,0 +1,70 @@
+{
+  "name": "Arcane OS Machine Bundle",
+  "version": "0.8.3",
+  "protocolVersion": "arcane/1",
+  "description": "Native WebView Arcane shell and machine provisioner for Windows and Linux.",
+  "build": {
+    "webview2SdkVersion": "1.0.4078.44",
+    "webview2SdkSha256": "dc4d1d9168df26b830398303e50210b6e1729f6ce5a7ac69d2c766852f489962"
+  },
+  "apps": {
+    "provisioner": {
+      "displayName": "Arcane Provisioner",
+      "type": "provisioner",
+      "entry": "provisioner/index.html",
+      "capabilities": [
+        "system.read",
+        "identity.read",
+        "system.metrics.read",
+        "network.status.read",
+        "requirements.read",
+        "installation.read",
+        "users.manage",
+        "diagnostics.read",
+        "provisioning.manage"
+      ]
+    },
+    "shell": {
+      "displayName": "Arcane Shell",
+      "type": "shell",
+      "entry": "shell/index.html",
+      "capabilities": [
+        "ai.models.read",
+        "ai.models.manage",
+        "system.read",
+        "identity.read",
+        "system.metrics.read",
+        "network.status.read",
+        "diagnostics.read",
+        "applications.read",
+        "applications.launch",
+        "session.control",
+        "storage.read",
+        "storage.write",
+        "media.microphone",
+        "preferences.read",
+        "preferences.write"
+      ]
+    }
+  },
+  "requirements": {
+    "node": {
+      "minimumVersion": "22.0.0",
+      "installMajor": 24,
+      "installPolicy": "optional; install separately from a trusted administrator-managed package channel"
+    },
+    "ollama": {
+      "minimumVersion": "0.30.0",
+      "installPolicy": "required globally for Arcane users; on Windows the Provisioner may install or repair the verified official archive as the automatic ArcaneOllama machine service; Linux remains manual"
+    },
+    "renderer": {
+      "minimumVersion": null,
+      "windows": "Microsoft Edge WebView2 Evergreen Runtime",
+      "linux": "WebKitGTK 6.0 / GTK 4 (WebKitGTK 2.40 or newer recommended)"
+    },
+    "session-control": {
+      "minimumVersion": null,
+      "installPolicy": "native Windows session control or supported Linux desktop/login manager"
+    }
+  }
+}

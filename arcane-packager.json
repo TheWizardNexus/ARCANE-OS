@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "appsRoot": "apps",
+  "distRoot": "dist",
+  "sharedPayloads": {
+    "browser-runtime": [
+      {
+        "source": "arcane",
+        "destination": "arcane",
+        "include": [
+          "components",
+          "css",
+          "entities",
+          "img",
+          "modules"
+        ],
+        "exclude": []
+      },
+      {
+        "source": "node_modules/strong-type",
+        "destination": "node_modules/strong-type",
+        "include": [
+          "index.js",
+          "licence",
+          "package.json"
+        ],
+        "exclude": []
+      }
+    ]
+  }
+}

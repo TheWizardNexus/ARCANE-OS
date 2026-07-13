@@ -15,7 +15,8 @@
 
         <!-- Styles -->
         <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
-        <link rel="stylesheet" href="./apps/boss/boss.css?v=5">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./apps/boss/boss.css?v=7">
         <style>
             .chat{
                 height: 100%;
@@ -35,14 +36,20 @@
                 box-shadow:0 .35rem 1rem var(--shadow-color);
                 color:var(--text-color);
                 font-size:.82rem;
+                align-items:center;
+                gap:.65rem;
+                flex-wrap:wrap;
             }
 
+            #uploadStatus:not(.hidden){display:flex}
             #uploadStatus.success{border-color:var(--success-color)}
             #uploadStatus.error{border-color:var(--danger-color)}
             #uploadStatus.loading{border-color:var(--boss-gold,var(--focus-color))}
+            #uploadStatusAction{font-weight:800;white-space:nowrap}
         </style>
         
         
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
         <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
         <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
         <script type="module" src="./arcane/modules/Mail.js"></script>
@@ -50,14 +57,17 @@
 
     <body>
         <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./apps/boss/components/nav.html?v=2"></html-import>
-        <html-import class="file-manager" data-dirs="documents,memories,images" href="./arcane/components/file-manager.html?v=15"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=10"></html-import>
+        <html-import class="file-manager" data-dirs="documents,memories,images" data-hidden-prefixes=".boss-library-" href="./arcane/components/file-manager.html?v=18"></html-import>
 
         <main class="contents">
             <html-import id="chat" class="chat" href="./arcane/components/chat.html?v=3"></html-import>
-            <div id="uploadStatus" class="hidden"></div>
+            <div id="uploadStatus" class="hidden" role="status" aria-live="polite">
+                <span id="uploadStatusText"></span>
+                <a id="uploadStatusAction" href="./apps/boss/library-setup.html" hidden></a>
+            </div>
         </main>
-        <html-import id="modal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
+        <html-import id="modal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
     </body>
 
     <script type="module">
@@ -68,9 +78,9 @@
         import ChatEntity from './arcane/entities/Chat.js';
         import {
             createBossLibraryContext,
+            inspectBossLibrarySeedState,
             loadBossLibraryManifest,
-            seedBossLibraryDocuments
-        } from './apps/boss/boss-library.js';
+        } from './apps/boss/boss-library.js?v=4';
 
         window.ChatEntity=ChatEntity;
         window.Is=Is;
@@ -80,6 +90,10 @@
 
         const chat=document.querySelector('#chat');
         const modal=document.querySelector('#modal');
+        const libraryHandoffQuery=String(
+            new URL(window.location.href).searchParams.get('q')||''
+        ).trim().slice(0,500);
+        let libraryHandoffHydrated=false;
 
         chat.sendMessage=sendMessage;
         chat.languageChanged=languageChanged;
@@ -97,6 +111,46 @@
         let chatSession=null;
         let libraryManifest=null;
         let libraryInitializationPromise=null;
+        let currentModalPurpose='';
+        let providerSetupRequested=false;
+        let providerSetupModalPromise=null;
+
+        modal.addEventListener('modal-closed',()=>{
+            const purpose=currentModalPurpose;
+            currentModalPurpose='';
+
+            if(purpose==='library-setup'){
+                providerSetupRequested=true;
+                if(chatSession&&!ai.configured){
+                    requestProviderSetupModal();
+                }
+            }
+        });
+
+        modal.addEventListener('modal-action',event=>{
+            const action=event.detail?.action;
+
+            if(action==='import-boss-library'){
+                const setupUrl=new URL(
+                    './apps/boss/library-setup.html?start=1',
+                    document.baseURI
+                );
+                const returnUrl=new URL(window.location.href);
+
+                setupUrl.searchParams.set('start','1');
+                setupUrl.searchParams.set(
+                    'return',
+                    `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`
+                );
+                window.location.assign(setupUrl.href);
+            }else if(action==='open-profile'){
+                window.location.assign(
+                    new URL('./apps/boss/admin.html',document.baseURI).href
+                );
+            }else if(action==='close'){
+                void modal.close();
+            }
+        });
 
         const systemPromptPromise=fetch(
             './apps/boss/prompts/system.md',
@@ -144,7 +198,7 @@
                             },
                             include_restricted:{
                                 type:'boolean',
-                                description:'Use only when the user explicitly requests a specific private or restricted library record.'
+                                description:'Use only when the user explicitly requests a specific private-user document they uploaded into this browser library.'
                             }
                         },
                         required:['query']
@@ -174,7 +228,7 @@
                             },
                             include_restricted:{
                                 type:'boolean',
-                                description:'Use only when the user explicitly requests a specific private or restricted library record.'
+                                description:'Use only when the user explicitly requests a specific private-user document they uploaded into this browser library.'
                             }
                         },
                         required:['user_goal']
@@ -183,24 +237,151 @@
             }
         ];
 
-        function setLibraryStatus(message='',type=''){
+        function setLibraryStatus(
+            message='',
+            type='',
+            {actionHref='',actionLabel=''}={}
+        ){
             const status=document.querySelector('#uploadStatus');
+            const statusText=document.querySelector('#uploadStatusText');
+            const action=document.querySelector('#uploadStatusAction');
 
             if(!status){
                 return;
             }
 
-            status.textContent=message;
+            statusText.textContent=message;
             status.className=type||'';
             status.classList.toggle('hidden',!message);
+            action.textContent=actionLabel;
+            action.hidden=!actionHref||!actionLabel;
+            if(!action.hidden){
+                action.href=actionHref;
+            }
         }
 
-        async function refreshFileManager(){
-            const fileManager=document.querySelector('.file-manager');
-
-            if(fileManager?.ready&&typeof fileManager.loadAll==='function'){
-                await fileManager.loadAll();
+        async function waitForModal(){
+            if(modal.ready&&typeof modal.populate==='function'){
+                return modal;
             }
+
+            await new Promise((resolve,reject)=>{
+                const timeout=window.setTimeout(()=>{
+                    cleanup();
+                    const error=new Error('The setup dialog did not become available.');
+                    error.code='BOSS_MODAL_UNAVAILABLE';
+                    reject(error);
+                },15000);
+                const ready=()=>{
+                    if(!modal.ready||typeof modal.populate!=='function'){
+                        return;
+                    }
+                    cleanup();
+                    resolve();
+                };
+                const cleanup=()=>{
+                    window.clearTimeout(timeout);
+                    modal.removeEventListener('modal-ready',ready);
+                };
+
+                modal.addEventListener('modal-ready',ready);
+                queueMicrotask(ready);
+            });
+
+            return modal;
+        }
+
+        function createModalContent({title,message,primaryAction,primaryLabel}){
+            const content=document.createElement('section');
+            const style=document.createElement('style');
+            const heading=document.createElement('h2');
+            const copy=document.createElement('p');
+            const actions=document.createElement('div');
+            const primary=document.createElement('button');
+            const dismiss=document.createElement('button');
+
+            style.textContent=`
+                .boss-setup-modal{display:grid;gap:1rem}
+                .boss-setup-modal h2,.boss-setup-modal p{margin:0}
+                .boss-setup-actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:.35rem}
+                .boss-setup-actions button{min-height:2.8rem;padding:.7rem 1rem;border:1px solid var(--border-color);border-radius:.55rem;cursor:pointer;font:inherit;font-weight:750}
+                .boss-setup-actions .primary{border-color:var(--boss-gold,#E7AA3B);background:var(--boss-gold,#E7AA3B);color:var(--boss-navy,#022241)}
+                .boss-setup-actions .secondary{background:transparent;color:var(--text-color)}
+            `;
+            content.className='boss-setup-modal';
+            heading.textContent=title;
+            copy.textContent=message;
+            actions.className='boss-setup-actions';
+            primary.type='button';
+            primary.className='primary';
+            primary.dataset.modalAction=primaryAction;
+            primary.textContent=primaryLabel;
+            dismiss.type='button';
+            dismiss.className='secondary';
+            dismiss.dataset.modalAction='close';
+            dismiss.textContent='Not now';
+            actions.append(primary,dismiss);
+            content.append(style,heading,copy,actions);
+            return content;
+        }
+
+        async function showLibrarySetupModal(inspection){
+            await waitForModal();
+            const firstRun=inspection.firstRun;
+            const message=firstRun
+                ?`Is this your first time using BOSS Libraries on this server? Your Library does not have the ${inspection.expected.toLocaleString()} BOSS documents yet. Click Import BOSS documents to add them now.`
+                :inspection.missing>0
+                    ?`This Library has ${inspection.present.toLocaleString()} of ${inspection.expected.toLocaleString()} BOSS documents. Continue the import to add the missing documents without changing your own uploads.`
+                    :'The packaged BOSS Library has been updated. Refresh the BOSS documents to finish setup without changing your own uploads.';
+
+            currentModalPurpose='library-setup';
+            await modal.populate(createModalContent({
+                title:firstRun?'Set up your BOSS Library':'Finish setting up your BOSS Library',
+                message,
+                primaryAction:'import-boss-library',
+                primaryLabel:'Import BOSS documents'
+            }));
+            await modal.open();
+        }
+
+        async function showProviderSetupModal(){
+            await waitForModal();
+            const needsOpenAiKey=ai.llmService==='OPENAI'&&!ai.license;
+            const message=needsOpenAiKey
+                ?'The BOSS Librarian cannot start because the selected OpenAI provider does not have an API key. Open Profile to add your key.'
+                :'The BOSS Librarian does not have a configured AI provider. Open Profile to add an OpenAI API key or choose a local Ollama model.';
+
+            currentModalPurpose='provider-setup';
+            await modal.populate(createModalContent({
+                title:needsOpenAiKey?'Add your OpenAI API key':'Finish Librarian setup',
+                message,
+                primaryAction:'open-profile',
+                primaryLabel:'Open Profile'
+            }));
+            await modal.open();
+        }
+
+        function requestProviderSetupModal(){
+            if(providerSetupModalPromise||ai.configured){
+                return providerSetupModalPromise;
+            }
+
+            providerSetupModalPromise=showProviderSetupModal().catch(error=>{
+                console.warn('The Librarian setup dialog is unavailable.',error);
+                setLibraryStatus(
+                    'The BOSS Librarian needs an AI provider. Open Profile to finish setup.',
+                    'error',
+                    {
+                        actionHref:new URL('./apps/boss/admin.html',document.baseURI).href,
+                        actionLabel:'Open Profile'
+                    }
+                );
+                return false;
+            }).finally(()=>{
+                providerSetupModalPromise=null;
+            });
+
+            return providerSetupModalPromise;
         }
 
         async function initializeBossLibrary(){
@@ -220,42 +401,69 @@
                 }
 
                 libraryManifest=loaded.manifest;
-
-                const seeded=await seedBossLibraryDocuments({
+                const inspection=await inspectBossLibrarySeedState({
                     manifest:libraryManifest,
-                    opfs:dbopfs,
-                    batchSize:8,
-                    onRefresh:refreshFileManager
+                    opfs:dbopfs
                 });
 
-                if(!seeded.ok){
-                    const seedErrors=seeded.errors.map(
+                if(!inspection.ok){
+                    const inspectionErrors=inspection.errors.map(
                         error=>error?.message||String(error)
                     );
 
                     console.warn(
-                        'Some BOSS Libraries documents could not be seeded.',
-                        seedErrors.slice(0,5),
-                        seedErrors.length>5
-                            ?`and ${seedErrors.length-5} more`
+                        'The BOSS Libraries document store could not be inspected.',
+                        inspectionErrors.slice(0,5),
+                        inspectionErrors.length>5
+                            ?`and ${inspectionErrors.length-5} more`
                             :''
                     );
                     setLibraryStatus(
-                        `${libraryManifest.documents.length} indexed records ready; local sync incomplete (${seedErrors.length} errors).`,
+                        'The document store could not be inspected. Your uploaded documents remain unchanged.',
                         'error'
                     );
-                }else{
-                    setLibraryStatus(
-                        `${libraryManifest.documents.length} indexed library records ready.`,
-                        'success'
-                    );
+                    return {ok:false,manifest:libraryManifest,inspection};
                 }
 
-                return {ok:true,manifest:libraryManifest,seeded};
+                if(inspection.needsImport){
+                    setLibraryStatus(
+                        `${inspection.present.toLocaleString()} of ${inspection.expected.toLocaleString()} BOSS documents are in this Library. Import is required.`,
+                        'loading'
+                    );
+                    await showLibrarySetupModal(inspection);
+                    return {
+                        ok:true,
+                        needsImport:true,
+                        manifest:libraryManifest,
+                        inspection
+                    };
+                }
+
+                setLibraryStatus(
+                    `${inspection.expected.toLocaleString()} BOSS library documents ready.`,
+                    'success'
+                );
+
+                return {
+                    ok:true,
+                    needsImport:false,
+                    manifest:libraryManifest,
+                    inspection
+                };
             })().catch(
                 error=>{
                     console.warn('BOSS Libraries initialization failed.',error);
-                    setLibraryStatus('Library initialization failed; uploaded documents remain available.','error');
+                    setLibraryStatus(
+                        'Library initialization failed; uploaded documents remain available.',
+                        'error',
+                        {
+                            actionHref:new URL(
+                                './apps/boss/library-setup.html',
+                                document.baseURI
+                            ).href,
+                            actionLabel:'Set up Library'
+                        }
+                    );
                     return {ok:false,error};
                 }
             );
@@ -347,6 +555,36 @@
 
             return ai.fetch(messages,receivedMessage);
         }
+
+        function hydrateLibraryHandoff(){
+            if(!libraryHandoffQuery||libraryHandoffHydrated){
+                return false;
+            }
+
+            const chatInput=chat.shadowRoot?.querySelector('#chat_input');
+
+            if(!chatInput){
+                return false;
+            }
+
+            libraryHandoffHydrated=true;
+            chatInput.value=libraryHandoffQuery;
+            chatInput.placeholder='Review your Library search, add any helpful detail, then send it';
+            chatInput.setAttribute(
+                'aria-label',
+                'Library search to review with the BOSS Librarian'
+            );
+            chatInput.dispatchEvent(new Event('keyup',{bubbles:true}));
+            window.requestAnimationFrame(()=>{
+                chatInput.focus({preventScroll:true});
+                chatInput.setSelectionRange(
+                    chatInput.value.length,
+                    chatInput.value.length
+                );
+            });
+
+            return true;
+        }
         
         window.addEventListener(
             'user-entity-loaded',
@@ -366,6 +604,7 @@
         chat.addEventListener(
             'chat-ready',
             function chatReadyHandler(){
+                hydrateLibraryHandoff();
                 initChat('chat');
                 console.log('chat-ready event fired');}
         );
@@ -385,6 +624,7 @@
         }
 
         if(chat?.ready){
+            hydrateLibraryHandoff();
             initChat('chat');
         }
 
@@ -408,7 +648,7 @@
                 try{
                     // Endpoint for Ollama server
                     const response = await fetch(
-                        "http://127.0.0.1:11431",
+                        "http://127.0.0.1:11434/api/version",
                         {
                             method: "GET",
                             credentials: "omit",
@@ -707,7 +947,7 @@ Please change to a smaller model or use cloud models (if applicable).`;
 
             initStarted=true;
 
-            const [system]=await Promise.all([
+            const [system,libraryState]=await Promise.all([
                 loadBossSystemPrompt(),
                 initializeBossLibrary()
             ]);
@@ -728,7 +968,20 @@ Please change to a smaller model or use cloud models (if applicable).`;
             const chatInput=chat.shadowRoot?.querySelector('#chat_input');
 
             if(chatInput){
-                chatInput.placeholder='What document, link, resource, or person do you need?';
+                if(libraryHandoffQuery){
+                    hydrateLibraryHandoff();
+                    chatInput.placeholder='Review your Library search, add any helpful detail, then send it';
+                    chatInput.setAttribute(
+                        'aria-label',
+                        'Library search to review with the BOSS Librarian'
+                    );
+                }else{
+                    chatInput.placeholder='What document, link, resource, or person do you need?';
+                    chatInput.setAttribute(
+                        'aria-label',
+                        'Describe what you need help finding'
+                    );
+                }
             }
 
             const displayName=(chat?.name?.length>1)?chat.name:'Friend';
@@ -737,12 +990,22 @@ Please change to a smaller model or use cloud models (if applicable).`;
             setTimeout(
                 function(){
                     ai.stopAudio();
+                    if(libraryState?.needsImport){
+                        if(providerSetupRequested&&!ai.configured){
+                            requestProviderSetupModal();
+                        }
+                        return;
+                    }
                     if(!ai.configured){
                         chat.streamMessage(
                             'AI is not configured. Add an API key in Profile or select a local Ollama model.',
                             `provider-config-${Date.now()}`,
                             false
                         );
+                        requestProviderSetupModal();
+                        return;
+                    }
+                    if(libraryHandoffQuery){
                         return;
                     }
                     sendMessage(message);

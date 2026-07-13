@@ -16,8 +16,10 @@
 
         <!-- Styles -->
         <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
-        <link rel="stylesheet" href="./apps/boss/boss.css?v=5">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./apps/boss/boss.css?v=7">
         
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
         <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
         <script type="module" src="./arcane/modules/DBLS.js"></script>
         <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
@@ -101,8 +103,8 @@
 
     <body>
         <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./apps/boss/components/nav.html?v=2"></html-import>
-        <html-import class="file-manager" href="./arcane/components/file-manager.html"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=10"></html-import>
+        <html-import class="file-manager" data-hidden-prefixes=".boss-library-" href="./arcane/components/file-manager.html?v=18"></html-import>
 
         <main class="contents">
 

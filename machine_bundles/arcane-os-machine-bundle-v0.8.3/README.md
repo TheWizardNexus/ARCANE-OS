@@ -1,0 +1,289 @@
+﻿# Arcane OS Machine Bundle 0.8.3
+
+Arcane 0.8.3 uses native application windows and private process IPC instead of a browser-and-localhost production architecture.
+
+- **Microsoft NT:** `ArcaneProvisioner.exe` and `ArcaneShell.exe` own native WinForms windows and embed Microsoft Edge WebView2.
+- **Linux:** `ArcaneProvisioner` and `ArcaneShell` own GTK 4 windows and embed WebKitGTK 6.0. Real account/shell provisioning is disabled until Arcane has a display-manager-safe Linux session integration.
+- **Shared backend:** `ArcaneCore` is the packaged Node runtime that normalizes machine operations through Microsoft NT and Linux adapters.
+- **Frontend contract:** both SPAs import the same external `arcane-api.js` and only use `window.Arcane`.
+- **Per-application policy:** each packaged application has a type and an explicit capability allowlist. Arcane Core rejects methods that the active application was not granted, including after privilege elevation.
+- **Production transport:** no localhost HTTP server and no browser process. Native hosts communicate with Arcane Core using framed JSON over redirected standard input/output.
+- **Privileged work:** on Microsoft NT, the normal GUI remains open and unelevated while Arcane launches a short-lived UAC worker. `ArcanePipeGuard.exe` admits only the kernel-reported named-pipe client PID returned by the UAC launch; the worker also verifies a broker signature over the exact request/session binding, and all post-handshake request, event, and response frames use an encrypted, integrity-checked channel. Automatic Linux administrator brokering is disabled until an equivalent kernel peer-credential guard exists.
+
+## Frontend-to-native call path
+
+```text
+SPA
+  window.Arcane.users.add(["arcane1"])
+        â”‚
+        â–¼
+shared/arcane-api.js
+        â”‚
+        â”œâ”€ Microsoft NT: WebView2 host object
+        â”œâ”€ Linux: WebKitGTK reply-capable message handler
+        â””â”€ Development only: local HTTP bridge
+        â”‚
+        â–¼
+Native Arcane window host
+        â”‚ framed arcane/1 RPC over child stdio
+        â–¼
+Arcane Core (Node)
+        â”‚
+        â”œâ”€ Microsoft NT native adapter
+        â””â”€ Linux native adapter
+```
+
+The web UI never calls PowerShell, registry tools, `useradd`, `pkexec`, UAC, or session commands directly.
+
+## Public Arcane API
+
+```js
+await Arcane.app.current();
+await Arcane.capabilities.list();
+await Arcane.version.current();
+await Arcane.system.ping();
+
+await Arcane.platform.status();
+await Arcane.permissions.status();
+await Arcane.machine.status();
+await Arcane.user.current();
+await Arcane.system.metrics();
+await Arcane.network.status();
+
+await Arcane.requirements.list();
+await Arcane.requirements.ensure();
+await Arcane.installation.status();
+await Arcane.installation.ensure();
+
+await Arcane.users.validate(["arcane1"]);
+await Arcane.users.add(["arcane1"]);
+await Arcane.users.activate("arcane1");
+await Arcane.users.list();
+const prepared = await Arcane.users.resetPassword("arcane1");
+await Arcane.users.applyPassword("arcane1", prepared.credentials[0].temporaryPassword);
+await Arcane.users.restoreShell("arcane1");
+
+await Arcane.storage.list();
+await Arcane.storage.get("editor.document.current");
+await Arcane.storage.set("editor.document.current", { markdown: "# Draft" });
+await Arcane.storage.delete("editor.document.current");
+
+const applications = await Arcane.applications.list();
+await Arcane.applications.launch(applications.applications[0].id);
+
+await Arcane.provisioning.plan(["arcane1"]);
+const recent = await Arcane.diagnostics.recentErrors();
+await Arcane.diagnostics.get(recent[0].id);
+
+await Arcane.system.lock();
+await Arcane.session.logout();
+```
+
+The API is defined in `src/frontend/shared/arcane-api.js`. This is the union of the typed API surface; an application can call only methods allowed by its descriptor. Applications should never use `chrome.webview`, `window.webkit`, PowerShell, or Linux commands outside that transport module.
+
+## Application capabilities and storage
+
+The built-in `provisioner` and `shell` descriptors live in `arcane-bundle.json`. Target applications are registered in `arcane-apps.json`. Arcane Core maps every callable method to a required capability and, for sensitive operations, an allowed application type. Generic applications cannot grant themselves `users.manage`, `provisioning.manage`, or session-control methods. The same authorization check runs in an elevated worker, so elevation cannot widen an application's authority.
+
+`Arcane.storage` is per-user and per-application. It accepts JSON-compatible values, writes them atomically to the user's Arcane state directory, limits one value to 128 KiB, and limits an application's total storage to 1 MiB. `storage.read` and `storage.write` are separate grants, and one application cannot select another application's storage file.
+
+Renderer permissions are a second boundary. The built-in native hosts allow microphone access only to the trusted packaged shell origin for voice transcription. The provisioner, camera access, untrusted navigation, and other permission requests are denied. Microsoft NT does not persist the decision in the WebView profile. Every target package receives a generated default-deny Content Security Policy, a restrictive Permissions Policy, and an explicit navigation-entry allowlist. Microsoft NT native target launchers enforce the packaged origin and the target's `media.microphone` grant; portable packages contain the same policy metadata but no operating-system launcher.
+
+## Privilege model
+
+A machine-changing method such as:
+
+```js
+await Arcane.installation.ensure();
+```
+
+is one request from the UI. On Microsoft NT, Arcane Core determines whether elevation is required. When it is:
+
+1. The normal Arcane GUI remains open.
+2. Arcane starts `ArcanePipeGuard.exe`, which creates a one-use named pipe protected for the current Microsoft NT identity, Administrators, and LocalSystem, then creates session secrets and ephemeral signing and key-exchange material.
+3. Microsoft NT launches `ArcaneCore.exe` using UAC and returns the worker PID. Arcane supplies that PID to the guard over its private standard input.
+4. The guard calls `GetNamedPipeClientProcessId`, rejects clients whose kernel-reported PID differs from the UAC launch result, and relays bytes only for the verified worker.
+5. The worker sends its claimed process id, nonce, and ephemeral X25519 public key. The broker requires the claim and kernel-verified identity to match the launch result, then signs the session, process identities, application identity, request id/method/hash, nonce, and both exchange keys with Ed25519; the worker verifies that binding before accepting the request.
+6. Both sides derive directional keys with X25519 and HKDF. The original request is forwarded in an AES-256-GCM frame with authenticated direction, context, and sequence.
+7. Progress and the final result return through encrypted, authenticated worker-to-broker frames to the same frontend promise, then the worker and guard exit.
+
+There is no elevated provisioner window, no second Install click, and no GUI handoff.
+
+Linux 0.8.3 deliberately fails automatic privileged requests with `PRIVILEGE_PEER_VERIFICATION_UNAVAILABLE`. It does not invoke PolicyKit or sudo because the JavaScript Unix-socket broker does not yet enforce an `SO_PEERCRED`-equivalent worker identity.
+
+## 0.8.2 Microsoft NT bridge correction
+
+Version 0.8.2 fixes the WebView2 startup failure reported as `Unknown name. (0x80020006)`. The bridge now exposes `Send(requestJson)` instead of the COM-reserved `Invoke` name. The Microsoft NT build verifies the real compiled `IDispatch` surface in both executables, and frontend diagnostics retain the native HRESULT and method if a bridge call fails.
+
+## 0.8.1 Microsoft NT build correction
+
+Version 0.8.1 fixes the C# `CS0051` failure from 0.8.0. The COM-visible `ArcaneBridge` remains public for WebView2, while its constructor is internal because it receives the private `ArcaneCoreProcess` implementation. The Microsoft NT build now runs this accessibility preflight before packaging `ArcaneCore.exe`, so the same source regression fails immediately with a direct explanation.
+
+## Microsoft NT build
+
+Requirements for building:
+
+- Microsoft NT 10.0 or newer, x64
+- Node.js 22 or newer
+- npm and internet access for build-time dependency acquisition
+- Microsoft .NET Framework 4.x C# compiler
+
+Run:
+
+```bat
+build-windows.bat
+```
+
+The build:
+
+1. Generates the shared Arcane Core and local app payload.
+2. Packages Arcane Core as `dist\windows\bin\ArcaneCore.exe`.
+3. Acquires the exact pinned Microsoft WebView2 SDK from NuGet when it is not already cached and verifies its configured SHA-256 before use.
+4. Compiles icon-bearing native GUI applications:
+   - `dist\windows\bin\ArcaneProvisioner.exe`
+   - `dist\windows\bin\ArcaneShell.exe`
+5. Compiles `dist\windows\bin\ArcanePipeGuard.exe` and runs a real named-pipe adversarial test proving that a client which merely claims the expected PID is rejected while the kernel-matched client is relayed.
+6. Copies the WebView2 loader and managed assemblies.
+7. Writes `dist\windows\arcane-release.json` with the exact release inventory, byte sizes, and SHA-256 hashes for every executable, library, manifest, and application asset.
+
+Start the provisioner:
+
+```bat
+start-provisioner.bat
+```
+
+For fast local work on the Provisioner, shared Core, native host, or built-in Shell UI, use the isolated iteration build:
+
+```bat
+npm run build:windows:iteration
+dist\windows-iteration\bin\ArcaneProvisioner.exe --allow-unsigned-local-release
+```
+
+This regenerates the Core and built-in frontend payload, packages `ArcaneCore.exe`, and rebuilds only `ArcanePipeGuard.exe`, `ArcaneProvisioner.exe`, and `ArcaneShell.exe`. It reuses the existing `dist\apps` projection only after its native app packages and catalog pass their exact verification, and publishes the newly bound result atomically under `dist\windows-iteration`. It never writes over `dist\windows` and never invokes the target-app builders. Close a running iteration Provisioner or Shell before rebuilding.
+
+The iteration command is an unsigned controlled-test shortcut, not a distribution or release gate. A first checkout needs one successful `npm run build:distribution:windows:unsigned-local-test` to create the reusable Microsoft NT app projection. Changes to BOSS, PreCrisis, their app descriptors, or target-host packaging require the full Microsoft NT build. `npm run prepush` remains the authoritative complete gate and still rebuilds and verifies every native target app and the canonical Microsoft NT release.
+
+Runtime prerequisites are machine-scoped and reported explicitly. The packaged Core does not require a separately installed Node.js, so Node remains nonblocking. WebView2 and native session control are administrator-managed. Provisioned Arcane users require a global Ollama runtime: on Microsoft NT, the Provisioner can download the official archive only when its published SHA-256 digest verifies, install it under Program Files, and configure the automatic `ArcaneOllama` machine service. A user-only Ollama copy is detected but never treated as globally ready or executed for version discovery.
+
+Production builds require `ARCANE_SIGNING_CERT_THUMBPRINT`, `ARCANE_TIMESTAMP_SERVER`, and Microsoft SignTool (discoverable as `signtool.exe` or configured with `ARCANE_SIGNTOOL_PATH`). SignTool uses SHA-256 file digests and RFC 3161 timestamping with `/fd SHA256 /tr <server> /td SHA256`; the build fails unless every executable is signed by the same publisher and timestamped. Before starting the pipe guard, Arcane requires `ArcaneCore.exe` and `ArcanePipeGuard.exe` to have valid signatures from that same runtime-pinned signer. Unsigned artifacts are suitable only for controlled local testing and privileged operations refuse them by default; use `npm run build:distribution:windows:unsigned-local-test`, then explicitly launch `dist\windows\bin\ArcaneProvisioner.exe --allow-unsigned-local-release`. That switch accepts only PE files proven to have no certificate table whose sibling files still match the exact schema-2 release manifest. It cannot replace an existing signed or administrator-pinned installation. Never distribute a build using this override.
+
+`ARCANE_EXPECTED_PUBLISHER_THUMBPRINT` is a build-time consistency check only: because the builder controls both environment values, it is not an immutable runtime vendor anchor. Runtime continuity comes from the protected installed attestation or an administrator policy at `HKLM\SOFTWARE\Arcane OS\Security`. The native host reads that policy from the 64-bit registry view, accepts only the documented values and types, requires policy version `1`, and rejects unsafe ownership or mutation rights. `PublisherThumbprint` can pre-provision the accepted signer before first install. Without that policy or a prior signed installation, Arcane labels the release `fresh-unpinned`, shows a warning, and only an administrator-approved install may establish a `uac-approved-tofu` trust-on-first-use pin. Future updates must match the protected installed signer. An explicit rotation policy sets `PublisherPolicyVersion=1`, the new `PublisherThumbprint`, and `PreviousPublisherThumbprint` exactly equal to the installed pin; arbitrary policy/install mismatches fail closed.
+
+Microsoft NT trust verification is purpose-specific and time-bounded. Every WinVerifyTrust call runs in a separate hidden copy of the exact native host with a minimal environment, bounded output, and a monotonic deadline; a hung worker is killed and reaped, and timeout is kept distinct from revocation-provider unavailability. The Provisioner and every signed Shell or target launched outside the canonical installed tree require strict online WinTrust chain revocation and provider-selected signer/timestamp-chain evidence before any UI starts. A canonical installed Shell or target first performs a no-network baseline and cache-only revocation check. Only documented revocation-unavailable or timed-out results may use an administrator-protected attestation no older than 30 days; revoked, invalid, hash-failed, malformed, ambiguous multi-signer, missing-timestamp, or unknown results fail closed. The 30-day degraded limit is enforced by both wall time and a monotonic runtime deadline. After an attested-degraded desktop or target becomes usable, Arcane retries strict verification with exponential backoff. Continued unavailability remains degraded; revoked, invalid, or expired evidence closes the target and activates the emergency Microsoft NT desktop before closing the Shell. A successful retry ends degraded enforcement, but the UI intentionally retains its conservative startup warning until the application is restarted and reverified. A separate Shell watchdog starts before verification and requires verifier progress, UI-ready confirmation, and periodic UI-thread heartbeats, so a verification or message-loop hang restores Explorer and terminates the unusable Shell.
+
+On a Microsoft NT user's first successful start of the installed Arcane Shell, the native host runs an extensible per-user first-boot step pipeline. Development and external release-folder launches do not run or consume these steps. The initial step uses the Microsoft NT per-user lock-screen API to set the image from `C:\Program Files\Arcane OS\app\shared\arcane-lock-screen-v1.png`, which is part of the verified installed payload rather than a deletable Public Pictures copy. Microsoft NT also uses that lock-screen image behind the user's sign-in surface. Each idempotent step records its own completion marker under `HKCU\Software\Arcane OS\FirstBoot`; failed steps are logged under the user's Arcane log directory and retried at the next sign-in without preventing the Shell from opening.
+
+The external Provisioner creates `publisherAttestation` inside `arcane-install.json` only from a bounded native probe that first strict-verifies its own retained release, then independently strict-verifies the exact staged machine/app bindings and same provider-selected signer immediately before minting. Ambient environment claims cannot authorize the attestation. It records signer, fresh verification time, trust source, machine binding, and every target binding. New installed manifests also bind the exact `securityMode`; a signed, attested, malformed, or mode-less integrity-era installation cannot be replaced by unsigned metadata. Installed startup revalidates those bindings and requires Administrators- or SYSTEM-owned, inheritance-protected ACLs across the canonical tree. Signed installed startup does not rerun PowerShell's network-dependent signature-status path. The one compatibility exception is an older pre-integrity installation: Arcane accepts only the exact older product identity, walks its entire non-reparse tree under secure inherited Program Files ACLs, and independently proves that every executable is either consistently signed and timestamped by one publisher or truly unsigned before migration. Equal-version, newer, mismatched, mixed, invalid, or ambiguous legacy evidence is blocked. The explicit unsigned local-test workflow remains separate and never creates or consumes publisher attestation metadata.
+
+## Linux build
+
+Build dependencies vary by distribution. Debian/Ubuntu example:
+
+```bash
+sudo apt install build-essential libgtk-4-dev libwebkitgtk-6.0-dev
+```
+
+Then:
+
+```bash
+./build-linux.sh
+./start-provisioner.sh
+```
+
+The Linux host uses GTK 4 and WebKitGTK 6.0. Its non-privileged status, renderer, shell, and session-control paths remain available. Automatic machine-changing requests fail closed in 0.8.3 instead of invoking PolicyKit or sudo because the Unix-socket worker has no enforced kernel peer-credential check yet.
+
+Linux requirements are administrator-managed; Arcane does not run a package manager or remote installer at runtime. Install GTK/WebKitGTK and a machine-wide Ollama runtime from the distribution or a verified official package. Real account creation and login-shell replacement are intentionally unavailable on Linux in 0.8.3; use the supported Microsoft NT provisioner for machine accounts.
+
+## Development browser fallback
+
+Production does not use a server. A localhost bridge exists only so the same SPA can be developed in an ordinary browser:
+
+```bash
+npm run dev:provisioner
+npm run dev:shell
+```
+
+The development bridge uses the same `arcane/1` envelopes and the same `window.Arcane` API.
+
+## Arcane brain and model settings
+
+The installed Settings app controls the operating-system AI brain. Ollama remains the private local provider: Arcane selects 20B or 120B from reliable GPU memory, allows an explicit override, creates `arcane:latest`, and asynchronously ensures the selected model during Provisioner and Shell boot. A user may also pull another Ollama model or create `arcane-<name>:latest` from that base with the verified Arcane system prompt. Download and creation work emits native operation progress for the Settings progress bar and Shell notifications.
+
+The default local model, boot preload, keep-alive, and context length are per-user. Advanced Settings controls the global ArcaneOllama service environment on Microsoft NT, then restarts and health-checks the service. Models always remain in the protected machine-wide Ollama model store.
+
+OpenAI is an alternate provider. Settings stores the selected model identifier in user settings and protects the API token with Microsoft Data Protection Application Programming Interface (DPAPI) for the current user. The token is never returned to a browser application; Arcane Core lists account-accessible models and performs OpenAI chat requests on the app's behalf. Selecting OpenAI stops local model preloading, while ArcaneOllama remains available for local apps and later provider changes.
+
+## Provisioning behavior
+
+**Install Arcane OS** performs the entire install/update/repair flow:
+
+- Blocks downgrade attempts when the globally installed Arcane version is newer than the package.
+- Installs Arcane when absent.
+- Updates an older Arcane installation.
+- Verifies the native renderer and session control, reports optional Node.js without blocking, and requires a healthy global Ollama service before Arcane-user provisioning.
+- On Microsoft NT, installs or repairs Ollama globally only from the official archive after verifying its published SHA-256 digest; unsupported platform prerequisites retain manual remediation guidance.
+- Rejects any release whose exact file inventory, size, or SHA-256 does not match `arcane-release.json`.
+- Stages and verifies native executables and all app assets before activation, then swaps the installation atomically and restores the previous installation if activation fails.
+- Removes a failed stage only while its captured filesystem identity still matches the exact cryptographically named directory Arcane created; replacement and uncertain recovery trees are preserved for administrator review.
+- Records an exact installed-tree integrity inventory and performs a verified same-version repair when files are missing, changed, or unexpected.
+
+**Create Arcane user** is supported for real accounts on Microsoft NT and intentionally uses a two-step credential-delivery and activation flow:
+
+- Ensures Arcane and its requirements are ready.
+- Creates each missing account as a disabled standard user and records its exact Microsoft NT SID.
+- Preserves existing account passwords and memberships.
+- Captures the account's prior shell state before assigning Arcane.
+- Assigns Arcane as the selected account's shell.
+- Protects the account running the provisioner from shell replacement.
+- Returns the new temporary password while the account remains disabled and durably marked `activation-pending`.
+- Enables a staged account only after the operator has saved the credentials and explicitly selects **Activate staged users**, which calls `Arcane.users.activate(username)` separately.
+- Offers **Restore previous shell** for Arcane-managed accounts and verifies the restored state.
+- Keeps a **Verify and restore previous shell** action available when a signed-out profile is visible only through the protected recovery journal; administrator approval reloads the profile and rechecks both exact Microsoft NT shell bindings before restoring either one.
+- Journals preparation, shell assignment, account staging, activation, and rollback so interrupted work can be recovered or failed closed.
+- Before credential delivery, rolls back a newly created account only when its exact recorded SID still matches. A crash before the SID is durably known leaves the account disabled and requires administrator review rather than deleting by username.
+- After credential delivery, activation failures retain a retryable staged record; repeated `users.activate` reconciles whether Microsoft NT enabled the account before the interruption.
+- Refreshes the Arcane user list after completion.
+
+For an active Arcane account whose password is unknown, use **Set temporary password** in the Arcane users list. This first `users.resetPassword` request only generates and displays a credential; it does not change the operating-system password. Save the credential, then explicitly select **Apply saved password**, which makes the separate privileged `users.applyPassword` request and requires the password to be changed at next sign-in. A failure before that second request leaves the existing password untouched; if the apply request is interrupted after Microsoft NT changes the password, the operator already has the credential needed to recover.
+
+For pre-existing accounts, rollback is intentionally scoped to the shell assignment and does not reverse a separately requested password reset. Arcane also refuses to overwrite a shell changed outside Arcane after provisioning. Linux exposes no real `users.add` or `users.activate` account workflow in this release.
+
+## Targeted application packages
+
+`arcane-apps.json` is the registry for generic non-privileged Arcane applications. Each entry defines the app id, display name, source directory, HTML entry point, capability allowlist, and explicit payload allowlist. The current registry contains `boss`, `precrisis`, `files`, and `settings`.
+
+```bash
+npm run build:app -- --list
+npm run build:app -- --app=precrisis
+npm run build:app -- --app=boss
+npm run build:apps:portable
+npm run build:apps:windows
+```
+
+Packages are written atomically to `dist/targets/<app-id>/`. Each target contains only its allowlisted app and shared payload, an injected Arcane runtime API, an app-specific Core and bundle descriptor, and `arcane-app-package.json` with an exact deterministic SHA-256 inventory. The packager rejects unknown apps, unsafe or escaping paths, symbolic links, overlapping payload rules, privileged app types, and capabilities outside the approved non-privileged set. It also rewrites package-relative URLs, verifies all local dependencies, injects the target CSP/Permissions Policy into every navigable document, and records a traversal-safe navigation allowlist that supports nested HTML paths.
+
+`build:apps`, `build:apps:portable`, and `--platform=portable` produce cross-platform verification packages without a native executable. On Microsoft NT, `build:app` defaults to `--platform=windows`; `build:apps:windows` produces actual `ArcaneApp-<id>.exe` WebView2 launchers, packaged `ArcaneCore.exe` and `ArcanePipeGuard.exe`, and the WebView2 assemblies. Each native target package has an exact root inventory and intentionally contains no mutable batch launcher. The launcher permits only the generated exact navigation entries and applies the target's CSP, Permissions Policy, and microphone grant. A single-app Microsoft NT rebuild preserves every other app in the existing projection only after that projection passes its complete catalog and content verification. Build the Microsoft NT release first so the pinned, verified WebView2 SDK is present in the build cache.
+
+Application source corpora are outside the default target boundary. In 0.8.3, the BOSS package emits an `empty-unpublished` document catalog with zero records and no Markdown documents. A later corpus export may include only records that receive separate publication authorization and are both public and non-sensitive; classification metadata alone is not publication permission.
+
+## Diagnostics
+
+User-facing errors include a plain-language cause and next step. **See full diagnostics** reveals the structured diagnostic record. **Copy full diagnostics** and temporary-credential copy actions provide visible `Copied âœ“` feedback.
+
+Arcane Core reserves stdout exclusively for framed RPC. Technical logs go to stderr. The Microsoft NT native host writes Core stderr to:
+
+```text
+%LOCALAPPDATA%\Arcane OS\logs\
+```
+
+## Verification
+
+Run the canonical bundle gate:
+
+```bash
+npm run check
+```
+
+It builds generated assets, runs source verification, all smoke tests, the app-packager test suite, and portable target builds with exact inventory verification. From the repository root, `npm run check` also runs every shared Arcane test before delegating to this bundle. `npm run hooks:install` configures the repository's pre-push hook; on Microsoft NT, `npm run prepush` runs the portable gate and then compiles and verifies the complete Microsoft NT release, the real kernel-PID pipe guard, both native app targets, and the compiled dispatch contracts. The `Arcane checks` GitHub Actions workflow repeats those portable and native Microsoft NT gates on every push and pull request.
+
+The portable tests exercise framed RPC, capability denial, app-scoped storage, staged-account transaction/crash recovery, the two-request password-reset handoff, shell restoration, release and installed-tree tamper detection, runtime isolation, command hardening, broker identity/signature rejection, the encrypted privilege channel, and the fail-closed Linux privilege boundary without installing software, changing real accounts, assigning a real shell, or logging out. The Microsoft NT build additionally runs the compiled kernel-PID pipe-guard test. See `VALIDATION.md` for the exact automated and target-only portions.

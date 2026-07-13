@@ -83,6 +83,9 @@ describe(
             manifestUrl:new URL('../apps/boss/documents/document-manifest.json',import.meta.url).href
         });
         assert.equal(normalized.documents.length,618);
+        assert.ok(normalized.documents.every(record=>record.originalUrl));
+        assert.ok(normalized.documents.every(record=>record.sourceExtension));
+        assert.ok(normalized.documents.every(record=>record.sourceBytes>0));
 
         const matches=rankBossLibraryDocuments(
             normalized.documents,
@@ -94,6 +97,13 @@ describe(
         assert.equal(matches[0].title,'SCORE Contact and Support');
         assert.match(matches[0].documentUrl,/bossdoc-.+\.md$/);
         assert.match(matches[0].sourceUrl,/^https:\/\//);
+        assert.match(matches[0].originalUrl,/\/apps\/boss\/business%20docs\//);
+        assert.ok(matches[0].sourceExtension);
+        assert.ok(matches[0].sourceBytes>0);
+        assert.equal(
+            fileURLToPath(matches[0].originalUrl),
+            path.join(sourceDirectory,...matches[0].sourcePath.split('/'))
+        );
     });
     }
 );

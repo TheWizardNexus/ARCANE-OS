@@ -239,6 +239,36 @@ function resolveDocumentUrl(path='',manifestUrl=DEFAULT_MANIFEST_URL){
     }
 }
 
+function resolveOriginalUrl(
+    path='',
+    manifestUrl=DEFAULT_MANIFEST_URL,
+    originalRoot=''
+){
+    const value=toStringValue(path).replaceAll('\\','/');
+    const root=toStringValue(originalRoot).replaceAll('\\','/');
+    const segments=value.split('/');
+
+    if(!value||!root||segments.some(
+        segment=>!segment||segment==='.'||segment==='..'
+    )){
+        return '';
+    }
+
+    try{
+        const encodedPath=segments.map(encodeURIComponent).join('/');
+        const manifestLocation=new URL(manifestUrl);
+        const base=new URL(root.endsWith('/')?root:`${root}/`,manifestLocation);
+
+        if(base.origin!==manifestLocation.origin){
+            return '';
+        }
+
+        return new URL(encodedPath,base).href;
+    }catch{
+        return '';
+    }
+}
+
 function normalizeAccess(value='public'){
     return normalizeText(value)||'public';
 }
@@ -250,7 +280,7 @@ function isRestrictedAccess(value=''){
 function normalizeBossLibraryRecord(
     source={},
     index=0,
-    {manifestUrl=DEFAULT_MANIFEST_URL}={}
+    {manifestUrl=DEFAULT_MANIFEST_URL,originalRoot=''}={}
 ){
     if(source?.__bossLibraryRecord===true){
         return source;
@@ -295,6 +325,23 @@ function normalizeBossLibraryRecord(
     const sourcePath=toStringValue(
         firstDefined(source,['source_path','sourcePath','original_path'])
     ).replaceAll('\\','/');
+    const declaredSourceExtension=toStringValue(
+        firstDefined(source,['source_extension','extension'])
+    ).trim().toLowerCase();
+    const derivedSourceExtension=toStringValue(
+        pathBaseName(sourcePath).match(/\.[^.]+$/)?.[0]
+    ).trim().toLowerCase();
+    const sourceExtension=declaredSourceExtension
+        ?(declaredSourceExtension.startsWith('.')
+            ?declaredSourceExtension
+            :`.${declaredSourceExtension}`)
+        :derivedSourceExtension;
+    const sourceMime=toStringValue(
+        firstDefined(source,['source_mime','mime_type','content_type'])
+    );
+    const sourceBytes=Number(
+        firstDefined(source,['source_bytes','size_bytes','bytes'])
+    )||0;
     const contacts=toStringList(
         firstDefined(source,['contacts','contact','contact_details'])
     );
@@ -316,6 +363,11 @@ function normalizeBossLibraryRecord(
         explicitlyLooksLikeMarkdown(explicitLink)?explicitLink:''
     );
     const documentUrl=resolveDocumentUrl(localPath,manifestUrl);
+    const originalUrl=resolveOriginalUrl(
+        sourcePath,
+        manifestUrl,
+        originalRoot
+    );
     const tags=toStringList([
         ...toStringList(
             firstDefined(source,['search_tags','keywords','tag_list','tags'])
@@ -402,6 +454,10 @@ function normalizeBossLibraryRecord(
         link:documentUrl||explicitLink||sourceUrl,
         sourceUrl,
         sourcePath,
+        sourceExtension,
+        sourceMime,
+        sourceBytes,
+        originalUrl,
         links:listedLinks,
         contacts,
         people,
@@ -418,10 +474,7 @@ function normalizeBossLibraryRecord(
         ),
         sensitive:source.sensitive===true||normalizeText(source.sensitive)==='true',
         format:normalizeText(
-            firstDefined(
-                source,
-                ['mime_type','content_type','format','source_extension','extension']
-            )
+            firstDefined(source,['format'])||sourceMime||sourceExtension
         ),
         origin:toStringValue(source.origin)||'manifest',
         opfsName:toStringValue(source.opfsName||source.opfs_name),
@@ -472,13 +525,60 @@ function normalizeBossLibraryManifest(
         :rawDocumentValue&&typeof rawDocumentValue==='object'
             ?Object.values(rawDocumentValue)
             :[];
+    const audience=normalizeText(
+        firstDefined(source,['audience','deployment_audience','deploymentAudience'])
+    );
+    const originalRoot=toStringValue(
+        firstDefined(
+            source,
+            ['original_root','originalRoot','original_base_url','originalBaseUrl']
+        )
+    );
+
+    if(audience==='public'){
+        const expectedOriginalBase=new URL('../originals/',manifestUrl).href;
+        let declaredOriginalBase='';
+
+        try{
+            declaredOriginalBase=new URL(originalRoot,manifestUrl).href;
+        }catch{
+            // The validation below reports one fail-closed error for bad roots.
+        }
+
+        if(declaredOriginalBase!==expectedOriginalBase){
+            throw new Error(
+                'Public BOSS manifests must use the isolated ../originals/ root.'
+            );
+        }
+
+        const unsafeRecord=rawDocuments.find(record=>{
+            const explicitAccess=normalizeText(record?.access);
+            const sensitive=record?.sensitive===true
+                ||normalizeText(record?.sensitive)==='true';
+
+            return explicitAccess!=='public'||sensitive;
+        });
+
+        if(unsafeRecord){
+            throw new Error(
+                'Public BOSS manifests may contain only explicit public, non-sensitive records.'
+            );
+        }
+    }
+
     const documents=rawDocuments.map(
         (record,index)=>normalizeBossLibraryRecord(
             record,
             index,
-            {manifestUrl}
+            {manifestUrl,originalRoot}
         )
     );
+
+    if(audience==='public'&&documents.some(record=>!record.originalUrl)){
+        throw new Error(
+            'Every public BOSS record must resolve to an isolated public original.'
+        );
+    }
     const declaredVersion=toStringValue(
         firstDefined(
             source,
@@ -501,9 +601,11 @@ function normalizeBossLibraryManifest(
 
     return {
         version:declaredVersion||derivedVersion,
+        audience,
         generatedAt:toStringValue(
             firstDefined(source,['generated_at','generatedAt','created_at','updated_at'])
         ),
+        originalRoot,
         manifestUrl,
         documents,
         raw:source,
@@ -1235,9 +1337,160 @@ async function readSeedState(opfs){
             BOSS_LIBRARY_MANIFEST_VERSION_KEY
         );
 
+        if(value===undefined||value===null||value===''){
+            return null;
+        }
+
         return typeof value==='string'?JSON.parse(value):value;
-    }catch{
-        return null;
+    }catch(error){
+        if(error?.name==='NotFoundError'){
+            return null;
+        }
+
+        throw normalizeError(error,'Unable to read the BOSS library seed state.');
+    }
+}
+
+async function resolveBossLibraryManifest({
+    manifest,
+    manifestUrl=DEFAULT_MANIFEST_URL,
+    fetchImpl
+}={}){
+    if(manifest){
+        return {
+            ok:true,
+            manifest:normalizeBossLibraryManifest(manifest,{manifestUrl}),
+            error:null
+        };
+    }
+
+    return loadBossLibraryManifest({manifestUrl,fetchImpl});
+}
+
+async function inspectNormalizedBossLibrarySeedState(normalizedManifest,opfs){
+    const expectedFiles=normalizedManifest.documents
+        .filter(isMarkdownRecord)
+        .map(stableDocumentFileName);
+    const errors=[];
+
+    if(!opfs){
+        errors.push(new Error('OPFS is unavailable for BOSS document inspection.'));
+        return {
+            ok:false,
+            needsImport:true,
+            firstRun:false,
+            complete:false,
+            sameVersion:false,
+            manifestVersion:normalizedManifest.version,
+            expected:expectedFiles.length,
+            present:0,
+            missing:expectedFiles.length,
+            expectedFiles,
+            presentFiles:[],
+            missingFiles:expectedFiles,
+            existingKeys:[],
+            errors
+        };
+    }
+
+    let existingKeys=[];
+
+    try{
+        existingKeys=await getOpfsDocumentKeys(opfs);
+    }catch(error){
+        errors.push(normalizeError(error,'Unable to inspect BOSS library documents.'));
+    }
+
+    let state=null;
+
+    if(!errors.length){
+        try{
+            state=await readSeedState(opfs);
+        }catch(error){
+            errors.push(
+                normalizeError(error,'Unable to inspect the BOSS library seed state.')
+            );
+        }
+    }
+    const existingSet=new Set(existingKeys);
+    const presentFiles=expectedFiles.filter(name=>existingSet.has(name));
+    const missingFiles=expectedFiles.filter(name=>!existingSet.has(name));
+    const managedFiles=existingKeys.filter(
+        name=>name.startsWith(BOSS_LIBRARY_SEED_PREFIX)
+    );
+    const sameVersion=toStringValue(state?.manifestVersion||state?.version)
+        ===toStringValue(normalizedManifest.version);
+    const complete=!errors.length
+        &&sameVersion
+        &&missingFiles.length===0
+        &&state?.complete!==false;
+    const firstRun=!errors.length&&!state&&managedFiles.length===0;
+
+    return {
+        ok:errors.length===0,
+        needsImport:!complete,
+        firstRun,
+        complete,
+        sameVersion,
+        manifestVersion:normalizedManifest.version,
+        expected:expectedFiles.length,
+        present:presentFiles.length,
+        missing:missingFiles.length,
+        expectedFiles,
+        presentFiles,
+        missingFiles,
+        existingKeys,
+        state,
+        errors
+    };
+}
+
+async function inspectBossLibrarySeedState({
+    manifest,
+    manifestUrl=DEFAULT_MANIFEST_URL,
+    fetchImpl,
+    opfs
+}={}){
+    const resolved=await resolveBossLibraryManifest({
+        manifest,
+        manifestUrl,
+        fetchImpl
+    });
+
+    if(!resolved.ok){
+        const expected=resolved.manifest.documents.filter(isMarkdownRecord).length;
+        return {
+            ok:false,
+            needsImport:true,
+            firstRun:false,
+            complete:false,
+            sameVersion:false,
+            manifestVersion:resolved.manifest.version,
+            expected,
+            present:0,
+            missing:expected,
+            expectedFiles:[],
+            presentFiles:[],
+            missingFiles:[],
+            existingKeys:[],
+            errors:[resolved.error]
+        };
+    }
+
+    return inspectNormalizedBossLibrarySeedState(resolved.manifest,opfs);
+}
+
+async function reportSeedProgress(onProgress,detail={}){
+    if(typeof onProgress!=='function'){
+        return false;
+    }
+
+    try{
+        await onProgress({...detail});
+        return true;
+    }catch(error){
+        console.warn('BOSS library progress listener failed.',error);
+        return false;
     }
 }
 
@@ -1287,6 +1540,7 @@ async function seedBossLibraryDocuments({
     opfs,
     batchSize=DEFAULT_SEED_BATCH_SIZE,
     removeStale=true,
+    onProgress,
     onRefresh,
     eventTarget,
     eventName=BOSS_LIBRARY_REFRESH_EVENT
@@ -1294,38 +1548,54 @@ async function seedBossLibraryDocuments({
     const errors=[];
 
     if(!opfs){
+        await reportSeedProgress(onProgress,{
+            phase:'complete',
+            processed:0,
+            total:0,
+            seeded:0,
+            failed:1,
+            ok:false
+        });
         return {
             ok:false,
             idempotent:false,
             seeded:0,
             skipped:0,
+            failed:1,
             removed:0,
             notified:false,
             errors:[new Error('OPFS is unavailable for BOSS document seeding.')]
         };
     }
 
-    let normalizedManifest;
+    const resolved=await resolveBossLibraryManifest({
+        manifest,
+        manifestUrl,
+        fetchImpl
+    });
 
-    if(manifest){
-        normalizedManifest=normalizeBossLibraryManifest(manifest,{manifestUrl});
-    }else{
-        const loaded=await loadBossLibraryManifest({manifestUrl,fetchImpl});
-
-        if(!loaded.ok){
-            return {
-                ok:false,
-                idempotent:false,
-                seeded:0,
-                skipped:0,
-                removed:0,
-                notified:false,
-                errors:[loaded.error]
-            };
-        }
-
-        normalizedManifest=loaded.manifest;
+    if(!resolved.ok){
+        await reportSeedProgress(onProgress,{
+            phase:'complete',
+            processed:0,
+            total:0,
+            seeded:0,
+            failed:1,
+            ok:false
+        });
+        return {
+            ok:false,
+            idempotent:false,
+            seeded:0,
+            skipped:0,
+            failed:1,
+            removed:0,
+            notified:false,
+            errors:[resolved.error]
+        };
     }
+
+    const normalizedManifest=resolved.manifest;
 
     const fetcher=getFetchImplementation(fetchImpl);
     const entries=normalizedManifest.documents
@@ -1335,27 +1605,74 @@ async function seedBossLibraryDocuments({
             fileName:stableDocumentFileName(record)
         }));
     const expectedFiles=entries.map(entry=>entry.fileName);
-    const state=await readSeedState(opfs);
-    let existingKeys=[];
+    const inspection=await inspectNormalizedBossLibrarySeedState(
+        normalizedManifest,
+        opfs
+    );
+    errors.push(...inspection.errors);
+    const state=inspection.state;
+    const existingKeys=inspection.existingKeys;
+    const existingSet=new Set(existingKeys);
+    const sameVersion=inspection.sameVersion;
+    const allPresent=inspection.missing===0;
 
-    try{
-        existingKeys=await getOpfsDocumentKeys(opfs);
-    }catch(error){
-        errors.push(normalizeError(error,'Unable to inspect seeded BOSS documents.'));
+    await reportSeedProgress(onProgress,{
+        phase:'inspect',
+        processed:inspection.sameVersion&&state?.complete!==false
+            ?inspection.present
+            :0,
+        total:entries.length,
+        seeded:0,
+        failed:errors.length,
+        present:inspection.present,
+        missing:inspection.missing,
+        firstRun:inspection.firstRun
+    });
+
+    if(!inspection.ok){
+        await reportSeedProgress(onProgress,{
+            phase:'complete',
+            processed:0,
+            total:entries.length,
+            seeded:0,
+            skipped:0,
+            failed:errors.length,
+            removed:0,
+            ok:false,
+            idempotent:false
+        });
+        return {
+            ok:false,
+            idempotent:false,
+            manifestVersion:normalizedManifest.version,
+            seeded:0,
+            skipped:0,
+            failed:errors.length,
+            removed:0,
+            notified:false,
+            files:expectedFiles,
+            errors
+        };
     }
 
-    const existingSet=new Set(existingKeys);
-    const sameVersion=toStringValue(state?.manifestVersion||state?.version)
-        ===toStringValue(normalizedManifest.version);
-    const allPresent=expectedFiles.every(name=>existingSet.has(name));
-
     if(sameVersion&&allPresent&&state?.complete!==false&&!errors.length){
+        await reportSeedProgress(onProgress,{
+            phase:'complete',
+            processed:entries.length,
+            total:entries.length,
+            seeded:0,
+            failed:0,
+            removed:0,
+            ok:true,
+            idempotent:true
+        });
         return {
             ok:true,
             idempotent:true,
             manifestVersion:normalizedManifest.version,
             seeded:0,
             skipped:entries.length,
+            failed:0,
             removed:0,
             notified:false,
             files:expectedFiles,
@@ -1363,20 +1680,62 @@ async function seedBossLibraryDocuments({
         };
     }
 
-    const pending=sameVersion
+    const pending=sameVersion&&state?.complete!==false
         ?entries.filter(entry=>!existingSet.has(entry.fileName))
         :entries;
+    const skipped=entries.length-pending.length;
     const boundedBatchSize=Math.max(
         1,
         Math.min(32,Number(batchSize)||DEFAULT_SEED_BATCH_SIZE)
     );
     let seeded=0;
+    let failed=errors.length;
+    let processed=entries.length-pending.length;
 
-    if(!fetcher&&pending.length){
+    await reportSeedProgress(onProgress,{
+        phase:'start',
+        processed,
+        total:entries.length,
+        seeded,
+        failed,
+        skipped,
+        pending:pending.length
+    });
+
+    try{
+        await writeOpfsDocument(
+            opfs,
+            BOSS_LIBRARY_MANIFEST_VERSION_KEY,
+            JSON.stringify({
+                manifestVersion:normalizedManifest.version,
+                complete:false,
+                files:expectedFiles
+            })
+        );
+    }catch(error){
+        failed++;
+        errors.push(
+            normalizeError(error,'Unable to begin the BOSS document import safely.')
+        );
+    }
+
+    if(errors.length){
+        // A durable incomplete marker is required before any document mutation.
+    }else if(!fetcher&&pending.length){
         errors.push(new Error('Fetch is unavailable for BOSS document seeding.'));
+        failed++;
     }else{
         for(let offset=0;offset<pending.length;offset+=boundedBatchSize){
             const batch=pending.slice(offset,offset+boundedBatchSize);
+            await reportSeedProgress(onProgress,{
+                phase:'batch',
+                processed,
+                total:entries.length,
+                seeded,
+                failed,
+                batch:Math.floor(offset/boundedBatchSize)+1,
+                batchSize:batch.length
+            });
             const results=await Promise.allSettled(
                 batch.map(
                     async entry=>{
@@ -1392,9 +1751,11 @@ async function seedBossLibraryDocuments({
             );
 
             for(let i=0;i<results.length;i++){
+                processed++;
                 if(results[i].status==='fulfilled'){
                     seeded++;
                 }else{
+                    failed++;
                     errors.push(
                         normalizeError(
                             results[i].reason,
@@ -1402,13 +1763,24 @@ async function seedBossLibraryDocuments({
                         )
                     );
                 }
+
+                await reportSeedProgress(onProgress,{
+                    phase:'document',
+                    status:results[i].status==='fulfilled'?'imported':'failed',
+                    processed,
+                    total:entries.length,
+                    seeded,
+                    failed,
+                    title:batch[i].record.title,
+                    fileName:batch[i].fileName
+                });
             }
         }
     }
 
     let removed=0;
 
-    if(removeStale){
+    if(removeStale&&!errors.length){
         const expectedSet=new Set(expectedFiles);
         const stale=toStringList([
             ...toStringList(state?.files),
@@ -1424,7 +1796,17 @@ async function seedBossLibraryDocuments({
             try{
                 await deleteOpfsDocument(opfs,name);
                 removed++;
+                await reportSeedProgress(onProgress,{
+                    phase:'cleanup',
+                    processed,
+                    total:entries.length,
+                    seeded,
+                    failed,
+                    removed,
+                    fileName:name
+                });
             }catch(error){
+                failed++;
                 errors.push(
                     normalizeError(error,`Unable to remove stale document ${name}.`)
                 );
@@ -1442,7 +1824,16 @@ async function seedBossLibraryDocuments({
                 files:expectedFiles
             })
         );
+        await reportSeedProgress(onProgress,{
+            phase:'marker',
+            processed,
+            total:entries.length,
+            seeded,
+            failed,
+            complete:errors.length===0
+        });
     }catch(error){
+        failed++;
         errors.push(normalizeError(error,'Unable to store the BOSS manifest version.'));
     }
 
@@ -1450,7 +1841,8 @@ async function seedBossLibraryDocuments({
     const detail={
         manifestVersion:normalizedManifest.version,
         seeded,
-        skipped:entries.length-seeded,
+        skipped,
+        failed,
         removed,
         complete:errors.length===0
     };
@@ -1465,16 +1857,29 @@ async function seedBossLibraryDocuments({
                 detail
             });
         }catch(error){
+            failed++;
             errors.push(normalizeError(error,'BOSS document refresh notification failed.'));
         }
     }
+
+    await reportSeedProgress(onProgress,{
+        phase:'complete',
+        processed,
+        total:entries.length,
+        seeded,
+        failed,
+        removed,
+        ok:errors.length===0,
+        idempotent:false
+    });
 
     return {
         ok:errors.length===0,
         idempotent:false,
         manifestVersion:normalizedManifest.version,
         seeded,
-        skipped:entries.length-seeded,
+        skipped,
+        failed,
         removed,
         notified,
         files:expectedFiles,
@@ -1495,6 +1900,7 @@ export {
     isMarkdownRecord,
     loadBossLibraryManifest,
     loadUserMarkdownDocuments,
+    inspectBossLibrarySeedState,
     normalizeBossLibraryManifest,
     normalizeBossLibraryRecord,
     normalizeFilters,

@@ -8,7 +8,7 @@ const DEFAULT_RATE_WINDOW_MS=60_000;
 const LEDGER_STORAGE_KEY='arcane-global-errors-v1';
 const MAX_DETAIL_LENGTH=8_000;
 const HANDLER_MARKER=Symbol.for('arcane.global-errors.handler');
-const DEVELOPER_MODAL_HREF=new URL('../components/modal.html?v=11',import.meta.url).href;
+const DEVELOPER_MODAL_HREF=new URL('../components/modal.html?v=13',import.meta.url).href;
 
 const MESSAGE_STYLE=[
     'Write a simple plain-text email showing the error and, when the available details support it, a possible solution.',

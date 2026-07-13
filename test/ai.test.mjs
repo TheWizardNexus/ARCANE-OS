@@ -130,7 +130,7 @@ describe('AI provider configuration and failures', () => {
         const result=await ai.fetch(messages);
 
         assert.equal(ai.configured,true);
-        assert.equal(captured.url,'http://127.0.0.1:11431/v1/chat/completions');
+        assert.equal(captured.url,'http://127.0.0.1:11434/v1/chat/completions');
         assert.equal('Authorization' in captured.options.headers,false);
         assert.equal(result.choices[0].message.content,'Hello back');
     });

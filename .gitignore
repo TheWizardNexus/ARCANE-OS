@@ -1,8 +1,30 @@
 node_modules/
+.pnpm-store/
 dist/
 local/
+tmp/
 apps/boss/business docs/
 apps/boss/documents/
 apps/boss/scripts/build_library.py
 
 *.log
+.agents/
+.codex/
+.env
+.env.*
+!.env.example
+
+# Local model weights and generated model artifacts
+*.gguf
+*.ggml
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.h5
+*.weights
+*.model
+pytorch_model*.bin
+model*.bin
+consolidated*.bin

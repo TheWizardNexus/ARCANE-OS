@@ -11,7 +11,7 @@
 </style>
 
 <button id="openData" type="button" aria-haspopup="dialog"></button>
-<html-import id="dataModal" class="modal" href="./arcane/components/modal.html?v=11"></html-import>
+<html-import id="dataModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
 
 <script type="module">
     const host=this;
@@ -61,7 +61,7 @@
             fileManager.dataset.layout=host.dataset.layout||'files';
             fileManager.setAttribute(
                 'href',
-                './arcane/components/file-manager.html?v=14'
+                './arcane/components/file-manager.html?v=18'
             );
 
             content.append(heading,fileManager);

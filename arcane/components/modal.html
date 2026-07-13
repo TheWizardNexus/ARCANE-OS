@@ -1,73 +1,115 @@
 <link rel="stylesheet" href="./arcane/css/layout.css?v=3" />
 <style>
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
+    :host{
+        --modal-surface:var(--modal-background,var(--background,#fff));
+        --modal-border:var(--border-color,rgba(127,127,127,.35));
+        --modal-shadow:0 .5em 2em var(--shadow-color,rgba(0,0,0,.28));
+        --modal-backdrop:rgba(0,0,0,.55);
+        --modal-width:min(35em,calc(100vw - 2em));
+        --modal-max-height:min(80vh,calc(100vh - 2em));
+        --modal-radius:.65em;
+        --modal-padding:3em;
+        display:contents;
     }
 
-    .modal {
-        background: var(--modal-background);
-        border:1px solid var(--border-color);
-        padding: 3em;
-        border-radius: .5em;
-        box-shadow:0 .5em 2em var(--shadow-color);
-        max-width: 35em;
-        width: 100%;
-        max-height: 80%;
-        overflow-y: auto;
+    dialog.modal{
+        box-sizing:border-box;
+        width:var(--modal-width);
+        max-width:var(--modal-width);
+        max-height:var(--modal-max-height);
+        margin:auto;
+        padding:0;
+        overflow:hidden;
+        border:1px solid var(--modal-border);
+        border-radius:var(--modal-radius);
+        color:var(--text-color,CanvasText);
+        background:var(--modal-surface);
+        box-shadow:var(--modal-shadow);
+    }
+
+    dialog.modal::backdrop{
+        background:var(--modal-backdrop);
+        backdrop-filter:blur(var(--modal-backdrop-blur,0));
+    }
+
+    .modal-shell{
         position:relative;
+        display:grid;
+        grid-template-rows:auto auto minmax(0,1fr) auto;
+        max-height:var(--modal-max-height);
+        overflow:hidden;
     }
 
-    .modal>.modal-button {
+    .modal-header:empty,
+    .modal-footer:empty{
+        display:none;
+    }
+
+    .modal-header,
+    .modal-footer{
+        padding:var(--modal-region-padding,1em var(--modal-padding));
+    }
+
+    .modal-header{
+        border-bottom:1px solid var(--modal-border);
+    }
+
+    .modal-footer{
+        border-top:1px solid var(--modal-border);
+    }
+
+    .modal-content{
+        box-sizing:border-box;
+        min-height:0;
+        padding:var(--modal-padding);
+        overflow:auto;
+        overscroll-behavior:contain;
+    }
+
+    .modal-search{
+        box-sizing:border-box;
+        width:auto;
+        margin:1em var(--modal-padding) 0;
+        padding:.65em .75em;
+        border:1px solid var(--modal-border);
+        border-radius:.4em;
+        color:inherit;
+        background:var(--input-background,var(--modal-surface));
+    }
+
+    .modal>.modal-shell>.modal-button{
         position:absolute;
         top:.5em;
-        right: .5em;
-        opacity:.4;
+        right:.5em;
+        z-index:2;
+        min-width:2.25em;
+        min-height:2.25em;
+        margin:0;
+        padding:.35em;
+        border:0;
+        border-radius:.4em;
+        color:inherit;
+        background:transparent;
+        box-shadow:none;
+        cursor:pointer;
+        opacity:.55;
     }
 
-    .modal-button:hover, .close-modal-button:hover {
-        background-color:var(--secondary-color);
-        opacity:.7;
+    .modal-button:hover,
+    .modal-button:focus-visible{
+        background:var(--secondary-color,rgba(127,127,127,.18));
+        opacity:1;
     }
 
-    .modal input,
-    .modal textarea {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 10px;
-        padding: 10px;
-        border:1px solid var(--border-color);
-        border-radius: 4px;
+    .modal-content input,
+    .modal-content textarea{
+        box-sizing:border-box;
+        width:100%;
+        max-width:100%;
     }
 
-    .modal textarea {
-        resize: vertical;
-    }
-
-    .modal button {
-        transition: opacity 250ms, background-color 250ms, box-shadow 250ms;
-        opacity: 1;
-        margin: 8px;
-        border: none;
-        cursor: pointer;
-        padding: 10px 20px;
-        border-radius: .5em;
-        box-shadow:0 .12em .35em var(--shadow-color);
-        background-color:var(--primary-color);
-        color:var(--button-text-color,var(--text-color));
-    }
-
-    .modal h1{
-        word-break: break-all;
+    .modal-content h1{
+        overflow-wrap:anywhere;
     }
 
     .report-progress-list{
@@ -77,196 +119,204 @@
     }
 
     .report-progress-list li{
-        align-items:center;
-        border-bottom:1px solid rgba(127,127,127,.35);
         display:flex;
-        gap:2em;
+        align-items:center;
         justify-content:space-between;
+        gap:2em;
         padding:.75em 0;
+        border-bottom:1px solid var(--modal-border);
     }
 
-    .report-progress-status{
-        white-space:nowrap;
+    .report-progress-status{white-space:nowrap}
+    .report-progress-list li[data-status="complete"] .report-progress-status{color:var(--success-color,green)}
+    .report-progress-list li[data-status="failed"] .report-progress-status{color:var(--danger-color,#b00020)}
+    .hidden{display:none!important}
+
+    @media(max-width:36em){
+        :host{
+            --modal-width:calc(100vw - 1em);
+            --modal-max-height:calc(100vh - 1em);
+            --modal-padding:1em;
+        }
     }
 
-    .report-progress-list li[data-status="complete"] .report-progress-status{
-        color:var(--success-color);
-    }
-
-    .report-progress-list li[data-status="failed"] .report-progress-status{
-        color:var(--danger-color);
+    @media(prefers-reduced-motion:reduce){
+        dialog.modal{scroll-behavior:auto}
     }
 </style>
 
-<div id="modal-overlay" class="modal-overlay hidden">
-    <div id="modal" class="modal">
-        <button id='close' class="modal-button">X</button>
-        <input type="search" id="modal-search" class="modal-search" placeholder="🔍 Search..."/>
-        <div id='modal-content' class="modal-content">
-
-        </div>
+<dialog id="modal" class="modal" part="surface" aria-label="Dialog">
+    <div class="modal-shell" part="shell">
+        <button id="close" class="modal-button" part="close" type="button" aria-label="Close" title="Close">&#10005;</button>
+        <header id="modal-header" class="modal-header" part="header" hidden><slot id="header-slot" name="header"></slot></header>
+        <input type="search" id="modal-search" class="modal-search hidden" part="search" placeholder="Search..." aria-label="Search modal content">
+        <div id="modal-content" class="modal-content" part="body"><slot name="body"></slot></div>
+        <footer id="modal-footer" class="modal-footer" part="footer" hidden><slot id="footer-slot" name="footer"></slot></footer>
     </div>
-</div>
+</dialog>
 
 <script type="module">
     const host=this;
     const shadowRoot=host.shadowRoot;
-    const modalOverlay = shadowRoot.querySelector('#modal-overlay');
+    const dialog=shadowRoot.querySelector('#modal');
     const modalContent=shadowRoot.querySelector('#modal-content');
     const modalSearch=shadowRoot.querySelector('#modal-search');
     const closeButton=shadowRoot.querySelector('#close');
+    const headerSlot=shadowRoot.querySelector('#header-slot');
+    const footerSlot=shadowRoot.querySelector('#footer-slot');
     const modalStack=window.modalStack=window.modalStack||[];
 
     let running=false;
     let disposed=false;
     let activeRun=Promise.resolve([]);
+    let returnFocus=null;
 
     host.ready=false;
-
     host.populate=populate;
     host.open=open;
     host.close=close;
     host.runTasks=runTasks;
 
-    Object.defineProperty(
-        host,
-        'running',
-        {
-            get:()=>running
+    Object.defineProperties(host,{
+        running:{get:()=>running},
+        opened:{get:()=>dialog.open}
+    });
+
+    dialog.addEventListener('cancel',event=>{
+        event.preventDefault();
+        close(event);
+    });
+
+    dialog.addEventListener('click',event=>{
+        if(event.target!==dialog||running){
+            return;
         }
-    );
-
-    const modalReady = new CustomEvent( 
-        'modal-ready', {
-            detail: {  }
-        } 
-    );
-
-    modalOverlay.addEventListener(
-        'click', 
-        close
-    );
-
-    closeButton.addEventListener(
-        'click',
-        close
-    );
-
-    modalContent.addEventListener(
-        'click',
-        function modalAction(e){
-            const action=e.target.closest('[data-modal-action]');
-
-            if(!action){
-                return;
-            }
-
-            const detail={...action.dataset};
-            detail.action=detail.modalAction;
-            delete detail.modalAction;
-
-            host.dispatchEvent(
-                new CustomEvent(
-                    'modal-action',
-                    {
-                        detail:detail
-                    }
-                )
-            );
+        const bounds=dialog.getBoundingClientRect();
+        const inside=event.clientX>=bounds.left
+            &&event.clientX<=bounds.right
+            &&event.clientY>=bounds.top
+            &&event.clientY<=bounds.bottom;
+        if(!inside){
+            close(event);
         }
-    );
+    });
 
-    async function open(e=new Event('none')){
+    closeButton.addEventListener('click',event=>close(event));
+
+    for(const slot of [headerSlot,footerSlot]){
+        const region=slot.parentElement;
+        const update=()=>{region.hidden=slot.assignedNodes({flatten:true}).length===0;};
+        slot.addEventListener('slotchange',update);
+        update();
+    }
+
+    modalContent.addEventListener('click',event=>{
+        const action=event.target.closest('[data-modal-action]');
+        if(!action){
+            return;
+        }
+        const detail={...action.dataset};
+        detail.action=detail.modalAction;
+        delete detail.modalAction;
+        host.dispatchEvent(new CustomEvent('modal-action',{detail}));
+    });
+
+    async function open(){
         if(disposed){
             return false;
         }
 
-        const wasHidden=modalOverlay.classList.contains('hidden');
+        const wasOpen=dialog.open;
         const stackIndex=modalStack.indexOf(host);
-
         if(stackIndex>-1){
             modalStack.splice(stackIndex,1);
         }
-
         modalStack.push(host);
-        modalOverlay.style.zIndex=1000+modalStack.length;
-        modalOverlay.classList.remove('hidden');
 
-        if(wasHidden){
-            host.dispatchEvent(
-                new CustomEvent('modal-opened')
-            );
+        if(!wasOpen){
+            returnFocus=document.activeElement instanceof HTMLElement
+                ?document.activeElement
+                :null;
+            dialog.showModal();
+            queueMicrotask(()=>{
+                const focusTarget=modalContent.querySelector('[autofocus],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),a[href]')||closeButton;
+                focusTarget?.focus({preventScroll:true});
+            });
+            host.dispatchEvent(new CustomEvent('modal-opened'));
         }
+        return true;
     }
 
-    async function close(e,force=false){
+    async function close(_event,force=false){
         if(disposed){
             return false;
         }
-
         if(running&&!force){
             return true;
         }
 
-        if(!force&&e&&e?.target?.id!=='modal-overlay'&&!e?.target?.classList.contains('modal-button')){
-            //dont close do bubble
-            return true;
+        const wasOpen=dialog.open;
+        if(wasOpen){
+            dialog.close();
         }
-
-        const wasOpen=!modalOverlay.classList.contains('hidden');
-
-        modalOverlay.classList.add('hidden');
         closeButton.classList.remove('hidden');
 
         const stackIndex=modalStack.indexOf(host);
-
         if(stackIndex>-1){
             modalStack.splice(stackIndex,1);
         }
 
         if(wasOpen){
-            host.dispatchEvent(
-                new CustomEvent('modal-closed')
-            );
+            host.dispatchEvent(new CustomEvent('modal-closed'));
+            const target=returnFocus;
+            returnFocus=null;
+            queueMicrotask(()=>{
+                if(target?.isConnected){
+                    target.focus({preventScroll:true});
+                }
+            });
         }
 
         if(host.hasAttribute('data-once')){
             dispose();
         }
+        return true;
     }
 
     function dispose(){
         if(disposed){
             return;
         }
-
         disposed=true;
         host.ready=false;
-
         const stackIndex=modalStack.indexOf(host);
-
         if(stackIndex>-1){
             modalStack.splice(stackIndex,1);
         }
-
-        document.removeEventListener('keydown',onDocumentKeydown);
+        if(dialog.open){
+            dialog.close();
+        }
         host.remove();
     }
 
     async function populate(content='<p>Content goes here</p>',search=false){
         closeButton.classList.remove('hidden');
-
-        if(!search){
-            modalSearch.classList.add('hidden');
-        }else{
-            modalSearch.classList.remove('hidden');
-        }
-
+        modalSearch.classList.toggle('hidden',!search);
         if(content instanceof Node){
             modalContent.replaceChildren(content);
         }else{
             modalContent.innerHTML=content;
         }
+        const heading=modalContent.querySelector('h1,h2,h3');
+        if(heading){
+            heading.id=heading.id||`modal-title-${Math.random().toString(36).slice(2)}`;
+            dialog.setAttribute('aria-labelledby',heading.id);
+            dialog.removeAttribute('aria-label');
+        }else{
+            dialog.removeAttribute('aria-labelledby');
+            dialog.setAttribute('aria-label',host.dataset.label||'Dialog');
+        }
+        return modalContent;
     }
 
     async function runTasks(title='Stand By While Reports Are Generated',jobs=[]){
@@ -274,10 +324,7 @@
             return activeRun;
         }
 
-        const tasks=jobs.filter(
-            job=>job&&typeof job.name==='string'&&typeof job.task==='function'
-        );
-
+        const tasks=jobs.filter(job=>job&&typeof job.name==='string'&&typeof job.task==='function');
         if(!tasks.length){
             return [];
         }
@@ -288,85 +335,62 @@
         modalContent.replaceChildren();
 
         const heading=document.createElement('h2');
+        heading.id='modal-title';
         heading.innerText=title;
-
+        dialog.setAttribute('aria-labelledby',heading.id);
+        dialog.removeAttribute('aria-label');
         const message=document.createElement('p');
-        message.innerText='Please keep this window open until every report is complete.';
-
+        message.innerText='Please keep this window open until every task is complete.';
         const list=document.createElement('ul');
         list.className='report-progress-list';
         list.setAttribute('aria-live','polite');
 
-        const rows=tasks.map(
-            function createProgressRow(job){
-                const row=document.createElement('li');
-                const name=document.createElement('span');
-                const status=document.createElement('span');
-
-                row.dataset.status='pending';
-                name.innerText=job.name;
-                status.className='report-progress-status';
-                status.innerText='Generating...';
-
-                row.append(name,status);
-                list.append(row);
-
-                return {
-                    row:row,
-                    status:status
-                };
-            }
-        );
+        const rows=tasks.map(job=>{
+            const row=document.createElement('li');
+            const name=document.createElement('span');
+            const status=document.createElement('span');
+            row.dataset.status='pending';
+            name.innerText=job.name;
+            status.className='report-progress-status';
+            status.innerText='Working...';
+            row.append(name,status);
+            list.append(row);
+            return {row,status};
+        });
 
         modalContent.append(heading,message,list);
-        open();
+        await open();
 
-        activeRun=Promise.allSettled(
-            tasks.map(
-                async function runProgressTask(job,index){
-                    try{
-                        const result=await job.task();
-                        rows[index].row.dataset.status='complete';
-                        rows[index].status.innerText='Complete';
-                        return result;
-                    }catch(err){
-                        rows[index].row.dataset.status='failed';
-                        rows[index].status.innerText='Unable to complete';
-                        console.error(`Unable to complete ${job.name}:`,err);
-                        throw err;
-                    }
-                }
-            )
-        );
+        activeRun=Promise.allSettled(tasks.map(async(job,index)=>{
+            try{
+                const result=await job.task();
+                rows[index].row.dataset.status='complete';
+                rows[index].status.innerText='Complete';
+                return result;
+            }catch(error){
+                rows[index].row.dataset.status='failed';
+                rows[index].status.innerText='Unable to complete';
+                console.error(`Unable to complete ${job.name}:`,error);
+                throw error;
+            }
+        }));
 
         const results=await activeRun;
         const failed=results.some(result=>result.status==='rejected');
+        running=false;
 
         if(failed){
-            running=false;
-            heading.innerText='Some Reports Could Not Be Completed';
-            message.innerText='You may close this message and try the assessment again.';
+            heading.innerText='Some Tasks Could Not Be Completed';
+            message.innerText='You may close this message and try again.';
             closeButton.classList.remove('hidden');
             return results;
         }
 
         await new Promise(resolve=>setTimeout(resolve,700));
-        close(undefined,true);
-        running=false;
+        await close(undefined,true);
         return results;
     }
 
-    function onDocumentKeydown(e){
-        const topModal=modalStack[modalStack.length-1];
-
-        if(e.key==='Escape'&&topModal===host){
-            close();
-        }
-    }
-
-    document.addEventListener('keydown',onDocumentKeydown);
-
     host.ready=true;
-    host.dispatchEvent(modalReady);
-
+    host.dispatchEvent(new CustomEvent('modal-ready'));
 </script>
