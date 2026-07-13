@@ -111,7 +111,7 @@ test('Windows CI runs the portable gate before the unified Windows distribution 
   assert.doesNotMatch(workflow, /run: npm run build:win --prefix/, 'CI must enter Windows release work through check:windows');
 });
 
-test('pre-push runs public-package, portable, and compiled Windows gates including the real pipe guard', async () => {
+test('pre-push stays fast while the explicit release gate retains all checks', async () => {
   const rootPackage = JSON.parse(await fs.readFile(path.join(repositoryRoot, 'package.json'), 'utf8'));
   const hook = await fs.readFile(path.join(repositoryRoot, '.githooks/pre-push'), 'utf8');
   const windowsBuild = await fs.readFile(path.join(bundleRoot, 'tools/build-windows-webview2.ps1'), 'utf8');
@@ -133,7 +133,8 @@ test('pre-push runs public-package, portable, and compiled Windows gates includi
   }
   assert(rootCheckPositions['npm run check:public-apps'] < rootCheckPositions['npm run test:machine']);
   assert.doesNotMatch(rootCheck, /check:windows/, 'the portable root check must not duplicate the long Windows gate');
-  assert.equal(rootPackage.scripts.prepush, 'npm run check && npm run check:windows');
+  assert.equal(rootPackage.scripts.prepush, 'npm test');
+  assert.equal(rootPackage.scripts['release:check'], 'npm run check && npm run check:windows');
   assert.match(hook, /exec npm run prepush/);
   assert.match(windowsBuild, /smoke-test-windows-pipe-guard\.mjs/);
 });

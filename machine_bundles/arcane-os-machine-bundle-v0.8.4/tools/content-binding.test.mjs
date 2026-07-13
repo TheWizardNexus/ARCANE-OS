@@ -144,13 +144,15 @@ test('Windows builders bind only finalized content and require timestamps for ev
 });
 
 test('Windows production and local-test release flavors are explicit and fail closed', async () => {
-  const [packageJsonText, release, target, appBuilder] = await Promise.all([
+  const [packageJsonText, repositoryPackageJsonText, release, target, appBuilder] = await Promise.all([
     fs.readFile(path.join(root, 'package.json'), 'utf8'),
+    fs.readFile(path.resolve(root, '..', '..', 'package.json'), 'utf8'),
     fs.readFile(path.join(root, 'tools/build-windows-release.ps1'), 'utf8'),
     fs.readFile(path.join(root, 'tools/build-windows-target-app.ps1'), 'utf8'),
     fs.readFile(path.join(root, 'tools/build-app.mjs'), 'utf8'),
   ]);
   const scripts = JSON.parse(packageJsonText).scripts;
+  const repositoryScripts = JSON.parse(repositoryPackageJsonText).scripts;
   assert.equal(scripts['build:win'], 'npm run build:distribution:windows');
   assert.match(scripts['build:signed:windows'], /build-windows-signed\.ps1 -Target release$/);
   assert.match(scripts['build:signed:apps:windows'], /build-windows-signed\.ps1 -Target apps$/);
@@ -160,6 +162,10 @@ test('Windows production and local-test release flavors are explicit and fail cl
   assert.match(scripts['build:dev:apps:windows'], /build-windows-dev-signed\.ps1 -Target apps$/);
   assert.match(scripts['build:dev:app:windows'], /build-windows-dev-signed\.ps1 -Target app$/);
   assert.match(scripts['signing:bootstrap:dev:windows'], /build-windows-dev-signed\.ps1 -BootstrapOnly$/);
+  assert.match(repositoryScripts['build:dev:windows'], /arcane-os-machine-bundle-v0\.8\.4\/tools\/build-windows-dev-signed\.ps1 -Target release$/);
+  assert.match(repositoryScripts['build:dev:apps:windows'], /arcane-os-machine-bundle-v0\.8\.4\/tools\/build-windows-dev-signed\.ps1 -Target apps$/);
+  assert.match(repositoryScripts['build:dev:app:windows'], /arcane-os-machine-bundle-v0\.8\.4\/tools\/build-windows-dev-signed\.ps1 -Target app$/);
+  assert.match(repositoryScripts['signing:bootstrap:dev:windows'], /arcane-os-machine-bundle-v0\.8\.4\/tools\/build-windows-dev-signed\.ps1 -BootstrapOnly$/);
   assert.doesNotMatch(scripts['build:distribution:windows'], /AllowUnsignedLocalRelease/);
   assert.match(scripts['build:distribution:windows:unsigned-local-test'], /-AllowUnsignedLocalRelease$/);
   assert.match(scripts['verify:winsecurity'], /-RequireSigned/);

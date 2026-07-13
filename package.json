@@ -30,7 +30,8 @@
     "build:signed:apps:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target apps",
     "build:signed:app:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target app",
     "signing:preflight:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target release -PreflightOnly",
-    "prepush": "npm run check && npm run check:windows",
+    "prepush": "npm test",
+    "release:check": "npm run check && npm run check:windows",
     "hooks:install": "node tools/install-git-hooks.mjs",
     "prepare": "node tools/install-git-hooks.mjs"
   },

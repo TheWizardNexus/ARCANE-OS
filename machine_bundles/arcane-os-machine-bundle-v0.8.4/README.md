@@ -129,6 +129,7 @@ Requirements for building:
 - Node.js 22 or newer
 - npm and internet access for build-time dependency acquisition
 - Microsoft .NET Framework 4.x C# compiler
+- Microsoft Windows SDK SignTool for signed or development-signed builds; set `ARCANE_SIGNTOOL_PATH` if it is not discoverable under the Windows Kits directory
 
 Run:
 
@@ -169,9 +170,9 @@ Runtime prerequisites are machine-scoped and reported explicitly. The packaged C
 
 ### Double-clickable local development builds
 
-Each Windows developer can create a private, per-user development signing identity and produce builds that Arcane accepts without `--allow-unsigned-local-release`. The private key is generated as non-exportable in that developer's `CurrentUser\My` certificate store. Only its public certificate is copied into that same user's `CurrentUser\Root` and `CurrentUser\TrustedPublisher` stores.
+Each Windows developer can create a private, per-user development signing identity and produce builds that Arcane accepts without `--allow-unsigned-local-release`. The private key is generated as non-exportable in that developer's `CurrentUser\My` certificate store. The explicit one-time bootstrap directly trusts only that non-CA public leaf certificate in the same user's `CurrentUser\Root` and `CurrentUser\TrustedPublisher` stores. Ordinary development builds verify that setup and never add certificate trust themselves.
 
-The first command creates or reuses the certificate and verifies the signing prerequisites without building. The build commands perform the same bootstrap automatically, so a new developer may go directly to the build they need:
+The first command is an explicit, one-time trust bootstrap: it creates or reuses the certificate, adds only its non-CA public certificate to the current user's trust stores, and verifies the signing prerequisites without building. Run it before the build commands; ordinary builds do not change certificate trust:
 
 ```powershell
 npm run signing:bootstrap:dev:windows
@@ -325,6 +326,6 @@ Run the canonical bundle gate:
 npm run check
 ```
 
-It builds generated assets, runs source verification, all smoke tests, the app-packager test suite, and portable target builds with exact inventory verification. From the repository root, `npm run check` also runs every shared Arcane test before delegating to this bundle. `npm run hooks:install` configures the repository's pre-push hook; on Microsoft NT, `npm run prepush` runs the portable gate and then compiles and verifies the complete Microsoft NT release, the real kernel-PID pipe guard, both native app targets, and the compiled dispatch contracts. The `Arcane checks` GitHub Actions workflow repeats those portable and native Microsoft NT gates on every push and pull request.
+It builds generated assets, runs source verification, all smoke tests, the app-packager test suite, and portable target builds with exact inventory verification. From the repository root, `npm run check` also runs every shared Arcane test before delegating to this bundle. `npm run hooks:install` configures the repository's pre-push hook, which intentionally runs only the fast shared/root test suite. Use root `npm run release:check` for the complete portable and compiled Microsoft NT release gates, including the real kernel-PID pipe guard, both native app targets, and compiled dispatch contracts. The `Arcane checks` GitHub Actions workflow repeats the portable and native Microsoft NT gates on every push and pull request.
 
 The portable tests exercise framed RPC, capability denial, app-scoped storage, staged-account transaction/crash recovery, the two-request password-reset handoff, shell restoration, release and installed-tree tamper detection, runtime isolation, command hardening, broker identity/signature rejection, the encrypted privilege channel, and the fail-closed Linux privilege boundary without installing software, changing real accounts, assigning a real shell, or logging out. The Microsoft NT build additionally runs the compiled kernel-PID pipe-guard test. See `VALIDATION.md` for the exact automated and target-only portions.

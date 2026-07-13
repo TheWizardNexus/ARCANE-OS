@@ -19,7 +19,7 @@ The npm scripts are convenient wrappers around `node tools/package-app.mjs`:
 
 `list`, `inspect`, `package`, `check`, and `bump` accept `--json` for machine-readable output where applicable. Package and version operations accept `--dry-run`. `build` aliases `package`, and `verify` aliases `check`.
 
-`npm run check` and the tracked pre-push hook include `check:public-apps`. A normal push therefore fails when any configured `dist/<app-id>` package is missing, stale, or fails exact inventory verification, or when the BOSS public-release policy test fails. The compiled Microsoft NT native machine-bundle gate remains a separate later step.
+`npm run check` and `npm run release:check` include `check:public-apps`. Routine pushes intentionally run only the fast shared/root suite; continuous integration and the explicit release gate enforce configured public-package freshness, exact inventory verification, BOSS publication policy, and the compiled Microsoft NT machine-bundle checks.
 
 ## Semantic versions
 

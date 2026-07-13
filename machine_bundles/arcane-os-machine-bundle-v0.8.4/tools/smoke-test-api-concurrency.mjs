@@ -183,9 +183,15 @@ try {
   await systemOnlyClient.close();
 }
 
+const simulatedInstallFixture = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-simulated-install-'));
+const simulatedInstallRoot = path.join(simulatedInstallFixture, 'Arcane OS');
 const mutationClient = createClient({
   app: 'provisioner',
   extraArgs: ['--simulate-exclusive-mutation-delay-ms=700'],
+  env: {
+    ARCANE_INSTALL_ROOT: simulatedInstallRoot,
+    ARCANE_STATE_ROOT: path.join(simulatedInstallFixture, 'state'),
+  },
 });
 try {
   const active = mutationClient.request('installation.ensure');
@@ -250,6 +256,12 @@ try {
   assert.equal(afterFailure.installation.present, true, 'the exclusive mutation gate must release after failure');
 } finally {
   await mutationClient.close();
+  assert.deepEqual(
+    await fs.readdir(simulatedInstallFixture),
+    [],
+    'simulated installation must not create an active, staged, backup, failed, or state path'
+  );
+  await fs.rm(simulatedInstallFixture, { recursive: true, force: true });
 }
 
 async function runSessionCommandSelfTest(mode) {

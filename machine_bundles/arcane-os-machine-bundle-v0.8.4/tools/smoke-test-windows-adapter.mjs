@@ -17,8 +17,10 @@ assert(nativeCapabilityBlock, 'Windows installed-app capability policy must be d
 const nativeCapabilities = [...nativeCapabilityBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
 assert.deepEqual(nativeCapabilities, [...new Set(PACKAGED_APP_CAPABILITIES)].sort(),
   'Windows verification must accept exactly the capabilities approved by the app packager');
-assert.match(coreSource,/stage = `\$\{PATHS\.installRoot\}\.stage-\$\{process\.pid\}-\$\{simulate \? Date\.now\(\) : crypto\.randomBytes\(24\)\.toString\('hex'\)\}`/,
-  'real install stages must use an unpredictable 192-bit name');
+assert.match(coreSource,/stage = simulate \? null : `\$\{PATHS\.installRoot\}\.stage-\$\{process\.pid\}-\$\{crypto\.randomBytes\(24\)\.toString\('hex'\)\}`/,
+  'simulation must not receive an install-stage path and real stages must use an unpredictable 192-bit name');
+assert.match(coreSource,/if \(!simulate\) \{[\s\S]*?await native\.writeLaunchers\(stage, payload\);[\s\S]*?await writeFile\(path\.join\(stage, 'arcane-install\.json'\)/,
+  'all installation-stage writes must remain inside the real-install boundary');
 assert.doesNotMatch(coreSource,/fsp\.rm\(stage, \{ recursive: true, force: true \}\)/,
   'installation must never pre-delete an unowned path before atomic stage creation');
 assert.match(coreSource,/status = user\.present \? 'global-install-required' : 'missing'/,

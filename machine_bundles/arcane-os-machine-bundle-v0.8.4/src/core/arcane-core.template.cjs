@@ -2232,7 +2232,7 @@ async function installArcaneGlobally(action) {
     if (!simulate && native.assertNoRunningInstalledApplications) native.assertNoRunningInstalledApplications();
     await recoverInterruptedInstallation(action);
     actionLog(action, 'info', `Installing Arcane ${VERSION} globally from ${root}.`, { payloadMode: payload.mode });
-    stage = `${PATHS.installRoot}.stage-${process.pid}-${simulate ? Date.now() : crypto.randomBytes(24).toString('hex')}`;
+    stage = simulate ? null : `${PATHS.installRoot}.stage-${process.pid}-${crypto.randomBytes(24).toString('hex')}`;
     if (!simulate) {
       await fsp.mkdir(stage, { recursive: false });
       if (typeof native.captureInstallStageOwnership === 'function') {
@@ -2254,11 +2254,11 @@ async function installArcaneGlobally(action) {
         const bundleManifestSource = payload.bundleManifestSource || path.join(root, 'arcane-bundle.json');
         if (fs.existsSync(bundleManifestSource)) await fsp.copyFile(bundleManifestSource, path.join(stage, 'arcane-bundle.json'));
       }
-    }
-    await native.writeLaunchers(stage, payload);
-    if (!simulate && payload.integrity) {
-      verifyIntegrityEntries(stage, payload.integrity.files, true);
-      if (native.verifyStagedInstallation) native.verifyStagedInstallation(stage, false);
+      await native.writeLaunchers(stage, payload);
+      if (payload.integrity) {
+        verifyIntegrityEntries(stage, payload.integrity.files, true);
+        if (native.verifyStagedInstallation) native.verifyStagedInstallation(stage, false);
+      }
     }
     let publisherAttestation = null;
     if (!simulate && payload.integrity) {
@@ -2286,9 +2286,9 @@ async function installArcaneGlobally(action) {
       ...(publisherAttestation ? { publisherAttestation } : {}),
       integrity: simulate ? { schemaVersion: 2, hashAlgorithm: 'sha256', scope: 'simulation', files: [] } : createInstalledIntegrity(stage),
     };
-    await writeFile(path.join(stage, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
-    if (!simulate && native.verifyStagedInstallation) native.verifyStagedInstallation(stage, true);
     if (!simulate) {
+      await writeFile(path.join(stage, 'arcane-install.json'), JSON.stringify(manifest, null, 2));
+      if (native.verifyStagedInstallation) native.verifyStagedInstallation(stage, true);
       const backup = `${PATHS.installRoot}.backup`;
       if (fs.existsSync(backup)) {
         throw arcaneError('INSTALL_BACKUP_BUSY', 'Arcane preserved an unresolved installation backup and will not overwrite it.', 'Review the backup and active installation as an administrator before retrying.', 409, { backup });

@@ -14,47 +14,86 @@ $subject = 'CN=The Wizard Nexus Development'
 $friendlyName = 'Arcane OS Local Development Code Signing'
 $minimumExpiry = (Get-Date).AddDays(30)
 
+function Test-ArcaneDevelopmentCertificate {
+  param([Parameter(Mandatory=$true)]$Certificate)
+
+  if ($Certificate.Subject -cne $subject -or
+      $Certificate.Issuer -cne $subject -or
+      $Certificate.FriendlyName -cne $friendlyName -or
+      -not $Certificate.HasPrivateKey -or
+      $Certificate.NotBefore -gt (Get-Date) -or
+      $Certificate.NotAfter -le $minimumExpiry -or
+      $Certificate.SignatureAlgorithm.Value -cne '1.2.840.113549.1.1.11' -or
+      $Certificate.PublicKey.Oid.Value -cne '1.2.840.113549.1.1.1') {
+    return $false
+  }
+
+  $hasCodeSigningUsage = @($Certificate.EnhancedKeyUsageList |
+    Where-Object { [string]$_.ObjectId -ceq '1.3.6.1.5.5.7.3.3' }).Count -gt 0
+  $keyUsage = $Certificate.Extensions |
+    Where-Object { $_.Oid.Value -ceq '2.5.29.15' } |
+    Select-Object -First 1
+  $basicConstraints = $Certificate.Extensions |
+    Where-Object { $_.Oid.Value -ceq '2.5.29.19' } |
+    Select-Object -First 1
+  if (-not $hasCodeSigningUsage -or
+      -not $keyUsage -or
+      (($keyUsage.KeyUsages -band [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature) -eq 0) -or
+      ($basicConstraints -and $basicConstraints.CertificateAuthority)) {
+    return $false
+  }
+
+  $rsa = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($Certificate)
+  if (-not $rsa) { return $false }
+  try {
+    if ($rsa.KeySize -lt 3072) { return $false }
+    if ($rsa -is [System.Security.Cryptography.RSACng]) {
+      return $rsa.Key.ExportPolicy -eq [System.Security.Cryptography.CngExportPolicies]::None
+    }
+    if ($rsa -is [System.Security.Cryptography.RSACryptoServiceProvider]) {
+      return -not $rsa.CspKeyContainerInfo.Exportable
+    }
+    return $false
+  } finally {
+    $rsa.Dispose()
+  }
+}
+
 function Find-ArcaneDevelopmentCertificate {
   return Get-ChildItem -Path Cert:\CurrentUser\My -CodeSigningCert -ErrorAction Stop |
-    Where-Object {
-      $_.Subject -ceq $subject -and
-      $_.FriendlyName -ceq $friendlyName -and
-      $_.HasPrivateKey -and
-      $_.NotBefore -le (Get-Date) -and
-      $_.NotAfter -gt $minimumExpiry
-    } |
+    Where-Object { Test-ArcaneDevelopmentCertificate -Certificate $_ } |
     Sort-Object NotAfter -Descending |
     Select-Object -First 1
 }
 
 function Add-PublicCertificateToCurrentUserStore {
   param(
-    [Parameter(Mandatory=$true)][byte[]]$CertificateBytes,
+    [Parameter(Mandatory=$true)][string]$CertificatePath,
     [Parameter(Mandatory=$true)][string]$StoreName,
     [Parameter(Mandatory=$true)][string]$Thumbprint
   )
 
-  $store = [System.Security.Cryptography.X509Certificates.X509Store]::new(
-    $StoreName,
-    [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
-  try {
-    $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-    $existing = $store.Certificates.Find(
-      [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint,
-      $Thumbprint,
-      $false)
-    if ($existing.Count -eq 0) {
-      $publicCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($CertificateBytes)
-      try { $store.Add($publicCertificate) } finally { $publicCertificate.Dispose() }
-    }
-  } finally {
-    $store.Close()
+  $existing = Get-ChildItem -Path "Cert:\CurrentUser\$StoreName" -ErrorAction Stop |
+    Where-Object { ([string]$_.Thumbprint).Replace(' ', '').ToUpperInvariant() -ceq $Thumbprint } |
+    Select-Object -First 1
+  if ($existing) { return }
+
+  $certUtil = Join-Path $env:WINDIR 'System32\certutil.exe'
+  if (-not (Test-Path -LiteralPath $certUtil -PathType Leaf)) {
+    throw 'Arcane development signing requires Windows certutil.exe.'
+  }
+  $output = & $certUtil -user -f -addstore $StoreName $CertificatePath 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "Windows could not trust the Arcane development certificate in CurrentUser\$StoreName. $($output -join ' ')"
   }
 }
 
 $certificate = Find-ArcaneDevelopmentCertificate
 $created = $false
 if (-not $certificate) {
+  if (-not $BootstrapOnly) {
+    throw 'Arcane local development signing is not initialized. Run npm run signing:bootstrap:dev:windows once, then retry the build.'
+  }
   $newSelfSignedCertificate = Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue
   if (-not $newSelfSignedCertificate) {
     throw 'Arcane development signing requires the Windows PKI New-SelfSignedCertificate command.'
@@ -82,25 +121,31 @@ $thumbprint = ([string]$certificate.Thumbprint).Replace(' ', '').ToUpperInvarian
 if ($thumbprint -cnotmatch '^[A-F0-9]{40,128}$') { throw 'Arcane created an invalid development certificate thumbprint.' }
 
 $publicBytes = $certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
-Add-PublicCertificateToCurrentUserStore -CertificateBytes $publicBytes -StoreName 'Root' -Thumbprint $thumbprint
-Add-PublicCertificateToCurrentUserStore -CertificateBytes $publicBytes -StoreName 'TrustedPublisher' -Thumbprint $thumbprint
-
-foreach ($storeName in @('Root', 'TrustedPublisher')) {
-  $trusted = Get-ChildItem -Path "Cert:\CurrentUser\$storeName" -ErrorAction Stop |
-    Where-Object { ([string]$_.Thumbprint).Replace(' ', '').ToUpperInvariant() -ceq $thumbprint } |
-    Select-Object -First 1
-  if (-not $trusted) { throw "Arcane could not trust its development certificate in CurrentUser\$storeName." }
-}
-
 $publicDirectory = Join-Path $root '.cache\development-signing'
 $publicCertificatePath = Join-Path $publicDirectory "$thumbprint.cer"
 New-Item -ItemType Directory -Path $publicDirectory -Force | Out-Null
 [IO.File]::WriteAllBytes($publicCertificatePath, $publicBytes)
 
+if ($BootstrapOnly) {
+  Write-Warning 'Arcane will directly trust this non-CA development signer in the current user Root and TrustedPublisher stores. Remove it when local Arcane development ends.'
+  Add-PublicCertificateToCurrentUserStore -CertificatePath $publicCertificatePath -StoreName 'Root' -Thumbprint $thumbprint
+  Add-PublicCertificateToCurrentUserStore -CertificatePath $publicCertificatePath -StoreName 'TrustedPublisher' -Thumbprint $thumbprint
+}
+
+foreach ($storeName in @('Root', 'TrustedPublisher')) {
+  $trusted = Get-ChildItem -Path "Cert:\CurrentUser\$storeName" -ErrorAction Stop |
+    Where-Object { ([string]$_.Thumbprint).Replace(' ', '').ToUpperInvariant() -ceq $thumbprint } |
+    Select-Object -First 1
+  if (-not $trusted) {
+    if ($BootstrapOnly) { throw "Arcane could not trust its development certificate in CurrentUser\$storeName." }
+    throw 'Arcane local development trust is not initialized. Run npm run signing:bootstrap:dev:windows once, then retry the build.'
+  }
+}
+
 $disposition = if ($created) { 'Created' } else { 'Reused' }
 Write-Host "$disposition local development signer: $subject"
 Write-Host "  Thumbprint: $thumbprint"
-Write-Host '  Trust:      CurrentUser\Root and CurrentUser\TrustedPublisher'
+Write-Host '  Trust:      CurrentUser\Root and CurrentUser\TrustedPublisher (this non-CA leaf certificate only)'
 Write-Host "  Public cert: $publicCertificatePath"
 Write-Warning 'This certificate is trusted only for local development by the current Windows user. Never distribute its builds as Arcane production releases.'
 
