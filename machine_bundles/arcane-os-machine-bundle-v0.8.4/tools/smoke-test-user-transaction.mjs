@@ -52,7 +52,6 @@ function startCore(phase, options={}) {
   function call(method, parameters = {}) {
     const id = crypto.randomUUID();
     const body = Buffer.from(JSON.stringify({ protocol: 'arcane/1', type: 'request', id, method, parameters }));
-    child.stdin.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`), body]));
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         pending.delete(id);
@@ -61,6 +60,13 @@ function startCore(phase, options={}) {
       pending.set(id, {
         resolve(value) { clearTimeout(timer); resolve(value); },
         reject(error) { clearTimeout(timer); reject(error); },
+      });
+      child.stdin.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`), body]), (error) => {
+        if (!error) return;
+        const callback = pending.get(id);
+        if (!callback) return;
+        pending.delete(id);
+        callback.reject(error);
       });
     });
   }
