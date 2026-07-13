@@ -1,4 +1,9 @@
-node_modules/
+# Vendor only approved first-party modules authored by RIAEvangelist.
+**/node_modules/
+!/node_modules/
+/node_modules/*
+!/node_modules/strong-type/
+!/node_modules/strong-type/**
 .pnpm-store/
 /pnpm-lock.yaml
 dist/

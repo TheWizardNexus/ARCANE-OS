@@ -167,6 +167,23 @@ The iteration command is an unsigned controlled-test shortcut, not a distributio
 
 Runtime prerequisites are machine-scoped and reported explicitly. The packaged Core does not require a separately installed Node.js, so Node remains nonblocking. WebView2 and native session control are administrator-managed. Provisioned Arcane users require a global Ollama runtime: on Microsoft NT, the Provisioner can download the official archive only when its published SHA-256 digest verifies, install it under Program Files, and configure the automatic `ArcaneOllama` machine service. A user-only Ollama copy is detected but never treated as globally ready or executed for version discovery.
 
+### Double-clickable local development builds
+
+Each Windows developer can create a private, per-user development signing identity and produce builds that Arcane accepts without `--allow-unsigned-local-release`. The private key is generated as non-exportable in that developer's `CurrentUser\My` certificate store. Only its public certificate is copied into that same user's `CurrentUser\Root` and `CurrentUser\TrustedPublisher` stores.
+
+The first command creates or reuses the certificate and verifies the signing prerequisites without building. The build commands perform the same bootstrap automatically, so a new developer may go directly to the build they need:
+
+```powershell
+npm run signing:bootstrap:dev:windows
+npm run build:dev:windows
+npm run build:dev:apps:windows
+npm run build:dev:app:windows -- -AppId boss
+```
+
+After `build:dev:windows`, double-click `dist\windows\bin\ArcaneProvisioner.exe` or start it normally with no unsigned argument. After an app build, double-click its `dist\targets\<app-id>\ArcaneApp-<app-id>.exe`. Microsoft Defender SmartScreen may still show an unfamiliar-file or reputation warning; the developer may use its normal review-and-proceed action. Arcane itself still requires a valid signature, a trusted chain, one exact publisher, an RFC 3161 timestamp, and exact content manifests before opening.
+
+This trust is deliberately local to the Windows user who built the files. A coworker's build is not trusted automatically, provisioned Arcane accounts do not inherit it, and installing or updating a canonical Arcane machine with different developers' certificates will trigger publisher-continuity protections. Local development-signed output is classified as publisher-verified by the runtime but must never be published as an Arcane production release. Shared-company artifacts and machine-wide trust can be added later with a centralized development signer without changing the production certificate path.
+
 ### Signed Microsoft NT builds
 
 Install an eligible code-signing certificate and private key in `Cert:\CurrentUser\My` or `Cert:\LocalMachine\My`. For Windows to display **The Wizard Nexus** as the verified publisher, the certificate authority must issue the certificate to that validated legal entity or accepted trade name; the build cannot substitute a publisher label that is absent from the certificate. Hardware-backed and cloud-key-provider certificates work when their provider exposes the certificate through one of those stores. Keep the private key and any token PIN in that provider—never in this repository, an environment variable, or a build argument.

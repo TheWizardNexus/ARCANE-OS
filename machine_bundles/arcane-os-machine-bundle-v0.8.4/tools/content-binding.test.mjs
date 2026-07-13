@@ -156,6 +156,10 @@ test('Windows production and local-test release flavors are explicit and fail cl
   assert.match(scripts['build:signed:apps:windows'], /build-windows-signed\.ps1 -Target apps$/);
   assert.match(scripts['build:signed:app:windows'], /build-windows-signed\.ps1 -Target app$/);
   assert.match(scripts['signing:preflight:windows'], /build-windows-signed\.ps1 -Target release -PreflightOnly$/);
+  assert.match(scripts['build:dev:windows'], /build-windows-dev-signed\.ps1 -Target release$/);
+  assert.match(scripts['build:dev:apps:windows'], /build-windows-dev-signed\.ps1 -Target apps$/);
+  assert.match(scripts['build:dev:app:windows'], /build-windows-dev-signed\.ps1 -Target app$/);
+  assert.match(scripts['signing:bootstrap:dev:windows'], /build-windows-dev-signed\.ps1 -BootstrapOnly$/);
   assert.doesNotMatch(scripts['build:distribution:windows'], /AllowUnsignedLocalRelease/);
   assert.match(scripts['build:distribution:windows:unsigned-local-test'], /-AllowUnsignedLocalRelease$/);
   assert.match(scripts['verify:winsecurity'], /-RequireSigned/);

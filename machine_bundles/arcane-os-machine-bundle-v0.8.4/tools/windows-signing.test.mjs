@@ -115,6 +115,27 @@ test('shared Windows signing module owns the secretless Authenticode contract', 
   assert.doesNotMatch(contractSource, /\bsetx(?:\.exe)?\b|EnvironmentVariableTarget\]::(?:User|Machine)/i);
 });
 
+test('local development signing creates only a non-exportable current-user identity and delegates to the shared signer', async () => {
+  const source = await fs.readFile(path.join(here, 'build-windows-dev-signed.ps1'), 'utf8');
+  assert.match(source, /New-SelfSignedCertificate/);
+  assert.match(source, /-Type CodeSigningCert/);
+  assert.match(source, /CN=The Wizard Nexus Development/);
+  assert.match(source, /Cert:\\CurrentUser\\My/);
+  assert.match(source, /-KeyAlgorithm RSA/);
+  assert.match(source, /-KeyLength 3072/);
+  assert.match(source, /-HashAlgorithm SHA256/);
+  assert.match(source, /-KeyExportPolicy NonExportable/);
+  assert.match(source, /StoreLocation\]::CurrentUser/);
+  assert.match(source, /StoreName 'Root'/);
+  assert.match(source, /StoreName 'TrustedPublisher'/);
+  assert.match(source, /build-windows-signed\.ps1/);
+  assert.match(source, /BootstrapOnly[\s\S]*PreflightOnly/);
+  assert.match(source, /finally \{[\s\S]*SetEnvironmentVariable\(\$name, \$previousEnvironment\[\$name\], 'Process'\)/);
+  assert.doesNotMatch(source, /Cert:\\LocalMachine|StoreLocation\]::LocalMachine/);
+  assert.doesNotMatch(source, /Export-PfxCertificate|X509ContentType\]::Pfx|SecureString|CertificatePassword|\.pfx\b/i);
+  assert.doesNotMatch(source, /EnvironmentVariableTarget\]::(?:User|Machine)|\bsetx(?:\.exe)?\b/i);
+});
+
 test('signed-build preflight rejects a missing certificate thumbprint before any build', { skip: process.platform !== 'win32' }, () => {
   const result = runPreflight([
     '-Target', 'release',

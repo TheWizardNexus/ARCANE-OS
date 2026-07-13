@@ -6,6 +6,7 @@
 - Adds capability-gated `Arcane.appearance.current()` and `Arcane.appearance.apply()` APIs that synchronize Arcane scheme and caption colors with per-user Microsoft NT personalization.
 - Applies dark/light DWM chrome to every Arcane native window and refreshes open hosts when Windows broadcasts an appearance change.
 - Adds one shared certificate-store signer plus preflighted release, all-app, and single-app build commands, with SHA-256 Authenticode, RFC 3161 timestamps, exact publisher verification, and no repository-managed private keys.
+- Adds a one-command, per-developer Windows signing bootstrap that creates a non-exportable local certificate and produces double-clickable builds without the unsigned-local launch argument.
 
 ## 0.8.3
 
