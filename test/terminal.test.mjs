@@ -28,8 +28,8 @@ test('command registry handles quoting, aliases, completion, and app context',as
 test('system tools are named, discoverable, and reject command injection as app ids',()=>{
     const tools=createArcaneSystemTools();assert(tools instanceof SystemToolRegistry);assert(tools.list().some(tool=>tool.id==='app-package'));
     assert.equal(tools.build('app-package',['terminal']),'npm run app:package -- terminal');
-    assert.equal(tools.build('native-app-build',['terminal','portable']),'npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.3 run build:app -- --app=terminal --platform=portable');
-    assert.equal(tools.build('native-app-build',['terminal','nt']),'npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.3 run build:app -- --app=terminal --platform=windows');
+    assert.equal(tools.build('native-app-build',['terminal','portable']),'npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.4 run build:app -- --app=terminal --platform=portable');
+    assert.equal(tools.build('native-app-build',['terminal','nt']),'npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.4 run build:app -- --app=terminal --platform=windows');
     assert.throws(()=>tools.build('app-package',['terminal; rm']),/Usage/);
 });
 

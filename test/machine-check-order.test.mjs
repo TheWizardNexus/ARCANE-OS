@@ -5,7 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const bundlePath = 'machine_bundles/arcane-os-machine-bundle-v0.8.3';
+const bundlePath = 'machine_bundles/arcane-os-machine-bundle-v0.8.4';
 const bundleRoot = path.join(repositoryRoot, ...bundlePath.split('/'));
 
 function commandPositions(command, expected) {

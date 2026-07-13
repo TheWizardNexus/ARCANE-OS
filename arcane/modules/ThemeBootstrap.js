@@ -1,6 +1,7 @@
 import {loadAndApplyTheme} from './ThemeManager.js';
 
 const sharedKey='arcaneThemeReady';
+const listenerKey='arcaneThemeAppearanceListener';
 
 export function bootstrapArcaneTheme(options={}){
     const useSharedPromise=Object.keys(options).length===0;
@@ -12,6 +13,12 @@ export function bootstrapArcaneTheme(options={}){
     });
 
     if(useSharedPromise) globalThis[sharedKey]=ready;
+    if(useSharedPromise&&globalThis.Arcane?.events?.on&&!globalThis[listenerKey]){
+        globalThis[listenerKey]=globalThis.Arcane.events.on('appearance.changed',async()=>{
+            const result=await ready;
+            if(result?.manager) await result.manager.load();
+        });
+    }
     return ready;
 }
 

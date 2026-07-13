@@ -1,0 +1,293 @@
+{
+  "schemaVersion": 1,
+  "workspaceRoot": "../..",
+  "sharedPayload": [
+    {
+      "source": "arcane",
+      "destination": "arcane",
+      "include": [
+        "components",
+        "css",
+        "entities",
+        "img",
+        "models",
+        "modules"
+      ]
+    },
+    {
+      "source": "node_modules/strong-type",
+      "destination": "node_modules/strong-type",
+      "include": [
+        "index.js",
+        "licence",
+        "package.json"
+      ]
+    }
+  ],
+  "apps": {
+    "files": {
+      "displayName": "Files",
+      "description": "A private file workspace for documents, downloads, pictures, uploads, and exports.",
+      "icon": "img/icon.png",
+      "order": 30,
+      "type": "app",
+      "source": "apps/files",
+      "entry": "index.html",
+      "capabilities": [
+        "preferences.read",
+        "storage.read",
+        "storage.write"
+      ],
+      "security": {
+        "connectOrigins": [],
+        "mediaOrigins": []
+      },
+      "include": [
+        "files.css",
+        "img/icon.png",
+        "index.html",
+        "manifest.json",
+        "modules"
+      ]
+    },
+    "precrisis": {
+      "displayName": "PreCrisis AI",
+      "description": "Clinical decision support, structured notes, and operational dashboards for earlier intervention.",
+      "icon": "img/192.png",
+      "order": 20,
+      "type": "app",
+      "source": "apps/precrisis",
+      "entry": "index.html",
+      "capabilities": [
+        "ai.inference",
+        "ai.models.read",
+        "diagnostics.read",
+        "identity.read",
+        "installation.read",
+        "media.microphone",
+        "network.status.read",
+        "requirements.read",
+        "storage.read",
+        "storage.write",
+        "system.metrics.read",
+        "system.read"
+      ],
+      "security": {
+        "connectOrigins": [
+          "http://127.0.0.1:8011",
+          "http://127.0.0.1:11434",
+          "https://api.openai.com"
+        ],
+        "mediaOrigins": [
+          "https://cdn.openai.com"
+        ]
+      },
+      "include": [
+        "admin.html",
+        "chat.html",
+        "components",
+        "dashboard-clinical.html",
+        "dashboard-leadership.html",
+        "dashboard.html",
+        "data.html",
+        "entities",
+        "export.html",
+        "img/1024.png",
+        "img/192.png",
+        "img/256.png",
+        "img/512.png",
+        "img/favicon.png",
+        "img/icon-16.ico",
+        "import-many.html",
+        "import.html",
+        "index.html",
+        "journal.html",
+        "manifest.json",
+        "modules",
+        "prev.html",
+        "service-worker.js",
+        "soc.html"
+      ]
+    },
+    "boss": {
+      "displayName": "BOSS",
+      "description": "A private workspace for grounded business research, document libraries, and assisted analysis.",
+      "icon": "img/boss-libraries-logo-stacked.png",
+      "order": 10,
+      "type": "app",
+      "source": "apps/boss",
+      "entry": "chat.html",
+      "capabilities": [
+        "ai.inference",
+        "ai.models.read",
+        "diagnostics.read",
+        "identity.read",
+        "installation.read",
+        "network.status.read",
+        "requirements.read",
+        "storage.read",
+        "storage.write",
+        "system.metrics.read",
+        "system.read"
+      ],
+      "security": {
+        "connectOrigins": [
+          "http://127.0.0.1:8011",
+          "http://127.0.0.1:11434",
+          "https://api.openai.com"
+        ],
+        "mediaOrigins": [
+          "https://cdn.openai.com"
+        ]
+      },
+      "documentCatalog": {
+        "policy": "empty-unpublished",
+        "destination": "documents",
+        "manifest": "document-manifest.json"
+      },
+      "include": [
+        "Modelfile",
+        "admin.html",
+        "boss-library.js",
+        "boss.css",
+        "chat.html",
+        "components",
+        "export.html",
+        "img",
+        "import.html",
+        "library-setup.html",
+        "library.html",
+        "manifest.json",
+        "prompts"
+      ]
+    },
+    "terminal": {
+      "displayName": "Arcane Terminal",
+      "description": "Native shell sessions with Arcane APIs, registered system tools, themes, search, and keyboard-first controls.",
+      "icon": "img/arcane-terminal.png",
+      "order": 50,
+      "type": "app",
+      "source": "apps/terminal",
+      "entry": "index.html",
+      "capabilities": [
+        "ai.models.read",
+        "applications.launch",
+        "applications.read",
+        "diagnostics.read",
+        "identity.read",
+        "network.status.read",
+        "preferences.read",
+        "preferences.write",
+        "appearance.read",
+        "appearance.write",
+        "system.metrics.read",
+        "system.read",
+        "terminal.execute"
+      ],
+      "security": {
+        "connectOrigins": [],
+        "mediaOrigins": []
+      },
+      "include": [
+        "img/arcane-terminal.png",
+        "index.html",
+        "manifest.json",
+        "modules",
+        "terminal.css"
+      ]
+    },
+    "mail": {
+      "displayName": "Arcane Mail",
+      "description": "A provider-aware inbox for reading and replying across email accounts.",
+      "icon": "img/icon.png",
+      "order": 60,
+      "type": "app",
+      "source": "apps/mail",
+      "entry": "index.html",
+      "capabilities": [
+        "network.status.read",
+        "preferences.read",
+        "preferences.write",
+        "appearance.read",
+        "appearance.write"
+      ],
+      "security": {
+        "connectOrigins": [
+          "http://127.0.0.1:8020"
+        ],
+        "mediaOrigins": []
+      },
+      "include": [
+        "img/icon.png",
+        "index.html",
+        "mail.css",
+        "manifest.json",
+        "modules"
+      ]
+    },
+    "messages": {
+      "displayName": "Arcane Messages",
+      "description": "A unified, channel-labeled inbox for SMS, RCS, WhatsApp, and compatible messaging services.",
+      "icon": "img/icon.png",
+      "order": 70,
+      "type": "app",
+      "source": "apps/messages",
+      "entry": "index.html",
+      "capabilities": [
+        "network.status.read",
+        "preferences.read",
+        "preferences.write",
+        "appearance.read",
+        "appearance.write"
+      ],
+      "security": {
+        "connectOrigins": [
+          "http://127.0.0.1:8020"
+        ],
+        "mediaOrigins": []
+      },
+      "include": [
+        "img/icon.png",
+        "index.html",
+        "manifest.json",
+        "messages.css",
+        "modules"
+      ]
+    },
+    "settings": {
+      "displayName": "Settings",
+      "description": "Shared appearance, accessibility, device, and local AI brain controls.",
+      "icon": "img/icon.png",
+      "order": 40,
+      "type": "app",
+      "source": "apps/settings",
+      "entry": "index.html",
+      "capabilities": [
+        "ai.inference",
+        "ai.models.manage",
+        "ai.models.read",
+        "ai.settings.manage",
+        "identity.read",
+        "network.status.read",
+        "preferences.read",
+        "preferences.write",
+        "appearance.read",
+        "appearance.write",
+        "system.read"
+      ],
+      "security": {
+        "connectOrigins": [],
+        "mediaOrigins": []
+      },
+      "include": [
+        "ai-settings.css",
+        "img/icon.png",
+        "index.html",
+        "manifest.json",
+        "modules",
+        "provider-settings.css",
+        "settings.css"
+      ]
+    }
+  }
+}

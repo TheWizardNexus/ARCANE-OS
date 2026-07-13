@@ -1,6 +1,7 @@
-import Theme from '../entities/Theme.js';
+import Theme,{arcaneDarkThemeTokens,arcaneLightThemeTokens} from '../entities/Theme.js';
 import PreferenceStore from './PreferenceStore.js';
 import {applyAppearancePreferences,createAppearancePreferenceStore} from './AppearancePreferences.js';
+import SystemAppearance from './SystemAppearance.js';
 
 const skinSchema=Object.freeze([
     {key:'appearance.activeSkin',type:'text',defaultValue:''},
@@ -8,10 +9,11 @@ const skinSchema=Object.freeze([
 ]);
 
 export default class ThemeManager{
-    constructor({appearanceStore=null,skinStore=null,root=null}={}){
+    constructor({appearanceStore=null,skinStore=null,systemAppearance=null,root=null}={}){
         this.appearanceStore=appearanceStore||createAppearancePreferenceStore();
         this.skinStore=skinStore||new PreferenceStore({namespace:'arcane',schema:skinSchema});
         this.root=root||globalThis.document?.documentElement||null;
+        this.systemAppearance=systemAppearance||new SystemAppearance();
         this.appearance=this.appearanceStore.defaults();
         this.skinState=this.skinStore.defaults();
         this.customTheme=null;
@@ -51,7 +53,7 @@ export default class ThemeManager{
         ]);
         this.appearance={...this.appearance,'appearance.colorScheme':normalized};
         this.skinState={...this.skinState,'appearance.activeSkin':''};
-        this.apply();this.emit();
+        this.apply();await this.syncSystemAppearance();this.emit();
         return this.current();
     }
 
@@ -65,7 +67,7 @@ export default class ThemeManager{
         this.customTheme=theme;
         this.skinState={...this.skinState,'appearance.customSkin':JSON.stringify(theme),'appearance.activeSkin':'custom'};
         this.appearance={...this.appearance,'appearance.colorScheme':theme.scheme};
-        this.apply();this.emit();
+        this.apply();await this.syncSystemAppearance();this.emit();
         return this.current();
     }
 
@@ -78,7 +80,7 @@ export default class ThemeManager{
         ]);
         this.skinState={...this.skinState,'appearance.activeSkin':'custom'};
         this.appearance={...this.appearance,'appearance.colorScheme':this.customTheme.scheme};
-        this.apply();this.emit();
+        this.apply();await this.syncSystemAppearance();this.emit();
         return this.current();
     }
 
@@ -95,8 +97,19 @@ export default class ThemeManager{
         ]);
         this.customTheme=null;
         this.skinState={...this.skinState,'appearance.customSkin':'','appearance.activeSkin':''};
-        this.apply();this.emit();
+        this.apply();await this.syncSystemAppearance();this.emit();
         return this.current();
+    }
+
+    async syncSystemAppearance(){
+        const state=this.current();
+        const theme=state.mode==='custom'?this.customTheme:null;
+        const tokens=theme?.tokens||(state.mode==='dark'?arcaneDarkThemeTokens:state.mode==='light'?arcaneLightThemeTokens:null);
+        return this.systemAppearance.apply({
+            scheme:theme?.scheme||state.mode,
+            captionColor:tokens?.surface||null,
+            textColor:tokens?.text||null
+        });
     }
 
     emit(){

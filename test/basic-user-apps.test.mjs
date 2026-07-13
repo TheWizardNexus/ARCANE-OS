@@ -117,7 +117,7 @@ test('Settings and Files remain thin shells over shared Arcane behavior',async()
     const [settings,settingsModule,files,filesModule,registry]=await Promise.all([
         read('apps/settings/index.html'),read('apps/settings/modules/SettingsApp.js').then(async source=>source+await read('apps/settings/modules/AISettingsApp.js')),
         read('apps/files/index.html'),read('apps/files/modules/FilesApp.js'),
-        read('machine_bundles/arcane-os-machine-bundle-v0.8.3/arcane-apps.json').then(JSON.parse)
+        read('machine_bundles/arcane-os-machine-bundle-v0.8.4/arcane-apps.json').then(JSON.parse)
     ]);
     assert.match(settings,/arcane\/components\/preferences-form\.html/);
     assert.match(settings,/arcane\/components\/theme-editor\.html/);
@@ -129,7 +129,7 @@ test('Settings and Files remain thin shells over shared Arcane behavior',async()
     assert.match(filesModule,/arcane\/modules\/ThemeManager\.js/);
     assert.doesNotMatch(filesModule,/indexedDB|showOpenFilePicker|FileSystemHandle/);
     assert.deepEqual(registry.apps.files.capabilities,['preferences.read','storage.read','storage.write']);
-    assert.deepEqual(registry.apps.settings.capabilities,['ai.inference','ai.models.manage','ai.models.read','ai.settings.manage','identity.read','network.status.read','preferences.read','preferences.write','system.read']);
+    assert.deepEqual(registry.apps.settings.capabilities,['ai.inference','ai.models.manage','ai.models.read','ai.settings.manage','identity.read','network.status.read','preferences.read','preferences.write','appearance.read','appearance.write','system.read']);
     for(const app of ['files','settings']){
         const entries=await readdir(new URL(`../apps/${app}`,import.meta.url));
         assert(!entries.includes('components'),`${app} must use shared components rather than app-local copies`);
@@ -138,9 +138,9 @@ test('Settings and Files remain thin shells over shared Arcane behavior',async()
 
 test('native preference capability is shared and explicitly permissioned',async()=>{
     const [core,api,packager]=await Promise.all([
-        read('machine_bundles/arcane-os-machine-bundle-v0.8.3/src/core/arcane-core.template.cjs'),
-        read('machine_bundles/arcane-os-machine-bundle-v0.8.3/src/frontend/shared/arcane-api.js'),
-        read('machine_bundles/arcane-os-machine-bundle-v0.8.3/tools/app-packager-lib.mjs')
+        read('machine_bundles/arcane-os-machine-bundle-v0.8.4/src/core/arcane-core.template.cjs'),
+        read('machine_bundles/arcane-os-machine-bundle-v0.8.4/src/frontend/shared/arcane-api.js'),
+        read('machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/app-packager-lib.mjs')
     ]);
     for(const method of ['preferences.list','preferences.get','preferences.set','preferences.delete']) assert.ok(core.includes(method),method);
     assert.match(api,/preferences:\s*Object\.freeze/);
