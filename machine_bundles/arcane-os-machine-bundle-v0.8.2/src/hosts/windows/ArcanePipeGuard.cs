@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 
@@ -35,6 +36,10 @@ namespace ArcaneOS
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetExitCodeProcess(IntPtr process, out uint exitCode);
 
         private static int Main(string[] args)
         {
@@ -71,7 +76,7 @@ namespace ArcaneOS
                     {
                         using (server)
                         {
-                            server.WaitForConnection();
+                            WaitForConnectionOrProcessExit(server, expectedProcess, expectedPid);
                             uint clientPid;
                             if (!GetNamedPipeClientProcessId(server.SafePipeHandle, out clientPid))
                             {
@@ -113,6 +118,54 @@ namespace ArcaneOS
             {
                 WriteSignal("ARCANE_PIPE_GUARD_ERROR " + Sanitize(error.Message));
                 return 10;
+            }
+        }
+
+        private static void WaitForConnectionOrProcessExit(
+            NamedPipeServerStream server,
+            IntPtr expectedProcess,
+            uint expectedPid)
+        {
+            IAsyncResult connection = server.BeginWaitForConnection(null, null);
+            using (WaitHandle connectionReady = connection.AsyncWaitHandle)
+            using (ManualResetEvent processExited = new ManualResetEvent(false))
+            {
+                processExited.SafeWaitHandle = new SafeWaitHandle(expectedProcess, false);
+                int signaled = WaitHandle.WaitAny(new WaitHandle[] { connectionReady, processExited });
+                if (signaled == 1)
+                {
+                    uint exitCode;
+                    if (!GetExitCodeProcess(expectedProcess, out exitCode))
+                    {
+                        int exitCodeError = Marshal.GetLastWin32Error();
+                        CompleteCancelledConnectionWait(server, connection);
+                        throw new InvalidOperationException(
+                            "The expected worker process " + expectedPid.ToString(CultureInfo.InvariantCulture) +
+                            " exited before pipe connection; Windows could not read its exit code (error " +
+                            exitCodeError.ToString(CultureInfo.InvariantCulture) + ").");
+                    }
+                    CompleteCancelledConnectionWait(server, connection);
+                    throw new InvalidOperationException(
+                        "The expected worker process " + expectedPid.ToString(CultureInfo.InvariantCulture) +
+                        " exited before pipe connection with exit code " +
+                        exitCode.ToString(CultureInfo.InvariantCulture) + ".");
+                }
+                server.EndWaitForConnection(connection);
+            }
+        }
+
+        private static void CompleteCancelledConnectionWait(NamedPipeServerStream server, IAsyncResult connection)
+        {
+            server.Dispose();
+            try
+            {
+                server.EndWaitForConnection(connection);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (IOException)
+            {
             }
         }
 

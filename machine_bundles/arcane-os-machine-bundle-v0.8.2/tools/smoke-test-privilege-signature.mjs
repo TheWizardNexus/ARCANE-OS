@@ -15,6 +15,27 @@ const endpoint = platform === 'win32'
 const token = crypto.randomBytes(32).toString('base64url');
 const session = crypto.randomBytes(24).toString('base64url');
 const publicKey = crypto.generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }).toString('base64url');
+const releaseClaims = {
+  securityMode: '',
+  contentBinding: '',
+  signerThumbprint: '',
+  verifiedAt: '',
+  revocationStatus: '',
+  trustSource: '',
+  timestampVerified: false,
+};
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+const releaseClaimsJson = canonicalJson(releaseClaims);
+const releaseClaimsEncoded = Buffer.from(releaseClaimsJson, 'utf8').toString('base64url');
+const releaseClaimsSha256 = crypto.createHash('sha256').update(releaseClaimsJson, 'utf8').digest('hex');
 
 function writeFrame(socket, message) {
   const body = Buffer.from(JSON.stringify(message));
@@ -48,6 +69,7 @@ const server = net.createServer((socket) => {
         app: 'provisioner',
         platform,
         version: manifest.version,
+        releaseClaimsSha256,
         workerNonce: workerHello.workerNonce,
         requestId: crypto.randomUUID(),
         requestMethod: 'installation.ensure',
@@ -77,6 +99,7 @@ const worker = spawn(process.execPath, [
   `--broker-pid=${process.pid}`,
   `--broker-session=${session}`,
   `--broker-public-key=${publicKey}`,
+  `--release-claims=${releaseClaimsEncoded}`,
 ], { stdio: ['ignore', 'ignore', 'pipe'] });
 let stderr = '';
 worker.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
@@ -88,6 +111,7 @@ try {
   ]);
   assert.equal(exitCode, 7);
   assert.ok(workerHello && workerHello.workerNonce && workerHello.pid === worker.pid);
+  assert.equal(workerHello.releaseClaimsSha256, releaseClaimsSha256);
   assert.match(stderr, /invalid or unsigned broker identity/i);
   console.log('Arcane privileged worker broker-signature rejection smoke test passed.');
 } finally {

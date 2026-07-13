@@ -69,17 +69,74 @@ const ipcToken = argValue('--token=') || '';
 const ipcBrokerPid = Number(argValue('--broker-pid=') || 0);
 const ipcBrokerSession = argValue('--broker-session=') || '';
 const ipcBrokerPublicKey = argValue('--broker-public-key=') || '';
+const workerReleaseClaimArguments = argv.filter((item) => item.startsWith('--release-claims='));
 const simulateBrokerFirstClient = simulate && !process.pkg && args.has('--simulate-broker-first-client');
 const allowUnsignedLocalRelease = !simulate && args.has('--allow-unsigned-local-release');
 const elevationProtectedUsername = argValue('--protected-user=') || process.env.ARCANE_PROTECTED_USERNAME || null;
+const WORKER_RELEASE_CLAIM_KEYS = Object.freeze([
+  'contentBinding', 'revocationStatus', 'securityMode', 'signerThumbprint',
+  'timestampVerified', 'trustSource', 'verifiedAt',
+]);
+function releaseClaimsDocument(claims) {
+  return {
+    securityMode: String(claims && claims.mode || ''),
+    contentBinding: String(claims && claims.contentBinding || ''),
+    signerThumbprint: String(claims && claims.signerThumbprint || ''),
+    verifiedAt: String(claims && claims.verifiedAt || ''),
+    revocationStatus: String(claims && claims.revocationStatus || ''),
+    trustSource: String(claims && claims.trustSource || ''),
+    timestampVerified: Boolean(claims && claims.timestampVerified),
+  };
+}
+function parseWorkerReleaseClaims() {
+  if (!privilegedWorker) {
+    if (workerReleaseClaimArguments.length) throw new Error('Arcane accepts release-claim arguments only for a privileged worker.');
+    return null;
+  }
+  if (workerReleaseClaimArguments.length !== 1) {
+    throw new Error('Arcane privileged worker requires exactly one release-claim argument.');
+  }
+  const encoded = workerReleaseClaimArguments[0].slice('--release-claims='.length);
+  if (!/^[A-Za-z0-9_-]{16,8192}$/.test(encoded)) throw new Error('Arcane privileged worker received malformed release claims.');
+  let bytes;
+  let parsed;
+  try {
+    bytes = Buffer.from(encoded, 'base64url');
+    if (bytes.length > 6144 || bytes.toString('base64url') !== encoded) throw new Error('non-canonical encoding');
+    parsed = JSON.parse(bytes.toString('utf8'));
+  } catch (_) {
+    throw new Error('Arcane privileged worker could not decode its release claims.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)
+    || Object.getPrototypeOf(parsed) !== Object.prototype
+    || JSON.stringify(Object.keys(parsed).sort()) !== JSON.stringify([...WORKER_RELEASE_CLAIM_KEYS].sort())
+    || typeof parsed.securityMode !== 'string' || typeof parsed.contentBinding !== 'string'
+    || typeof parsed.signerThumbprint !== 'string' || typeof parsed.verifiedAt !== 'string'
+    || typeof parsed.revocationStatus !== 'string' || typeof parsed.trustSource !== 'string'
+    || typeof parsed.timestampVerified !== 'boolean') {
+    throw new Error('Arcane privileged worker rejected an invalid release-claim document.');
+  }
+  return parsed;
+}
 function validatedHostReleaseClaims() {
-  const mode = String(process.env.ARCANE_RELEASE_SECURITY_MODE || '');
-  const contentBinding = String(process.env.ARCANE_RELEASE_CONTENT_BINDING || '');
-  const signerThumbprint = String(process.env.ARCANE_RELEASE_SIGNER_THUMBPRINT || '').toUpperCase();
-  const verifiedAt = String(process.env.ARCANE_RELEASE_VERIFIED_AT || '');
-  const revocationStatus = String(process.env.ARCANE_RELEASE_REVOCATION_STATUS || '');
-  const trustSource = String(process.env.ARCANE_RELEASE_TRUST_SOURCE || '');
-  const timestampVerified = String(process.env.ARCANE_RELEASE_TIMESTAMP_VERIFIED || '');
+  const workerClaims = parseWorkerReleaseClaims();
+  const source = workerClaims || {
+    securityMode: process.env.ARCANE_RELEASE_SECURITY_MODE || '',
+    contentBinding: process.env.ARCANE_RELEASE_CONTENT_BINDING || '',
+    signerThumbprint: process.env.ARCANE_RELEASE_SIGNER_THUMBPRINT || '',
+    verifiedAt: process.env.ARCANE_RELEASE_VERIFIED_AT || '',
+    revocationStatus: process.env.ARCANE_RELEASE_REVOCATION_STATUS || '',
+    trustSource: process.env.ARCANE_RELEASE_TRUST_SOURCE || '',
+    timestampVerified: process.env.ARCANE_RELEASE_TIMESTAMP_VERIFIED || '',
+  };
+  const mode = String(source.securityMode || '');
+  const contentBinding = String(source.contentBinding || '');
+  const signerThumbprint = String(source.signerThumbprint || '').toUpperCase();
+  const verifiedAt = String(source.verifiedAt || '');
+  const revocationStatus = String(source.revocationStatus || '');
+  const trustSource = String(source.trustSource || '');
+  const timestampClaim = source.timestampVerified;
+  const timestampVerified = workerClaims ? timestampClaim === true : String(timestampClaim || '') === '1';
   const hasPublisherEvidence = Boolean(contentBinding || signerThumbprint || verifiedAt || revocationStatus || trustSource || timestampVerified);
   if (mode === 'publisher-verified') {
     const bindingValid = /^ARCANE-(?:MACHINE|TARGET)-BINDING\|1\|[^|\r\n]{1,128}\|[a-f0-9]{64}$/.test(contentBinding);
@@ -88,7 +145,7 @@ function validatedHostReleaseClaims() {
       || !verifiedAt.endsWith('Z') || !Number.isFinite(time.getTime()) || time.getTime() > Date.now() + 300000
       || !['online-good', 'cache-good', 'attested-degraded'].includes(revocationStatus)
       || !['administrator-policy', 'administrator-policy-rotation', 'installed-continuity', 'uac-approved-tofu', 'fresh-unpinned'].includes(trustSource)
-      || timestampVerified !== '1') {
+      || !timestampVerified) {
       throw new Error('Arcane Core rejected incomplete or malformed publisher verification claims from its native host.');
     }
     return Object.freeze({ mode, contentBinding, signerThumbprint, verifiedAt, revocationStatus, trustSource, timestampVerified: true });
@@ -103,6 +160,9 @@ function validatedHostReleaseClaims() {
   return Object.freeze({ mode: '', contentBinding: '', signerThumbprint: '', verifiedAt: '', revocationStatus: '', trustSource: '', timestampVerified: false });
 }
 const hostReleaseClaims = validatedHostReleaseClaims();
+const hostReleaseClaimsDocument = Object.freeze(releaseClaimsDocument(hostReleaseClaims));
+const hostReleaseClaimsEncoded = Buffer.from(canonicalJson(hostReleaseClaimsDocument), 'utf8').toString('base64url');
+const hostReleaseClaimsSha256 = crypto.createHash('sha256').update(canonicalJson(hostReleaseClaimsDocument), 'utf8').digest('hex');
 let simulatedInstallationManifest = null;
 let simulatedArcaneUsersState = { schemaVersion: 1, users: {} };
 let simulatedAppStorage = Object.create(null);
@@ -3199,6 +3259,7 @@ function monitorPipeGuardSignals(child) {
   const seen = [];
   const waiters = new Set();
   let terminalError = null;
+  let exitMetadata = null;
 
   const settleWaiters = () => {
     for (const waiter of [...waiters]) {
@@ -3244,9 +3305,14 @@ function monitorPipeGuardSignals(child) {
     settleWaiters();
   });
   child.once('exit', (code, signal) => {
+    exitMetadata = { code, signal };
+  });
+  child.once('close', (code, signal) => {
     if (buffer) acceptLine(buffer);
-    if (!terminalError && (code !== 0 || waiters.size)) {
-      terminalError = new Error(`ArcanePipeGuard exited before peer authentication (code ${code}, signal ${signal || 'none'}).`);
+    if (!terminalError) {
+      const finalCode = exitMetadata ? exitMetadata.code : code;
+      const finalSignal = exitMetadata ? exitMetadata.signal : signal;
+      terminalError = new Error(`ArcanePipeGuard closed before peer authentication (code ${finalCode}, signal ${finalSignal || 'none'}).`);
     }
     settleWaiters();
   });
@@ -3297,6 +3363,7 @@ function privilegeBindingDocument(fields) {
     app: String(fields.app || ''),
     platform: String(fields.platform || ''),
     version: String(fields.version || ''),
+    releaseClaimsSha256: String(fields.releaseClaimsSha256 || ''),
     requestId: String(fields.requestId || ''),
     requestMethod: String(fields.requestMethod || ''),
     requestSha256: String(fields.requestSha256 || ''),
@@ -3431,6 +3498,7 @@ function workerLaunchSpec(endpoint, token, brokerSession, brokerPublicKey) {
     `--broker-pid=${process.pid}`,
     `--broker-session=${brokerSession}`,
     `--broker-public-key=${brokerPublicKey}`,
+    `--release-claims=${hostReleaseClaimsEncoded}`,
     `--app=${appMode}`,
     `--bundle-root=${bundleRoot()}`,
     `--protected-user=${protectedProvisioningUsername()}`,
@@ -3564,7 +3632,8 @@ async function runPrivilegedProxy(request) {
               && claimedPid === launchIdentity.pid
               && frame.app === appMode
               && frame.platform === platform
-              && frame.version === VERSION;
+              && frame.version === VERSION
+              && frame.releaseClaimsSha256 === hostReleaseClaimsSha256;
             if (!identityMatches || frame.elevated !== true || !/^[A-Za-z0-9_-]{32,}$/.test(String(frame.workerNonce || '')) || !frame.workerExchangePublicKey) {
               rejectClient(identityMatches ? 'worker-not-elevated' : 'worker-identity-mismatch', frame);
               return;
@@ -3590,6 +3659,7 @@ async function runPrivilegedProxy(request) {
               app: appMode,
               platform,
               version: VERSION,
+              releaseClaimsSha256: hostReleaseClaimsSha256,
               brokerExchangePublicKey,
               workerExchangePublicKey: frame.workerExchangePublicKey,
             };
@@ -3607,6 +3677,7 @@ async function runPrivilegedProxy(request) {
               app: appMode,
               platform,
               version: VERSION,
+              releaseClaimsSha256: hostReleaseClaimsSha256,
               requestId: request.id,
               requestMethod: request.method,
               requestSha256: originalRequestSha256,
@@ -3624,6 +3695,7 @@ async function runPrivilegedProxy(request) {
               app: appMode,
               platform,
               version: VERSION,
+              releaseClaimsSha256: hostReleaseClaimsSha256,
               workerNonce: frame.workerNonce,
               requestId: request.id,
               requestMethod: request.method,
@@ -3860,7 +3932,8 @@ async function startPrivilegedWorker() {
         && Number(frame.workerPid) === process.pid
         && frame.app === appMode
         && frame.platform === platform
-        && frame.version === VERSION;
+        && frame.version === VERSION
+        && frame.releaseClaimsSha256 === hostReleaseClaimsSha256;
       const binding = validBroker && privilegeBindingDocument({
         brokerSession: ipcBrokerSession,
         brokerPid: ipcBrokerPid,
@@ -3869,6 +3942,7 @@ async function startPrivilegedWorker() {
         app: appMode,
         platform,
         version: VERSION,
+        releaseClaimsSha256: hostReleaseClaimsSha256,
         requestId: frame.requestId,
         requestMethod: frame.requestMethod,
         requestSha256: frame.requestSha256,
@@ -3894,6 +3968,7 @@ async function startPrivilegedWorker() {
         app: appMode,
         platform,
         version: VERSION,
+        releaseClaimsSha256: hostReleaseClaimsSha256,
         brokerExchangePublicKey: frame.brokerExchangePublicKey,
         workerExchangePublicKey,
       };
@@ -3955,6 +4030,7 @@ async function startPrivilegedWorker() {
       app: appMode,
       platform,
       version: VERSION,
+      releaseClaimsSha256: hostReleaseClaimsSha256,
       workerNonce,
       workerExchangePublicKey,
     });

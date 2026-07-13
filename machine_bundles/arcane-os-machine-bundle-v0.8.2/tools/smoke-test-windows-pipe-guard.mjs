@@ -180,3 +180,49 @@ try {
     try { guard.kill(); } catch { }
   }
 }
+
+{
+  const exitPipeName = `arcane-privileged-exit-test-${process.pid}-${crypto.randomBytes(10).toString('hex')}`;
+  const exitGuard = spawn(guardPath, [`--pipe-name=${exitPipeName}`], {
+    cwd: path.dirname(guardPath),
+    windowsHide: true,
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  let exitDiagnostics = '';
+  exitGuard.stderr.setEncoding('utf8');
+  exitGuard.stderr.on('data', (chunk) => { exitDiagnostics += chunk; });
+  let shortLivedWorker;
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`Exit-test guard did not become ready. ${exitDiagnostics}`)), 5000);
+      exitGuard.stderr.on('data', () => {
+        if (!exitDiagnostics.includes(`ARCANE_PIPE_GUARD_READY ${exitPipeName}`)) return;
+        clearTimeout(timer);
+        resolve();
+      });
+      exitGuard.once('error', reject);
+    });
+    shortLivedWorker = spawn(process.execPath, ['-e', 'setTimeout(() => process.exit(37), 1000)'], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+    assert(Number.isSafeInteger(shortLivedWorker.pid) && shortLivedWorker.pid > 0);
+    const started = Date.now();
+    exitGuard.stdin.write(`ARCANE_EXPECTED_PID ${shortLivedWorker.pid}\n`, 'ascii');
+    const exitCode = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`Exit-test guard did not detect worker exit. ${exitDiagnostics}`)), 5000);
+      exitGuard.once('error', reject);
+      exitGuard.once('exit', (code) => { clearTimeout(timer); resolve(code); });
+    });
+    assert.equal(exitCode, 10, exitDiagnostics);
+    assert(Date.now() - started < 5000, 'worker exit detection exceeded its bounded diagnostic window');
+    assert.match(exitDiagnostics, new RegExp(`expected worker process ${shortLivedWorker.pid} exited before pipe connection with exit code 37`, 'i'));
+    console.log('ArcanePipeGuard reported the expected worker exit before pipe connection.');
+  } finally {
+    try { shortLivedWorker?.kill(); } catch { }
+    try { exitGuard.stdin.end(); } catch { }
+    if (exitGuard.exitCode === null && exitGuard.signalCode === null) {
+      try { exitGuard.kill(); } catch { }
+    }
+  }
+}

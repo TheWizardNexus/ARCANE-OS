@@ -19,6 +19,15 @@ const signingPublicKey = signingKeys.publicKey.export({ format: 'der', type: 'sp
 const exchangeKeys = crypto.generateKeyPairSync('x25519');
 const exchangePublicKey = exchangeKeys.publicKey.export({ format: 'der', type: 'spki' }).toString('base64url');
 const request = { protocol: 'arcane/1', type: 'request', id: crypto.randomUUID(), method: 'users.add', parameters: { usernames: ['arcane-wire-test'] } };
+const releaseClaims = {
+  securityMode: '',
+  contentBinding: '',
+  signerThumbprint: '',
+  verifiedAt: '',
+  revocationStatus: '',
+  trustSource: '',
+  timestampVerified: false,
+};
 
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -26,6 +35,8 @@ function canonicalJson(value) {
   return JSON.stringify(value);
 }
 function sha(value) { return crypto.createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex'); }
+const releaseClaimsEncoded = Buffer.from(canonicalJson(releaseClaims), 'utf8').toString('base64url');
+const releaseClaimsSha256 = sha(releaseClaims);
 function writeFrame(socket, message) {
   const body = Buffer.from(JSON.stringify(message));
   socket.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`), body]));
@@ -95,6 +106,7 @@ const server = net.createServer((incoming) => {
       expected = null;
       wireFrames.push(raw);
       if (frame.type === 'hello') {
+        assert.equal(frame.releaseClaimsSha256, releaseClaimsSha256);
         channelContext = {
           brokerSession: session,
           brokerPid: process.pid,
@@ -102,6 +114,7 @@ const server = net.createServer((incoming) => {
           app: 'provisioner',
           platform,
           version: manifest.version,
+          releaseClaimsSha256,
           brokerExchangePublicKey: exchangePublicKey,
           workerExchangePublicKey: frame.workerExchangePublicKey,
         };
@@ -117,6 +130,7 @@ const server = net.createServer((incoming) => {
           app: 'provisioner',
           platform,
           version: manifest.version,
+          releaseClaimsSha256,
           requestId: request.id,
           requestMethod: request.method,
           requestSha256,
@@ -126,6 +140,7 @@ const server = net.createServer((incoming) => {
         writeFrame(incoming, {
           protocol: 'arcane/1', type: 'broker-hello', token, brokerSession: session, brokerPid: process.pid, workerPid: frame.pid,
           app: 'provisioner', platform, version: manifest.version, workerNonce: frame.workerNonce,
+          releaseClaimsSha256,
           requestId: request.id, requestMethod: request.method, requestSha256,
           brokerExchangePublicKey: exchangePublicKey, workerExchangePublicKey: frame.workerExchangePublicKey,
           brokerSignature: crypto.sign(null, Buffer.from(canonicalJson(binding)), signingKeys.privateKey).toString('base64url'),
@@ -147,6 +162,7 @@ worker = spawn(process.execPath, [
   path.join(root, 'runtime/arcane-core.cjs'), '--privileged-worker', '--simulate', `--simulate-platform=${platform}`,
   '--app=provisioner', `--bundle-root=${root}`, `--ipc=${endpoint}`, `--token=${token}`,
   `--broker-pid=${process.pid}`, `--broker-session=${session}`, `--broker-public-key=${signingPublicKey}`,
+  `--release-claims=${releaseClaimsEncoded}`,
 ], { stdio: ['ignore', 'ignore', 'pipe'] });
 let stderr = '';
 worker.stderr.on('data', (chunk) => { stderr += chunk.toString(); });

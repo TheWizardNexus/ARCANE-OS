@@ -25,6 +25,15 @@ const request = {
   method: 'installation.ensure',
   parameters: {},
 };
+const releaseClaims = {
+  securityMode: '',
+  contentBinding: '',
+  signerThumbprint: '',
+  verifiedAt: '',
+  revocationStatus: '',
+  trustSource: '',
+  timestampVerified: false,
+};
 
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -34,6 +43,8 @@ function canonicalJson(value) {
 function requestHash(value) {
   return crypto.createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
 }
+const releaseClaimsEncoded = Buffer.from(canonicalJson(releaseClaims), 'utf8').toString('base64url');
+const releaseClaimsSha256 = requestHash(releaseClaims);
 function writeFrame(socket, message) {
   const body = Buffer.from(JSON.stringify(message), 'utf8');
   socket.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`, 'ascii'), body]));
@@ -96,6 +107,7 @@ const server = net.createServer((socket) => {
       buffer = buffer.subarray(expected);
       expected = null;
       if (frame.type !== 'hello') continue;
+      assert.equal(frame.releaseClaimsSha256, releaseClaimsSha256);
 
       const context = {
         brokerSession: session,
@@ -104,6 +116,7 @@ const server = net.createServer((socket) => {
         app: 'provisioner',
         platform,
         version: manifest.version,
+        releaseClaimsSha256,
         brokerExchangePublicKey: exchangePublicKey,
         workerExchangePublicKey: frame.workerExchangePublicKey,
       };
@@ -118,6 +131,7 @@ const server = net.createServer((socket) => {
         app: 'provisioner',
         platform,
         version: manifest.version,
+        releaseClaimsSha256,
         requestId: request.id,
         requestMethod: request.method,
         requestSha256: hash,
@@ -134,6 +148,7 @@ const server = net.createServer((socket) => {
         app: 'provisioner',
         platform,
         version: manifest.version,
+        releaseClaimsSha256,
         workerNonce: frame.workerNonce,
         requestId: request.id,
         requestMethod: request.method,
@@ -162,6 +177,7 @@ worker = spawn(process.execPath, [
   `--broker-pid=${process.pid}`,
   `--broker-session=${session}`,
   `--broker-public-key=${signingPublicKey}`,
+  `--release-claims=${releaseClaimsEncoded}`,
 ], { stdio: ['ignore', 'ignore', 'pipe'] });
 worker.stderr.setEncoding('utf8');
 worker.stderr.on('data', (chunk) => { stderr += chunk; });
