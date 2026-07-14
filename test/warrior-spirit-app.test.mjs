@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import test from 'node:test';
+import {warriorProfileRequirements} from '../apps/warrior-spirit/modules/PreCrisisFrame.js';
 import {programById,programPrompt,programs} from '../apps/warrior-spirit/modules/WarriorSpiritPrograms.js';
 import {validateAppRegistry} from '../machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/app-packager-lib.mjs';
 
@@ -35,7 +36,7 @@ test('Warrior Spirit routes are thin themed wrappers over the working PreCrisis 
     }
     const homeWrapper=await read('apps/warrior-spirit/index.html');
     assert.match(homeWrapper,/data-precrisis-page="home\.html"/);
-    assert.match(homeWrapper,/PreCrisisFrame\.js\?v=9/);
+    assert.match(homeWrapper,/PreCrisisFrame\.js\?v=10/);
 });
 
 test('the white-label keeps the established chat, journal, profile, and Mental Health Center components',async()=>{
@@ -60,7 +61,7 @@ test('the white-label keeps the established chat, journal, profile, and Mental H
     assert.match(data,/arcane\/components\/file-manager\.html/);
 });
 
-test('Profile exposes the OpenAI key while color and support-email controls stay out of the Warrior view',async()=>{
+test('Profile presents the Warrior Spirit AI Licence key while advanced setup stays out of the Warrior view',async()=>{
     const [adapter,skin,profile]=await Promise.all([
         read('apps/warrior-spirit/modules/PreCrisisFrame.js'),
         read('apps/warrior-spirit/precrisis-skin.css'),
@@ -72,16 +73,64 @@ test('Profile exposes the OpenAI key while color and support-email controls stay
     assert.match(adapter,/!document\.body\.classList\.contains\('warrior-spirit-white-label'\)/);
     assert.match(adapter,/section\.classList\.remove\('hidden'\)/);
     assert.match(adapter,/section\.hidden=false/);
-    assert.match(adapter,/heading\.textContent='OpenAI API Key'/);
+    assert.match(adapter,/heading\.textContent='Warrior Spirit AI Licence key'/);
+    assert.match(adapter,/input\.placeholder='Warrior Spirit AI Licence key'/);
     assert.match(adapter,/document\.querySelector\('section\.color-table'\)/);
     assert.match(adapter,/document\.getElementById\('contact_1'\)\?\.closest\('section'\)/);
     assert.match(adapter,/supportSection\.hidden=true/);
     assert.match(adapter,/reason:'support_email_hidden'/);
     assert.match(adapter,/Object\.defineProperty\(host,'notifySupportNetwork'/);
     assert.match(adapter,/\[data-modal-action="notifySupportNetwork"\]/);
+    for(const selector of ['section.model-preference','section.model-select','section.developer-preference']){
+        assert(adapter.includes(`'${selector}'`));
+    }
+    assert.match(adapter,/profileSection\.hidden=true/);
     assert.match(profile,/arcane\/css\/theme\.css/);
     assert.match(profile,/ThemeBootstrap\.js/);
     assert.doesNotMatch(profile,/type="color"|Color Palette/);
+});
+
+test('Companion and Reflection direct incomplete profiles through the shared modal',async()=>{
+    assert.deepEqual(
+        warriorProfileRequirements({username:'',license_key:'',preferredModels:['OPENAI']}),
+        {missingLicense:true,missingName:true,required:true}
+    );
+    assert.deepEqual(
+        warriorProfileRequirements({username:'Taylor',license_key:'',preferredModels:['OPENAI']}),
+        {missingLicense:true,missingName:false,required:true}
+    );
+    assert.deepEqual(
+        warriorProfileRequirements({username:'Taylor',license_key:'',preferredModels:['OLLAMA']}),
+        {missingLicense:false,missingName:false,required:false}
+    );
+    assert.deepEqual(
+        warriorProfileRequirements({username:'',license_key:'',preferredModels:['OLLAMA']}),
+        {missingLicense:false,missingName:true,required:true}
+    );
+    assert.deepEqual(
+        warriorProfileRequirements({username:'Taylor',license_key:'ws-key',preferredModels:['OPENAI']}),
+        {missingLicense:false,missingName:false,required:false}
+    );
+    assert.deepEqual(
+        warriorProfileRequirements({username:'Taylor'}),
+        {missingLicense:false,missingName:false,required:false}
+    );
+
+    const [adapter,chat,journal]=await Promise.all([
+        read('apps/warrior-spirit/modules/PreCrisisFrame.js'),
+        read('apps/precrisis/chat.html'),
+        read('apps/precrisis/journal.html')
+    ]);
+    assert.match(adapter,/new Set\(\['chat\.html','journal\.html'\]\)/);
+    assert.match(adapter,/window\.addEventListener\('user-entity-loaded',complete\)[\s\S]*complete\(\)/);
+    assert.match(adapter,/document\.getElementById\('modal'\)/);
+    assert.match(adapter,/modal\.populate\(profileRequirementContent\(document,requirements\),false\)/);
+    assert.match(adapter,/globalThis\.location\.assign\(new URL\('profile\.html',appRoot\)\.href\)/);
+    assert.match(adapter,/Add your Warrior Spirit AI Licence key to use Cloud AI with the Companion\./);
+    assert.match(adapter,/request to your chosen AI/);
+    assert.doesNotMatch(adapter,/use OpenAI with the Companion|request to OpenAI/);
+    assert.match(chat,/id="modal" class="modal" href="\.\/arcane\/components\/modal\.html/);
+    assert.match(journal,/id="modal" class="modal" href="\.\/arcane\/components\/modal\.html/);
 });
 
 test('Warrior branding changes navigation and presentation without replacing PreCrisis functionality',async()=>{
@@ -119,6 +168,18 @@ test('Warrior branding changes navigation and presentation without replacing Pre
     assert.match(home,/Powered by <strong>The Wizard Nexus's PreCrisis\.ai<\/strong>/);
 });
 
+test('Warrior home explains current and upcoming Companion AI choices',async()=>{
+    const home=await read('apps/warrior-spirit/home.html');
+    assert.match(home,/Cloud AI today/);
+    assert.match(home,/local PreCrisis AI and the dedicated Warrior Spirit AI/);
+    assert.match(home,/Warrior Spirit AI is a local AI designed to run right on your own computer/);
+    assert.match(home,/Companion remains the same familiar, private place to talk and reflect/);
+    assert.match(home,/currently being finalized and will be available soon/);
+    assert.match(home,/Until then, add your Warrior Spirit AI Licence key in Profile to use Cloud AI with the Companion\./);
+    assert.match(home,/Set up your Profile/);
+    assert.doesNotMatch(home,/OpenAI/i);
+});
+
 test('Warrior home navigation begins Home, Companion, then Mental Health Center',async()=>{
     const [adapter,wrapper,home]=await Promise.all([
         read('apps/warrior-spirit/modules/PreCrisisFrame.js'),
@@ -146,7 +207,7 @@ test('the existing PreCrisis DBOPFS records and profile remain the white-label d
     assert.match(journal,/dbopfs\.set\(\s*'journal_entries'/);
     assert.match(user,/dbopfs/);
     assert.match(home,/saved through PreCrisis DBOPFS storage on this device/i);
-    assert.match(home,/OpenAI key is stored locally with the on-device PreCrisis profile/i);
+    assert.match(home,/Warrior Spirit AI Licence key is stored locally with the on-device PreCrisis profile/i);
 });
 
 test('saved Companion conversations render as dated private transcripts instead of raw JSON',async()=>{

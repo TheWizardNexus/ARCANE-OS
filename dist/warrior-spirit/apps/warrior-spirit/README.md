@@ -9,7 +9,7 @@ Warrior Spirit Companion is the Warrior Spirit white-label of The Wizard Nexus's
 - `reflection.html` — the existing PreCrisis journal and post-save workflow.
 - `mental-health.html` — the existing Personal Mental Health Center charts and notes.
 - `memories.html` — the existing on-device PreCrisis data browser.
-- `profile.html` — the existing PreCrisis profile with the OpenAI key visible and its color-palette and support-email controls hidden from the Warrior view.
+- `profile.html` — the existing PreCrisis profile with the Warrior Spirit AI Licence key visible and its color-palette, model setup, developer, and support-email controls hidden from the Warrior view.
 
 The functional pages load the authoritative `apps/precrisis/` surfaces through the app-local `modules/PreCrisisFrame.js` adapter. `scripts/build_public_release.mjs` includes those sources in the public Warrior package so the white-label does not maintain a separate code fork.
 
@@ -17,9 +17,9 @@ The functional pages load the authoritative `apps/precrisis/` surfaces through t
 
 Arcane's system/light/dark appearance remains the base. `precrisis-skin.css` adds the Warrior Spirit-inspired navy, amber, and green treatment after the shared theme. Profile does not offer separate palette choices in this edition.
 
-## Local data and OpenAI
+## Local data and artificial intelligence
 
-The app uses the existing PreCrisis DBOPFS tables for profile, chats, journal entries, memories, notes, reports, and scores. Those records remain on this device unless the user exports them. AI requests send the necessary conversation or journal content to the configured provider. The OpenAI key is stored in the on-device PreCrisis profile, matching the existing application.
+The app uses the existing PreCrisis DBOPFS tables for profile, chats, journal entries, memories, notes, reports, and scores. Those records remain on this device unless the user exports them. AI requests send the necessary conversation or reflection content to the configured provider. The Warrior Spirit AI Licence key is stored in the on-device PreCrisis profile and supplies the inherited Cloud AI credential field.
 
 ## Crisis support
 
