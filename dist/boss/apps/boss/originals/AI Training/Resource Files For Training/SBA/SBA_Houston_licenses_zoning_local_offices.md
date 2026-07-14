@@ -1,0 +1,209 @@
+Source URL: https://www.sba.gov/
+
+# SBA URL Catalog for BOSS Routing
+
+Last verified for BOSS pack: 2026-06-24
+
+This catalog lists every source URL represented in the SBA BOSS resource pack. The first line of every individual file is also its own `Source URL:` line.
+
+## Files and source URLs
+- `00_INDEX_AND_PROCESS/000_SBA_BOSS_resource_index_and_routing_map.md` — SBA BOSS Resource Index and Routing Map — https://www.sba.gov/
+- `00_INDEX_AND_PROCESS/000_SBA_URL_catalog_for_BOSS_routing.md` — SBA URL Catalog for BOSS Routing — https://www.sba.gov/
+- `00_INDEX_AND_PROCESS/001_SBA_Houston_77084_quick_routing_summary.md` — SBA Houston 77084 Quick Routing Summary — https://www.sba.gov/district/houston
+- `00_INDEX_AND_PROCESS/002_SBA_business_guide_process_10_steps_start_business.md` — SBA Business Guide Process: 10 Steps to Start a Business — https://www.sba.gov/business-guide/10-steps-start-your-business
+- `00_INDEX_AND_PROCESS/003_SBA_resource_partner_process_SBDC_SCORE_WBC_VBOC.md` — SBA Resource Partner Process: SBDC, SCORE, WBC, and VBOC — https://www.sba.gov/local-assistance
+- `00_INDEX_AND_PROCESS/004_SBA_SCORE_business_mentoring_process.md` — SBA SCORE Business Mentoring Process — https://www.sba.gov/local-assistance/resource-partners/score-business-mentoring
+- `00_INDEX_AND_PROCESS/005_SBA_SBDC_advising_process.md` — SBA SBDC Advising Process — https://www.sba.gov/local-assistance/resource-partners/small-business-development-centers-sbdc
+- `00_INDEX_AND_PROCESS/006_SBA_WBC_training_counseling_process.md` — SBA Women’s Business Center Process — https://www.sba.gov/local-assistance/resource-partners/womens-business-centers
+- `00_INDEX_AND_PROCESS/007_SBA_VBOC_veteran_military_spouse_process.md` — SBA Veterans Business Outreach Center Process — https://www.sba.gov/local-assistance/resource-partners/veterans-business-outreach-centers-vboc
+- `00_INDEX_AND_PROCESS/008_SBA_funding_readiness_and_lender_match_process.md` — SBA Funding Readiness and Lender Match Process — https://www.sba.gov/funding-programs/loans/lender-match
+- `00_INDEX_AND_PROCESS/009_SBA_loan_program_selection_process_7a_504_microloan.md` — SBA Loan Program Selection Process: 7(a), 504, and Microloan — https://www.sba.gov/funding-programs/loans
+- `00_INDEX_AND_PROCESS/010_SBA_grants_expectation_and_fraud_guardrail_process.md` — SBA Grants Expectation and Fraud Guardrail Process — https://www.sba.gov/funding-programs/grants
+- `00_INDEX_AND_PROCESS/011_SBA_government_contracting_readiness_sequence_process.md` — SBA Government Contracting Readiness Sequence Process — https://www.sba.gov/federal-contracting
+- `00_INDEX_AND_PROCESS/012_SBA_contracting_certification_process.md` — SBA Contracting Certification Process Overview — https://www.sba.gov/federal-contracting/contracting-assistance-programs
+- `00_INDEX_AND_PROCESS/013_SBA_MySBA_Certifications_and_SAM_gov_workflow_note.md` — SBA MySBA Certifications and SAM.gov Workflow Note — https://certifications.sba.gov/
+- `00_INDEX_AND_PROCESS/014_SBA_disaster_recovery_process.md` — SBA Disaster Recovery Process — https://www.sba.gov/funding-programs/disaster-assistance
+- `00_INDEX_AND_PROCESS/015_SBA_export_trade_assistance_process.md` — SBA Export and Trade Assistance Process — https://www.sba.gov/local-assistance/export-trade-assistance
+- `00_INDEX_AND_PROCESS/016_SBA_Houston_business_requirements_process.md` — SBA Houston Business Requirements Process — https://www.sba.gov/district/houston/doing-business-houston-district
+- `00_INDEX_AND_PROCESS/017_SBA_Houston_lending_and_lenders_process.md` — SBA Houston Lending and Local Lenders Process — https://www.sba.gov/district/houston/doing-business-houston-district
+- `00_INDEX_AND_PROCESS/018_SBA_events_and_learning_platform_process.md` — SBA Events and Learning Platform Process — https://www.sba.gov/sba-learning-platform
+- `00_INDEX_AND_PROCESS/019_BOSS_SBA_stage_to_resource_crosswalk.md` — BOSS SBA Stage-to-Resource Crosswalk — https://www.sba.gov/business-guide
+- `00_INDEX_AND_PROCESS/020_BOSS_SBA_special_eligibility_routing_logic.md` — BOSS SBA Special Eligibility Routing Logic — https://www.sba.gov/business-guide/grow-your-business
+- `00_INDEX_AND_PROCESS/021_BOSS_SBA_intake_questions_for_resource_routing.md` — BOSS SBA Intake Questions for Resource Routing — https://www.sba.gov/local-assistance
+- `00_INDEX_AND_PROCESS/022_BOSS_SBA_client_handoff_summary_template.md` — BOSS SBA Client Handoff Summary Template — https://www.sba.gov/local-assistance
+- `00_INDEX_AND_PROCESS/023_BOSS_SBA_resource_partner_handoff_template.md` — BOSS SBA Resource Partner Handoff Template — https://www.sba.gov/local-assistance/resource-partners
+- `00_INDEX_AND_PROCESS/024_BOSS_SBA_government_contracting_early_stage_guardrail.md` — BOSS SBA Government Contracting Early-Stage Guardrail — https://www.sba.gov/federal-contracting
+- `00_INDEX_AND_PROCESS/025_BOSS_SBA_Houston_77084_intake_and_referral_script.md` — BOSS SBA Houston 77084 Intake and Referral Script — https://www.sba.gov/district/houston
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_business_name_registration_Texas_SOS_county_clerk.md` — SBA Houston: Business Name Registration and Texas Secretary of State Context — https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_lender_match_local_lenders.md` — SBA Houston: Lender Match and Local Lenders — https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_lending_activity_reports.md` — SBA Houston: Lending Activity Reports — https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_licenses_zoning_local_offices.md` — SBA Houston: Licenses, Permits, and Zoning Local Office Routing — https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_local_assistance_find_counselors_77084.md` — SBA Houston: Find Counselors for 77084 — https://www.sba.gov/local-assistance
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_office_location_contact_hours.md` — SBA Houston: Office Location, Contact, and Appointment Notes — https://www.sba.gov/district/houston
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_taxes_labor_OSHA_local_contacts.md` — SBA Houston: Taxes, Labor, and OSHA Local Contact Routing — https://www.sba.gov/district/houston/doing-business-houston-district
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_10_Steps_to_Start_Your_Business.md` — SBA 10 Steps to Start Your Business — https://www.sba.gov/business-guide/10-steps-start-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_AI_for_Small_Business.md` — SBA AI for Small Business — https://www.sba.gov/business-guide/manage-your-business/ai-small-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Apply_for_Licenses_and_Permits.md` — SBA Apply for Licenses and Permits — https://www.sba.gov/business-guide/launch-your-business/apply-licenses-permits
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Become_a_Federal_Contractor.md` — SBA Become a Federal Contractor — https://www.sba.gov/business-guide/grow-your-business/become-federal-contractor
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Break_Even_Point.md` — SBA Break-Even Point — https://www.sba.gov/business-guide/plan-your-business/calculate-your-startup-costs/break-even-point
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Business_Guide_Overview.md` — SBA Business Guide Overview — https://www.sba.gov/business-guide
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Buy_Assets_and_Equipment.md` — SBA Buy Assets and Equipment — https://www.sba.gov/business-guide/manage-your-business/buy-assets-equipment
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Buy_an_Existing_Business_or_Franchise.md` — SBA Buy an Existing Business or Franchise — https://www.sba.gov/business-guide/plan-your-business/buy-existing-business-or-franchise
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Calculate_Startup_Costs.md` — SBA Calculate Startup Costs — https://www.sba.gov/business-guide/plan-your-business/calculate-your-startup-costs
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Choose_Your_Business_Name.md` — SBA Choose Your Business Name — https://www.sba.gov/business-guide/launch-your-business/choose-your-business-name
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Choose_a_Business_Structure.md` — SBA Choose a Business Structure — https://www.sba.gov/business-guide/launch-your-business/choose-business-structure
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Close_or_Sell_Your_Business.md` — SBA Close or Sell Your Business — https://www.sba.gov/business-guide/manage-your-business/close-or-sell-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Establish_Business_Credit.md` — SBA Establish Business Credit — https://www.sba.gov/business-guide/plan-your-business/establish-business-credit
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Expand_to_New_Locations.md` — SBA Expand to New Locations — https://www.sba.gov/business-guide/grow-your-business/expand-new-locations
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Export_Products.md` — SBA Export Products — https://www.sba.gov/business-guide/grow-your-business/export-products
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Franchise_Directory.md` — SBA Franchise Directory — https://www.sba.gov/document/support-sba-franchise-directory
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Fund_Your_Business.md` — SBA Fund Your Business — https://www.sba.gov/business-guide/plan-your-business/fund-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Get_Business_Insurance.md` — SBA Get Business Insurance — https://www.sba.gov/business-guide/launch-your-business/get-business-insurance
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Get_Federal_and_State_Tax_ID_Numbers.md` — SBA Get Federal and State Tax ID Numbers — https://www.sba.gov/business-guide/launch-your-business/get-federal-state-tax-id-numbers
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Get_More_Funding.md` — SBA Get More Funding — https://www.sba.gov/business-guide/grow-your-business/get-more-funding
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Grow_Your_Business.md` — SBA Grow Your Business — https://www.sba.gov/business-guide/grow-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Hire_Employees_with_Disabilities.md` — SBA Hire Employees with Disabilities — https://www.sba.gov/business-guide/manage-your-business/hire-employees-disabilities
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Hire_and_Manage_Employees.md` — SBA Hire and Manage Employees — https://www.sba.gov/business-guide/manage-your-business/hire-manage-employees
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Launch_Your_Business.md` — SBA Launch Your Business — https://www.sba.gov/business-guide/launch-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Manage_Your_Business.md` — SBA Manage Your Business — https://www.sba.gov/business-guide/manage-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Manage_Your_Finances.md` — SBA Manage Your Finances — https://www.sba.gov/business-guide/manage-your-business/manage-your-finances
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Market_Research_and_Competitive_Analysis.md` — SBA Market Research and Competitive Analysis — https://www.sba.gov/business-guide/plan-your-business/market-research-competitive-analysis
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Marketing_and_Sales.md` — SBA Marketing and Sales — https://www.sba.gov/business-guide/manage-your-business/marketing-sales
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Merge_and_Acquire_Businesses.md` — SBA Merge and Acquire Businesses — https://www.sba.gov/business-guide/grow-your-business/merge-acquire-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Military_Spouse_Businesses.md` — SBA Military Spouse Businesses — https://www.sba.gov/business-guide/grow-your-business/military-spouse-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Minority_Owned_Businesses.md` — SBA Minority-Owned Businesses — https://www.sba.gov/business-guide/grow-your-business/minority-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Native_American_Owned_Businesses.md` — SBA Native American-Owned Businesses — https://www.sba.gov/business-guide/grow-your-business/native-american-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Open_a_Business_Bank_Account.md` — SBA Open a Business Bank Account — https://www.sba.gov/business-guide/launch-your-business/open-business-bank-account
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Pay_Taxes.md` — SBA Pay Taxes — https://www.sba.gov/business-guide/manage-your-business/pay-taxes
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Pick_Your_Business_Location.md` — SBA Pick Your Business Location — https://www.sba.gov/business-guide/launch-your-business/pick-your-business-location
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Plan_Your_Business.md` — SBA Plan Your Business — https://www.sba.gov/business-guide/plan-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Prepare_for_Emergencies.md` — SBA Prepare for Emergencies — https://www.sba.gov/business-guide/manage-your-business/prepare-emergencies
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Recover_from_Disasters.md` — SBA Recover from Disasters — https://www.sba.gov/business-guide/manage-your-business/recover-disasters
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Register_Your_Business.md` — SBA Register Your Business — https://www.sba.gov/business-guide/launch-your-business/register-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Rural_Businesses.md` — SBA Rural Businesses — https://www.sba.gov/business-guide/grow-your-business/rural-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Stay_Legally_Compliant.md` — SBA Stay Legally Compliant — https://www.sba.gov/business-guide/manage-your-business/stay-legally-compliant
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Strengthen_Your_Cybersecurity.md` — SBA Strengthen Your Cybersecurity — https://www.sba.gov/business-guide/manage-your-business/strengthen-your-cybersecurity
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Veteran_Owned_Businesses.md` — SBA Veteran-Owned Businesses — https://www.sba.gov/business-guide/grow-your-business/veteran-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Women_Owned_Businesses.md` — SBA Women-Owned Businesses — https://www.sba.gov/business-guide/grow-your-business/women-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Write_Your_Business_Plan.md` — SBA Write Your Business Plan — https://www.sba.gov/business-guide/plan-your-business/write-your-business-plan
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_504_Loans.md` — SBA 504 Loans — https://www.sba.gov/funding-programs/loans/504-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_7_a_Loans.md` — SBA 7(a) Loans — https://www.sba.gov/funding-programs/loans/7a-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_COVID_19_Relief_Options.md` — SBA COVID-19 Relief Options — https://www.sba.gov/funding-programs/loans/covid-19-relief-options
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Disaster_Assistance.md` — SBA Disaster Assistance — https://www.sba.gov/funding-programs/disaster-assistance
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Economic_Injury_Disaster_Loans.md` — SBA Economic Injury Disaster Loans — https://www.sba.gov/funding-programs/disaster-assistance/economic-injury-disaster-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Funding_Programs_Overview.md` — SBA Funding Programs Overview — https://www.sba.gov/funding-programs
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Grants_Overview.md` — SBA Grants Overview — https://www.sba.gov/funding-programs/grants
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Grants_for_Community_Organizations.md` — SBA Grants for Community Organizations — https://www.sba.gov/funding-programs/grants/grants-community-organizations
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Investment_Capital.md` — SBA Investment Capital — https://www.sba.gov/funding-programs/investment-capital
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Lender_Match.md` — SBA Lender Match — https://www.sba.gov/funding-programs/loans/lender-match
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Loans_Overview.md` — SBA Loans Overview — https://www.sba.gov/funding-programs/loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Make_a_Payment.md` — SBA Make a Payment — https://www.sba.gov/funding-programs/loans/make-payment-sba
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Manufacturing_Grants.md` — SBA Manufacturing Grants — https://www.sba.gov/funding-programs/grants/manufacturing-grants
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Microloans.md` — SBA Microloans — https://www.sba.gov/funding-programs/loans/microloans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Military_Reservist_Loan.md` — SBA Military Reservist Loan — https://www.sba.gov/funding-programs/disaster-assistance/military-reservist-loan
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Mitigation_Assistance.md` — SBA Mitigation Assistance — https://www.sba.gov/funding-programs/disaster-assistance/mitigation-assistance
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Options_to_Bypass_Permitting_Delays.md` — SBA Options to Bypass Permitting Delays — https://www.sba.gov/funding-programs/disaster-assistance/options-bypass-permitting-delays
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Physical_Damage_Loans.md` — SBA Physical Damage Loans — https://www.sba.gov/funding-programs/disaster-assistance/physical-damage-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_SBIC_Directory.md` — SBA SBIC Directory — https://www.sba.gov/funding-programs/investment-capital/sbic-directory
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_State_Trade_Expansion_Program_STEP.md` — SBA State Trade Expansion Program STEP — https://www.sba.gov/funding-programs/grants/state-trade-expansion-program-step
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Surety_Bond_Agency_Directory.md` — SBA Surety Bond Agency Directory — https://www.sba.gov/funding-programs/surety-bonds/surety-bond-agency-directory
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Surety_Bonds.md` — SBA Surety Bonds — https://www.sba.gov/funding-programs/surety-bonds
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_8a_Business_Development_Program.md` — SBA 8a Business Development Program — https://www.sba.gov/federal-contracting/contracting-assistance-programs/8a-business-development-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Assess_Your_Business_for_Contracting.md` — SBA Assess Your Business for Contracting — https://www.sba.gov/federal-contracting/contracting-guide/assess-your-business
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Basic_Requirements_for_Contracting.md` — SBA Basic Requirements for Contracting — https://www.sba.gov/federal-contracting/contracting-guide/basic-requirements
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Commercial_Market_Representatives.md` — SBA Commercial Market Representatives — https://www.sba.gov/federal-contracting/counseling-help/commercial-market-representatives
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Area_Directors.md` — SBA Contracting Area Directors — https://www.sba.gov/federal-contracting/counseling-help/contracting-area-directors
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Assistance_Programs.md` — SBA Contracting Assistance Programs — https://www.sba.gov/federal-contracting/contracting-assistance-programs
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Counseling_and_Help.md` — SBA Contracting Counseling and Help — https://www.sba.gov/federal-contracting/counseling-help
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Data.md` — SBA Contracting Data — https://www.sba.gov/federal-contracting/contracting-data
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Guide.md` — SBA Contracting Guide — https://www.sba.gov/federal-contracting/contracting-guide
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Federal_Contracting_Overview.md` — SBA Federal Contracting Overview — https://www.sba.gov/federal-contracting
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Governing_Rules_and_Responsibilities.md` — SBA Governing Rules and Responsibilities — https://www.sba.gov/federal-contracting/contracting-guide/governing-rules-responsibilities
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_HUBZone_Program.md` — SBA HUBZone Program — https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_How_to_Win_Contracts.md` — SBA How to Win Contracts — https://www.sba.gov/federal-contracting/contracting-guide/how-win-contracts
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Joint_Ventures.md` — SBA Joint Ventures — https://www.sba.gov/federal-contracting/contracting-assistance-programs/joint-ventures
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Mentor_Protege_Program.md` — SBA Mentor Protege Program — https://www.sba.gov/federal-contracting/contracting-assistance-programs/sba-mentor-protege-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Natural_Resource_Sales_Assistance.md` — SBA Natural Resource Sales Assistance — https://www.sba.gov/federal-contracting/contracting-assistance-programs/natural-resource-sales-assistance-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Prime_and_Subcontracting.md` — SBA Prime and Subcontracting — https://www.sba.gov/federal-contracting/contracting-guide/prime-subcontracting
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Procurement_Center_Representative_Directory.md` — SBA Procurement Center Representative Directory — https://www.sba.gov/federal-contracting/counseling-help/procurement-center-representative-directory
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Procurement_Data_Hub.md` — SBA Procurement Data Hub — https://datahub.certify.sba.gov/
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_SUBNet_Subcontracting_Network.md` — SBA SUBNet Subcontracting Network — https://subnet.sba.gov/
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Size_Standards.md` — SBA Size Standards — https://www.sba.gov/federal-contracting/contracting-guide/size-standards
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Small_Business_Procurement_Scorecard.md` — SBA Small Business Procurement Scorecard — https://www.sba.gov/federal-contracting/contracting-data/small-business-procurement-scorecard
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Types_of_Contracts.md` — SBA Types of Contracts — https://www.sba.gov/federal-contracting/contracting-guide/types-contracts
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Veteran_Contracting_Assistance_Programs.md` — SBA Veteran Contracting Assistance Programs — https://www.sba.gov/federal-contracting/contracting-assistance-programs/veteran-contracting-assistance-programs
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_WOSB_Federal_Contract_Program.md` — SBA WOSB Federal Contract Program — https://www.sba.gov/federal-contracting/contracting-assistance-programs/women-owned-small-business-federal-contract-program
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Boots_to_Business.md` — SBA Boots to Business — https://www.sba.gov/sba-learning-platform/boots-business
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Empower_to_Grow.md` — SBA Empower to Grow — https://www.sba.gov/sba-learning-platform/empower-grow
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Learning_Platform_Overview.md` — SBA Learning Platform Overview — https://www.sba.gov/sba-learning-platform
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Learning_Portal.md` — SBA Learning Portal — https://learning.sba.gov/
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Upcoming_Events.md` — SBA Upcoming Events — https://www.sba.gov/events
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Doing_Business_in_Houston_District.md` — SBA Doing Business in Houston District — https://www.sba.gov/district/houston/doing-business-houston-district
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Export_Finance_Managers.md` — SBA Export Finance Managers — https://www.sba.gov/local-assistance/export-trade-assistance/finance-managers
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Export_and_Trade_Assistance.md` — SBA Export and Trade Assistance — https://www.sba.gov/local-assistance/export-trade-assistance
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Federal_Contracting_Assistance.md` — SBA Federal Contracting Assistance — https://www.sba.gov/local-assistance/federal-contracting-assistance
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Houston_District.md` — SBA Houston District — https://www.sba.gov/district/houston
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Local_Assistance_Overview.md` — SBA Local Assistance Overview — https://www.sba.gov/local-assistance
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Regional_Innovation_Clusters.md` — SBA Regional Innovation Clusters — https://www.sba.gov/local-assistance/regional-innovation-clusters
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Resource_Partners.md` — SBA Resource Partners — https://www.sba.gov/local-assistance/resource-partners
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_SCORE_Business_Mentoring.md` — SBA SCORE Business Mentoring — https://www.sba.gov/local-assistance/resource-partners/score-business-mentoring
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Small_Business_Development_Centers_SBDC.md` — SBA Small Business Development Centers SBDC — https://www.sba.gov/local-assistance/resource-partners/small-business-development-centers-sbdc
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_U_S_Export_Assistance_Centers.md` — SBA U.S. Export Assistance Centers — https://www.sba.gov/local-assistance/export-trade-assistance/us-export-assistance-centers
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Veterans_Business_Development_Officers.md` — SBA Veterans Business Development Officers — https://www.sba.gov/local-assistance/veterans-business-development-officers
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Veterans_Business_Outreach_Centers_VBOC.md` — SBA Veterans Business Outreach Centers VBOC — https://www.sba.gov/local-assistance/resource-partners/veterans-business-outreach-centers-vboc
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Womens_Business_Centers.md` — SBA Womens Business Centers — https://www.sba.gov/local-assistance/resource-partners/womens-business-centers
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Asian_Chamber_of_Commerce.md` — Asian Chamber of Commerce — https://asianchamber-hou.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_BakerRipley.md` — BakerRipley — https://www.bakerripley.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Brazoria_Hispanic_Chamber_of_Commerce.md` — Brazoria Hispanic Chamber of Commerce — https://bchispanicchamber.net/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Camara_De_Empresarios_Latinos_De_Houston.md` — Camara De Empresarios Latinos De Houston — https://empresarioslatinos.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_City_of_Houston_Office_of_Business_Opportunity.md` — City of Houston Office of Business Opportunity — https://www.houstontx.gov/obo/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Combined_Arms.md` — Combined Arms — https://www.combinedarms.us/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Fort_Bend_County_Chamber_of_Commerce.md` — Fort Bend County Chamber of Commerce — https://www.fortbendchamber.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Fort_Bend_County_Economic_Opportunity_and_Development.md` — Fort Bend County Economic Opportunity and Development — https://www.fortbendcountytx.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Greater_Houston_LGBT_Chamber_of_Commerce.md` — Greater Houston LGBT Chamber of Commerce — https://www.houstonlgbtchamber.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Greater_Houston_Partnership.md` — Greater Houston Partnership — https://www.houston.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Harris_County_Department_of_Economic_Equity_and_Opportunity.md` — Harris County Department of Economic Equity and Opportunity — https://deeo.harriscountytx.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Harris_County_Department_of_Education.md` — Harris County Department of Education — https://www.hcde-texas.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Area_Urban_League.md` — Houston Area Urban League — https://www.haul.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Community_College.md` — Houston Community College — https://www.hccs.edu/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Hispanic_Chamber.md` — Houston Hispanic Chamber — https://www.houstonhispanicchamber.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Veterans_Chamber_of_Commerce.md` — Houston Veterans Chamber of Commerce — https://www.houveteranschamber.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Impact_Hub_Houston.md` — Impact Hub Houston — https://houston.impacthub.net/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Indo_American_Chamber_of_Commerce_of_Greater_Houston.md` — Indo-American Chamber of Commerce of Greater Houston — https://www.iaccgh.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Ion_District.md` — Ion District — https://iondistrict.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Jewish_Federation_of_Greater_Houston.md` — Jewish Federation of Greater Houston — https://www.houstonjewish.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_MBDA_Business_Center_Houston.md` — MBDA Business Center Houston — https://www.mbda.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Port_Houston.md` — Port Houston — https://porthouston.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_Chambers_of_Commerce.md` — Texas Chambers of Commerce — https://www.lone-star.net/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_Comptroller_Office.md` — Texas Comptroller Office — https://comptroller.texas.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_State_Law_Library.md` — Texas State Law Library — https://www.sll.texas.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_Workforce_Commission.md` — Texas Workforce Commission — https://www.twc.texas.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_The_Woodlands_Chamber_of_Commerce.md` — The Woodlands Chamber of Commerce — https://www.woodlandschamber.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Vision_Galveston.md` — Vision Galveston — https://www.visiongalveston.com/
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Child_Care_Business_Development_Support.md` — SBA Child Care Business Development Support — https://www.sba.gov/priorities/small-business-resource-hubs/child-care-business-development-support
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Community_Builders_Network.md` — SBA Community Builders Network — https://www.sba.gov/priorities/sba-initiatives/community-builders-network
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Cutting_Red_Tape_for_Small_Manufacturers.md` — SBA Cutting Red Tape for Small Manufacturers — https://www.sba.gov/priorities/american-manufacturers/cutting-red-tape-small-manufacturers
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Increasing_Access_to_Capital_for_Manufacturers.md` — SBA Increasing Access to Capital for Manufacturers — https://www.sba.gov/priorities/american-manufacturers/increasing-access-capital
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Interagency_Capital_Resources_for_Small_Businesses.md` — SBA Interagency Capital Resources for Small Businesses — https://www.sba.gov/priorities/small-business-resource-hubs/interagency-capital-resources-small-businesses
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Make_Onshoring_Great_Again_Portal.md` — SBA Make Onshoring Great Again Portal — https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Manufacturing_Success_Stories.md` — SBA Manufacturing Success Stories — https://www.sba.gov/priorities/american-manufacturers/manufacturing-success-stories
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Priorities_Overview.md` — SBA Priorities Overview — https://www.sba.gov/priorities
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Putting_American_Manufacturers_First.md` — SBA Putting American Manufacturers First — https://www.sba.gov/priorities/american-manufacturers
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Small_Business_Resource_Hubs.md` — SBA Small Business Resource Hubs — https://www.sba.gov/priorities/small-business-resource-hubs
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Small_Businesses_Against_Trafficking_in_Persons_SBATiP.md` — SBA Small Businesses Against Trafficking in Persons SBATiP — https://www.sba.gov/priorities/sba-initiatives/small-businesses-against-trafficking-persons-sbatip
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Taking_Manufacturing_Business_Global.md` — SBA Taking Manufacturing Business Global — https://www.sba.gov/priorities/american-manufacturers/taking-manufacturing-business-global
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Contact_SBA.md` — SBA Contact SBA — https://www.sba.gov/about-sba/contact-sba
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_District_Offices.md` — SBA District Offices — https://www.sba.gov/about-sba/sba-locations/district-offices
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Forms_and_Documents.md` — SBA Forms and Documents — https://www.sba.gov/document
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Fraud_and_Identity_Theft.md` — SBA Fraud and Identity Theft — https://www.sba.gov/about-sba/oversight-advocacy/office-inspector-general/office-inspector-general-hotline
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Locations.md` — SBA Locations — https://www.sba.gov/about-sba/sba-locations
+
+## Houston / ZIP 77084 anchor URLs
+- SBA Houston District: https://www.sba.gov/district/houston
+- Doing Business in the Houston District: https://www.sba.gov/district/houston/doing-business-houston-district
+- SBA Local Assistance ZIP search: https://www.sba.gov/local-assistance
+- SBA Resource Partners: https://www.sba.gov/local-assistance/resource-partners
+- SCORE Business Mentoring via SBA: https://www.sba.gov/local-assistance/resource-partners/score-business-mentoring
+- Small Business Development Centers via SBA: https://www.sba.gov/local-assistance/resource-partners/small-business-development-centers-sbdc
+- Women’s Business Centers via SBA: https://www.sba.gov/local-assistance/resource-partners/womens-business-centers
+- Veterans Business Outreach Centers via SBA: https://www.sba.gov/local-assistance/resource-partners/veterans-business-outreach-centers-vboc

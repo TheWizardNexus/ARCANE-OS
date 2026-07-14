@@ -1,0 +1,43 @@
+Source URL: https://www.sba.gov/about-sba/oversight-advocacy/office-inspector-general/office-inspector-general-hotline
+
+# SBA Fraud and Identity Theft
+
+Last verified for BOSS pack: 2026-06-24
+
+BOSS Library ingestion note: This file is designed for the BOSS AI Librarian. It summarizes the SBA resource in lifecycle-routing language so the model can quickly decide when to surface the resource, when to refer to a human advisor, and what link to provide to the user.
+
+BOSS operating alignment:
+- Discover -> Diagnose -> Classify -> Route -> Recommend Next Action.
+- SBA is strongest for official education, startup guides, funding program education, government program information, certifications, federal contracting, disaster recovery, and specialized entrepreneur-group resources.
+- In Greater Houston / ZIP 77084, pair SBA national resources with the SBA Houston District Office, local SBA Resource Partners, SCORE Houston, and the local SBDC ecosystem when human guidance or local navigation is needed.
+- Do not treat this file as legal, tax, lending, certification, procurement, or compliance advice. Route regulated decisions to the official agency page and/or a qualified professional.
+
+## Resource summary
+SBA-related fraud and identity theft reporting resource.
+
+## BOSS tags
+- SBA official utility
+
+## Lifecycle stages this resource can support
+- Recovery, Risk
+
+## Route the user here when
+- The user reports SBA loan fraud, identity theft, scams, or suspected misuse.
+
+## Useful BOSS intake questions
+- What exact official office, form, document, or contact path does the user need?
+- Is the user in Houston/77084 or another region?
+
+## Recommended client-facing next action
+Open the source URL, review the official SBA guidance, and then use the BOSS routing summary to decide whether the client needs education, local counseling, funding readiness support, or another referral.
+
+## Related links
+- SBA Houston District: https://www.sba.gov/district/houston
+- SBA Local Assistance: https://www.sba.gov/local-assistance
+
+## BOSS response guardrails
+Guardrails for BOSS responses:
+- Do not guarantee loan approval, grant availability, certification eligibility, procurement success, or legal/tax outcomes.
+- Do not complete government forms for the user.
+- Do not advise the user to spend money on formation, branding, equipment, or certifications before the business concept and market have been clarified when the user is still in Ideation or early Validation.
+- If the user is in Greater Houston or ZIP 77084, consider local SBA Houston District, SBDC, SCORE, WBC, VBOC, APEX, and chamber/community resources as appropriate.
