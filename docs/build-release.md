@@ -86,6 +86,7 @@ When adding a new `machine_bundles/<version>` directory:
 - If npm expands an intentionally tracked vendored dependency, remove only files that Git reports as untracked and only within that dependency's validated directory boundary.
 - Use an ignored repository-local npm cache for unified setup so corrupted or permission-restricted user-global cache state cannot affect the build.
 - Keep a focused source-contract test for step order, package identifiers, exit-code propagation, and the prohibition on production signing material.
+- Follow `docs/developer-reference-sop.md`: every new or changed system tool, developer launcher, root npm command, or machine-bundle npm command must update `docs/developer-commands.md` in the same change.
 
 ## Required handoff
 

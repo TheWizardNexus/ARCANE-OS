@@ -17,6 +17,7 @@ Use this checklist for every applicable request. The later sections explain each
 - [ ] Implement the shared core first, then the app adapter and orchestration.
 - [ ] Add focused shared tests, app tests, and a synthetic example as applicable.
 - [ ] Update package allowlists, cache references, versions, and machine capabilities as applicable.
+- [ ] Update `docs/arcane-api.md` for every added or changed application-facing `Arcane` native bridge method, following `docs/developer-reference-sop.md`.
 - [ ] Run relevant verification and include the completed capability decision in the handoff.
 
 If any answer is unclear, stop designing files and clarify the boundary. Do not use uncertainty as permission to default to an app-local implementation.

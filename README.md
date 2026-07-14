@@ -100,8 +100,10 @@ Knowledge without ethics is dangerous. Ethics without capability is ineffective.
 
 This repository contains two related implementation surfaces:
 
-- The repository-level `arcane/`, `apps/`, and `example/` trees provide the shared application interface runtime, reusable browser components, application-specific composition, development pages, and browser-context application packaging.
-- [`machine_bundles/arcane-os-machine-bundle-v0.8.4/`](./machine_bundles/arcane-os-machine-bundle-v0.8.4/) contains the native-capable machine runtime and its authoritative release documentation for that version.
+| Implementation surface | Description |
+|---|---|
+| [`arcane/`](./arcane/), [`apps/`](./apps/), and [`example/`](./example/) | Shared application interface runtime, reusable components, application-specific composition, development pages, and browser-context application packaging. |
+| [Machine bundle v0.8.4](./machine_bundles/arcane-os-machine-bundle-v0.8.4/) | Native-capable machine runtime and its authoritative version-specific release documentation. |
 
 In the current machine bundle:
 
@@ -120,45 +122,58 @@ The longer-range product direction prefers JavaScript and Node.js for orchestrat
 
 ### Mandatory engineering procedures
 
-- [`AGENTS.md`](./AGENTS.md) — repository-wide instructions for human and AI contributors.
-- [`docs/app-building.md`](./docs/app-building.md) — mandatory reuse-first capability design, placement, theming, contracts, testing, examples, and completion rules.
-- [`docs/debugging.md`](./docs/debugging.md) — mandatory no-assumptions debugging and clean-state verification process.
-- [`docs/app-packaging.md`](./docs/app-packaging.md) — browser-context application package manifests, versioning, isolation, and verification.
+| Resource | Description |
+|---|---|
+| [`AGENTS.md`](./AGENTS.md) | Repository-wide instructions for human and AI contributors. |
+| [Application-building SOP](./docs/app-building.md) | Mandatory reuse-first capability design, placement, theming, contracts, testing, examples, and completion rules. |
+| [Debugging SOP](./docs/debugging.md) | Mandatory no-assumptions debugging and clean-state verification process. |
+| [Build and release SOP](./docs/build-release.md) | Public dependency, canonical-file, signing-mode, build, packaging, and clean-state release requirements. |
+| [Developer reference maintenance SOP](./docs/developer-reference-sop.md) | Requires every system command and application-facing Arcane API change to update its authoritative reference table. |
+| [Code style standard](./docs/code-style.md) | Repository source formatting, naming, structure, and review rules. |
+| [Application packaging contract](./docs/app-packaging.md) | Browser-context application package manifests, versioning, isolation, and verification. |
 
 ### Product and architecture direction
 
-- [`Ideation/README.md`](./Ideation/README.md) — entry point to the complete ideation package.
-- [`Ideation/docs/00_Vision_and_Product_Definition.md`](./Ideation/docs/00_Vision_and_Product_Definition.md) — product purpose, proposition, philosophy, and system-platform relationship.
-- [`Ideation/docs/03_Reference_Architecture.md`](./Ideation/docs/03_Reference_Architecture.md) — experience, intent, capability, memory, policy, runtime, and platform layers.
-- [`Ideation/docs/04_Node_Single_Executable_Strategy.md`](./Ideation/docs/04_Node_Single_Executable_Strategy.md) — Node.js orchestration direction, renderer boundary, process model, and untrusted-code rules.
-- [`Ideation/docs/05_Security_Identity_and_Memory.md`](./Ideation/docs/05_Security_Identity_and_Memory.md) — operating-system identity, roles, data placement, scoped memory, privacy, and controlled learning.
-- [`Ideation/docs/06_Provisioning_Installer_and_Baselines.md`](./Ideation/docs/06_Provisioning_Installer_and_Baselines.md) — transactional provisioning, shell assignment, updates, rollback, and regulated baselines.
-- [`Ideation/docs/07_HMI_and_Capability_Ideation.md`](./Ideation/docs/07_HMI_and_Capability_Ideation.md) — human-machine interaction goals, adaptive interfaces, devices, orchestration, and deployment domains.
-- [`Ideation/docs/08_TWiN_Compass.md`](./Ideation/docs/08_TWiN_Compass.md) — ethical and policy foundation.
-- [`Ideation/docs/09_Codex_Project_Instructions.md`](./Ideation/docs/09_Codex_Project_Instructions.md) — condensed architectural rules and preferred boundaries for AI contributors.
-- [`Ideation/docs/10_Decisions_and_Open_Questions.md`](./Ideation/docs/10_Decisions_and_Open_Questions.md) — accepted direction and unresolved design choices.
+| Resource | Description |
+|---|---|
+| [Ideation overview](./Ideation/README.md) | Entry point to the complete product and architecture ideation package. |
+| [Vision and product definition](./Ideation/docs/00_Vision_and_Product_Definition.md) | Product purpose, proposition, philosophy, and system-platform relationship. |
+| [Reference architecture](./Ideation/docs/03_Reference_Architecture.md) | Experience, intent, capability, memory, policy, runtime, and platform layers. |
+| [Node single-executable strategy](./Ideation/docs/04_Node_Single_Executable_Strategy.md) | Node.js orchestration direction, renderer boundary, process model, and untrusted-code rules. |
+| [Security, identity, and memory](./Ideation/docs/05_Security_Identity_and_Memory.md) | Operating-system identity, roles, data placement, scoped memory, privacy, and controlled learning. |
+| [Provisioning, installer, and baselines](./Ideation/docs/06_Provisioning_Installer_and_Baselines.md) | Transactional provisioning, shell assignment, updates, rollback, and regulated baselines. |
+| [HMI and capability ideation](./Ideation/docs/07_HMI_and_Capability_Ideation.md) | Human-machine interaction goals, adaptive interfaces, devices, orchestration, and deployment domains. |
+| [TWiN Compass](./Ideation/docs/08_TWiN_Compass.md) | Ethical and policy foundation. |
+| [Codex project instructions](./Ideation/docs/09_Codex_Project_Instructions.md) | Condensed architectural rules and preferred boundaries for AI contributors. |
+| [Decisions and open questions](./Ideation/docs/10_Decisions_and_Open_Questions.md) | Accepted direction and unresolved design choices. |
 
 ### Current implementation references
 
-- [`machine_bundles/arcane-os-machine-bundle-v0.8.4/README.md`](./machine_bundles/arcane-os-machine-bundle-v0.8.4/README.md) — current native architecture, API, privilege model, provisioning behavior, build routes, and diagnostics.
-- [`machine_bundles/arcane-os-machine-bundle-v0.8.4/VALIDATION.md`](./machine_bundles/arcane-os-machine-bundle-v0.8.4/VALIDATION.md) — automated and target-platform validation coverage.
-- [`docs/ollama-module.md`](./docs/ollama-module.md) — shared local-model integration contract.
-- [`docs/communications-design.md`](./docs/communications-design.md) — communications capability boundary and credential policy.
-- [`docs/utility-apps-design.md`](./docs/utility-apps-design.md) — reusable browser, media, editor, calculator, capture, weather, and API-model boundaries.
-- [`docs/readiness.md`](./docs/readiness.md) — dual event and persistent `.ready` contract for load-order-safe system processes, modules, entities, services, and components.
-- Application-level README and architecture files under [`apps/`](./apps/) — application-specific purpose, composition, and constraints.
+| Resource | Description |
+|---|---|
+| [Developer command reference](./docs/developer-commands.md) | Authoritative setup, test, packaging, development-signing, production-signing, build, launcher, and verification command tables. |
+| [Arcane API reference](./docs/arcane-api.md) | Complete application-facing native API for WebView2, WebKitGTK, and the development bridge, including parameters and returns. |
+| [Machine-bundle README](./machine_bundles/arcane-os-machine-bundle-v0.8.4/README.md) | Current native architecture, privilege model, provisioning behavior, build routes, and diagnostics. |
+| [Machine-bundle validation](./machine_bundles/arcane-os-machine-bundle-v0.8.4/VALIDATION.md) | Automated and target-platform validation coverage. |
+| [Ollama module contract](./docs/ollama-module.md) | Shared local-model integration contract. |
+| [Communications design](./docs/communications-design.md) | Communications capability boundary and credential policy. |
+| [Utility application design](./docs/utility-apps-design.md) | Reusable browser, media, editor, calculator, capture, weather, and API-model boundaries. |
+| [Readiness contract](./docs/readiness.md) | Dual event and persistent `.ready` contract for load-order-safe system processes, modules, entities, services, and components. |
+| [Application documentation](./apps/) | Application-level README and architecture files describing purpose, composition, and constraints. |
 
 ## Repository layout
 
-- `arcane/` — reusable interface modules, entities, components, styles, and assets.
-- `apps/` — ARCANE applications and their application-specific business logic, configuration, prompts, and assets.
-- `example/` — focused examples and usage notes for shared ARCANE capabilities.
-- `test/` — repository-level Node tests for shared and browser-independent behavior.
-- `tools/` — packaging, model, hook, and repository automation.
-- `docs/` — current mandatory procedures and implementation design records.
-- `machine_bundles/` — native-capable machine runtime, provisioning, packaging, and platform adapters.
-- `Ideation/` — product vision, architectural direction, narrative, visual exploration, and open questions; it is not production runtime code.
-- `dist/` — generated application or release packages; verify and rebuild these through the documented commands rather than editing them by hand.
+| Directory | Purpose |
+|---|---|
+| [`arcane/`](./arcane/) | Reusable interface modules, entities, components, styles, and assets. |
+| [`apps/`](./apps/) | ARCANE applications and their application-specific business logic, configuration, prompts, and assets. |
+| [`example/`](./example/) | Focused examples and usage notes for shared ARCANE capabilities. |
+| [`test/`](./test/) | Repository-level Node tests for shared and platform-independent behavior. |
+| [`tools/`](./tools/) | Packaging, model, hook, setup, and repository automation. |
+| [`docs/`](./docs/) | Current mandatory procedures, command/API references, and implementation design records. |
+| [`machine_bundles/`](./machine_bundles/) | Native-capable machine runtime, provisioning, packaging, and platform adapters. |
+| [`Ideation/`](./Ideation/) | Product vision, architectural direction, narrative, visual exploration, and open questions; not production runtime code. |
+| `dist/` | Generated application or release packages; rebuild and verify these through documented commands rather than editing them by hand. |
 
 Reusable behavior belongs under the appropriate `arcane/` layer. Applications should supply domain data, labels, routes, persistence, and actions through defined contracts and adapters. Do not create an application-local copy of behavior another ARCANE application could use.
 
@@ -180,24 +195,26 @@ python -m http.server 8000
 
 Example entry points:
 
-- PreCrisis: <http://localhost:8000/apps/precrisis/index.html>
-- Warrior Spirit Companion: <http://localhost:8000/apps/warrior-spirit/index.html>
-- BOSS: <http://localhost:8000/apps/boss/chat.html>
-- Redress: <http://localhost:8000/apps/redress/index.html>
-- Arcane Terminal: <http://localhost:8000/apps/terminal/index.html>
-- Arcane Developer: <http://localhost:8000/apps/developer/index.html>
-- Files: <http://localhost:8000/apps/files/index.html>
-- Settings: <http://localhost:8000/apps/settings/index.html>
-- Arcane Mail: <http://localhost:8000/apps/mail/index.html>
-- Arcane Messages: <http://localhost:8000/apps/messages/index.html>
-- Arcane Browser: <http://localhost:8000/apps/browser/index.html>
-- Arcane YouTube: <http://localhost:8000/apps/youtube/index.html>
-- Arcane YouTube Music: <http://localhost:8000/apps/youtube-music/index.html>
-- Arcane Markdown: <http://localhost:8000/apps/markdown/index.html>
-- Arcane Calculator: <http://localhost:8000/apps/calculator/index.html>
-- Arcane Capture: <http://localhost:8000/apps/capture/index.html>
-- Arcane Weather: <http://localhost:8000/apps/weather/index.html>
-- Utility component suite: <http://localhost:8000/example/component_utility_suite/index.html>
+| Application / resource | Local development URL | Description |
+|---|---|---|
+| PreCrisis | <http://localhost:8000/apps/precrisis/index.html> | Mental-health support application and shared behavioral-health foundation. |
+| Warrior Spirit Companion | <http://localhost:8000/apps/warrior-spirit/index.html> | Warrior Spirit white-label companion experience. |
+| BOSS | <http://localhost:8000/apps/boss/chat.html> | BOSS library and librarian chat interface. |
+| Redress | <http://localhost:8000/apps/redress/index.html> | Legal workbench and evidence application. |
+| Arcane Terminal | <http://localhost:8000/apps/terminal/index.html> | Native terminal-session interface and registered system tools. |
+| Arcane Developer | <http://localhost:8000/apps/developer/index.html> | Development workspace inspection, setup, and assistance. |
+| Files | <http://localhost:8000/apps/files/index.html> | Shared file-management interface. |
+| Settings | <http://localhost:8000/apps/settings/index.html> | Shared preference and appearance settings. |
+| Arcane Mail | <http://localhost:8000/apps/mail/index.html> | Provider-neutral mail interface. |
+| Arcane Messages | <http://localhost:8000/apps/messages/index.html> | Provider-neutral messaging interface. |
+| Arcane Browser | <http://localhost:8000/apps/browser/index.html> | Governed browsing interface. |
+| Arcane YouTube | <http://localhost:8000/apps/youtube/index.html> | YouTube video interface. |
+| Arcane YouTube Music | <http://localhost:8000/apps/youtube-music/index.html> | YouTube music interface. |
+| Arcane Markdown | <http://localhost:8000/apps/markdown/index.html> | Shared Markdown editing and preview interface. |
+| Arcane Calculator | <http://localhost:8000/apps/calculator/index.html> | Safe arithmetic calculator. |
+| Arcane Capture | <http://localhost:8000/apps/capture/index.html> | Governed screen-capture interface. |
+| Arcane Weather | <http://localhost:8000/apps/weather/index.html> | Weather lookup and forecast interface. |
+| Utility component suite | <http://localhost:8000/example/component_utility_suite/index.html> | Synthetic examples for reusable utility components. |
 
 Do not serve an individual application directory by itself. These pages intentionally load shared files from the repository-level `arcane/` directory. The static server is a development surface, not the native production architecture.
 
@@ -221,6 +238,12 @@ npm run build:dev:windows
 npm run build:dev:apps:windows
 npm run build:dev:app:windows -- -AppId boss
 ```
+
+| Related resource | Description |
+|---|---|
+| [Developer Command Reference](./docs/developer-commands.md) | Complete system-level setup, development, verification, build, and signing command tables. |
+| [Arcane API Reference](./docs/arcane-api.md) | Application-facing native API methods, parameters, returns, and descriptions. |
+| [Developer Reference Maintenance SOP](./docs/developer-reference-sop.md) | Required synchronization rules for system commands and Arcane API methods. |
 
 The bootstrap creates a non-exportable, per-developer Code Signing certificate and directly trusts only that non-CA certificate under the current Windows user. It does not configure GitHub or official release signing. Development-signed executables open without `--allow-unsigned-local-release`; Microsoft Defender SmartScreen may still present its normal unfamiliar-file warning. See the machine bundle's [double-clickable local development build instructions](./machine_bundles/arcane-os-machine-bundle-v0.8.4/README.md#double-clickable-local-development-builds) for the trust scope and publisher-continuity limits.
 
