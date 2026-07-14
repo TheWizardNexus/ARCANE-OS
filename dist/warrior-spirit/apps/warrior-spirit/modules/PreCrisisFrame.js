@@ -150,7 +150,7 @@ if(pageName){
         }
         if(requirements.missingLicense){
             const item=document.createElement('li');
-            item.textContent='Add your Warrior Spirit AI Licence key to use Cloud AI with the Companion.';
+            item.textContent='Add your Warrior Spirit AI Licence key to use your chosen AI with the Companion.';
             list.append(item);
         }
         privacy.textContent='These details are stored with your on-device PreCrisis profile.';

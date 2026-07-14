@@ -128,7 +128,7 @@ test('Companion and Reflection direct incomplete profiles through the shared mod
     assert.match(adapter,/document\.getElementById\('modal'\)/);
     assert.match(adapter,/modal\.populate\(profileRequirementContent\(document,requirements\),false\)/);
     assert.match(adapter,/globalThis\.location\.assign\(new URL\('profile\.html',appRoot\)\.href\)/);
-    assert.match(adapter,/Add your Warrior Spirit AI Licence key to use Cloud AI with the Companion\./);
+    assert.match(adapter,/Add your Warrior Spirit AI Licence key to use your chosen AI with the Companion\./);
     assert.match(adapter,/request to your chosen AI/);
     assert.doesNotMatch(adapter,/use OpenAI with the Companion|request to OpenAI/);
     assert.match(chat,/id="modal" class="modal" href="\.\/arcane\/components\/modal\.html/);
