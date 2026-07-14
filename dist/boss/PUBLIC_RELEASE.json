@@ -1940,8 +1940,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-c169c29bf951--july-24-lll-gen-ai-final.md",
-      "bytes": 2161,
-      "sha256": "cd8fd9fe4951e87a152f0338dbadc9c85bde735c11bbc4526144465d6309d20e"
+      "bytes": 2153,
+      "sha256": "782b28337e8674d4e08176a33d26fb057c7f7d686d873ce3cc4db0a9f42281e7"
     },
     {
       "path": "apps/boss/documents/bossdoc-c1cda8d7cefd--sba-choose-a-business-structure.md",
@@ -2545,8 +2545,8 @@
     },
     {
       "path": "apps/boss/documents/document-manifest.json",
-      "bytes": 2156332,
-      "sha256": "309c9874485965e2f51590e26b74fbcaddfa414cd04f64822a2da0a0d024d624"
+      "bytes": 2156316,
+      "sha256": "20c15bb29f1d797fdab3223e9db9565233cf08465ec10304c20cc8d5211951de"
     },
     {
       "path": "apps/boss/export.html",

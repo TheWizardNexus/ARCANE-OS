@@ -33,7 +33,7 @@ Surface when the user's question concerns artificial intelligence, business plan
 ## People and links
 
 - Organizations: SCORE, Small Business Development Center (SBDC)
-- Link: <https://sites.google.com/scorevolunteer.org/score-ai-community/home>
+- Link: <https://supportcenter.score.org/kb/article/733-ai-cop-faqs/>
 - Link: <https://help.score.org/hc/en-us/articles/35997202907411-AI-CoP-FAQs>
 - Contact: matthew.krieger@scorevolunteer.org
 - Contact: marvin.tanner@scorevolunteer.org

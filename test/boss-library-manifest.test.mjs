@@ -35,7 +35,7 @@ describe('BOSS Libraries link policy',()=>{
         const replacements=Object.entries(linkPolicy.replace);
         const removals=new Set(linkPolicy.remove);
 
-        assert.equal(replacements.length,41);
+        assert.equal(replacements.length,44);
         assert.equal(linkPolicy.remove.length,3);
         assert.deepEqual(linkPolicy.remove_prefixes,[
             'http://images.google.com/imgres?',

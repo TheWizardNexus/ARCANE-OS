@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "manifest_version": "sha256:b0ddb2ba166557f4b216e013a0a2107605b035a039b0e803ba49829b1a93a459",
+  "manifest_version": "sha256:e7d40873b49e4115626ed6d98c9b20f79d36c9361acc42ff4835e381f9b0bb91",
   "builder_version": "boss-public-release-v1",
   "audience": "public",
   "original_root": "../originals/",
@@ -33676,7 +33676,7 @@
         "Growth"
       ],
       "links": [
-        "https://sites.google.com/scorevolunteer.org/score-ai-community/home",
+        "https://supportcenter.score.org/kb/article/733-ai-cop-faqs/",
         "https://help.score.org/hc/en-us/articles/35997202907411-AI-CoP-FAQs"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
@@ -33693,7 +33693,7 @@
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/AI/_July 24 LLL GenAI FINAL.pdf",
-      "source_url": "https://sites.google.com/scorevolunteer.org/score-ai-community/home",
+      "source_url": "https://supportcenter.score.org/kb/article/733-ai-cop-faqs/",
       "summary": "www.score.org Generative AI 101 FOR SCORE MENTORS",
       "title": "July 24 LLL Gen AI FINAL",
       "topics": [

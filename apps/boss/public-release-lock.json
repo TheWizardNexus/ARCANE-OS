@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "purpose": "Explicit content lock for the BOSS public website release.",
-  "source_manifest_version": "sha256:4e61acc63377c97a298efd4e6727c65a3ef4fc626c3130503e381bfa49e6b36a",
+  "source_manifest_version": "sha256:97cbbf528fd1c3ed9b07055c1bdc12741a1a511c93336cb9c4ae5d1102bd06dd",
   "record_count": 500,
   "records": [
     {
@@ -2667,7 +2667,7 @@
     {
       "id": "bossdoc-c169c29bf951",
       "output": "bossdoc-c169c29bf951--july-24-lll-gen-ai-final.md",
-      "output_sha256": "0ee001f5af89fd75745a36993c4cb25dca81dbb25eeecca2415123ab76fe51cd",
+      "output_sha256": "44fadd97b7cbc57d63aa6e93417700dcadaf2781f8576da29d18a6a81395dcf2",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/AI/_July 24 LLL GenAI FINAL.pdf",
       "source_sha256": "5107301763a884553347fa1f98be08425f56433b85f1ac6888ab9dee9f3f9bae"
     },
