@@ -6,7 +6,10 @@
 !/node_modules/strong-type/**
 .pnpm-store/
 /pnpm-lock.yaml
-dist/
+dist/*
+!dist/warrior-spirit/
+!dist/warrior-spirit/**
+machine_bundles/**/dist/
 local/
 tmp/
 apps/boss/business docs/

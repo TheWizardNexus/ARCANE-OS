@@ -2,3 +2,4 @@ local/vendors/whisper_cpp/models/ggml-small.bin filter=lfs diff=lfs merge=lfs -t
 .githooks/* text eol=lf
 *.sh text eol=lf
 *.bat text eol=crlf
+dist/warrior-spirit/** -text

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="./apps/precrisis/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/precrisis/img/favicon.png" type="image/png">
+        
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <style>
+            main>.buckets {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(35em, 1fr));
+                gap: 1em;
+                padding-right:.5em
+            }
+
+            /* ========== Leadership cards ========== */
+            .metric-card{
+                background:var(--background);
+                border:1px solid var(--accent-color);
+                border-radius:12px;
+                padding:1.25rem 1.5rem;
+                display:flex;
+                flex-direction:column;
+                gap:.75rem;
+                box-shadow:0 .2em .7em var(--shadow-color);
+                transition:box-shadow 180ms,transform 180ms;
+            }
+            .metric-card:hover{
+                box-shadow:0 .4em 1em var(--shadow-color);
+                transform:translateY(-.2em);
+            }
+
+            .metric-title{
+            font-size:1.15rem;
+            font-weight:600;
+            margin:0;
+            }
+
+            .progress-wrapper{
+                background:var(--border-color);
+                border-radius:8px;
+                height:.75rem;
+                overflow:hidden;
+            }
+
+            .progress-bar{
+            height:100%;
+            width:0%;
+            background:linear-gradient(90deg,var(--primary-color),var(--accent-color));
+            transition:width .8s ease;
+            }
+
+            .score-label{
+                font-family:monospace;
+                font-size:.9rem;
+                text-align:right;
+                margin-top:.25rem;
+                color:var(--text-color);
+            }
+        </style>
+
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+        <script type="module" src="./arcane/modules/AI.js?v=3"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+            <div class="full-width">
+                <h2>Leadership Overview</h2>
+                <p>Learn about your forces stats here.</p>
+            </div>
+
+            <section class="buckets">            
+                <section class="metric-card">
+                    <h3 class="metric-title">Force Readiness</h3>
+                    <div class="progress-wrapper"><div id="bar-readiness" class="progress-bar"></div></div>
+                    <span id="forcereadyness" class="score-label">calculating…</span>
+                </section>
+
+                <section class="metric-card">
+                    <h3 class="metric-title">Force Deployability</h3>
+                    <div class="progress-wrapper"><div id="bar-deploy" class="progress-bar"></div></div>
+                    <span id="forcedeployability" class="score-label">calculating…</span>
+                </section>
+
+                <section class="metric-card">
+                    <h3 class="metric-title">Force Lethality</h3>
+                    <div class="progress-wrapper"><div id="bar-lethal" class="progress-bar"></div></div>
+                    <span id="forceleathality" class="score-label">calculating…</span>
+                </section>
+            </section>
+        </main>
+    </body>
+    <script type="module">
+        import Scores from './apps/precrisis/entities/Scores.js';
+
+        let scores={};
+        let means={};
+
+        window.addEventListener(
+            'dbopfs-ready',
+            populateUI
+        );
+
+        window.addEventListener(
+            'ai-ready',
+            populateUI
+        );
+
+        if(window.dbopfs?.ready ){
+            populateUI();
+        }
+
+        function isOlderThan15Days(dateString) {
+            // Convert the input string to a Date object.
+            const inputDate = new Date(dateString);
+
+            // Get the current date.
+            const currentDate = new Date();
+
+            // Calculate the difference in milliseconds between the two dates.
+            const timeDifference = currentDate.getTime() - inputDate.getTime();
+
+            // Calculate the number of days in the time difference.
+            // There are 1000 milliseconds in a second, 60 seconds in a minute, 60 minutes in an hour, and 24 hours in a day.
+            const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
+
+            // Check if the difference is greater than 15 days.
+            return daysDifference > 15;
+        }
+
+        async function updateMetric(spanId, barId, value){
+            const pct = Math.max(0, Math.min(10, value)) * 10;        // 0-100 %
+            document.getElementById(spanId).textContent = value.toFixed(2) + ' / 10';
+            document.getElementById(barId ).style.width = pct + '%';
+        }
+
+        async function toolHandler(resp){
+            const tool=resp.choices[0].message.tool_calls[0].function;
+            const func=tool.name;
+            const params=JSON.parse(tool.arguments);
+            
+            //console.log(func);
+            //console.table(params);
+
+            forcereadyness.innerText=params.readiness+'/10';
+            forcedeployability.innerText=params.deployability+'/10';
+            forceleathality.innerText=params.leathality+'/10';
+
+            updateMetric('forcereadyness',     'bar-readiness', params.readiness);
+            updateMetric('forcedeployability', 'bar-deploy',    params.deployability);
+            updateMetric('forceleathality',    'bar-lethal',    params.leathality);
+        }
+
+        async function populateUI(){
+            if(!window.dbopfs?.ready || !window.ai?.ready){
+                return;
+            }
+
+            scores={};
+            means={};
+
+            const records=await Scores.getAll();
+
+            for(let i=0;i<records.length;i++){
+                const score=records[i];
+
+                if(!score || typeof score!=='object' || !Number.isFinite(Number(score.date))
+                    || isOlderThan15Days(score.date)
+                ){
+                    continue;
+                }
+
+                if(!score.data || typeof score.data!=='object' || Array.isArray(score.data)){
+                    continue;
+                }
+
+                const scoreKeys=Object.keys(score.data);
+
+                for(let j=0;j<scoreKeys.length;j++){
+                    const key=scoreKeys[j];
+                    const value=score.data[key];
+
+                    if(typeof value!=='number'){
+                        continue;
+                    }
+
+                    if(!scores[key]){
+                        scores[key]={
+                            count:0,
+                            value:0
+                        }
+                    }
+
+                    scores[key].count++;
+                    scores[key].value+=value;
+                }
+            }
+
+            for(let [key,score] of Object.entries(scores)){
+                if(typeof score.value !== 'number'){
+                    continue;
+                }
+
+                score.mean=score.value/score.count;
+                means[key]=score.mean;
+            }
+
+            //console.log(means);
+
+            let function_log=[
+                {
+                    role:'system',
+                    content:`As an AI specifically designed to analyze active duty military mental health, assess this force's average scores. Use the required force_stats tool.`
+                },
+                {
+                    role:'user',
+                    content:JSON.stringify(means)
+                }
+            ];
+
+            await ai.fetch(
+                function_log,
+                toolHandler,
+                false,
+                [
+                    {
+                        type: 'function',
+                        function: {
+                            name: "force_stats",
+                            description: "Determine the forces readiness, deployability and leathality.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    readiness: {
+                                        type: "number",
+                                        description: "0-10 likelihood the forces are ready for duty"
+                                    },
+                                    deployability: {
+                                        type: "number",
+                                        description: "0-10 likelihood the forces are ready, prepared and capable of being succesfully deployed"
+                                    },
+                                    leathality: {
+                                        type: "number",
+                                        description: "0-10 likelihood the forces are an effective and leathal military"
+                                    }
+                                },
+                                required: [
+                                    "readiness",
+                                    "deployability",
+                                    "leathality"
+                                ]
+                            }
+                        }
+                    }
+                ],
+                {"type": "function", "function": {"name": "force_stats"}}
+            );
+        }
+    </script>
+</html>
