@@ -1,0 +1,476 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<style>
+    :host{
+        display:block;
+        height:100%;
+        min-height:0;
+    }
+
+    .voice-transcription{
+        display:grid;
+        gap:1em;
+        grid-template-rows:auto minmax(12em,1fr) auto auto;
+        height:100%;
+        min-height:0;
+    }
+
+    .transcript{
+        background:var(--background);
+        border:1px solid var(--border-color);
+        border-radius:.5em;
+        overflow:auto;
+        padding:1em;
+    }
+
+    .transcript:empty::before{
+        content:attr(data-empty-label);
+        opacity:.55;
+    }
+
+    .controls{
+        display:flex;
+        flex-wrap:wrap;
+        gap:.5em;
+    }
+
+    .controls button{
+        margin:0;
+    }
+
+    .recording{
+        color:var(--danger-color);
+    }
+
+    .description,
+    .status{
+        margin:0;
+    }
+</style>
+
+<section class="voice-transcription">
+    <p id="description" class="description"></p>
+    <section id="transcript" class="transcript"></section>
+    <p id="status" class="status" aria-live="polite"></p>
+    <section class="controls">
+        <button id="start" type="button" disabled></button>
+        <button id="stop" type="button" disabled></button>
+        <button id="complete" type="button" disabled></button>
+    </section>
+</section>
+
+<script type="module">
+    const host=this;
+    const componentURL=new URL(
+        host.getAttribute('href')||'./arcane/components/voice-transcription.html',
+        document.baseURI
+    );
+    const moduleURL=name=>new URL(`../modules/${name}`,componentURL).href;
+    const {default:MD}=await import(moduleURL('MD.js?v=2'));
+    const {
+        appendTranscription,
+        normalizeVoiceOptions
+    }=await import(moduleURL('ComponentContracts.js'));
+    const description=host.shadowRoot.querySelector('#description');
+    const transcriptElement=host.shadowRoot.querySelector('#transcript');
+    const status=host.shadowRoot.querySelector('#status');
+    const startButton=host.shadowRoot.querySelector('#start');
+    const stopButton=host.shadowRoot.querySelector('#stop');
+    const completeButton=host.shadowRoot.querySelector('#complete');
+
+    let chunks=[];
+    let mediaStream=null;
+    let recorder=null;
+    let state='idle';
+    let transcript='';
+    let sessionGeneration=0;
+    let options=normalizeVoiceOptions(optionsFromDataset());
+
+    host.clear=clear;
+    host.completeTranscription=completeStream;
+    host.configure=configure;
+    host.destroy=destroy;
+    host.reset=clear;
+    host.startRecording=startRecording;
+    host.stopRecording=stopRecording;
+
+    Object.defineProperties(
+        host,
+        {
+            options:{get:getOptions,set:configure},
+            state:{get:()=>state},
+            value:{get:()=>transcript,set:setValue}
+        }
+    );
+
+    startButton.addEventListener('click',startRecording);
+    stopButton.addEventListener('click',stopRecording);
+    completeButton.addEventListener('click',completeStream);
+
+    function optionsFromDataset(){
+        const dataset=host.dataset||{};
+        const mapped={};
+        const fields=[
+            'completeLabel',
+            'description',
+            'emptyLabel',
+            'startLabel',
+            'stopLabel',
+            'transcriptionLabel'
+        ];
+        for(const field of fields){
+            if(dataset[field]!==undefined){
+                mapped[field]=dataset[field];
+            }
+        }
+        if(dataset.persist!==undefined){
+            mapped.persist=dataset.persist!=='false';
+        }
+        return mapped;
+    }
+
+    function configure(input={}){
+        const setInitial=Object.prototype.hasOwnProperty.call(input||{},'initialValue');
+        options=normalizeVoiceOptions(input,options);
+        renderOptions();
+        if(setInitial){
+            setValue(options.initialValue);
+        }else{
+            setState(state,status.innerText);
+        }
+        return getOptions();
+    }
+
+    async function startRecording(){
+        if(!['idle','error'].includes(state)){
+            return false;
+        }
+        if(
+            typeof MediaRecorder==='undefined'
+            ||!navigator.mediaDevices?.getUserMedia
+        ){
+            setState('error',options.messages.unsupported);
+            return false;
+        }
+
+        setState('starting',options.messages.requesting);
+        chunks=[];
+        const generation=++sessionGeneration;
+        try{
+            const stream=await navigator.mediaDevices.getUserMedia(
+                options.mediaConstraints
+            );
+            if(generation!==sessionGeneration){
+                for(const track of stream.getTracks()){
+                    track.stop();
+                }
+                return false;
+            }
+            mediaStream=stream;
+            recorder=createRecorder(mediaStream);
+            recorder.addEventListener('dataavailable',collectAudio);
+            recorder.addEventListener('stop',finishRecording,{once:true});
+            recorder.addEventListener('error',recordingError,{once:true});
+            for(const track of mediaStream.getAudioTracks()){
+                track.addEventListener('ended',recordingInterrupted,{once:true});
+            }
+            recorder.start();
+            setState('recording',options.messages.recording);
+            return true;
+        }catch(error){
+            if(generation!==sessionGeneration){
+                return false;
+            }
+            releaseMicrophone();
+            setState('error',options.messages.startError);
+            console.error('Unable to start recording:',error);
+            return false;
+        }
+    }
+
+    function createRecorder(stream){
+        for(const mimeType of options.mimeTypes){
+            if(MediaRecorder.isTypeSupported?.(mimeType)){
+                return new MediaRecorder(stream,{mimeType});
+            }
+        }
+        return new MediaRecorder(stream);
+    }
+
+    function collectAudio(event){
+        if(event.data?.size){
+            chunks.push(event.data);
+        }
+    }
+
+    function stopRecording(){
+        if(state!=='recording'||recorder?.state!=='recording'){
+            return false;
+        }
+        setState('transcribing',options.messages.transcribing);
+        recorder.stop();
+        return true;
+    }
+
+    async function finishRecording(){
+        const mimeType=recorder?.mimeType||chunks[0]?.type||'audio/webm';
+        const audio=new Blob(chunks,{type:mimeType});
+        releaseMicrophone();
+        if(!audio.size){
+            setState('error',options.messages.emptyAudio);
+            return false;
+        }
+
+        try{
+            const file=new File(
+                [audio],
+                `audio.${fileExtension(mimeType)}`,
+                {type:mimeType}
+            );
+            const transcribe=await getTranscriber();
+            const result=await transcribe(
+                file,
+                {
+                    audio,
+                    mimeType,
+                    transcript
+                }
+            );
+            const segment=typeof result==='string'?result.trim():'';
+            if(!segment){
+                setState('idle',options.messages.noSpeech);
+                return false;
+            }
+
+            transcript=appendTranscription(
+                transcript,
+                segment,
+                options.separator
+            );
+            renderTranscript();
+
+            if(options.persist){
+                const save=options.onSave||(
+                    typeof host.save==='function'?host.save.bind(host):null
+                );
+                if(!save){
+                    setState('error',options.messages.saveError);
+                    return false;
+                }
+                setState('saving',options.messages.saving);
+                try{
+                    await save({transcript,segment});
+                }catch(error){
+                    setState('error',options.messages.saveError);
+                    console.error('Unable to save transcription:',error);
+                    return false;
+                }
+            }
+
+            const detail={text:segment,transcript};
+            host.dispatchEvent(
+                new CustomEvent(
+                    'speech-transcription-complete',
+                    {bubbles:true,composed:true,detail}
+                )
+            );
+            host.dispatchEvent(
+                new CustomEvent(
+                    'voice-transcription-segment',
+                    {bubbles:true,composed:true,detail}
+                )
+            );
+            setState(
+                'idle',
+                options.persist?options.messages.saved:options.messages.transcribed
+            );
+            return true;
+        }catch(error){
+            setState('error',options.messages.transcribeError);
+            console.error('Unable to transcribe recording:',error);
+            return false;
+        }
+    }
+
+    async function getTranscriber(){
+        if(options.transcribe){
+            return options.transcribe;
+        }
+        if(typeof globalThis.ai?.fetchSTT!=='function'){
+            await import(moduleURL('AI.js?v=3'));
+        }
+        if(typeof globalThis.ai?.fetchSTT!=='function'){
+            throw new Error('Speech transcription is not configured.');
+        }
+        return globalThis.ai.fetchSTT.bind(globalThis.ai);
+    }
+
+    function fileExtension(mimeType=''){
+        if(mimeType.includes('mp4')){
+            return 'm4a';
+        }
+        if(mimeType.includes('ogg')){
+            return 'ogg';
+        }
+        return 'webm';
+    }
+
+    function recordingInterrupted(){
+        if(state==='recording'){
+            setState('transcribing',options.messages.recordingEnded);
+            if(recorder?.state==='recording'){
+                recorder.stop();
+            }
+        }
+    }
+
+    function recordingError(event){
+        setState('error',options.messages.interrupted);
+        releaseMicrophone();
+        console.error('Audio recorder error:',event.error||event);
+    }
+
+    async function completeStream(){
+        if(!transcript.trim()||!['idle','error'].includes(state)){
+            return false;
+        }
+        setState('completing',options.messages.completing);
+        try{
+            const complete=options.onComplete||(
+                typeof host.complete==='function'?host.complete.bind(host):null
+            );
+            if(complete){
+                await complete({transcript});
+            }
+            host.dispatchEvent(
+                new CustomEvent(
+                    'voice-transcription-complete',
+                    {
+                        bubbles:true,
+                        composed:true,
+                        detail:{transcript}
+                    }
+                )
+            );
+            setState('complete',options.messages.complete);
+            return true;
+        }catch(error){
+            setState('error',options.messages.completeError);
+            console.error('Unable to complete transcription:',error);
+            return false;
+        }
+    }
+
+    function setValue(value=''){
+        transcript=`${value??''}`;
+        renderTranscript();
+        if(state!=='recording'){
+            setState('idle',options.messages.ready);
+        }
+        host.dispatchEvent(
+            new CustomEvent(
+                'voice-transcription-change',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{transcript}
+                }
+            )
+        );
+        return transcript;
+    }
+
+    function clear(){
+        if(!['complete','error','idle'].includes(state)){
+            return false;
+        }
+        transcript='';
+        renderTranscript();
+        setState('idle',options.messages.ready);
+        return true;
+    }
+
+    function renderTranscript(){
+        transcriptElement.innerHTML=new MD(transcript).safeRendered;
+        transcriptElement.querySelectorAll('a').forEach(
+            link=>{
+                link.target='_blank';
+                link.rel='noopener noreferrer';
+            }
+        );
+    }
+
+    function renderOptions(){
+        description.innerText=options.labels.description;
+        transcriptElement.setAttribute(
+            'aria-label',
+            options.labels.transcription
+        );
+        transcriptElement.dataset.emptyLabel=options.labels.empty;
+        startButton.innerText=options.labels.start;
+        stopButton.innerText=options.labels.stop;
+        completeButton.innerText=options.labels.complete;
+    }
+
+    function releaseMicrophone(){
+        const tracks=mediaStream?.getTracks?.()||[];
+        recorder?.removeEventListener('dataavailable',collectAudio);
+        recorder?.removeEventListener('stop',finishRecording);
+        recorder?.removeEventListener('error',recordingError);
+        mediaStream=null;
+        recorder=null;
+        chunks=[];
+        for(const track of tracks){
+            track.removeEventListener('ended',recordingInterrupted);
+            track.stop();
+        }
+    }
+
+    function setState(nextState,message=''){
+        state=nextState;
+        status.innerText=message||nextState;
+        status.classList.toggle('recording',state==='recording');
+        startButton.disabled=!['idle','error'].includes(state);
+        stopButton.disabled=state!=='recording';
+        completeButton.disabled=!transcript.trim()
+            ||!['idle','error'].includes(state);
+        host.dispatchEvent(
+            new CustomEvent(
+                'voice-transcription-state',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{message:status.innerText,state}
+                }
+            )
+        );
+    }
+
+    function getOptions(){
+        return {
+            ...options,
+            labels:{...options.labels},
+            messages:{...options.messages},
+            mediaConstraints:{...options.mediaConstraints},
+            mimeTypes:options.mimeTypes.slice()
+        };
+    }
+
+    function destroy(){
+        sessionGeneration++;
+        releaseMicrophone();
+        setState('idle',options.messages.ready);
+        return true;
+    }
+
+    renderOptions();
+    transcript=options.initialValue;
+    renderTranscript();
+    setState('idle',options.messages.ready);
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent(
+            'voice-transcription-ready',
+            {bubbles:true,composed:true}
+        )
+    );
+</script>

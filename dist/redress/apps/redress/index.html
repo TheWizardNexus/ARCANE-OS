@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Redress is an Arcane legal workbench for case files, evidence, analysis, drafting, research, and oral-argument preparation.">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#172238" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0F1220" media="(prefers-color-scheme: dark)">
+    <title>Redress | Legal Workbench</title>
+    <link rel="manifest" href="./apps/redress/manifest.json">
+    <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="./apps/redress/redress.css?v=7">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+    <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+    <script type="module" src="./arcane/modules/AI.js?v=3"></script>
+</head>
+<body>
+    <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+    <html-import class="nav" href="./apps/redress/components/nav.html?v=6"></html-import>
+
+    <main class="redress-layout" aria-busy="true">
+        <aside class="case-rail" aria-label="Case files">
+            <div class="case-rail-heading">
+                <div>
+                    <span class="eyebrow">Active matter</span>
+                    <label class="sr-only" for="caseSwitcher">Active case</label>
+                    <select id="caseSwitcher" class="case-switcher" aria-label="Active case"></select>
+                </div>
+                <button id="newCaseButton" class="icon-button" type="button" aria-label="Create a new case" title="New case">+</button>
+            </div>
+
+            <button id="editCaseProfile" class="case-card" type="button">
+                <span id="railCaseName">Set up this case</span>
+                <small id="railJurisdiction">Jurisdiction needed</small>
+                <span class="profile-action">Edit case profile</span>
+            </button>
+
+            <div class="rail-section-heading">
+                <span>Case record</span>
+                <span id="fileCount" class="count-pill">0</span>
+            </div>
+            <html-import id="caseTree" class="case-tree" data-layout="tree" data-open-mode="event" data-empty-label="Import a case folder to build the record." href="./arcane/components/file-manager.html?v=19"></html-import>
+
+            <div class="storage-card">
+                <span class="status-light" aria-hidden="true"></span>
+                <div>
+                    <strong id="storageName">DBOPFS</strong>
+                    <small>Private workspace storage</small>
+                </div>
+            </div>
+        </aside>
+
+        <div class="workbench">
+            <section id="workspaceView" class="view-panel active" data-view-panel="workspace">
+                <header class="view-header workspace-header">
+                    <div>
+                        <span class="eyebrow">Record-first legal work</span>
+                        <h1 id="caseTitle">Build the record. Find the rule. Prepare the ask.</h1>
+                        <p id="caseSummary">Start with the court filings and evidence. Redress keeps the source beside every description, analysis, and draft.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="button secondary" data-open-profile type="button">Case profile</button>
+                        <button class="button primary" data-import-case type="button">Import case folder</button>
+                    </div>
+                </header>
+
+                <html-import id="caseSummaryStrip" class="matter-strip" data-aria-label="Case readiness" href="./arcane/components/summary-strip.html?v=2"></html-import>
+
+                <section class="section-card intake-card" aria-labelledby="ingestHeading">
+                    <div class="section-heading">
+                        <div>
+                            <span class="section-kicker">Matter intake</span>
+                            <h2 id="ingestHeading">Bring in the case record</h2>
+                        </div>
+                        <p>Original files stay intact. Redress stores provenance, pairs descriptions, and flags anything that needs review.</p>
+                    </div>
+
+                    <div class="drop-grid">
+                        <div id="caseDropZone" class="drop-zone" tabindex="0" role="button" aria-describedby="caseDropHelp">
+                            <span class="drop-icon" aria-hidden="true">01</span>
+                            <h3>Existing case folder</h3>
+                            <p id="caseDropHelp">Drop the full case folder. Redress imports <strong>Filing by Filing/PDF</strong>, <strong>Filing by Filing/MD</strong>, and Evidence while skipping merged PDFs and rendered-page cache.</p>
+                            <button class="text-button" data-import-case type="button">Choose folder</button>
+                        </div>
+                        <div id="filingDropZone" class="drop-zone filing" tabindex="0" role="button" aria-describedby="filingDropHelp">
+                            <span class="drop-icon" aria-hidden="true">02</span>
+                            <h3>New filed PDF</h3>
+                            <p id="filingDropHelp">Add one or more newly filed PDFs. A compliant <strong>YY-MM-DD [SOURCE] - TITLE.pdf</strong> name is preserved and a same-basename Markdown review file is created.</p>
+                            <button class="text-button" data-import-filing type="button">Choose filed PDFs</button>
+                        </div>
+                        <div id="evidenceDropZone" class="drop-zone evidence" tabindex="0" role="button" aria-describedby="evidenceDropHelp">
+                            <span class="drop-icon" aria-hidden="true">03</span>
+                            <h3>New evidence</h3>
+                            <p id="evidenceDropHelp">Drop documents, messages, images, audio, video, or other originals. Redress uses available text and AI for a descriptive name; unsupported binaries get a conservative review name and same-basename Markdown.</p>
+                            <button class="text-button" data-import-evidence type="button">Choose evidence</button>
+                        </div>
+                    </div>
+
+                    <input id="caseFolderInput" type="file" webkitdirectory directory multiple hidden>
+                    <input id="filingInput" type="file" accept="application/pdf,.pdf" multiple hidden>
+                    <input id="evidenceInput" type="file" multiple hidden>
+
+                    <div id="importStatus" class="import-status" hidden aria-live="polite">
+                        <div class="progress-line"><span id="importProgress"></span></div>
+                        <div>
+                            <strong id="importStatusTitle">Preparing import</strong>
+                            <span id="importStatusDetail"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section-card record-card" aria-labelledby="recordHeading">
+                    <div class="section-heading compact">
+                        <div>
+                            <span class="section-kicker">Source review</span>
+                            <h2 id="recordHeading">Selected file</h2>
+                        </div>
+                        <div id="selectedFileActions" class="inline-actions" hidden>
+                            <button id="downloadFile" class="button tertiary" type="button">Open original</button>
+                            <button id="regenerateDescription" class="button tertiary" type="button">Describe again</button>
+                        </div>
+                    </div>
+                    <div id="fileInspector" class="file-inspector empty">
+                        <div class="inspector-placeholder">
+                            <span aria-hidden="true">R</span>
+                            <p>Select a file from the case record to review its provenance, Markdown description, or original.</p>
+                        </div>
+                    </div>
+                </section>
+            </section>
+
+            <section id="analyzeView" class="view-panel" data-view-panel="analyze" hidden>
+                <header class="view-header">
+                    <div>
+                        <span class="eyebrow">Record analysis</span>
+                        <h1>Test the theory against the file.</h1>
+                        <p>Redress cites local source paths, separates facts from inference, and shows missing proof instead of quietly filling gaps.</p>
+                    </div>
+                </header>
+
+                <section class="section-card task-card">
+                    <form id="analysisForm" class="task-form">
+                        <label class="field span-2">
+                            <span>Analysis</span>
+                            <select name="mode" id="analysisMode">
+                                <option value="chronology">Chronology and turning points</option>
+                                <option value="issues">Issue spotting</option>
+                                <option value="contempt">Possible contempt</option>
+                                <option value="sanctions">Potential sanctions</option>
+                                <option value="consistency">Statements and consistency</option>
+                                <option value="evidence">Evidence and proof gaps</option>
+                                <option value="family">Family-law case map</option>
+                                <option value="criminal">Criminal case map</option>
+                            </select>
+                        </label>
+                        <label class="field span-2">
+                            <span>Question or focus</span>
+                            <textarea name="question" rows="5" placeholder="What exact order was allegedly violated, and what in the record shows notice, ability to comply, and the act or omission?"></textarea>
+                        </label>
+                        <div class="form-note span-2">
+                            <strong>Grounding rule</strong>
+                            <span>Every material factual statement must point back to an imported Markdown source path.</span>
+                        </div>
+                        <button class="button primary span-2" type="submit">Run record analysis</button>
+                    </form>
+                </section>
+                <section class="section-card output-card" aria-live="polite">
+                    <div class="section-heading compact">
+                        <div><span class="section-kicker">Work product</span><h2>Analysis</h2></div>
+                        <span class="autosave-label">Saved to Work Product after completion</span>
+                    </div>
+                    <article id="analysisOutput" class="legal-output markdown-content"><p>Choose an analysis and give Redress a focused question.</p></article>
+                </section>
+            </section>
+
+            <section id="draftView" class="view-panel" data-view-panel="draft" hidden>
+                <header class="view-header">
+                    <div>
+                        <span class="eyebrow">Document studio</span>
+                        <h1>Draft from verified facts, not a blank page.</h1>
+                        <p>Build working Requests for Order, replies, briefs, judicial notices, motions, declarations, and correspondence with visible verification placeholders.</p>
+                    </div>
+                </header>
+                <section class="section-card task-card">
+                    <form id="draftForm" class="task-form">
+                        <label class="field">
+                            <span>Document</span>
+                            <select name="documentType">
+                                <option value="rfo">Request for Order (RFO)</option>
+                                <option value="response">Response or reply</option>
+                                <option value="brief">Brief or memorandum</option>
+                                <option value="judicial_notice">Request for judicial notice</option>
+                                <option value="declaration">Declaration or affidavit</option>
+                                <option value="motion">Motion</option>
+                                <option value="criminal_motion">Criminal motion or opposition</option>
+                                <option value="email">Case-related email or letter</option>
+                                <option value="outline">Hearing or filing outline</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Purpose</span>
+                            <input name="purpose" placeholder="Respond to the requested modification">
+                        </label>
+                        <label class="field span-2">
+                            <span>Relief or result requested</span>
+                            <textarea name="relief" rows="3" placeholder="State the exact order, result, or communication goal."></textarea>
+                        </label>
+                        <label class="field span-2">
+                            <span>Additional facts from you</span>
+                            <textarea name="facts" rows="4" placeholder="Add facts not yet in the file. Redress labels these as user statements until supported."></textarea>
+                        </label>
+                        <label class="field span-2">
+                            <span>Constraints</span>
+                            <input name="constraints" placeholder="Deadline, page limit, required form, tone, service issue, or audience">
+                        </label>
+                        <button class="button primary span-2" type="submit">Build working draft</button>
+                    </form>
+                </section>
+                <section class="section-card output-card" aria-live="polite">
+                    <div class="section-heading compact">
+                        <div><span class="section-kicker">Work product</span><h2>Draft</h2></div>
+                        <span class="autosave-label">No filing or sending occurs automatically</span>
+                    </div>
+                    <article id="draftOutput" class="legal-output markdown-content"><p>Select a document type and tell Redress what the document must accomplish.</p></article>
+                </section>
+            </section>
+
+            <section id="researchView" class="view-panel" data-view-panel="research" hidden>
+                <header class="view-header">
+                    <div>
+                        <span class="eyebrow">Authority map</span>
+                        <h1>Find the law that governs this forum and date.</h1>
+                        <p>Map local, municipal, state, federal, national, international, and global authority without treating an unverified model citation as law.</p>
+                    </div>
+                </header>
+                <section class="section-card task-card">
+                    <form id="researchForm" class="task-form">
+                        <fieldset class="scope-field span-2">
+                            <legend>Authority levels</legend>
+                            <label><input type="checkbox" name="scopes" value="local"> Local</label>
+                            <label><input type="checkbox" name="scopes" value="municipal"> Municipal</label>
+                            <label><input type="checkbox" name="scopes" value="state" checked> State</label>
+                            <label><input type="checkbox" name="scopes" value="federal" checked> Federal</label>
+                            <label><input type="checkbox" name="scopes" value="national"> National</label>
+                            <label><input type="checkbox" name="scopes" value="international"> International</label>
+                            <label><input type="checkbox" name="scopes" value="global"> Global</label>
+                        </fieldset>
+                        <label class="field span-2">
+                            <span>Research question</span>
+                            <textarea name="query" rows="5" placeholder="What authorities govern notice and willfulness for contempt in this court on the relevant date?"></textarea>
+                        </label>
+                        <div class="form-note span-2 warning-note">
+                            <strong>Current-law boundary</strong>
+                            <span>This first version produces a source plan grounded in uploaded authority. Live official-source connectors are part of the shared Arcane integration phase; verify every authority and effective date.</span>
+                        </div>
+                        <button class="button primary span-2" type="submit">Build research plan</button>
+                    </form>
+                </section>
+                <section class="section-card output-card" aria-live="polite">
+                    <div class="section-heading compact">
+                        <div><span class="section-kicker">Authority work product</span><h2>Research plan</h2></div>
+                    </div>
+                    <article id="researchOutput" class="legal-output markdown-content"><p>State a narrow legal question. Redress will map authority levels, search terms, propositions to verify, and official-source targets.</p></article>
+                </section>
+            </section>
+
+            <section id="argueView" class="view-panel" data-view-panel="argue" hidden>
+                <header class="view-header">
+                    <div>
+                        <span class="eyebrow">Hearing room</span>
+                        <h1>Know the ask. Know the record. Answer the hard question.</h1>
+                        <p>Prepare a timed oral argument for the court and jurisdiction, then use Socratic questions to expose weak rules, unsupported facts, and missing remedies.</p>
+                    </div>
+                </header>
+
+                <div class="method-grid">
+                    <article class="method-card">
+                        <span>C</span><div><strong>Conclusion</strong><p>Lead with the precise result you want and why the court can grant it.</p></div>
+                    </article>
+                    <article class="method-card">
+                        <span>R</span><div><strong>Rule</strong><p>State the verified governing rule, hierarchy, effective date, and elements.</p></div>
+                    </article>
+                    <article class="method-card">
+                        <span>A</span><div><strong>Application</strong><p>Connect each element to exact record facts and confront contrary facts.</p></div>
+                    </article>
+                    <article class="method-card">
+                        <span>C</span><div><strong>Conclusion</strong><p>Return to the requested order, including the narrowest acceptable fallback.</p></div>
+                    </article>
+                </div>
+
+                <section class="section-card task-card">
+                    <form id="argumentForm" class="task-form">
+                        <label class="field">
+                            <span>Hearing or argument type</span>
+                            <input name="hearingType" placeholder="Contempt hearing, RFO, suppression motion, sentencing">
+                        </label>
+                        <label class="field">
+                            <span>Minutes available</span>
+                            <input name="timeMinutes" type="number" min="1" max="180" value="10">
+                        </label>
+                        <label class="field span-2">
+                            <span>Exact result requested</span>
+                            <textarea name="requestedResult" rows="3" placeholder="What do you want the judicial officer to order or decide today?"></textarea>
+                        </label>
+                        <label class="field span-2">
+                            <span>Weak point or concern</span>
+                            <textarea name="concern" rows="3" placeholder="What question are you most worried the court will ask?"></textarea>
+                        </label>
+                        <div class="form-actions span-2">
+                            <button class="button primary" type="submit">Prepare argument and Socratic drill</button>
+                            <button id="startSocraticPractice" class="button secondary" type="button">Start one-question-at-a-time practice</button>
+                        </div>
+                    </form>
+                </section>
+                <section class="section-card output-card" aria-live="polite">
+                    <div class="section-heading compact">
+                        <div><span class="section-kicker">Practice outline</span><h2>Oral argument</h2></div>
+                    </div>
+                    <article id="argumentOutput" class="legal-output markdown-content"><p>Give Redress the hearing, time limit, requested result, and the question you least want to hear.</p></article>
+                </section>
+            </section>
+        </div>
+
+        <button id="assistantDrawerToggle" class="assistant-drawer-toggle" type="button" aria-expanded="false" aria-controls="assistantPanel">Ask R</button>
+        <html-import id="assistantPanel" class="assistant-panel" data-layout="docked" data-open data-title="Ask Redress" data-subtitle="Case-aware legal workbench" href="./arcane/components/assistant-panel.html?v=3">
+            <span slot="identity" class="assistant-avatar" aria-hidden="true">R</span>
+            <span slot="title">Ask Redress</span>
+            <span slot="subtitle">Case-aware legal workbench</span>
+            <div id="chatMessages" slot="messages" class="chat-messages" aria-live="polite">
+                <div class="chat-message assistant">Tell me what happened or what you need to create. I will tie the answer to the case record and ask for missing jurisdiction or proof.</div>
+            </div>
+            <form id="chatForm" slot="composer" class="chat-form">
+                <label for="chatInput" class="sr-only">Ask about this case</label>
+                <textarea id="chatInput" name="message" rows="4" placeholder="Ask about the case, an issue, a draft, or the next hearing..."></textarea>
+                <div>
+                    <button id="voiceNote" class="icon-button" type="button" disabled title="Voice notes will use Arcane speech in a later pass">Mic</button>
+                    <button class="button primary" type="submit">Send</button>
+                </div>
+            </form>
+            <button id="clearChat" slot="actions" class="assistant-clear" data-assistant-clear type="button">Clear conversation</button>
+            <p slot="footer" class="assistant-footnote">Verify current law, deadlines, and local procedure. Redress never files, serves, sends, or contacts anyone without your action.</p>
+        </html-import>
+    </main>
+
+    <html-import id="caseProfileDialog" class="modal redress-modal" href="./arcane/components/modal.html?v=13"></html-import>
+    <template id="caseProfileDialogContent">
+        <form id="caseProfileForm">
+            <header><div><span class="eyebrow">Matter profile</span><h2>Give the record its legal context</h2></div></header>
+            <div class="dialog-body form-grid">
+                <label class="field"><span>Case name</span><input name="caseName" placeholder="Miller v. Miller"></label>
+                <label class="field"><span>Case number</span><input name="caseNumber" placeholder="24FL001068"></label>
+                <label class="field"><span>Matter type</span><select name="matterType"><option value="family">Family</option><option value="criminal">Criminal</option><option value="civil">Civil</option><option value="administrative">Administrative</option><option value="other">Other</option></select></label>
+                <label class="field"><span>Your role</span><input name="userRole" placeholder="Petitioner, respondent, defendant, support person"></label>
+                <label class="field"><span>Jurisdiction</span><input name="jurisdiction" placeholder="California, Monterey County"></label>
+                <label class="field"><span>Court or tribunal</span><input name="court" placeholder="Superior Court of California, County of Monterey"></label>
+                <label class="field"><span>Court type</span><select name="courtType"><option value="trial">Trial court</option><option value="appellate">Appellate court</option><option value="administrative">Administrative tribunal</option><option value="international">International tribunal</option><option value="other">Other</option></select></label>
+                <label class="field"><span>Forum level</span><input name="forumLevel" placeholder="County, state, federal, national"></label>
+                <label class="field"><span>Case stage</span><input name="caseStage" placeholder="Pretrial, post-judgment, appeal"></label>
+                <label class="field"><span>Next hearing or deadline</span><input name="nextHearing" type="date"></label>
+                <label class="field span-2"><span>Goals and current posture</span><textarea name="goals" rows="4" placeholder="What is happening now, and what result are you working toward?"></textarea></label>
+            </div>
+            <footer><button class="button secondary" value="cancel" type="button" data-close-dialog>Cancel</button><button class="button primary" value="save" type="submit">Save case profile</button></footer>
+        </form>
+    </template>
+
+    <html-import id="newCaseDialog" class="modal redress-modal compact-modal" href="./arcane/components/modal.html?v=13"></html-import>
+    <template id="newCaseDialogContent">
+        <form id="newCaseForm">
+            <header><div><span class="eyebrow">New matter</span><h2>Create a separate case workspace</h2></div></header>
+            <div class="dialog-body form-grid">
+                <label class="field"><span>Case name</span><input name="caseName" required placeholder="People v. Name"></label>
+                <label class="field"><span>Case number</span><input name="caseNumber" placeholder="If assigned"></label>
+                <label class="field"><span>Matter type</span><select name="matterType"><option value="family">Family</option><option value="criminal">Criminal</option><option value="civil">Civil</option><option value="other">Other</option></select></label>
+                <label class="field"><span>Jurisdiction</span><input name="jurisdiction" placeholder="State, county, country"></label>
+            </div>
+            <footer><button class="button secondary" value="cancel" type="button" data-close-dialog>Cancel</button><button class="button primary" value="create" type="submit">Create case</button></footer>
+        </form>
+    </template>
+
+    <html-import id="aiSettingsDialog" class="modal redress-modal compact-modal" href="./arcane/components/modal.html?v=13"></html-import>
+    <template id="aiSettingsDialogContent">
+        <form id="aiSettingsForm">
+            <header><div><span class="eyebrow">AI configuration</span><h2>Choose where legal work runs</h2></div></header>
+            <div class="dialog-body form-grid">
+                <label class="field span-2"><span>Provider</span><select name="provider"><option value="OLLAMA">Local Ollama (private on this machine)</option><option value="OPENAI">OpenAI API</option></select></label>
+                <label class="field span-2" data-local-model><span>Local model name</span><input name="localModel" value="REDRESS:120b" placeholder="REDRESS:120b"><small>Build the supplied Redress Modelfile or name another OpenAI-compatible Ollama model.</small></label>
+                <label class="field span-2" data-openai-key hidden><span>OpenAI API key</span><input name="apiKey" type="password" autocomplete="off"><small>The current Arcane user profile stores this key in private browser storage. A native secret vault is planned.</small></label>
+                <div class="form-note span-2"><strong>Privacy</strong><span>Case context is sent to the provider you choose. Use a local model when the matter should not leave this device.</span></div>
+            </div>
+            <footer><button class="button secondary" value="cancel" type="button" data-close-dialog>Cancel</button><button class="button primary" value="save" type="submit">Save AI settings</button></footer>
+        </form>
+    </template>
+
+    <html-import id="filePreviewDialog" class="modal redress-modal file-preview-modal" href="./arcane/components/modal.html?v=13"></html-import>
+    <template id="filePreviewDialogContent">
+        <section class="file-preview-dialog-shell">
+            <header>
+                <div>
+                    <span class="eyebrow">Original file</span>
+                    <h2 id="filePreviewTitle">File preview</h2>
+                </div>
+            </header>
+            <div class="dialog-body file-preview-dialog-body">
+                <div id="filePreviewSurface" class="native-file-preview" aria-live="polite"></div>
+            </div>
+            <footer class="file-preview-dialog-footer">
+                <span id="filePreviewMeta" class="file-preview-meta">Native browser preview</span>
+                <button id="downloadPreviewFile" class="button secondary" type="button">Download original</button>
+                <button id="closeFilePreview" class="button primary" type="button" data-close-dialog>Close</button>
+            </footer>
+        </section>
+    </template>
+
+    <script type="module" src="./apps/redress/modules/RedressApp.js?v=16"></script>
+</body>
+</html>

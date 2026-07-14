@@ -1,0 +1,45 @@
+.chart-options{
+    display:grid;
+    gap:.75em;
+    grid-template-columns:repeat(auto-fit,minmax(16em,1fr));
+}
+
+.chart-option-group{
+    font-size:1em;
+    grid-column:1 / -1;
+    margin:.5em 0 0;
+}
+
+.chart-option{
+    align-items:flex-start;
+    border:1px solid var(--border-color);
+    border-radius:.5em;
+    display:grid;
+    gap:.25em .65em;
+    grid-template-columns:auto 1fr;
+    padding:.75em;
+}
+
+.chart-option input{
+    margin:.25em 0 0;
+    width:auto;
+}
+
+.chart-option h3,
+.chart-option p{
+    grid-column:2;
+    margin:0;
+}
+
+.chart-option p{
+    font-size:.9em;
+    opacity:.75;
+}
+
+.chart-option.disabled{
+    opacity:.55;
+}
+
+.dashboard-config-empty{
+    opacity:.7;
+}

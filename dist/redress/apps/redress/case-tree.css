@@ -1,0 +1,21 @@
+:host{
+    --file-icon-filter:brightness(0) saturate(100%) invert(49%) sepia(33%) saturate(693%) hue-rotate(357deg) brightness(108%) contrast(91%);
+}
+
+/* Directory disclosure is not file selection. Do not leave pointer focus painted. */
+.tree-item[data-kind="directory"][aria-selected="true"]:not(:hover):not(:focus-visible)>.tree-item-row,
+.tree-item[data-kind="directory"]:focus:not(:hover):not(:focus-visible)>.tree-item-row{
+    border-color:transparent;
+    background:transparent;
+}
+
+.tree-item[data-kind="directory"]:focus-visible>.tree-item-row{
+    border-color:var(--focus-color,var(--accent-color));
+    background:color-mix(in srgb,var(--secondary-color) 70%,transparent);
+}
+
+@media(prefers-color-scheme:dark){
+    :host{
+        --file-icon-filter:brightness(0) saturate(100%) invert(58%) sepia(29%) saturate(446%) hue-rotate(2deg) brightness(110%) contrast(121%);
+    }
+}
