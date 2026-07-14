@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"calculator","displayName":"Arcane Calculator","version":"0.1.0","entry":"index.html","strategy":"static","include":["calculator.css","img","index.html","manifest.json","modules"],"exclude":[],"shared":["browser-runtime"]}

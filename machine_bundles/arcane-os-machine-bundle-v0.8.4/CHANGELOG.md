@@ -2,7 +2,7 @@
 
 ## 0.8.4
 
-- Paints a compiled Arcane Shell backdrop before publisher verification so the Microsoft NT session never exposes a long white startup surface while executable release content remains gated.
+- Paints a compiled, pure-HTML Arcane Shell boot screen before publisher verification and reports live directory, retained-handle, SHA-256 byte/file, Authenticode executable, first-boot, Core, WebView2, and verified-navigation progress until the real shell renders.
 - Adds capability-gated `Arcane.appearance.current()` and `Arcane.appearance.apply()` APIs that synchronize Arcane scheme and caption colors with per-user Microsoft NT personalization.
 - Applies dark/light DWM chrome to every Arcane native window and refreshes open hosts when Windows broadcasts an appearance change.
 - Adds one shared certificate-store signer plus preflighted release, all-app, and single-app build commands, with SHA-256 Authenticode, RFC 3161 timestamps, exact publisher verification, and no repository-managed private keys.
@@ -38,6 +38,7 @@
 - Expanded release schema 2 to hash the exact distribution inventory, including every application asset, and added source, staged, activated, and full installed-tree integrity checks. Same-version damage now triggers verified repair, while failed installation activation restores the prior verified installation.
 - Made every runtime prerequisite administrator-managed and non-installable. The provisioner detects required WebView/session capabilities and optional Node.js/Ollama installations but performs no third-party runtime download, package-manager operation, or installer execution.
 - Added `arcane-apps.json` and portable versus Windows-native target commands for isolated PreCrisis and BOSS payloads. Packages validate containment, explicit include lists, approved non-privileged capabilities, symbolic-link safety, relocated local URLs, exact dependencies, and deterministic inventories before atomic replacement.
+- Added validated `bundledApps` target composition so a white-label app can package another registered app's authoritative allowlist without source duplication; dependency graphs, capability/origin containment, URL roots, and same-origin frame policy remain fail-closed.
 - Generated a target-specific default-deny CSP, Permissions Policy, inline-script hashes, and navigation allowlist for every packaged HTML document.
 - Added actual Windows WebView2 target launchers (`ArcaneApp-<id>.exe`) with a target-specific Core, pipe guard, WebView2 dependencies, exact navigation-entry/origin enforcement, injected CSP/Permissions Policy, and descriptor-controlled microphone access. Portable packages remain launcher-free verification artifacts.
 - Kept source document corpora outside the default package boundary. BOSS emits an `empty-unpublished` zero-record catalog and no Markdown documents; future public, non-sensitive records still require separate publication authorization.

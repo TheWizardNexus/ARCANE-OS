@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyPackagedAppLinks } from './app-package-links.mjs';
 import { verifyAppContentManifest } from './app-catalog.mjs';
-import { loadAppRegistry, normalizeNavigationEntry } from './app-packager-lib.mjs';
+import { loadAppRegistry, normalizeNavigationEntry, resolveBundledAppIds } from './app-packager-lib.mjs';
 import { verifyWindowsDpiExecutable } from './verify-windows-dpi.mjs';
 
 const bundleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,7 +77,11 @@ for (const appId of Object.keys(registry.apps).sort()) {
     });
     await verifyWindowsDpiExecutable(path.join(target, manifest.native.launcher));
   }
-  const dependencies = await verifyPackagedAppLinks({ packageRoot: target, appId });
+  const dependencies = await verifyPackagedAppLinks({
+    packageRoot: target,
+    appId,
+    bundledAppIds: resolveBundledAppIds(registry, appId),
+  });
   assert.equal(manifest.app.security?.verifiedDependencies, dependencies.length, `${appId} dependency count mismatch`);
   console.log(`Verified isolated Arcane app package ${appId} (${manifest.files.length} files, ${dependencies.length} local dependencies).`);
 }

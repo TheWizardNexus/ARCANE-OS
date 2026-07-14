@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "developer",
+  "displayName": "Arcane Developer",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "strategy": "static",
+  "include": [
+    "developer.css",
+    "img",
+    "index.html",
+    "manifest.json",
+    "modules",
+    "prompts"
+  ],
+  "exclude": [],
+  "shared": [
+    "browser-runtime"
+  ]
+}

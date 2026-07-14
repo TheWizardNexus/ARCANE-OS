@@ -142,6 +142,8 @@ The longer-range product direction prefers JavaScript and Node.js for orchestrat
 - [`machine_bundles/arcane-os-machine-bundle-v0.8.4/VALIDATION.md`](./machine_bundles/arcane-os-machine-bundle-v0.8.4/VALIDATION.md) — automated and target-platform validation coverage.
 - [`docs/ollama-module.md`](./docs/ollama-module.md) — shared local-model integration contract.
 - [`docs/communications-design.md`](./docs/communications-design.md) — communications capability boundary and credential policy.
+- [`docs/utility-apps-design.md`](./docs/utility-apps-design.md) — reusable browser, media, editor, calculator, capture, weather, and API-model boundaries.
+- [`docs/readiness.md`](./docs/readiness.md) — dual event and persistent `.ready` contract for load-order-safe system processes, modules, entities, services, and components.
 - Application-level README and architecture files under [`apps/`](./apps/) — application-specific purpose, composition, and constraints.
 
 ## Repository layout
@@ -177,13 +179,23 @@ python -m http.server 8000
 Example entry points:
 
 - PreCrisis: <http://localhost:8000/apps/precrisis/index.html>
+- Warrior Spirit Companion: <http://localhost:8000/apps/warrior-spirit/index.html>
 - BOSS: <http://localhost:8000/apps/boss/chat.html>
 - Redress: <http://localhost:8000/apps/redress/index.html>
 - Arcane Terminal: <http://localhost:8000/apps/terminal/index.html>
+- Arcane Developer: <http://localhost:8000/apps/developer/index.html>
 - Files: <http://localhost:8000/apps/files/index.html>
 - Settings: <http://localhost:8000/apps/settings/index.html>
 - Arcane Mail: <http://localhost:8000/apps/mail/index.html>
 - Arcane Messages: <http://localhost:8000/apps/messages/index.html>
+- Arcane Browser: <http://localhost:8000/apps/browser/index.html>
+- Arcane YouTube: <http://localhost:8000/apps/youtube/index.html>
+- Arcane YouTube Music: <http://localhost:8000/apps/youtube-music/index.html>
+- Arcane Markdown: <http://localhost:8000/apps/markdown/index.html>
+- Arcane Calculator: <http://localhost:8000/apps/calculator/index.html>
+- Arcane Capture: <http://localhost:8000/apps/capture/index.html>
+- Arcane Weather: <http://localhost:8000/apps/weather/index.html>
+- Utility component suite: <http://localhost:8000/example/component_utility_suite/index.html>
 
 Do not serve an individual application directory by itself. These pages intentionally load shared files from the repository-level `arcane/` directory. The static server is a development surface, not the native production architecture.
 

@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"youtube","displayName":"Arcane YouTube","version":"0.1.0","entry":"index.html","strategy":"static","include":["img","index.html","manifest.json","modules","youtube.css"],"exclude":[],"shared":["browser-runtime"]}

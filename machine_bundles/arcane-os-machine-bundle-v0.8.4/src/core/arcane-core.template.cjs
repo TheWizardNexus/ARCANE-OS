@@ -1843,6 +1843,15 @@ async function managedAIProviderSettings(){
   const settings=readArcaneModelSettings();
   return Object.freeze({ provider:settings.provider,openAIModel:settings.openAIModel,openAIConfigured:typeof native.hasAIProviderCredential==='function'&&native.hasAIProviderCredential('openai') });
 }
+function managedAIProfile(){
+  const settings=readArcaneModelSettings();
+  const provider=settings.provider==='openai'?'openai':'ollama';
+  const model=provider==='openai'?settings.openAIModel:settings.defaultModel;
+  const configured=provider==='openai'
+    ? Boolean(model&&typeof native.hasAIProviderCredential==='function'&&native.hasAIProviderCredential('openai'))
+    : Boolean(model);
+  return Object.freeze({ provider,model,configured,local:provider==='ollama' });
+}
 async function setManagedAIProviderSettings(parameters){
   const source=parameters&&typeof parameters==='object'&&!Array.isArray(parameters)?parameters:{};
   if(Object.keys(source).some((key)=>!['provider','openAIModel','token','removeToken'].includes(key)))throw arcaneError('INVALID_AI_PROVIDER_SETTINGS','Arcane rejected unsupported provider settings.','Use only provider, model, and authentication controls.',400);
@@ -1925,13 +1934,547 @@ async function completeLocalChat(parameters) {
   };
 }
 async function completeConfiguredChat(parameters){
+  const source=parameters&&typeof parameters==='object'&&!Array.isArray(parameters)?{ ...parameters }:parameters;
+  const expectedProvider=source&&Object.prototype.hasOwnProperty.call(source,'expectedProvider')
+    ? String(source.expectedProvider||'').trim().toLowerCase()
+    : null;
+  if(source&&typeof source==='object'&&!Array.isArray(source))delete source.expectedProvider;
+  if(expectedProvider!==null&&!['ollama','openai'].includes(expectedProvider)){
+    throw arcaneError('INVALID_AI_PROVIDER','Arcane rejected an invalid expected AI provider.','Refresh the Arcane AI profile and retry.',400);
+  }
   const settings=readArcaneModelSettings();
-  if(settings.provider!=='openai')return completeLocalChat(parameters);
-  const request=normalizedLocalChatRequest({ ...parameters,model:settings.openAIModel });
+  const provider=settings.provider==='openai'?'openai':'ollama';
+  if(expectedProvider&&expectedProvider!==provider){
+    throw arcaneError('AI_PROVIDER_CHANGED','The Arcane AI provider changed before this request could be sent.','Review the updated provider disclosure in Arcane Developer, then retry your question.',409,{ expectedProvider,provider });
+  }
+  if(settings.provider!=='openai'){
+    const request=source&&typeof source==='object'&&!Array.isArray(source)?source:{};
+    return completeLocalChat(request.model?request:{ ...request,model:settings.defaultModel });
+  }
+  const request=normalizedLocalChatRequest({ ...source,model:settings.openAIModel });
   const response=await requestOpenAI('POST','chat/completions',{ model:settings.openAIModel,messages:request.messages,...(request.format==='json'?{response_format:{type:'json_object'}}:{}) });
   const choice=Array.isArray(response&&response.choices)?response.choices[0]:null;
   return { provider:'openai',model:String(response&&response.model||settings.openAIModel).slice(0,128),message:{ role:'assistant',content:String(choice&&choice.message&&choice.message.content||'').slice(0,4*1024*1024) },done:true,doneReason:choice&&choice.finish_reason?String(choice.finish_reason).slice(0,128):null,promptEvalCount:Number.isSafeInteger(response&&response.usage&&response.usage.prompt_tokens)?response.usage.prompt_tokens:null,evalCount:Number.isSafeInteger(response&&response.usage&&response.usage.completion_tokens)?response.usage.completion_tokens:null };
 }
+
+const DEVELOPMENT_CONTEXT_CHARACTER_LIMIT=48*1024;
+const DEVELOPMENT_CONTEXT_FILE_CHARACTER_LIMIT=6*1024;
+const DEVELOPMENT_CONTEXT_FILE_COUNT_LIMIT=10;
+const DEVELOPMENT_CONTEXT_FILE_BYTE_LIMIT=512*1024;
+const DEVELOPMENT_REDACTION_MARKER='[REDACTED BY ARCANE]';
+const DEVELOPMENT_TRUSTED_BASELINE='1a092ce6b65ff9f39fa715db1a7a5885ea81c559';
+const DEVELOPMENT_EXCLUDED_SEGMENTS=new Set([
+  '.git','.cache','.codex','.agents','node_modules','dist','runtime',
+  'credentials','credential','secrets','secret','keys','key','certs','certificates',
+]);
+const DEVELOPMENT_BLOCKED_EXTENSIONS=new Set([
+  '.cer','.crt','.der','.dll','.dylib','.exe','.gif','.ico','.jar','.jpeg','.jpg','.key',
+  '.lib','.node','.p12','.pem','.pfx','.png','.pvk','.so','.snk','.wasm','.webp','.zip',
+]);
+const DEVELOPMENT_TEXT_EXTENSIONS=new Set([
+  '.bat','.c','.cc','.cjs','.cmd','.cpp','.cs','.css','.csv','.h','.html','.ini','.java',
+  '.js','.json','.jsonl','.jsx','.md','.mjs','.ps1','.py','.sh','.sql','.svg','.toml',
+  '.ts','.tsx','.txt','.xml','.yaml','.yml',
+]);
+const DEVELOPMENT_TEXT_FILENAMES=new Set([
+  '.gitattributes','.gitignore','agents.md','license','license.md','modelfile','readme','readme.md',
+]);
+const DEVELOPMENT_QUERY_STOP_WORDS=new Set([
+  'about','after','also','and','are','can','code','developer','for','from','have','how','into',
+  'our','that','the','this','use','what','when','where','which','with','work','would',
+]);
+const DEVELOPMENT_SETUP_TASK_IDS=Object.freeze([
+  'root-dependencies','machine-dependencies','git-hooks','windows-signing',
+]);
+
+function developmentRequest(parameters,expectedKeys){
+  if(!parameters||typeof parameters!=='object'||Array.isArray(parameters)||Object.getPrototypeOf(parameters)!==Object.prototype){
+    throw arcaneError('DEVELOPMENT_REQUEST_INVALID','Arcane rejected an invalid development request.','Use the documented Arcane development API fields only.',400);
+  }
+  const keys=Object.keys(parameters).sort();
+  const expected=[...expectedKeys].sort();
+  if(keys.length!==expected.length||keys.some((key,index)=>key!==expected[index])){
+    throw arcaneError('DEVELOPMENT_REQUEST_INVALID','Arcane rejected unsupported development request fields.','Use the documented Arcane development API fields only.',400,{ allowedFields:expected });
+  }
+  return parameters;
+}
+
+function developmentPathWithin(root,candidate){
+  const relative=path.relative(root,candidate);
+  return relative===''||(!relative.startsWith(`..${path.sep}`)&&relative!=='..'&&!path.isAbsolute(relative));
+}
+
+function developmentRegularPath(file){
+  try{
+    const stat=fs.lstatSync(file);
+    return stat.isFile()&&!stat.isSymbolicLink();
+  }catch(_){return false;}
+}
+
+function validateDevelopmentWorkspace(input){
+  const requested=typeof input==='string'?input.trim():'';
+  if(!requested||requested.length>1024||requested.includes('\0')||!path.isAbsolute(requested)){
+    throw arcaneError('DEVELOPMENT_ROOT_INVALID','Choose an explicit Arcane checkout directory.','Select the root of a local Arcane OS Git checkout.',400);
+  }
+  let root;
+  try{
+    const rootStat=fs.lstatSync(requested);
+    if(!rootStat.isDirectory()||rootStat.isSymbolicLink())throw new Error('unsafe root');
+    root=fs.realpathSync(requested);
+  }catch(_){
+    throw arcaneError('DEVELOPMENT_ROOT_INVALID','Arcane could not open that development workspace.','Choose an existing local Arcane OS checkout directory that is not a link.',400);
+  }
+  const markerPaths={
+    git:path.join(root,'.git'),
+    package:path.join(root,'package.json'),
+    appBuilding:path.join(root,'docs','app-building.md'),
+    theme:path.join(root,'arcane','css','theme.css'),
+  };
+  try{
+    const gitStat=fs.lstatSync(markerPaths.git);
+    if(gitStat.isSymbolicLink()||(!gitStat.isDirectory()&&!gitStat.isFile()))throw new Error('unsafe Git marker');
+    for(const marker of [markerPaths.package,markerPaths.appBuilding,markerPaths.theme]){
+      if(!developmentRegularPath(marker))throw new Error(`missing marker: ${marker}`);
+    }
+  }catch(_){
+    throw arcaneError('DEVELOPMENT_ROOT_UNRECOGNIZED','That directory is not a canonical Arcane OS checkout.','Select the checkout root containing .git, package.json, docs/app-building.md, and arcane/css/theme.css.',400);
+  }
+  const packageManifest=readJsonFile(markerPaths.package);
+  if(!packageManifest||packageManifest.name!=='arcane-os'){
+    throw arcaneError('DEVELOPMENT_ROOT_UNRECOGNIZED','That directory is not an Arcane OS checkout.','Select the canonical Arcane OS checkout root.',400);
+  }
+  const scripts=packageManifest.scripts&&typeof packageManifest.scripts==='object'?packageManifest.scripts:{};
+  const bundleScript=String(scripts['test:machine']||scripts['build:dev:windows']||scripts['check:windows']||'');
+  const bundleMatch=bundleScript.match(/machine_bundles[\\/]arcane-os-machine-bundle-v([0-9]+\.[0-9]+\.[0-9]+)/);
+  if(!bundleMatch)throw arcaneError('DEVELOPMENT_ROOT_UNRECOGNIZED','Arcane could not identify the checkout’s active machine bundle.','Restore the canonical root package scripts, then select the checkout again.',409);
+  const checkoutBundleVersion=bundleMatch[1];
+  const machineBundlesRoot=path.join(root,'machine_bundles');
+  const bundleRoot=path.join(machineBundlesRoot,`arcane-os-machine-bundle-v${checkoutBundleVersion}`);
+  const bundlePath=path.join(bundleRoot,'arcane-bundle.json');
+  try{
+    const machineBundlesStat=fs.lstatSync(machineBundlesRoot);
+    const bundleRootStat=fs.lstatSync(bundleRoot);
+    if(!machineBundlesStat.isDirectory()||machineBundlesStat.isSymbolicLink()||!bundleRootStat.isDirectory()||bundleRootStat.isSymbolicLink()||!developmentRegularPath(bundlePath))throw new Error('unsafe machine bundle');
+    if(!developmentPathWithin(root,fs.realpathSync(bundleRoot)))throw new Error('machine bundle escaped checkout');
+  }catch(_){
+    throw arcaneError('DEVELOPMENT_ROOT_UNRECOGNIZED','The checkout’s active machine bundle is missing or unsafe.','Restore the machine bundle selected by the canonical root package scripts.',409);
+  }
+  const bundleManifest=readJsonFile(bundlePath);
+  if(!bundleManifest||String(bundleManifest.version||'')!==checkoutBundleVersion){
+    throw arcaneError('DEVELOPMENT_ROOT_UNRECOGNIZED','The checkout’s machine bundle manifest does not match its canonical path.','Restore the active machine bundle manifest, then select the checkout again.',409,{ checkoutBundleVersion });
+  }
+  const lineage=developmentRepositoryLineage(root);
+  return {
+    root,
+    bundleRoot,
+    checkoutBundleVersion,
+    packageManifest,
+    bundleManifest,
+    lineage,
+  };
+}
+
+function safeDevelopmentTrackedFile(workspace,relativeInput){
+  const relative=String(relativeInput||'').replace(/\\/g,'/');
+  if(!relative||relative.includes('\0')||path.posix.isAbsolute(relative))return null;
+  const segments=relative.split('/');
+  if(segments.some((segment)=>!segment||segment==='.'||segment==='..'))return null;
+  const lowered=segments.map((segment)=>segment.toLowerCase());
+  if(lowered.some((segment)=>DEVELOPMENT_EXCLUDED_SEGMENTS.has(segment)))return null;
+  const filename=lowered[lowered.length-1];
+  if(filename==='.env'||filename.startsWith('.env.')||/(?:^|[._-])(?:credential|credentials|secret|secrets)(?:[._-]|$)/.test(filename)||/(?:token|password|passwd|private-key|auth-key)/.test(filename))return null;
+  const extension=path.extname(filename);
+  if(DEVELOPMENT_BLOCKED_EXTENSIONS.has(extension))return null;
+  if(!DEVELOPMENT_TEXT_EXTENSIONS.has(extension)&&!DEVELOPMENT_TEXT_FILENAMES.has(filename))return null;
+  let cursor=workspace.root;
+  try{
+    for(let index=0;index<segments.length;index+=1){
+      cursor=path.join(cursor,segments[index]);
+      const stat=fs.lstatSync(cursor);
+      if(stat.isSymbolicLink())return null;
+      if(index<segments.length-1&&!stat.isDirectory())return null;
+      if(index===segments.length-1&&(!stat.isFile()||stat.size>DEVELOPMENT_CONTEXT_FILE_BYTE_LIMIT))return null;
+    }
+    const canonical=fs.realpathSync(cursor);
+    if(!developmentPathWithin(workspace.root,canonical))return null;
+    return { path:relative,absolute:canonical,size:fs.statSync(canonical).size };
+  }catch(_){return null;}
+}
+
+function fixedDevelopmentExecutable(candidates){
+  for(const candidate of candidates.filter(Boolean)){
+    if(!path.isAbsolute(candidate))continue;
+    try{
+      const canonical=fs.realpathSync(candidate);
+      if(fs.statSync(canonical).isFile())return canonical;
+    }catch(_){}
+  }
+  return null;
+}
+
+function developmentProbe(executable,commandArgs,options){
+  const opts=options||{};
+  if(!executable)return { ok:false,status:null,stdout:'',stderr:'',error:'Executable unavailable.' };
+  const result=spawnSync(executable,commandArgs||[],{
+    cwd:opts.cwd||safeSubprocessCwd,
+    env:opts.env||safeSubprocessEnvironment,
+    encoding:'utf8',
+    windowsHide:true,
+    shell:false,
+    timeout:Math.min(10000,Math.max(1000,Number(opts.timeout||5000))),
+    maxBuffer:Math.min(2*1024*1024,Math.max(16*1024,Number(opts.maxBuffer||256*1024))),
+  });
+  return {
+    ok:!result.error&&result.status===0,
+    status:Number.isInteger(result.status)?result.status:null,
+    stdout:String(result.stdout||''),
+    stderr:String(result.stderr||''),
+    error:result.error?String(result.error.message||result.error):null,
+  };
+}
+
+function developmentGitTool(){
+  const programFiles=safeSubprocessEnvironment.ProgramFiles||'C:\\Program Files';
+  const programFilesX86=safeSubprocessEnvironment['ProgramFiles(x86)']||'C:\\Program Files (x86)';
+  const executable=fixedDevelopmentExecutable(platform==='win32'?[
+    path.join(programFiles,'Git','cmd','git.exe'),
+    path.join(programFiles,'Git','bin','git.exe'),
+    path.join(programFilesX86,'Git','cmd','git.exe'),
+    path.join(programFilesX86,'Git','bin','git.exe'),
+  ]:[ '/usr/bin/git','/usr/local/bin/git' ]);
+  const probe=developmentProbe(executable,['--version']);
+  return { available:probe.ok,path:executable,version:probe.ok?probe.stdout.trim().slice(0,128):null };
+}
+
+function developmentGitArguments(root,args){
+  return ['-c',`safe.directory=${root}`,'-C',root,...args];
+}
+
+function developmentRepositoryLineage(root){
+  const gitTool=developmentGitTool();
+  if(!gitTool.available){
+    throw arcaneError('DEVELOPMENT_GIT_REQUIRED','Arcane needs Git to verify this checkout.','Install Git in a standard system location, then pair the checkout again.',409);
+  }
+  const topLevel=developmentProbe(gitTool.path,developmentGitArguments(root,['rev-parse','--show-toplevel']),{cwd:root,timeout:5000,maxBuffer:16*1024});
+  let canonicalTopLevel=null;
+  try{canonicalTopLevel=topLevel.ok?fs.realpathSync(topLevel.stdout.trim()):null;}catch(_){}
+  if(!canonicalTopLevel||canonicalTopLevel.toLowerCase()!==root.toLowerCase()){
+    throw arcaneError('DEVELOPMENT_ROOT_UNTRUSTED','Arcane could not bind the selected directory to its Git checkout root.','Select the canonical root of the company Arcane OS checkout.',409,{ stdout:`Requested root: ${root}; Git root: ${topLevel.stdout.trim().slice(0,1024)||'(unavailable)'}`,stderr:(topLevel.stderr||topLevel.error||'').trim().slice(0,1024)||null });
+  }
+  const ancestry=developmentProbe(gitTool.path,developmentGitArguments(root,['merge-base','--is-ancestor',DEVELOPMENT_TRUSTED_BASELINE,'HEAD']),{cwd:root,timeout:5000,maxBuffer:16*1024});
+  if(!ancestry.ok){
+    throw arcaneError('DEVELOPMENT_ROOT_UNTRUSTED','That checkout does not descend from Arcane\u2019s trusted company baseline.','Use a current company Arcane OS clone or rebase the branch onto the supported baseline before running setup.',409,{ trustedBaseline:DEVELOPMENT_TRUSTED_BASELINE });
+  }
+  return Object.freeze({ trusted:true,baseline:DEVELOPMENT_TRUSTED_BASELINE });
+}
+
+function developmentNodeTool(){
+  const nativeCandidate=typeof native.nodeExecutable==='function'?native.nodeExecutable():null;
+  const programFiles=safeSubprocessEnvironment.ProgramFiles||'C:\\Program Files';
+  const candidates=platform==='win32'?[nativeCandidate,path.join(programFiles,'nodejs','node.exe')]:[
+    '/usr/local/bin/node','/usr/bin/node',path.join(os.homedir(),'.local','bin','node'),
+  ];
+  const packagedCore=(()=>{try{return fs.realpathSync(process.execPath);}catch(_){return path.resolve(process.execPath);}})();
+  let unsupported=null;
+  for(const candidate of candidates.filter(Boolean)){
+    const executable=fixedDevelopmentExecutable([candidate]);
+    if(!executable||executable.toLowerCase()===packagedCore.toLowerCase())continue;
+    const probe=developmentProbe(executable,['--version']);
+    const match=probe.ok?probe.stdout.trim().match(/^v(\d+)(?:\.(\d+))?/):null;
+    const major=match?Number(match[1]):null;
+    const tool={ available:Boolean(probe.ok&&major>=22),path:executable,version:probe.ok?probe.stdout.trim().slice(0,64):null,major,supported:Boolean(probe.ok&&major>=22) };
+    if(tool.available)return tool;
+    if(probe.ok)unsupported=tool;
+  }
+  return unsupported||{ available:false,path:null,version:null,major:null,supported:false };
+}
+
+function developmentNpmTool(nodeTool){
+  if(!nodeTool||!nodeTool.path)return { available:false,path:null,version:null };
+  const nodeDirectory=path.dirname(nodeTool.path);
+  const candidates=platform==='win32'?[
+    path.join(nodeDirectory,'node_modules','npm','bin','npm-cli.js'),
+  ]:[
+    '/usr/local/lib/node_modules/npm/bin/npm-cli.js',
+    '/usr/lib/node_modules/npm/bin/npm-cli.js',
+    '/usr/share/nodejs/npm/bin/npm-cli.js',
+    path.resolve(nodeDirectory,'..','lib','node_modules','npm','bin','npm-cli.js'),
+  ];
+  const cli=fixedDevelopmentExecutable(candidates);
+  const probe=nodeTool.available&&cli?developmentProbe(nodeTool.path,[cli,'--version']):{ok:false,stdout:''};
+  return { available:Boolean(nodeTool.available&&cli&&probe.ok),path:cli,version:probe.ok?probe.stdout.trim().slice(0,64):null };
+}
+
+function developmentCommandEnvironment(nodeTool,gitTool){
+  const separator=platform==='win32'?';':':';
+  const directories=[nodeTool&&nodeTool.path?path.dirname(nodeTool.path):'',gitTool&&gitTool.path?path.dirname(gitTool.path):''].filter(Boolean);
+  const base=String(safeSubprocessEnvironment.PATH||safeSubprocessEnvironment.Path||'');
+  const trustedPath=[...new Set([...directories,base].filter(Boolean))].join(separator);
+  const env={ ...safeSubprocessEnvironment,PATH:trustedPath };
+  if(platform==='win32'){
+    env.Path=trustedPath;
+    env.APPDATA=process.env.APPDATA||path.join(os.homedir(),'AppData','Roaming');
+    env.TEMP=process.env.TEMP||os.tmpdir();
+    env.TMP=process.env.TMP||env.TEMP;
+  }
+  return env;
+}
+
+function developmentDependencyReady(root,relative){
+  const segments=relative.split('/');
+  let cursor=root;
+  try{
+    for(let index=0;index<segments.length;index+=1){
+      cursor=path.join(cursor,segments[index]);
+      const stat=fs.lstatSync(cursor);
+      if(stat.isSymbolicLink())return false;
+      if(index<segments.length-1&&!stat.isDirectory())return false;
+      if(index===segments.length-1&&!stat.isFile())return false;
+    }
+    return developmentPathWithin(root,fs.realpathSync(cursor));
+  }catch(_){return false;}
+}
+
+function developmentSigningReady(){
+  if(platform!=='win32')return { available:false,ready:false,message:'Windows development signing is available only on Windows.' };
+  const script=`$subject='CN=The Wizard Nexus Development'
+$friendly='Arcane OS Local Development Code Signing'
+$minimum=(Get-Date).AddDays(30)
+$certificate=Get-ChildItem Cert:\\CurrentUser\\My -CodeSigningCert -ErrorAction Stop | Where-Object { $_.Subject -ceq $subject -and $_.Issuer -ceq $subject -and $_.FriendlyName -ceq $friendly -and $_.HasPrivateKey -and $_.NotAfter -gt $minimum } | Sort-Object NotAfter -Descending | Select-Object -First 1
+if(-not $certificate){exit 2}
+$thumbprint=([string]$certificate.Thumbprint).Replace(' ','').ToUpperInvariant()
+foreach($store in @('Root','TrustedPublisher')){if(-not (Get-ChildItem "Cert:\\CurrentUser\\$store" -ErrorAction Stop | Where-Object { ([string]$_.Thumbprint).Replace(' ','').ToUpperInvariant() -ceq $thumbprint } | Select-Object -First 1)){exit 3}}
+'ready'`;
+  const encoded=Buffer.from(script,'utf16le').toString('base64');
+  const probe=developmentProbe(windowsPowerShell,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',encoded],{timeout:5000,maxBuffer:32*1024});
+  return { available:true,ready:probe.ok,message:probe.ok?'Local development signing is ready.':'Local development signing is not initialized.' };
+}
+
+function developmentGitStatus(workspace,gitTool){
+  if(!gitTool.available)return { available:false,path:gitTool.path,version:gitTool.version,branch:null,head:null,dirty:false,staged:0,modified:0,untracked:0 };
+  const probe=developmentProbe(gitTool.path,developmentGitArguments(workspace.root,['status','--porcelain=v2','--branch','--untracked-files=normal']),{cwd:workspace.root,timeout:5000,maxBuffer:1024*1024});
+  if(!probe.ok)return { available:false,path:gitTool.path,version:gitTool.version,branch:null,head:null,dirty:false,staged:0,modified:0,untracked:0,error:(probe.stderr||probe.error||'Git status failed.').trim().slice(0,512) };
+  let branch=null;
+  let head=null;
+  let staged=0;
+  let modified=0;
+  let untracked=0;
+  for(const line of probe.stdout.split(/\r?\n/)){
+    if(line.startsWith('# branch.head '))branch=line.slice(14).trim()||null;
+    else if(line.startsWith('# branch.oid '))head=line.slice(13).trim()||null;
+    else if(line.startsWith('? '))untracked+=1;
+    else if(line.startsWith('1 ')||line.startsWith('2 ')||line.startsWith('u ')){
+      const state=line.slice(2,4);
+      if(state[0]&&state[0]!=='.')staged+=1;
+      if(state[1]&&state[1]!=='.')modified+=1;
+    }
+  }
+  return { available:true,path:gitTool.path,version:gitTool.version,branch,head,dirty:staged+modified+untracked>0,staged,modified,untracked };
+}
+
+function inspectDevelopmentWorkspace(parameters){
+  const request=developmentRequest(parameters,['root']);
+  const workspace=validateDevelopmentWorkspace(request.root);
+  const gitTool=developmentGitTool();
+  const nodeTool=developmentNodeTool();
+  const npmTool=developmentNpmTool(nodeTool);
+  const commandEnvironment=developmentCommandEnvironment(nodeTool,gitTool);
+  const hooksProbe=gitTool.available?developmentProbe(gitTool.path,developmentGitArguments(workspace.root,['config','--get','core.hooksPath']),{cwd:workspace.root,env:commandEnvironment,timeout:3000,maxBuffer:16*1024}):{ok:false,stdout:''};
+  const signing=developmentSigningReady();
+  const tasks=[
+    {
+      id:'node-runtime',
+      label:'Node.js runtime',
+      available:nodeTool.available||platform==='win32',
+      installable:platform==='win32',
+      ready:nodeTool.available,
+      message:nodeTool.available
+        ? `Node.js ${nodeTool.version||'22+'} is ready at ${nodeTool.path}.`
+        : platform==='win32'
+          ? 'Install the verified Node.js 22 or newer runtime through Arcane.'
+          : 'Install Node.js 22 or newer in a standard system location.',
+    },
+    { id:'root-dependencies',label:'Root dependencies',available:nodeTool.available&&npmTool.available,ready:developmentDependencyReady(workspace.root,'node_modules/strong-type/package.json'),message:'Install the root lockfile with npm ci.' },
+    { id:'machine-dependencies',label:'Machine bundle dependencies',available:nodeTool.available&&npmTool.available,ready:developmentDependencyReady(workspace.bundleRoot,'node_modules/@yao-pkg/pkg/package.json'),message:'Install the current machine bundle lockfile with npm ci.' },
+    { id:'git-hooks',label:'Git hooks',available:nodeTool.available&&npmTool.available&&gitTool.available,ready:hooksProbe.ok&&hooksProbe.stdout.trim().replace(/\\/g,'/').replace(/^\.\//,'')==='.githooks',message:'Configure the checkout to use its versioned Git hooks.' },
+    { id:'windows-signing',label:'Windows development signing',available:signing.available&&nodeTool.available&&npmTool.available,ready:signing.ready,message:signing.message },
+  ];
+  const applicableTasks=tasks.filter((task)=>task.id!=='windows-signing'||platform==='win32');
+  return {
+    root:workspace.root,
+    runtimeVersion:VERSION,
+    repository:{ name:workspace.packageManifest.name,version:String(workspace.packageManifest.version||''),bundleVersion:String(workspace.bundleManifest.version||''),trustedBaseline:workspace.lineage.baseline },
+    git:developmentGitStatus(workspace,gitTool),
+    tools:{ node:nodeTool,npm:npmTool,git:gitTool },
+    signing,
+    readiness:{ ready:applicableTasks.every((task)=>task.available&&task.ready),tasks },
+  };
+}
+
+function developmentQueryTerms(query){
+  const terms=String(query||'').toLowerCase().match(/[a-z0-9][a-z0-9._-]{1,63}/g)||[];
+  return [...new Set(terms.filter((term)=>term.length>=3&&!DEVELOPMENT_QUERY_STOP_WORDS.has(term)))].slice(0,6);
+}
+
+function developmentTrackedPaths(workspace,gitTool){
+  if(!gitTool.available)throw arcaneError('DEVELOPMENT_GIT_REQUIRED','Arcane needs Git to read bounded development context.','Install Git in a standard system location, then inspect the workspace again.',409);
+  const probe=developmentProbe(gitTool.path,developmentGitArguments(workspace.root,['ls-files','-z','--cached','--','.']),{cwd:workspace.root,timeout:7000,maxBuffer:2*1024*1024});
+  if(!probe.ok)throw arcaneError('DEVELOPMENT_CONTEXT_FAILED','Arcane could not read the checkout index.','Verify that the selected Arcane checkout has a healthy Git index.',409,{ technicalMessage:(probe.stderr||probe.error||'git ls-files failed').trim().slice(0,1024) });
+  return probe.stdout.split('\0').filter(Boolean);
+}
+
+function developmentFileExcerpt(text,matchLines){
+  if(!matchLines.length)return text.slice(0,DEVELOPMENT_CONTEXT_FILE_CHARACTER_LIMIT);
+  const lines=text.split(/\r?\n/);
+  const selected=new Set();
+  for(const lineNumber of matchLines.slice(0,8)){
+    const center=Math.max(0,Number(lineNumber||1)-1);
+    for(let index=Math.max(0,center-3);index<=Math.min(lines.length-1,center+4);index+=1)selected.add(index);
+  }
+  let output='';
+  let previous=-2;
+  for(const index of [...selected].sort((left,right)=>left-right)){
+    if(index>previous+1)output+=`${output?'\n':''}[lines ${index+1}-${Math.min(lines.length,index+8)}]\n`;
+    const next=`${index+1}: ${lines[index]}\n`;
+    if(output.length+next.length>DEVELOPMENT_CONTEXT_FILE_CHARACTER_LIMIT)break;
+    output+=next;
+    previous=index;
+  }
+  return output.slice(0,DEVELOPMENT_CONTEXT_FILE_CHARACTER_LIMIT);
+}
+
+function redactDevelopmentSensitiveContent(input){
+  let text=String(input||'');
+  let redacted=false;
+  function replace(pattern,replacement){
+    text=text.replace(pattern,(...matches)=>{
+      redacted=true;
+      return typeof replacement==='function'?replacement(...matches):replacement;
+    });
+  }
+  replace(/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|$)/gi,DEVELOPMENT_REDACTION_MARKER);
+  replace(/\b(?:sk-[A-Za-z0-9_-]{16,}|github_pat_[A-Za-z0-9_]{16,}|gh[pousr]_[A-Za-z0-9]{16,}|xox[baprs]-[A-Za-z0-9-]{16,}|npm_[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})\b/g,DEVELOPMENT_REDACTION_MARKER);
+  replace(/\b(https?:\/\/)[^/\s:@]+:[^/\s@]+@/gi,(_match,scheme)=>`${scheme}${DEVELOPMENT_REDACTION_MARKER}@`);
+  replace(/^(\s*(?:(?:const|let|var)\s+)?["']?(?:api[_-]?key|access[_-]?(?:key|token)|auth(?:entication|orization)?[_-]?token|bearer|client[_-]?secret|credential|password|passwd|private[_-]?key|secret|token)["']?\s*[:=]\s*)(.+)$/gim,(_match,prefix)=>`${prefix}${DEVELOPMENT_REDACTION_MARKER}`);
+  replace(/(\b(?:password|pwd|access[_-]?token|api[_-]?key|client[_-]?secret)\s*=\s*)[^;\s"'`]+/gi,(_match,prefix)=>`${prefix}${DEVELOPMENT_REDACTION_MARKER}`);
+  return { text,redacted };
+}
+
+function developmentContext(parameters){
+  const request=developmentRequest(parameters,['query','root']);
+  const query=typeof request.query==='string'?request.query.trim():'';
+  if(!query||query.length>4096||query.includes('\0'))throw arcaneError('DEVELOPMENT_QUERY_INVALID','Enter a bounded codebase question.','Use between 1 and 4096 text characters.',400);
+  const workspace=validateDevelopmentWorkspace(request.root);
+  const gitTool=developmentGitTool();
+  const tracked=developmentTrackedPaths(workspace,gitTool);
+  const safeByPath=new Map();
+  for(const relative of tracked){
+    const safe=safeDevelopmentTrackedFile(workspace,relative);
+    if(safe)safeByPath.set(safe.path,safe);
+  }
+  const terms=developmentQueryTerms(query);
+  const scored=new Map();
+  function candidate(relative,score,lineNumber){
+    const safe=safeByPath.get(relative);
+    if(!safe)return;
+    const current=scored.get(relative)||{ safe,score:0,lines:[] };
+    current.score+=score;
+    if(Number.isSafeInteger(lineNumber)&&lineNumber>0&&!current.lines.includes(lineNumber))current.lines.push(lineNumber);
+    scored.set(relative,current);
+  }
+  for(const relative of ['AGENTS.md','README.md','package.json','docs/app-building.md'])candidate(relative,1,null);
+  for(const safe of safeByPath.values()){
+    const lowered=safe.path.toLowerCase();
+    for(const term of terms)if(lowered.includes(term))candidate(safe.path,8,null);
+  }
+  if(terms.length){
+    const expressions=terms.flatMap((term)=>['-e',term]);
+    const probe=developmentProbe(gitTool.path,developmentGitArguments(workspace.root,['grep','-I','-n','-i','-F','--max-count=120',...expressions,'--']),{cwd:workspace.root,timeout:7000,maxBuffer:1024*1024});
+    if(probe.ok||probe.status===1){
+    for(const line of probe.stdout.split(/\r?\n/)){
+      const match=line.match(/^(.+?):(\d+):(.*)$/);
+      if(match)candidate(match[1],12,Number(match[2]));
+    }
+    }
+  }
+  const ranked=[...scored.values()].sort((left,right)=>right.score-left.score||left.safe.path.localeCompare(right.safe.path)).slice(0,DEVELOPMENT_CONTEXT_FILE_COUNT_LIMIT);
+  const files=[];
+  let characters=0;
+  for(const item of ranked){
+    let buffer;
+    try{buffer=fs.readFileSync(item.safe.absolute);}catch(_){continue;}
+    if(buffer.includes(0))continue;
+    const text=buffer.toString('utf8');
+    const sanitized=redactDevelopmentSensitiveContent(text);
+    let content=developmentFileExcerpt(sanitized.text,item.lines);
+    const remaining=DEVELOPMENT_CONTEXT_CHARACTER_LIMIT-characters;
+    if(remaining<=0)break;
+    if(content.length>remaining)content=content.slice(0,remaining);
+    files.push({
+      path:item.safe.path,
+      bytes:buffer.length,
+      sha256:crypto.createHash('sha256').update(buffer).digest('hex'),
+      truncated:content.length<sanitized.text.length,
+      redacted:sanitized.redacted,
+      content,
+    });
+    characters+=content.length;
+  }
+  return { root:workspace.root,query,files,totals:{ files:files.length,characters,limitCharacters:DEVELOPMENT_CONTEXT_CHARACTER_LIMIT } };
+}
+
+async function installDevelopmentNode(action,parameters){
+  developmentRequest(parameters,[]);
+  if(platform!=='win32'){
+    throw arcaneError('DEVELOPMENT_NODE_INSTALL_UNAVAILABLE','Arcane Developer can install Node.js automatically only on Windows.','Install Node.js 22 or newer through your operating system’s trusted package channel.',409);
+  }
+  actionStep(action,5,'Installing the verified Node.js runtime…');
+  await installNode(action);
+  const nodeTool=developmentNodeTool();
+  if(!simulate&&!nodeTool.available){
+    throw arcaneError('DEVELOPMENT_NODE_INSTALL_FAILED','Arcane installed Node.js, but Arcane Developer could not use the external runtime.','Restart Arcane after confirming Node.js 22 or newer is installed in the standard system location.',409,{ node:nodeTool });
+  }
+  actionStep(action,100,simulate?'Node.js installation simulation complete.':'Node.js runtime ready.');
+  return { installed:!simulate,simulated:simulate,node:nodeTool };
+}
+
+async function setupDevelopmentWorkspace(action,parameters){
+  const request=developmentRequest(parameters,['root','taskId']);
+  const taskId=String(request.taskId||'');
+  if(!DEVELOPMENT_SETUP_TASK_IDS.includes(taskId)){
+    throw arcaneError('DEVELOPMENT_SETUP_TASK_INVALID','Arcane rejected an unknown development setup task.','Choose one of the setup tasks reported by Arcane.development.inspect().',400,{ allowedTaskIds:DEVELOPMENT_SETUP_TASK_IDS });
+  }
+  if(taskId==='windows-signing'&&platform!=='win32'){
+    throw arcaneError('DEVELOPMENT_SETUP_UNAVAILABLE','Windows development signing is available only on Windows.','Choose a setup task supported by this operating system.',409);
+  }
+  const workspace=validateDevelopmentWorkspace(request.root);
+  const nodeTool=developmentNodeTool();
+  const npmTool=developmentNpmTool(nodeTool);
+  if(!nodeTool.available||!npmTool.available){
+    throw arcaneError('DEVELOPMENT_NODE_REQUIRED','Arcane Developer requires an external Node.js 22 or newer installation with npm.','Install Node.js 22 or newer in the standard system location, then inspect the workspace again.',409,{ node:nodeTool,npm:npmTool });
+  }
+  const gitTool=developmentGitTool();
+  if(taskId==='git-hooks'&&!gitTool.available){
+    throw arcaneError('DEVELOPMENT_GIT_REQUIRED','Arcane needs Git to configure this checkout.','Install Git in a standard system location, then inspect the workspace again.',409);
+  }
+  const definitions={
+    'root-dependencies':{ cwd:workspace.root,args:['ci','--no-audit','--no-fund'],label:'Installing root dependencies' },
+    'machine-dependencies':{ cwd:workspace.bundleRoot,args:['ci','--no-audit','--no-fund'],label:'Installing machine bundle dependencies' },
+    'git-hooks':{ cwd:workspace.root,args:['run','hooks:install'],label:'Configuring repository Git hooks' },
+    'windows-signing':{ cwd:workspace.root,args:['run','signing:bootstrap:dev:windows'],label:'Initializing local Windows development signing' },
+  };
+  const definition=definitions[taskId];
+  actionStep(action,10,`${definition.label}…`);
+  const result=await run(nodeTool.path,[npmTool.path,...definition.args],{
+    action,
+    cwd:definition.cwd,
+    env:developmentCommandEnvironment(nodeTool,gitTool),
+    displayCommand:`$ npm ${definition.args.join(' ')}`,
+  });
+  actionStep(action,100,`${definition.label} complete.`);
+  return { root:workspace.root,taskId,completed:true,exitCode:result.code };
+}
+
 async function sha256(file) {
   const hash = crypto.createHash('sha256');
   const input = fs.createReadStream(file);
@@ -3295,6 +3838,7 @@ const METHOD_POLICIES = Object.freeze({
   'app.current': Object.freeze({}),
   'capabilities.list': Object.freeze({}),
   'ai.chat': Object.freeze({ capability:'ai.inference' }),
+  'ai.profile.current': Object.freeze({ capability:'ai.inference' }),
   'ai.models': Object.freeze({ capability:'ai.models.read' }),
   'ai.provider.settings.get': Object.freeze({ capability:'ai.settings.manage',appIds:['settings'] }),
   'ai.provider.settings.set': Object.freeze({ capability:'ai.settings.manage',appIds:['settings'] }),
@@ -3340,6 +3884,11 @@ const METHOD_POLICIES = Object.freeze({
   'users.list': Object.freeze({ capability:'users.manage', appTypes:['provisioner'] }),
   'diagnostics.recent': Object.freeze({ capability:'diagnostics.read' }),
   'diagnostics.get': Object.freeze({ capability:'diagnostics.read' }),
+  'development.inspect': Object.freeze({ capability:'development.read',appIds:['developer'] }),
+  'development.context': Object.freeze({ capability:'development.read',appIds:['developer'] }),
+  'development.setup': Object.freeze({ capability:'development.manage',appIds:['developer'],exclusiveMutation:true }),
+  'development.node.install': Object.freeze({ capability:'development.manage',appIds:['developer'],privileged:true,exclusiveMutation:true }),
+  'filesystem.directory.select': Object.freeze({ capability:'filesystem.directory.select' }),
   'apps.list': Object.freeze({ capability:'applications.read', appIds:['shell','terminal'] }),
   'apps.launch': Object.freeze({ capability:'applications.launch', appIds:['shell','terminal'] }),
   'terminal.start': Object.freeze({ capability:'terminal.execute', appIds:['terminal'] }),
@@ -3691,6 +4240,100 @@ function networkStatus() {
   return { online:activeNames.length>0,interfaceCount:activeNames.length };
 }
 
+const FILESYSTEM_DIRECTORY_TITLE_LIMIT=200;
+const FILESYSTEM_DIRECTORY_PATH_LIMIT=4096;
+
+function filesystemDirectorySelectionRequest(parameters) {
+  if(!parameters||typeof parameters!=='object'||Array.isArray(parameters)){
+    throw arcaneError(
+      'FILESYSTEM_DIRECTORY_SELECTION_INVALID',
+      'Arcane rejected an invalid folder-selection request.',
+      'Choose a folder again using the Arcane folder selector.',
+      400
+    );
+  }
+  const allowed=new Set(['initialPath','title']);
+  const unknown=Object.keys(parameters).filter((key)=>!allowed.has(key));
+  if(unknown.length){
+    throw arcaneError(
+      'FILESYSTEM_DIRECTORY_SELECTION_INVALID',
+      'Arcane rejected unsupported folder-selection fields.',
+      'Use only the documented folder-selector options.',
+      400,
+      { allowedFields:[...allowed].sort() }
+    );
+  }
+
+  let title='Choose a folder';
+  if(parameters.title!==undefined&&parameters.title!==null&&parameters.title!==''){
+    if(typeof parameters.title!=='string'){
+      throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_INVALID','The folder-selector title is invalid.','Choose the folder again.',400);
+    }
+    title=parameters.title.trim();
+    if(!title||title.length>FILESYSTEM_DIRECTORY_TITLE_LIMIT||/[\u0000-\u001f\u007f]/.test(title)){
+      throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_INVALID','The folder-selector title is invalid.','Use a short, plain-text folder-selector title.',400);
+    }
+  }
+
+  let initialPath='';
+  if(parameters.initialPath!==undefined&&parameters.initialPath!==null&&parameters.initialPath!==''){
+    if(typeof parameters.initialPath!=='string'){
+      throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_INVALID','The initial folder path is invalid.','Choose an existing absolute directory.',400);
+    }
+    const requested=parameters.initialPath.trim();
+    if(!requested||requested.length>FILESYSTEM_DIRECTORY_PATH_LIMIT||/[\u0000-\u001f\u007f]/.test(requested)||!path.isAbsolute(requested)){
+      throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_INVALID','The initial folder path is invalid.','Choose an existing absolute directory.',400);
+    }
+    try{
+      initialPath=fs.realpathSync(requested);
+      if(!fs.statSync(initialPath).isDirectory())throw new Error('Not a directory.');
+    }catch(_){
+      throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_INVALID','The initial folder path is unavailable.','Choose an existing absolute directory.',400);
+    }
+  }
+  return Object.freeze({ title,initialPath });
+}
+
+async function selectFilesystemDirectory(parameters) {
+  const options=filesystemDirectorySelectionRequest(parameters);
+  if(typeof native.selectDirectory!=='function'){
+    throw arcaneError(
+      'FILESYSTEM_DIRECTORY_SELECTION_UNSUPPORTED',
+      'Arcane folder selection is not available on this operating system.',
+      'Enter a verified absolute directory path, or use an Arcane host with native folder selection.',
+      501
+    );
+  }
+  const result=await native.selectDirectory(options);
+  const keys=result&&typeof result==='object'&&!Array.isArray(result)?Object.keys(result).sort():[];
+  if(keys.length!==2||keys[0]!=='cancelled'||keys[1]!=='path'||typeof result.cancelled!=='boolean'){
+    throw arcaneError(
+      'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
+      'The operating system returned an invalid folder-selection result.',
+      'Close Arcane, reopen the application, and choose the folder again.',
+      500
+    );
+  }
+  if(result.cancelled){
+    if(result.path!==null){
+      throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_FAILED','The operating system returned an invalid folder-selection result.','Choose the folder again.',500);
+    }
+    return Object.freeze({ cancelled:true,path:null });
+  }
+  const selected=typeof result.path==='string'?result.path.trim():'';
+  if(!selected||selected.length>FILESYSTEM_DIRECTORY_PATH_LIMIT||/[\u0000-\u001f\u007f]/.test(selected)||!path.isAbsolute(selected)){
+    throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_FAILED','The operating system returned an invalid folder path.','Choose an existing local directory.',500);
+  }
+  let canonical;
+  try{
+    canonical=fs.realpathSync(selected);
+    if(!fs.statSync(canonical).isDirectory())throw new Error('Not a directory.');
+  }catch(_){
+    throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_FAILED','The selected folder is no longer available.','Choose an existing local directory.',409);
+  }
+  return Object.freeze({ cancelled:false,path:canonical });
+}
+
 function machineStatus() {
   const installation = installationState();
   const releaseSecurity=activeReleaseSecurityEvidence();
@@ -3922,6 +4565,7 @@ async function dispatchMethod(request, options) {
     case 'app.current': return publicAppDescriptor();
     case 'capabilities.list': return capabilityStatus();
     case 'ai.chat': return completeConfiguredChat(parameters);
+    case 'ai.profile.current': return managedAIProfile();
     case 'ai.models': return listLocalModels();
     case 'ai.provider.settings.get': return managedAIProviderSettings();
     case 'ai.provider.settings.set': return setManagedAIProviderSettings(parameters);
@@ -3963,6 +4607,7 @@ async function dispatchMethod(request, options) {
     case 'user.current': return currentIdentity();
     case 'system.metrics': return systemMetrics();
     case 'network.status': return networkStatus();
+    case 'filesystem.directory.select': return selectFilesystemDirectory(parameters);
     case 'storage.list': return listAppStorage();
     case 'storage.get': return getAppStorage(parameters.key);
     case 'storage.set': return setAppStorage(parameters.key, parameters.value);
@@ -3986,6 +4631,16 @@ async function dispatchMethod(request, options) {
       const item = recentErrors.find((entry) => entry.id === parameters.diagnosticId);
       if (!item) throw arcaneError('DIAGNOSTIC_NOT_FOUND', 'That Arcane diagnostic record is no longer available.', 'Reproduce the failure and copy the new diagnostics.', 404);
       return item;
+    }
+    case 'development.inspect': return inspectDevelopmentWorkspace(parameters);
+    case 'development.context': return developmentContext(parameters);
+    case 'development.setup': {
+      const wrapped=await withAction('development.setup',requestId,(action)=>setupDevelopmentWorkspace(action,parameters));
+      return { ...wrapped.result,operation:wrapped.operation };
+    }
+    case 'development.node.install': {
+      const wrapped=await withAction('development.node.install',requestId,(action)=>installDevelopmentNode(action,parameters));
+      return { ...wrapped.result,operation:wrapped.operation };
     }
     case 'apps.list': return listInstalledApplications(request);
     case 'apps.launch': return launchInstalledApplication(request);

@@ -109,6 +109,62 @@
         "soc.html"
       ]
     },
+    "warrior-spirit": {
+      "displayName": "Warrior Spirit Companion",
+      "description": "A private reflection and whole-person wellness companion powered by The Wizard Nexus's PreCrisis.ai.",
+      "icon": "img/warrior-spirit-logo.png",
+      "order": 25,
+      "type": "app",
+      "source": "apps/warrior-spirit",
+      "entry": "index.html",
+      "capabilities": [
+        "ai.inference",
+        "ai.models.read",
+        "appearance.read",
+        "appearance.write",
+        "diagnostics.read",
+        "identity.read",
+        "installation.read",
+        "media.microphone",
+        "network.status.read",
+        "preferences.read",
+        "preferences.write",
+        "requirements.read",
+        "storage.read",
+        "storage.write",
+        "system.metrics.read",
+        "system.read",
+        "web.embed"
+      ],
+      "security": {
+        "connectOrigins": [
+          "http://127.0.0.1:8011",
+          "http://127.0.0.1:11434",
+          "https://api.openai.com"
+        ],
+        "frameOrigins": [],
+        "mediaOrigins": [
+          "https://cdn.openai.com"
+        ]
+      },
+      "bundledApps": [
+        "precrisis"
+      ],
+      "include": [
+        "companion.html",
+        "img/warrior-spirit-logo.png",
+        "home.html",
+        "index.html",
+        "manifest.json",
+        "mental-health.html",
+        "memories.html",
+        "modules",
+        "precrisis-skin.css",
+        "profile.html",
+        "reflection.html",
+        "warrior-spirit.css"
+      ]
+    },
     "boss": {
       "displayName": "BOSS",
       "description": "A private workspace for grounded business research, document libraries, and assisted analysis.",
@@ -158,6 +214,38 @@
         "library-setup.html",
         "library.html",
         "manifest.json",
+        "prompts"
+      ]
+    },
+    "developer": {
+      "displayName": "Arcane Developer",
+      "description": "Pair a verified Arcane checkout, prepare its development environment, review readiness, and work with the codebase through the current Arcane AI profile.",
+      "icon": "img/icon.png",
+      "order": 45,
+      "type": "app",
+      "source": "apps/developer",
+      "entry": "index.html",
+      "capabilities": [
+        "ai.inference",
+        "appearance.read",
+        "appearance.write",
+        "development.manage",
+        "development.read",
+        "filesystem.directory.select",
+        "preferences.read",
+        "preferences.write",
+        "requirements.read"
+      ],
+      "security": {
+        "connectOrigins": [],
+        "mediaOrigins": []
+      },
+      "include": [
+        "developer.css",
+        "img/icon.png",
+        "index.html",
+        "manifest.json",
+        "modules",
         "prompts"
       ]
     },
@@ -253,6 +341,90 @@
         "messages.css",
         "modules"
       ]
+    },
+    "browser": {
+      "displayName": "Arcane Browser",
+      "description": "A sandboxed web navigator with explicit external-browser handoff.",
+      "icon": "img/icon.png",
+      "order": 80,
+      "type": "app",
+      "source": "apps/browser",
+      "entry": "index.html",
+      "capabilities": ["appearance.read", "appearance.write", "network.status.read", "web.embed"],
+      "security": {"connectOrigins": [], "frameOrigins": ["https:"], "mediaOrigins": []},
+      "include": ["browser.css", "img/icon.png", "index.html", "manifest.json", "modules"]
+    },
+    "youtube": {
+      "displayName": "Arcane YouTube",
+      "description": "A privacy-enhanced YouTube video and playlist player.",
+      "icon": "img/icon.png",
+      "order": 90,
+      "type": "app",
+      "source": "apps/youtube",
+      "entry": "index.html",
+      "capabilities": ["appearance.read", "appearance.write", "network.status.read", "web.embed"],
+      "security": {"connectOrigins": [], "frameOrigins": ["https://www.youtube-nocookie.com"], "mediaOrigins": ["https://www.youtube-nocookie.com"]},
+      "include": ["img/icon.png", "index.html", "manifest.json", "modules", "youtube.css"]
+    },
+    "youtube-music": {
+      "displayName": "Arcane YouTube Music",
+      "description": "A YouTube Music song, video, and playlist player.",
+      "icon": "img/icon.png",
+      "order": 100,
+      "type": "app",
+      "source": "apps/youtube-music",
+      "entry": "index.html",
+      "capabilities": ["appearance.read", "appearance.write", "network.status.read", "web.embed"],
+      "security": {"connectOrigins": [], "frameOrigins": ["https://www.youtube-nocookie.com"], "mediaOrigins": ["https://www.youtube-nocookie.com"]},
+      "include": ["img/icon.png", "index.html", "manifest.json", "modules", "youtube-music.css"]
+    },
+    "markdown": {
+      "displayName": "Arcane Markdown",
+      "description": "A local Markdown editor with safe preview, device draft, and export.",
+      "icon": "img/icon.png",
+      "order": 110,
+      "type": "app",
+      "source": "apps/markdown",
+      "entry": "index.html",
+      "capabilities": ["appearance.read", "appearance.write"],
+      "security": {"connectOrigins": [], "mediaOrigins": []},
+      "include": ["img/icon.png", "index.html", "manifest.json", "markdown.css", "modules"]
+    },
+    "calculator": {
+      "displayName": "Arcane Calculator",
+      "description": "A local arithmetic and scientific expression calculator.",
+      "icon": "img/icon.png",
+      "order": 120,
+      "type": "app",
+      "source": "apps/calculator",
+      "entry": "index.html",
+      "capabilities": ["appearance.read", "appearance.write"],
+      "security": {"connectOrigins": [], "mediaOrigins": []},
+      "include": ["calculator.css", "img/icon.png", "index.html", "manifest.json", "modules"]
+    },
+    "capture": {
+      "displayName": "Arcane Capture",
+      "description": "User-controlled screenshots, display video recording, and animated GIF capture.",
+      "icon": "img/icon.png",
+      "order": 130,
+      "type": "app",
+      "source": "apps/capture",
+      "entry": "index.html",
+      "capabilities": ["appearance.read", "appearance.write", "media.display"],
+      "security": {"connectOrigins": [], "mediaOrigins": []},
+      "include": ["capture.css", "img/icon.png", "index.html", "manifest.json", "modules"]
+    },
+    "weather": {
+      "displayName": "Arcane Weather",
+      "description": "Current conditions and a reusable seven-day forecast for a user-entered location.",
+      "icon": "img/icon.png",
+      "order": 140,
+      "type": "app",
+      "source": "apps/weather",
+      "entry": "index.html",
+      "capabilities": ["appearance.read", "appearance.write", "network.status.read"],
+      "security": {"connectOrigins": ["https://api.open-meteo.com", "https://geocoding-api.open-meteo.com"], "mediaOrigins": []},
+      "include": ["img/icon.png", "index.html", "manifest.json", "modules", "weather.css"]
     },
     "settings": {
       "displayName": "Settings",

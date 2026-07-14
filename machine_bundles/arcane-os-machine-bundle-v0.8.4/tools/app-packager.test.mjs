@@ -8,6 +8,7 @@ import {
   buildTargetApp,
   normalizeNavigationEntry,
   normalizeRelativePath,
+  resolveBundledAppIds,
   validateAppRegistry,
 } from './app-packager-lib.mjs';
 import { verifyPackagedAppLinks } from './app-package-links.mjs';
@@ -47,7 +48,7 @@ function sha256Source(source) {
   return `'sha256-${crypto.createHash('sha256').update(source, 'utf8').digest('base64')}'`;
 }
 
-async function assertSecurityMetadata(target, appId, microphone) {
+async function assertSecurityMetadata(target, appId, microphone, frameSources = "'none'") {
   const appRoot = path.join(target, 'app', appId);
   const documents = [];
   async function visit(directory, relativeDirectory = '') {
@@ -80,7 +81,7 @@ async function assertSecurityMetadata(target, appId, microphone) {
     const policy = policies[0][1];
     assert.equal(policy, manifest.app.security.contentSecurityPolicy);
     assert.match(policy, /default-src 'none'/);
-    assert.match(policy, /frame-src 'none'/);
+    assert(policy.includes(`frame-src ${frameSources}`), `${appId}/${document} has an unexpected frame policy`);
     assert.match(policy, /object-src 'none'/);
     assert.match(policy, /script-src-attr 'none'/);
     assert.match(policy, /connect-src 'self' http:\/\/127\.0\.0\.1:11434 http:\/\/127\.0\.0\.1:8011 https:\/\/api\.openai\.com/);
@@ -176,6 +177,73 @@ test('registry rejects privileged types, capabilities, and overlapping allowlist
   const corpus = clone(valid);
   corpus.apps.boss.include.push('documents');
   assert.throws(() => validateAppRegistry(corpus), /must not copy the unpublished document catalog destination/);
+});
+
+test('bundled application graphs are explicit, acyclic, and capability-contained', async () => {
+  const valid = JSON.parse(await fs.readFile(path.join(bundleRoot, 'arcane-apps.json'), 'utf8'));
+  const normalized = validateAppRegistry(valid);
+  assert.deepEqual(normalized.apps['warrior-spirit'].bundledApps, ['precrisis']);
+  assert.deepEqual(resolveBundledAppIds(normalized, 'warrior-spirit'), ['precrisis']);
+  assert(normalized.apps['warrior-spirit'].capabilities.includes('web.embed'));
+  assert.deepEqual(normalized.apps['warrior-spirit'].security.frameOrigins, []);
+
+  const transitive = clone(valid);
+  transitive.apps['nested-helper'] = {
+    ...clone(transitive.apps.calculator),
+    displayName: 'Nested helper',
+    description: 'Synthetic package-graph fixture.',
+    order: 9999,
+    capabilities: [],
+    security: { connectOrigins: [], mediaOrigins: [] },
+  };
+  transitive.apps.precrisis.bundledApps = ['nested-helper'];
+  assert.deepEqual(
+    resolveBundledAppIds(validateAppRegistry(transitive), 'warrior-spirit'),
+    ['nested-helper', 'precrisis'],
+  );
+
+  const duplicate = clone(valid);
+  duplicate.apps['warrior-spirit'].bundledApps.push('precrisis');
+  assert.throws(() => validateAppRegistry(duplicate), /duplicate application ids/);
+
+  const self = clone(valid);
+  self.apps['warrior-spirit'].bundledApps = ['warrior-spirit'];
+  assert.throws(() => validateAppRegistry(self), /must not include its own application id/);
+
+  const unknown = clone(valid);
+  unknown.apps['warrior-spirit'].bundledApps = ['missing-app'];
+  assert.throws(() => validateAppRegistry(unknown), /references unknown application/);
+
+  const cycle = clone(valid);
+  cycle.apps.precrisis.bundledApps = ['warrior-spirit'];
+  assert.throws(() => validateAppRegistry(cycle), /bundledApps contains a cycle/);
+
+  const capabilityGap = clone(valid);
+  capabilityGap.apps['warrior-spirit'].capabilities = capabilityGap.apps['warrior-spirit'].capabilities
+    .filter((capability) => capability !== 'ai.models.read');
+  assert.throws(() => validateAppRegistry(capabilityGap), /capabilities for bundled application.*ai\.models\.read/);
+
+  const originGap = clone(valid);
+  originGap.apps['warrior-spirit'].security.connectOrigins = originGap.apps['warrior-spirit'].security.connectOrigins
+    .filter((origin) => origin !== 'https://api.openai.com');
+  assert.throws(() => validateAppRegistry(originGap), /connectOrigins for bundled application.*api\.openai\.com/);
+
+  const mediaOriginGap = clone(valid);
+  mediaOriginGap.apps['warrior-spirit'].security.mediaOrigins = [];
+  assert.throws(() => validateAppRegistry(mediaOriginGap), /mediaOrigins for bundled application.*cdn\.openai\.com/);
+
+  const frameOriginGap = clone(valid);
+  frameOriginGap.apps.precrisis.capabilities.push('web.embed');
+  frameOriginGap.apps.precrisis.security.frameOrigins = ['https://example.com'];
+  assert.throws(() => validateAppRegistry(frameOriginGap), /frameOrigins for bundled application.*example\.com/);
+
+  const catalog = clone(valid);
+  catalog.apps['warrior-spirit'].bundledApps = ['boss'];
+  assert.throws(() => validateAppRegistry(catalog), /cannot include.*because it generates a document catalog/);
+
+  const frameWithoutCapability = clone(valid);
+  frameWithoutCapability.apps.boss.security.frameOrigins = ['https://example.com'];
+  assert.throws(() => validateAppRegistry(frameWithoutCapability), /frameOrigins requires the web\.embed capability/);
 });
 
 test('presentation metadata is strict plain text with an included safe icon', async () => {
@@ -298,6 +366,55 @@ test('PreCrisis package contains every offline dependency without unrelated refe
   const clinical = await fs.readFile(path.join(result.target, 'app/precrisis/dashboard-clinical.html'), 'utf8');
   assert(!clinical.includes('gstatic.com'));
   assert(!clinical.includes('google.charts'));
+});
+
+test('Warrior Spirit package bundles the registered PreCrisis snapshot with self-only framing', async () => {
+  const registry = validateAppRegistry(JSON.parse(await fs.readFile(path.join(bundleRoot, 'arcane-apps.json'), 'utf8')));
+  const bundledAppIds = resolveBundledAppIds(registry, 'warrior-spirit');
+  const result = await buildTargetApp({ bundleRoot, appId: 'warrior-spirit' });
+  const manifestPath = path.join(result.target, 'arcane-app-package.json');
+  const firstManifestText = await fs.readFile(manifestPath, 'utf8');
+  const manifest = JSON.parse(firstManifestText);
+  const paths = manifest.files.map((file) => file.path);
+
+  for (const required of [
+    'app/precrisis/admin.html',
+    'app/precrisis/chat.html',
+    'app/precrisis/dashboard.html',
+    'app/precrisis/data.html',
+    'app/precrisis/entities/Journal.js',
+    'app/precrisis/journal.html',
+    'app/precrisis/modules/PostSaveAssessmentUI.js',
+    'app/warrior-spirit/companion.html',
+    'app/warrior-spirit/modules/PreCrisisFrame.js',
+  ]) assert(paths.includes(required), `Warrior Spirit package is missing ${required}`);
+  assert(!paths.some((file) => file.includes('deepwiki_ollama_blog.html')));
+  assert(!paths.some((file) => file.startsWith('app/boss/')));
+  assert(manifest.app.security.contentSecurityPolicy.includes("frame-src 'self'"));
+  assert(!manifest.app.security.contentSecurityPolicy.includes("frame-src 'none'"));
+
+  const companion = await fs.readFile(path.join(result.target, 'app/warrior-spirit/companion.html'), 'utf8');
+  assert.match(companion, /data-precrisis-page="chat\.html"/);
+  assert(!companion.includes('/apps/warrior-spirit/'));
+  const bundledChat = await fs.readFile(path.join(result.target, 'app/precrisis/chat.html'), 'utf8');
+  assert(!bundledChat.includes('/apps/precrisis/'));
+  assert(bundledChat.includes(`http-equiv="Content-Security-Policy" content="${manifest.app.security.contentSecurityPolicy}"`));
+  const bundledServiceWorker = await fs.readFile(path.join(result.target, 'app/precrisis/service-worker.js'), 'utf8');
+  assert(!bundledServiceWorker.includes('/apps/precrisis/'));
+
+  const dependencies = await verifyPackagedAppLinks({ packageRoot: result.target, appId: 'warrior-spirit', bundledAppIds });
+  assert.equal(manifest.app.security.verifiedDependencies, dependencies.length);
+  await assert.rejects(
+    () => verifyPackagedAppLinks({ packageRoot: result.target, appId: 'warrior-spirit' }),
+    /payload contains undeclared root.*precrisis/,
+  );
+  await assertSecurityMetadata(result.target, 'warrior-spirit', true, "'self'");
+
+  const targetBundle = JSON.parse(await fs.readFile(path.join(result.target, 'arcane-bundle.json'), 'utf8'));
+  assert.deepEqual(Object.keys(targetBundle.apps), ['warrior-spirit']);
+
+  await buildTargetApp({ bundleRoot, appId: 'warrior-spirit' });
+  assert.equal(await fs.readFile(manifestPath, 'utf8'), firstManifestText);
 });
 
 test('link and unpublished-catalog verification fail closed on package drift', async () => {

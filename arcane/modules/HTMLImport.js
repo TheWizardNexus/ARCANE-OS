@@ -8,6 +8,8 @@ globalThis[htmlImportHostRegistryKey]=htmlImportHostRegistry;
 let htmlImportScriptId=0;
 
 class HTMLImport extends HTMLElement {
+  ready=false;
+
   constructor() {
       super();
       this.attachShadow({ mode: 'open' });
@@ -16,6 +18,7 @@ class HTMLImport extends HTMLElement {
   #cacheVersion=3;
 
   async connectedCallback() {
+    this.ready=false;
     const href = this.getAttribute('href');
     if (href) {
       let cache=JSON.parse(localStorage.getItem(href));
@@ -77,6 +80,12 @@ class HTMLImport extends HTMLElement {
       )
     }
 
+    this.ready=true;
+    this.dispatchEvent(new CustomEvent('html-import-ready',{
+      bubbles:true,
+      composed:true,
+      detail:{href}
+    }));
     return true;
   }
 

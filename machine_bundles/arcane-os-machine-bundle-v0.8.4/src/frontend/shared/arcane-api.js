@@ -237,6 +237,7 @@
     ai: Object.freeze({
       models: function () { return invoke('ai.models'); },
       chat: function (request) { return invoke('ai.chat', request || {}, { timeoutMs: 130000 }); },
+      profile: function () { return invoke('ai.profile.current'); },
       providerSettings: function () { return invoke('ai.provider.settings.get'); },
       saveProviderSettings: function (settings) { return invoke('ai.provider.settings.set', settings || {}, { timeoutMs: 130000 }); },
       providerModels: function () { return invoke('ai.provider.models', {}, { timeoutMs: 130000 }); },
@@ -314,6 +315,13 @@
       metrics: function () { return invoke('system.metrics'); },
     }),
     network: Object.freeze({ status: function () { return invoke('network.status'); } }),
+    filesystem: Object.freeze({
+      selectDirectory: function (options) {
+        const source = options == null ? {} : options;
+        if (typeof source !== 'object' || Array.isArray(source)) throw new TypeError('Arcane directory selection options must be an object.');
+        return invoke('filesystem.directory.select', Object.assign({}, source), { timeoutMs: LONG_OPERATION_TIMEOUT });
+      },
+    }),
     storage: Object.freeze({
       list: function () { return invoke('storage.list'); },
       get: function (key) { return invoke('storage.get', { key: String(key || '').trim() }); },
@@ -337,6 +345,12 @@
     diagnostics: Object.freeze({
       recentErrors: function () { return invoke('diagnostics.recent'); },
       get: function (diagnosticId) { return invoke('diagnostics.get', { diagnosticId: diagnosticId }); },
+    }),
+    development: Object.freeze({
+      inspect: function (root) { return invoke('development.inspect', { root: String(root || '') }); },
+      context: function (root, query) { return invoke('development.context', { root: String(root || ''), query: String(query || '') }, { timeoutMs: 130000 }); },
+      setup: function (root, taskId) { return invoke('development.setup', { root: String(root || ''), taskId: String(taskId || '') }, { timeoutMs: LONG_OPERATION_TIMEOUT }); },
+      installNode: function () { return invoke('development.node.install', {}, { timeoutMs: LONG_OPERATION_TIMEOUT }); },
     }),
   });
 

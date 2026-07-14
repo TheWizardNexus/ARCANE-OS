@@ -5,6 +5,8 @@ const APP_ORIGIN = 'https://arcane.local';
 const TEXT_EXTENSIONS = new Set(['.css', '.html', '.js', '.mjs']);
 const SKIPPED_SCHEMES = new Set(['about:', 'blob:', 'data:', 'javascript:', 'mailto:', 'tel:']);
 const RUNTIME_ENDPOINTS = new Set(['rpc']);
+const APP_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const SHARED_PAYLOAD_ROOTS = Object.freeze(['arcane', 'arcane-runtime', 'node_modules']);
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -12,6 +14,24 @@ function compareText(left, right) {
 
 function packageLinkError(message) {
   return new Error(`Invalid Arcane app package dependency: ${message}`);
+}
+
+function normalizeAppIds(appId, bundledAppIds) {
+  if (typeof appId !== 'string' || appId.length > 64 || !APP_ID_PATTERN.test(appId)) {
+    throw packageLinkError('appId is invalid.');
+  }
+  if (!Array.isArray(bundledAppIds) || bundledAppIds.length > 64) {
+    throw packageLinkError('bundledAppIds must be a bounded array.');
+  }
+  const normalized = bundledAppIds.map((dependencyId, index) => {
+    if (typeof dependencyId !== 'string' || dependencyId.length > 64 || !APP_ID_PATTERN.test(dependencyId)) {
+      throw packageLinkError(`bundledAppIds[${index}] is invalid.`);
+    }
+    if (dependencyId === appId) throw packageLinkError('bundledAppIds must not contain appId.');
+    return dependencyId;
+  });
+  if (new Set(normalized).size !== normalized.length) throw packageLinkError('bundledAppIds contains duplicates.');
+  return Object.freeze([appId, ...normalized.sort(compareText)]);
 }
 
 async function enumerateFiles(root) {
@@ -99,7 +119,7 @@ function normalizeDynamicReference(value) {
   return interpolation >= 0 ? trimmed.slice(0, interpolation) : trimmed;
 }
 
-function localPayloadPath(reference, baseUrl, appId) {
+function localPayloadPath(reference, baseUrl, appId, allowedAppIds) {
   const normalized = normalizeDynamicReference(reference);
   if (!normalized) return null;
   let resolved;
@@ -120,19 +140,21 @@ function localPayloadPath(reference, baseUrl, appId) {
   if (pathname.includes('\0') || pathname.includes('\\')) throw packageLinkError(`“${reference}” has an unsafe local path.`);
   const relative = pathname.replace(/^\/+/, '');
   if (RUNTIME_ENDPOINTS.has(relative)) return null;
-  if (pathname.startsWith(`/apps/${appId}/`)) {
-    throw packageLinkError(`legacy route “${reference}” was not relocated to /${appId}/.`);
+  for (const allowedAppId of allowedAppIds) {
+    if (pathname.startsWith(`/apps/${allowedAppId}/`)) {
+      throw packageLinkError(`legacy route “${reference}” was not relocated to /${allowedAppId}/.`);
+    }
   }
   const firstSegment = relative.split('/', 1)[0];
-  const allowedRoots = new Set([appId, 'arcane', 'arcane-runtime', 'node_modules']);
+  const allowedRoots = new Set([...allowedAppIds, ...SHARED_PAYLOAD_ROOTS]);
   if (relative && !allowedRoots.has(firstSegment)) {
     throw packageLinkError(`“${reference}” resolves outside the isolated ${appId} payload.`);
   }
   return relative;
 }
 
-async function assertLocalReference({ appRoot, appId, baseUrl, reference, sourceFile, dependencies }) {
-  const relative = localPayloadPath(reference, baseUrl, appId);
+async function assertLocalReference({ appRoot, appId, allowedAppIds, baseUrl, reference, sourceFile, dependencies }) {
+  const relative = localPayloadPath(reference, baseUrl, appId, allowedAppIds);
   if (relative === null) return;
   const candidate = path.join(appRoot, ...relative.split('/').filter(Boolean));
   let stat;
@@ -164,7 +186,7 @@ async function verifyDocumentManifest({ absolute, relative, appRoot, appId, depe
   if (markdown.length !== 0) throw packageLinkError(`${relative} unpublished catalog contains staged Markdown documents.`);
 }
 
-async function verifyWebManifest({ absolute, relative, appRoot, appId, dependencies }) {
+async function verifyWebManifest({ absolute, relative, appRoot, appId, allowedAppIds, dependencies }) {
   let value;
   try {
     value = JSON.parse(await fs.readFile(absolute, 'utf8'));
@@ -178,17 +200,20 @@ async function verifyWebManifest({ absolute, relative, appRoot, appId, dependenc
   }
   const baseUrl = new URL(`/${relative}`, `${APP_ORIGIN}/`);
   for (const reference of references.filter((entry) => typeof entry === 'string')) {
-    await assertLocalReference({ appRoot, appId, baseUrl, reference, sourceFile: relative, dependencies });
+    await assertLocalReference({ appRoot, appId, allowedAppIds, baseUrl, reference, sourceFile: relative, dependencies });
   }
 }
 
-export async function verifyPackagedAppLinks({ packageRoot, appId }) {
-  if (typeof appId !== 'string' || !/^[a-z][a-z0-9-]{1,31}$/.test(appId)) {
-    throw packageLinkError('appId is invalid.');
-  }
+export async function verifyPackagedAppLinks({ packageRoot, appId, bundledAppIds = [] }) {
+  const allowedAppIds = normalizeAppIds(appId, bundledAppIds);
   const absolutePackageRoot = path.resolve(packageRoot);
   const appRoot = path.join(absolutePackageRoot, 'app');
   const files = await enumerateFiles(appRoot);
+  const allowedRoots = new Set([...allowedAppIds, ...SHARED_PAYLOAD_ROOTS]);
+  for (const relative of files) {
+    const root = relative.split('/', 1)[0];
+    if (!allowedRoots.has(root)) throw packageLinkError(`payload contains undeclared root “${root}”.`);
+  }
   const fileSet = new Set(files);
   if (!fileSet.has(`${appId}/index.html`)) throw packageLinkError(`${appId}/index.html is missing.`);
   const dependencies = new Set();
@@ -197,7 +222,7 @@ export async function verifyPackagedAppLinks({ packageRoot, appId }) {
     const absolute = path.join(appRoot, ...relative.split('/'));
     const extension = path.posix.extname(relative).toLowerCase();
     if (path.posix.basename(relative).toLowerCase() === 'manifest.json') {
-      await verifyWebManifest({ absolute, relative, appRoot, appId, dependencies });
+      await verifyWebManifest({ absolute, relative, appRoot, appId, allowedAppIds, dependencies });
     } else if (extension === '.json') {
       await verifyDocumentManifest({ absolute, relative, appRoot, appId, dependencies });
     }
@@ -217,10 +242,12 @@ export async function verifyPackagedAppLinks({ packageRoot, appId }) {
     } else if (extension === '.css') {
       references = extractCssReferences(source);
     } else {
-      references = extractJavaScriptReferences(source, { serviceWorker: relative === `${appId}/service-worker.js` });
+      references = extractJavaScriptReferences(source, {
+        serviceWorker: allowedAppIds.some((allowedAppId) => relative === `${allowedAppId}/service-worker.js`),
+      });
     }
     for (const reference of references) {
-      await assertLocalReference({ appRoot, appId, baseUrl, reference, sourceFile: relative, dependencies });
+      await assertLocalReference({ appRoot, appId, allowedAppIds, baseUrl, reference, sourceFile: relative, dependencies });
     }
   }
 

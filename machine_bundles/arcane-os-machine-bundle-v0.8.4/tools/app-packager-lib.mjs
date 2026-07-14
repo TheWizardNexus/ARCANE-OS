@@ -14,10 +14,14 @@ export const SAFE_APP_CAPABILITIES = Object.freeze([
   'applications.read',
   'appearance.read',
   'appearance.write',
+  'development.manage',
+  'development.read',
   'diagnostics.read',
+  'filesystem.directory.select',
   'identity.read',
   'installation.read',
   'media.microphone',
+  'media.display',
   'network.status.read',
   'preferences.read',
   'preferences.write',
@@ -27,6 +31,7 @@ export const SAFE_APP_CAPABILITIES = Object.freeze([
   'system.metrics.read',
   'system.read',
   'terminal.execute',
+  'web.embed',
 ]);
 
 const SAFE_CAPABILITY_SET = new Set(SAFE_APP_CAPABILITIES);
@@ -49,7 +54,6 @@ const PERMISSIONS_POLICY_DENY = Object.freeze([
   'camera=()',
   'clipboard-read=()',
   'clipboard-write=(self)',
-  'display-capture=()',
   'encrypted-media=()',
   'fullscreen=()',
   'gamepad=()',
@@ -182,6 +186,25 @@ function validateCapabilities(capabilities, label) {
   return [...normalized].sort();
 }
 
+function validateBundledApps(value, appId, label) {
+  if (value === undefined) return Object.freeze([]);
+  if (!Array.isArray(value)) fail(`${label} must be an array.`);
+  if (value.length > 16) fail(`${label} contains too many bundled applications.`);
+  const normalized = value.map((dependencyId, index) => {
+    if (
+      typeof dependencyId !== 'string'
+      || dependencyId.length > 64
+      || !APP_ID_PATTERN.test(dependencyId)
+      || RESERVED_APP_IDS.has(dependencyId)
+      || WINDOWS_RESERVED_NAME.test(dependencyId)
+    ) fail(`${label}[${index}] is not a valid application id.`);
+    if (dependencyId === appId) fail(`${label} must not include its own application id.`);
+    return dependencyId;
+  });
+  if (new Set(normalized).size !== normalized.length) fail(`${label} contains duplicate application ids.`);
+  return Object.freeze([...normalized].sort(compareText));
+}
+
 function validatePresentationText(value, label, maximumLength) {
   if (typeof value !== 'string' || !value.trim() || value.length > maximumLength) {
     fail(`${label} must contain 1-${maximumLength} characters.`);
@@ -205,10 +228,11 @@ function validatePresentationIcon(value, include, label) {
   return icon;
 }
 
-function validateOrigins(origins, label, { allowLoopbackHttp = false } = {}) {
+function validateOrigins(origins, label, { allowLoopbackHttp = false, allowHttpsScheme = false } = {}) {
   if (!Array.isArray(origins)) fail(`${label} must be an array of exact origins.`);
   if (origins.length > 16) fail(`${label} contains too many origins.`);
   const normalized = origins.map((origin, index) => {
+    if (origin === 'https:' && allowHttpsScheme) return origin;
     if (typeof origin !== 'string' || !origin || origin.includes('*')) fail(`${label}[${index}] must be an exact origin string.`);
     let parsed;
     try {
@@ -236,13 +260,67 @@ function validateOrigins(origins, label, { allowLoopbackHttp = false } = {}) {
   return Object.freeze([...normalized].sort(compareText));
 }
 
-function validateAppSecurity(security, label) {
+function validateAppSecurity(security, label, { capabilities = [], allowAnyHttpsFrame = false } = {}) {
   if (!isPlainObject(security)) fail(`${label} must be an explicit security policy object.`);
-  assertOnlyKeys(security, new Set(['connectOrigins', 'mediaOrigins']), label);
+  assertOnlyKeys(security, new Set(['connectOrigins', 'frameOrigins', 'mediaOrigins']), label);
+  const frameOrigins = validateOrigins(security.frameOrigins ?? [], `${label}.frameOrigins`, { allowHttpsScheme: allowAnyHttpsFrame });
+  if (frameOrigins.length && !capabilities.includes('web.embed')) fail(`${label}.frameOrigins requires the web.embed capability.`);
   return Object.freeze({
     connectOrigins: validateOrigins(security.connectOrigins, `${label}.connectOrigins`, { allowLoopbackHttp: true }),
+    frameOrigins,
     mediaOrigins: validateOrigins(security.mediaOrigins, `${label}.mediaOrigins`),
   });
+}
+
+function assertContainsAll(actual, required, label) {
+  const available = new Set(actual);
+  const missing = required.filter((value) => !available.has(value));
+  if (missing.length) fail(`${label} is missing: ${missing.join(', ')}.`);
+}
+
+function validateBundledAppGraph(apps, sharedDestinations) {
+  const states = new Map();
+  const stack = [];
+
+  function visit(appId) {
+    const state = states.get(appId) || 0;
+    if (state === 2) return;
+    if (state === 1) {
+      const cycleStart = stack.indexOf(appId);
+      const cycle = [...stack.slice(cycleStart), appId];
+      fail(`bundledApps contains a cycle: ${cycle.join(' -> ')}.`);
+    }
+    states.set(appId, 1);
+    stack.push(appId);
+    for (const dependencyId of apps[appId].bundledApps) {
+      const dependency = apps[dependencyId];
+      if (!dependency) fail(`apps.${appId}.bundledApps references unknown application “${dependencyId}”.`);
+      if (dependency.documentCatalog) {
+        fail(`apps.${appId}.bundledApps cannot include “${dependencyId}” because it generates a document catalog.`);
+      }
+      const collision = sharedDestinations.find((destination) => (
+        destination === dependencyId
+        || destination.startsWith(`${dependencyId}/`)
+        || dependencyId.startsWith(`${destination}/`)
+      ));
+      if (collision) fail(`apps.${appId}.bundledApps destination “${dependencyId}” overlaps shared payload “${collision}”.`);
+      visit(dependencyId);
+    }
+    stack.pop();
+    states.set(appId, 2);
+  }
+
+  for (const appId of Object.keys(apps).sort(compareText)) visit(appId);
+
+  for (const app of Object.values(apps)) {
+    for (const dependencyId of app.bundledApps) {
+      const dependency = apps[dependencyId];
+      assertContainsAll(app.capabilities, dependency.capabilities, `apps.${app.id}.capabilities for bundled application “${dependencyId}”`);
+      assertContainsAll(app.security.connectOrigins, dependency.security.connectOrigins, `apps.${app.id}.security.connectOrigins for bundled application “${dependencyId}”`);
+      assertContainsAll(app.security.frameOrigins, dependency.security.frameOrigins, `apps.${app.id}.security.frameOrigins for bundled application “${dependencyId}”`);
+      assertContainsAll(app.security.mediaOrigins, dependency.security.mediaOrigins, `apps.${app.id}.security.mediaOrigins for bundled application “${dependencyId}”`);
+    }
+  }
 }
 
 function validateDocumentCatalog(value, label) {
@@ -297,7 +375,7 @@ export function validateAppRegistry(registry) {
     }
     const label = `apps.${id}`;
     if (!isPlainObject(app)) fail(`${label} must be an object.`);
-    assertOnlyKeys(app, new Set(['displayName', 'description', 'icon', 'order', 'type', 'source', 'entry', 'capabilities', 'security', 'documentCatalog', 'include']), label);
+    assertOnlyKeys(app, new Set(['displayName', 'description', 'icon', 'order', 'type', 'source', 'entry', 'capabilities', 'security', 'documentCatalog', 'bundledApps', 'include']), label);
     const displayName = validatePresentationText(app.displayName, `${label}.displayName`, 80);
     const description = validatePresentationText(app.description, `${label}.description`, 240);
     if (!Number.isSafeInteger(app.order) || app.order < 0 || app.order > 10_000) {
@@ -321,6 +399,7 @@ export function validateAppRegistry(registry) {
       || allowed.startsWith(`${documentCatalog.destination}/`)
       || documentCatalog.destination.startsWith(`${allowed}/`)
     ))) fail(`${label}.include must not copy the unpublished document catalog destination.`);
+    const capabilities = validateCapabilities(app.capabilities, `${label}.capabilities`);
     apps[id] = Object.freeze({
       id,
       displayName,
@@ -330,14 +409,31 @@ export function validateAppRegistry(registry) {
       type: 'app',
       source,
       entry,
-      capabilities: validateCapabilities(app.capabilities, `${label}.capabilities`),
-      security: validateAppSecurity(app.security, `${label}.security`),
+      capabilities,
+      security: validateAppSecurity(app.security, `${label}.security`, { capabilities, allowAnyHttpsFrame: id === 'browser' }),
       documentCatalog,
+      bundledApps: validateBundledApps(app.bundledApps, id, `${label}.bundledApps`),
       include,
     });
   }
 
+  validateBundledAppGraph(apps, destinations);
+
   return Object.freeze({ schemaVersion: 1, workspaceRoot, sharedPayload: Object.freeze(sharedPayload), apps: Object.freeze(apps) });
+}
+
+export function resolveBundledAppIds(registry, appId) {
+  if (!registry?.apps?.[appId]) fail(`unknown app “${appId}” while resolving bundled applications.`);
+  const bundled = new Set();
+  function visit(currentId) {
+    for (const dependencyId of registry.apps[currentId].bundledApps) {
+      if (bundled.has(dependencyId)) continue;
+      bundled.add(dependencyId);
+      visit(dependencyId);
+    }
+  }
+  visit(appId);
+  return Object.freeze([...bundled].sort(compareText));
 }
 
 async function exists(candidate) {
@@ -419,13 +515,17 @@ function injectArcaneRuntime(html) {
   return `${html.slice(0, match.index)}${RUNTIME_SCRIPT_TAG}\n${html.slice(match.index)}`;
 }
 
-function relocateLegacyAppUrls(source, appId) {
-  const escapedAppId = appId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const legacyAppRoot = new RegExp(`(?:(?:\\.\\.?/)+|/)apps/${escapedAppId}/`, 'g');
-  return source.replace(legacyAppRoot, `/${appId}/`);
+function relocateLegacyAppUrls(source, appIds) {
+  let relocated = source;
+  for (const appId of appIds) {
+    const escapedAppId = appId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const legacyAppRoot = new RegExp(`(?:(?:\\.\\.?/)+|/)apps/${escapedAppId}/`, 'g');
+    relocated = relocated.replace(legacyAppRoot, `/${appId}/`);
+  }
+  return relocated;
 }
 
-function transformAppPayload(data, relative, appId) {
+function transformAppPayload(data, relative, appIds) {
   const extension = path.posix.extname(relative).toLowerCase();
   if (!['.css', '.html', '.js', '.mjs'].includes(extension)) return data;
   let source = data.toString('utf8');
@@ -433,7 +533,7 @@ function transformAppPayload(data, relative, appId) {
     source = source.replace(/\r\n?/g, '\n');
     source = source.replace(/(<base\b[^>]*\bhref\s*=\s*['"])\.\.\/\.\.\/?(['"][^>]*>)/gi, '$1/$2');
   }
-  source = relocateLegacyAppUrls(source, appId);
+  source = relocateLegacyAppUrls(source, appIds);
   if (extension === '.html') source = injectArcaneRuntime(source);
   return source;
 }
@@ -471,13 +571,17 @@ function rewriteComponentImports(html, relative) {
 
 function buildPermissionsPolicy(app) {
   const microphone = app.capabilities.includes('media.microphone') ? 'microphone=(self)' : 'microphone=()';
-  return [...PERMISSIONS_POLICY_DENY, microphone].sort(compareText).join(', ');
+  const displayCapture = app.capabilities.includes('media.display') ? 'display-capture=(self)' : 'display-capture=()';
+  return [...PERMISSIONS_POLICY_DENY, microphone, displayCapture].sort(compareText).join(', ');
 }
 
 function buildContentSecurityPolicy(app, hashes) {
   const scriptSources = ["'self'", ...hashes].join(' ');
   const connectSources = ["'self'", ...app.security.connectOrigins].join(' ');
   const mediaSources = ["'self'", 'blob:', ...app.security.mediaOrigins].join(' ');
+  const frameSources = app.capabilities.includes('web.embed')
+    ? ["'self'", ...app.security.frameOrigins].join(' ')
+    : "'none'";
   return [
     "default-src 'none'",
     "base-uri 'self'",
@@ -491,7 +595,7 @@ function buildContentSecurityPolicy(app, hashes) {
     "manifest-src 'self'",
     "worker-src 'self'",
     "child-src 'self'",
-    "frame-src 'none'",
+    `frame-src ${frameSources}`,
     "object-src 'none'",
     "form-action 'none'",
   ].join('; ');
@@ -524,10 +628,14 @@ function injectSecurityMetadata(html, contentSecurityPolicy, permissionsPolicy, 
   return `${withoutBase.slice(0, insertion)}\n${metadata}${withoutBase.slice(insertion)}`;
 }
 
-function assertHtmlSecurityCompatibility(html, relative) {
+function assertHtmlSecurityCompatibility(html, relative, app, bundledAppIds) {
+  const ownedRoots = new Set([app.id, ...bundledAppIds]);
+  const appOwned = ownedRoots.has(relative.split('/', 1)[0]);
   for (const tag of html.matchAll(/<[a-z][^>]*>/gi)) {
     if (/\son[a-z0-9_-]+\s*=/i.test(tag[0])) fail(`${relative} contains an inline event handler blocked by the generated CSP.`);
-    if (/^<(?:embed|frame|iframe|object)\b/i.test(tag[0])) fail(`${relative} contains framed or embedded content blocked by the generated CSP.`);
+    if (/^<(?:embed|frame|iframe|object)\b/i.test(tag[0]) && appOwned && !app.capabilities.includes('web.embed')) {
+      fail(`${relative} contains framed or embedded content without the web.embed capability.`);
+    }
     if (/^<script\b/i.test(tag[0])) {
       const source = /\ssrc\s*=\s*(['"])([^'"]+)\1/i.exec(tag[0])?.[2];
       if (source && (/^(?:https?:)?\/\//i.test(source) || source.includes('${'))) {
@@ -537,7 +645,7 @@ function assertHtmlSecurityCompatibility(html, relative) {
   }
 }
 
-async function securePackagedHtml(stagingRoot, app) {
+async function securePackagedHtml(stagingRoot, app, bundledAppIds = []) {
   const appRoot = path.join(stagingRoot, 'app');
   const files = [];
   await enumerateDirectory(appRoot, '', files);
@@ -547,7 +655,7 @@ async function securePackagedHtml(stagingRoot, app) {
   for (const file of htmlFiles) {
     let html = (await fs.readFile(file.source, 'utf8')).replace(/\r\n?/g, '\n');
     if (!/<head\b/i.test(html)) html = rewriteComponentImports(html, file.relative);
-    assertHtmlSecurityCompatibility(html, file.relative);
+    assertHtmlSecurityCompatibility(html, file.relative, app, bundledAppIds);
     htmlByPath.set(file.relative, html);
     for (const script of inlineScripts(html)) {
       hashes.add(scriptHash(script));
@@ -606,11 +714,11 @@ async function writeFile(stagingRoot, relative, data, written, mode) {
   await fs.writeFile(destination, data, mode ? { mode } : undefined);
 }
 
-async function copyPayloadFiles({ files, destinationRoot, stagingRoot, written, transformAppId = null }) {
+async function copyPayloadFiles({ files, destinationRoot, stagingRoot, written, transformAppIds = null }) {
   for (const file of files) {
     const relative = `${destinationRoot}/${file.relative}`;
     const data = await fs.readFile(file.source);
-    const output = transformAppId ? transformAppPayload(data, file.relative, transformAppId) : data;
+    const output = transformAppIds ? transformAppPayload(data, file.relative, transformAppIds) : data;
     await writeFile(stagingRoot, relative, output, written);
   }
 }
@@ -693,6 +801,8 @@ export async function buildTargetApp({ bundleRoot, appId, outputRoot: requestedO
   const registry = await loadAppRegistry(absoluteBundleRoot);
   const app = registry.apps[appId];
   if (!app) fail(`unknown app “${appId}”; choose one of: ${Object.keys(registry.apps).sort().join(', ')}.`);
+  const bundledAppIds = resolveBundledAppIds(registry, app.id);
+  const transformedAppIds = Object.freeze([app.id, ...bundledAppIds]);
 
   const repositoryRoot = await findRepositoryRoot(absoluteBundleRoot);
   const configuredWorkspace = path.resolve(absoluteBundleRoot, ...registry.workspaceRoot.split('/'));
@@ -736,9 +846,32 @@ export async function buildTargetApp({ bundleRoot, appId, outputRoot: requestedO
       destinationRoot: `app/${app.id}`,
       stagingRoot: staging,
       written,
-      transformAppId: app.id,
+      transformAppIds: transformedAppIds,
     });
     const documentCatalog = await generateUnpublishedDocumentCatalog({ app, stagingRoot: staging, written });
+
+    for (const dependencyId of bundledAppIds) {
+      const dependency = registry.apps[dependencyId];
+      const dependencySource = resolveInside(repositoryRoot, dependency.source, `apps.${dependency.id}.source`);
+      const dependencyFiles = await enumerateAllowlist(repositoryRoot, dependencySource, dependency.include, `apps.${dependency.id}`);
+      if (!dependencyFiles.some((file) => file.relative === dependency.entry)) {
+        fail(`apps.${dependency.id}.entry is not a regular allowlisted file.`);
+      }
+      if (!dependencyFiles.some((file) => file.relative === dependency.icon)) {
+        fail(`apps.${dependency.id}.icon is not a regular allowlisted file.`);
+      }
+      await copyPayloadFiles({
+        files: dependencyFiles,
+        destinationRoot: `app/${dependency.id}`,
+        stagingRoot: staging,
+        written,
+        transformAppIds: transformedAppIds,
+      });
+      if (dependency.entry !== 'index.html') {
+        const dependencyEntry = path.join(staging, 'app', dependency.id, ...dependency.entry.split('/'));
+        await writeFile(staging, `app/${dependency.id}/index.html`, await fs.readFile(dependencyEntry), written);
+      }
+    }
 
     for (let index = 0; index < registry.sharedPayload.length; index += 1) {
       const payload = registry.sharedPayload[index];
@@ -755,8 +888,8 @@ export async function buildTargetApp({ bundleRoot, appId, outputRoot: requestedO
     if (app.entry !== 'index.html') {
       await writeFile(staging, `app/${app.id}/index.html`, await fs.readFile(canonicalEntry), written);
     }
-    const security = await securePackagedHtml(staging, app);
-    const dependencies = await verifyPackagedAppLinks({ packageRoot: staging, appId: app.id });
+    const security = await securePackagedHtml(staging, app, bundledAppIds);
+    const dependencies = await verifyPackagedAppLinks({ packageRoot: staging, appId: app.id, bundledAppIds });
     await writeFile(staging, 'arcane-bundle.json', `${JSON.stringify(targetBundle, null, 2)}\n`, written);
     await writeFile(staging, 'runtime/arcane-core.cjs', await compileTargetCore(absoluteBundleRoot, targetBundle), written, 0o755);
 

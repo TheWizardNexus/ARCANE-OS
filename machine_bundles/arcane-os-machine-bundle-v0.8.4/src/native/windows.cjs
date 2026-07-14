@@ -108,6 +108,80 @@ $result=[UIntPtr]::Zero
     return appearanceStatus();
   }
 
+  async function selectDirectory(input) {
+    const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+    const title = String(source.title || 'Choose a folder');
+    const initialPath = String(source.initialPath || '');
+    if (ctx.simulate) {
+      return initialPath
+        ? { cancelled:false, path:initialPath }
+        : { cancelled:true, path:null };
+    }
+
+    const script = `$ErrorActionPreference='Stop'
+Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+[System.Windows.Forms.Application]::EnableVisualStyles()
+$dialog=New-Object System.Windows.Forms.FolderBrowserDialog
+$dialog.Description=${ctx.psQuote(title)}
+$dialog.ShowNewFolderButton=$false
+$dialog.AutoUpgradeEnabled=$true
+$initialPath=${ctx.psQuote(initialPath)}
+if($initialPath -and [IO.Directory]::Exists($initialPath)){$dialog.SelectedPath=$initialPath}
+$response=$null
+try{
+  $choice=$dialog.ShowDialog()
+  if($choice -eq [System.Windows.Forms.DialogResult]::OK -and [IO.Directory]::Exists($dialog.SelectedPath)){
+    $response=[ordered]@{cancelled=$false;path=[IO.Path]::GetFullPath($dialog.SelectedPath)}
+  }else{
+    $response=[ordered]@{cancelled=$true;path=$null}
+  }
+}finally{
+  $dialog.Dispose()
+}
+$response|ConvertTo-Json -Compress`;
+
+    let result;
+    try {
+      result = await ctx.powershell(script, {
+        purpose:'filesystem-directory-selection',
+        displayCommand:'$ powershell.exe [Arcane folder selector]',
+      });
+    } catch (error) {
+      throw ctx.arcaneError(
+        'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
+        'Windows could not open the Arcane folder selector.',
+        'Close any other open system dialogs, then choose the folder again.',
+        500,
+        { technicalMessage:String(error && error.message || error).slice(0,1024) }
+      );
+    }
+
+    let response;
+    try { response = JSON.parse(String(result.stdout || '').trim()); }
+    catch (_) {
+      throw ctx.arcaneError(
+        'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
+        'Windows returned an invalid folder-selection result.',
+        'Close Arcane, reopen the application, and choose the folder again.',
+        500
+      );
+    }
+    const keys = response && typeof response === 'object' && !Array.isArray(response)
+      ? Object.keys(response).sort()
+      : [];
+    if (keys.length !== 2 || keys[0] !== 'cancelled' || keys[1] !== 'path'
+      || typeof response.cancelled !== 'boolean'
+      || (response.cancelled ? response.path !== null : typeof response.path !== 'string' || !response.path)) {
+      throw ctx.arcaneError(
+        'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
+        'Windows returned an invalid folder-selection result.',
+        'Close Arcane, reopen the application, and choose the folder again.',
+        500
+      );
+    }
+    return response;
+  }
+
   function normalizeShellRecovery(value, previousShellPresent) {
     const source = value && typeof value === 'object'
       ? value
@@ -168,9 +242,9 @@ $result=[UIntPtr]::Zero
   const SAFE_APP_CAPABILITIES = new Set([
     'ai.inference', 'ai.models.manage', 'ai.models.read', 'ai.settings.manage',
     'appearance.read', 'appearance.write',
-    'applications.launch', 'applications.read', 'diagnostics.read', 'identity.read', 'installation.read', 'media.microphone',
+    'applications.launch', 'applications.read', 'development.manage', 'development.read', 'diagnostics.read', 'filesystem.directory.select', 'identity.read', 'installation.read', 'media.display', 'media.microphone',
     'network.status.read', 'preferences.read', 'preferences.write', 'requirements.read', 'storage.read', 'storage.write',
-    'system.metrics.read', 'system.read', 'terminal.execute',
+    'system.metrics.read', 'system.read', 'terminal.execute', 'web.embed',
   ]);
   const MACHINE_CONTENT_EXCLUSIONS = new Set([
     'arcane-install.json', 'arcane-machine-content.json', 'arcane-release.json',
@@ -3881,6 +3955,7 @@ try {
     permissionStatus,
     appearanceStatus,
     applyAppearance,
+    selectDirectory,
     isElevated,
     hideHostWindow,
     nodeExecutable,

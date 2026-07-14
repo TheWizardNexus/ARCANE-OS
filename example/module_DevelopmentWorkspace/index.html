@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Development workspace contract</title>
+</head>
+<body>
+    <h1>Development workspace contract</h1>
+    <pre id="output"></pre>
+    <script type="module">
+        import DevelopmentWorkspace from '../../arcane/modules/DevelopmentWorkspace.js';
+        const provider={
+            inspect:async root=>({root,valid:true,setup:[{id:'root-dependencies',status:'ready'}]}),
+            context:async(root,query)=>({root,query,files:[]}),
+            setup:async(root,taskId)=>({root,taskId,status:'completed'}),
+            installNode:async()=>({installed:true,simulated:true})
+        };
+        const workspace=new DevelopmentWorkspace(provider);
+        document.querySelector('#output').textContent=JSON.stringify({
+            inspection:await workspace.inspect('/synthetic/arcane'),
+            context:await workspace.context('/synthetic/arcane','Explain the app boundary'),
+            setup:await workspace.setup('/synthetic/arcane','root-dependencies'),
+            nodeInstaller:await workspace.installNode()
+        },null,2);
+    </script>
+</body>
+</html>

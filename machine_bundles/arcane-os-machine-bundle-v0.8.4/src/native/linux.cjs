@@ -864,6 +864,15 @@ Categories=System;Settings;
 
   async function applyAppearance() { return appearanceStatus(); }
 
+  async function selectDirectory() {
+    throw ctx.arcaneError(
+      'FILESYSTEM_DIRECTORY_SELECTION_UNSUPPORTED',
+      'Arcane folder selection is not available on this Linux host.',
+      'Enter a verified absolute directory path, or use an Arcane host with native folder selection.',
+      501
+    );
+  }
+
   async function launchElevated(executable, relaunchArgs, action) {
     if (ctx.simulate) {
       ctx.actionLog(action, 'info', 'Simulation: authorizing a temporary privileged Arcane worker.');
@@ -889,6 +898,7 @@ Categories=System;Settings;
     permissionStatus,
     appearanceStatus,
     applyAppearance,
+    selectDirectory,
     isElevated,
     hideHostWindow,
     nodeExecutable,

@@ -78,13 +78,13 @@ function Add-PublicCertificateToCurrentUserStore {
     Select-Object -First 1
   if ($existing) { return }
 
-  $certUtil = Join-Path $env:WINDIR 'System32\certutil.exe'
-  if (-not (Test-Path -LiteralPath $certUtil -PathType Leaf)) {
-    throw 'Arcane development signing requires Windows certutil.exe.'
-  }
-  $output = & $certUtil -user -f -addstore $StoreName $CertificatePath 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    throw "Windows could not trust the Arcane development certificate in CurrentUser\$StoreName. $($output -join ' ')"
+  $imported = Import-Certificate `
+    -FilePath $CertificatePath `
+    -CertStoreLocation "Cert:\CurrentUser\$StoreName" `
+    -ErrorAction Stop
+  $importedThumbprint = ([string]$imported.Thumbprint).Replace(' ', '').ToUpperInvariant()
+  if ($importedThumbprint -cne $Thumbprint) {
+    throw "Windows imported an unexpected certificate into CurrentUser\$StoreName."
   }
 }
 

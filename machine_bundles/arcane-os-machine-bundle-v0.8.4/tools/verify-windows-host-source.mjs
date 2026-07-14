@@ -71,7 +71,7 @@ if (!source.includes('if (Program.AppMode == "shell") EmergencyDesktop.TryStart(
   throw new Error('Shell fatal startup paths must activate the emergency Windows desktop.');
 }
 for (const firstBootContract of [
-  'FirstBoot.Run(releaseSecurity.ReleaseRoot);',
+  'FirstBoot.Run(releaseSecurity.ReleaseRoot, startupBackdrop);',
   'internal static class FirstBoot',
   'private static readonly Step[] Steps',
   'new Step(LockScreenStepId, ApplyWindowsLockScreen)',
@@ -87,9 +87,9 @@ for (const firstBootContract of [
 ]) {
   if (!source.includes(firstBootContract)) throw new Error(`Windows per-user first-boot contract is missing: ${firstBootContract}`);
 }
-const releaseVerification = source.indexOf('releaseSecurity = ReleaseSecurityVerifier.Verify(args);');
-const firstBootRun = source.indexOf('FirstBoot.Run(releaseSecurity.ReleaseRoot);');
-const applicationRun = source.indexOf('Application.Run(new ArcaneForm(args, releaseSecurity, startupBackdrop));');
+const releaseVerification = source.indexOf('releaseSecurity = ReleaseSecurityVerifier.Verify(args, startupBackdrop);');
+const firstBootRun = source.indexOf('FirstBoot.Run(releaseSecurity.ReleaseRoot, startupBackdrop);');
+const applicationRun = source.indexOf('Application.Run(form);');
 if (releaseVerification < 0 || firstBootRun <= releaseVerification || applicationRun <= firstBootRun) {
   throw new Error('Windows first-boot steps must run from the Shell only after release verification and before the Shell UI starts.');
 }
@@ -100,11 +100,31 @@ const backdropSource = source.slice(backdropStart, backdropEnd);
 if (backdropShow < 0 || backdropShow > releaseVerification || backdropStart < 0
     || !backdropSource.includes('BackColor = Program.StartupBackgroundColor;')
     || !backdropSource.includes('FormBorderStyle = FormBorderStyle.None;')
+    || !backdropSource.includes('private const string BootHtml = @"<!doctype html>')
+    || !backdropSource.includes('backdrop.browser.DocumentText = BootHtml;')
+    || !backdropSource.includes('while (!backdrop.documentReady')
     || !backdropSource.includes('Application.DoEvents();')) {
-  throw new Error('The Shell must paint its compiled startup backdrop before release verification begins.');
+  throw new Error('The Shell must paint its compiled HTML startup surface before release verification begins.');
 }
-for (const forbiddenBackdropInput of ['File.', 'Directory.', 'Registry.', 'WebView2', 'ArcaneCoreProcess']) {
+for (const forbiddenBackdropInput of ['File.', 'Directory.', 'Registry.', 'new WebView2', 'CoreWebView2', 'ArcaneCoreProcess']) {
   if (backdropSource.includes(forbiddenBackdropInput)) throw new Error(`The pre-verification backdrop must not consume external input: ${forbiddenBackdropInput}`);
+}
+for (const bootStage of ['stage-walk', 'stage-handles', 'stage-hash', 'stage-authenticode', 'stage-firstboot', 'stage-form', 'stage-core', 'stage-webview', 'stage-navigate']) {
+  if (!backdropSource.includes(bootStage)) throw new Error(`The trusted HTML startup surface is missing a required progress stage: ${bootStage}`);
+}
+if (/<script\b/i.test(backdropSource) || /<(?:link|img)\b[^>]*(?:href|src)\s*=/i.test(backdropSource)) {
+  throw new Error('The pre-verification HTML must not execute script or load external assets.');
+}
+for (const progressContract of [
+  'ReportDirectoryProgress(openedCount)',
+  'ReportFileHandleProgress(index + 1, files.Count)',
+  'ReportHashProgress(index + 1, files.Count, verifiedBytes, totalBytes)',
+  'ReportAuthenticodeProgress(executableIndex, executableTotal, Path.GetFileName(fullPath)',
+  'startupBackdrop.BeginStage("core"',
+  'startupBackdrop.BeginStage("webview"',
+  'startupBackdrop.BeginStage("navigate"',
+]) {
+  if (!source.includes(progressContract)) throw new Error(`Windows startup progress is not wired to the real operation boundary: ${progressContract}`);
 }
 for (const buildContract of [
   'arcane-lock-screen-v1.png',
@@ -285,9 +305,15 @@ if (controllerOptions < formStart || controllerBackground < controllerOptions ||
 const navigationCompleted = source.indexOf('webView.CoreWebView2.NavigationCompleted += delegate', formStart);
 const navigationReady = source.indexOf('ShellWatchdog.MarkUiReady();', navigationCompleted);
 const navigationHeartbeat = source.indexOf('watchdogHeartbeatTimer.Start();', navigationCompleted);
+const backdropHandoff = source.indexOf('StartupBackdrop.CloseSafely(startupBackdrop);', navigationCompleted);
 if (formStart < 0 || navigationCompleted < 0 || navigationReady < navigationCompleted
-    || navigationHeartbeat < navigationCompleted || !source.slice(navigationCompleted, navigationReady).includes('if (!eventArgs.IsSuccess)')) {
+    || navigationHeartbeat < navigationCompleted || backdropHandoff < navigationCompleted
+    || !source.slice(navigationCompleted, navigationReady).includes('if (!eventArgs.IsSuccess)')) {
   throw new Error('Shell readiness and UI heartbeats must begin only after successful application navigation.');
+}
+const shownHandler = source.slice(source.indexOf('Shown += delegate', formStart), source.indexOf('SystemEvents.UserPreferenceChanged', formStart));
+if (shownHandler.includes('StartupBackdrop.CloseSafely')) {
+  throw new Error('The trusted startup surface must remain visible until verified shell navigation completes.');
 }
 const loadStart = source.indexOf('Load += async delegate', formStart);
 const initializeAwait = source.indexOf('await InitializeAsync();', loadStart);

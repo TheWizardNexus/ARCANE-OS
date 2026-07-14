@@ -293,7 +293,7 @@ ${JSON.stringify(memories)}`
             ai.license=user.license_key || ai.license;
             
             const religion=user.religion;
-            const personality=user.personality;
+            const personality=user.AI_personality||user.personality;
 
             let message=`Begin assessment in ${(language?.length>1)? language:'English'} language and your personality is described as : ${(personality?.length>1)? personality:'described in system'}, you do not need to clarify this, nor make a big deal, just adopt the personality as best you can. Greet me, as ${(chat?.name?.length>1)? chat.name:'Friend'}, and consider or even speak to me according to my reading and writing level, no need to tell me that though, it is smoother to simply adjust as you learn my reading level ${(religion?.length>1)? ', and remember that my religion is '+religion: ''}. Speak to me in a way that ensures I comprehend your meaning culturally, from your personality and at my education and comprehension level. Adjust to me as you go, and don't make a big deal of it, just let it happen naturally.`;
 

@@ -75,10 +75,10 @@ namespace ArcaneOS
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 if (AppMode == "shell") startupBackdrop = StartupBackdrop.ShowNow();
-                releaseSecurity = ReleaseSecurityVerifier.Verify(args);
+                releaseSecurity = ReleaseSecurityVerifier.Verify(args, startupBackdrop);
                 if (AppMode == "shell") ShellWatchdog.MarkVerifierHeartbeat();
 #if ARCANE_SHELL
-                FirstBoot.Run(releaseSecurity.ReleaseRoot);
+                FirstBoot.Run(releaseSecurity.ReleaseRoot, startupBackdrop);
 #endif
                 try { SetCurrentProcessExplicitAppUserModelID(AppId); } catch { }
                 Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -92,7 +92,10 @@ namespace ArcaneOS
                 {
                     if (AppMode == "shell") EmergencyDesktop.TryStart();
                 };
-                Application.Run(new ArcaneForm(args, releaseSecurity, startupBackdrop));
+                if (startupBackdrop != null) startupBackdrop.BeginStage("form", "Constructing the trusted shell window…");
+                ArcaneForm form = new ArcaneForm(args, releaseSecurity, startupBackdrop);
+                if (startupBackdrop != null) startupBackdrop.CompleteStage("form", "Trusted shell window constructed.");
+                Application.Run(form);
                 startupBackdrop = null;
             }
             catch (InstalledTrustStateAccessException error)
@@ -139,10 +142,21 @@ namespace ArcaneOS
             new Step(LockScreenStepId, ApplyWindowsLockScreen),
         };
 
-        internal static void Run(string releaseRoot)
+        internal static void Run(string releaseRoot, StartupBackdrop startupBackdrop)
         {
-            if (Program.AppMode != "shell" || !IsInstalledReleaseRoot(releaseRoot)) return;
-            foreach (Step step in Steps) RunStep(step, releaseRoot);
+            if (Program.AppMode != "shell" || !IsInstalledReleaseRoot(releaseRoot))
+            {
+                if (startupBackdrop != null) startupBackdrop.SkipStage("firstboot", "No installed-user first-boot work is required.");
+                return;
+            }
+            if (startupBackdrop != null) startupBackdrop.BeginStage("firstboot", "Checking idempotent per-user first-boot steps…");
+            bool complete = true;
+            foreach (Step step in Steps) if (!RunStep(step, releaseRoot)) complete = false;
+            if (startupBackdrop != null)
+            {
+                if (complete) startupBackdrop.CompleteStage("firstboot", "Per-user first-boot steps are complete.");
+                else startupBackdrop.FailStage("firstboot", "A noncritical first-boot step could not finish and will retry at the next sign-in.");
+            }
         }
 
         private static bool IsInstalledReleaseRoot(string releaseRoot)
@@ -157,7 +171,7 @@ namespace ArcaneOS
             return String.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void RunStep(Step step, string releaseRoot)
+        private static bool RunStep(Step step, string releaseRoot)
         {
             try
             {
@@ -165,18 +179,20 @@ namespace ArcaneOS
                 {
                     if (markers == null) throw new UnauthorizedAccessException("Arcane could not open its per-user first-boot marker key.");
                     object completed = markers.GetValue(step.Id, 0, RegistryValueOptions.DoNotExpandEnvironmentNames);
-                    if (completed is int && (int)completed == 1) return;
+                    if (completed is int && (int)completed == 1) return true;
                     step.Apply(releaseRoot);
                     markers.SetValue(step.Id, 1, RegistryValueKind.DWord);
                     markers.Flush();
                 }
                 WriteLog("completed", step.Id, null);
+                return true;
             }
             catch (Exception error)
             {
                 // A personalization failure must not strand the user outside a usable Shell.
                 // The missing completion marker lets the idempotent step retry at next sign-in.
                 WriteLog("failed", step.Id, error);
+                return false;
             }
         }
 
@@ -662,7 +678,7 @@ namespace ArcaneOS
             internal uint FileIndexLow;
         }
 
-        internal static ReleaseSecurityResult Verify(string[] args)
+        internal static ReleaseSecurityResult Verify(string[] args, StartupBackdrop startupBackdrop = null)
         {
             string executable = Path.GetFullPath(Application.ExecutablePath);
             string executableDirectory = Path.GetDirectoryName(executable);
@@ -704,7 +720,13 @@ namespace ArcaneOS
             List<RetainedDirectoryHandle> retainedDirectories = new List<RetainedDirectoryHandle>();
             try
             {
-                RetainDirectoryTree(root, root, retainedDirectoriesByPath, retainedDirectories);
+                if (startupBackdrop != null) startupBackdrop.BeginStage("walk", "Walking the verified release directory…");
+                RetainDirectoryTree(root, root, retainedDirectoriesByPath, retainedDirectories, startupBackdrop);
+                if (startupBackdrop != null)
+                {
+                    startupBackdrop.CompleteStage("walk", "Release directory walk complete.");
+                    startupBackdrop.BeginStage("handles", retainedDirectories.Count.ToString(CultureInfo.InvariantCulture) + " protected directory handles retained; binding manifest files next.");
+                }
                 ShellWatchdog.MarkVerifierHeartbeat();
                 FileStream retainedManifest = RetainFile(manifestPath, retainedByPath, retained);
                 string manifestHash = HashStream(retainedManifest);
@@ -733,7 +755,7 @@ namespace ArcaneOS
                 List<string> excludedHosts = new List<string> { provisionerPath, shellPath };
 #endif
                 ShellWatchdog.MarkVerifierHeartbeat();
-                RetainAndRecheck(root, files, excludedHosts, retainedByPath, retained);
+                RetainAndRecheck(root, files, excludedHosts, retainedByPath, retained, startupBackdrop);
                 VerifyRetainedDirectoryIdentities(retainedDirectories);
                 ShellWatchdog.MarkVerifierHeartbeat();
 #if !ARCANE_TARGET_APP
@@ -750,7 +772,8 @@ namespace ArcaneOS
                     root,
                     canonicalInstalled,
                     retainedByPath,
-                    retained);
+                    retained,
+                    startupBackdrop);
                 ShellWatchdog.MarkVerifierHeartbeat();
                 return new ReleaseSecurityResult(
                     root,
@@ -918,7 +941,31 @@ namespace ArcaneOS
             Dictionary<string, RetainedDirectoryHandle> opened,
             List<RetainedDirectoryHandle> retained)
         {
+            RetainDirectoryTree(root, directory, opened, retained, null);
+        }
+
+        private static void RetainDirectoryTree(
+            string root,
+            string directory,
+            Dictionary<string, RetainedDirectoryHandle> opened,
+            List<RetainedDirectoryHandle> retained,
+            StartupBackdrop startupBackdrop)
+        {
+            int openedCount = 0;
+            RetainDirectoryTreeCore(root, directory, opened, retained, startupBackdrop, ref openedCount);
+        }
+
+        private static void RetainDirectoryTreeCore(
+            string root,
+            string directory,
+            Dictionary<string, RetainedDirectoryHandle> opened,
+            List<RetainedDirectoryHandle> retained,
+            StartupBackdrop startupBackdrop,
+            ref int openedCount)
+        {
             RetainDirectory(directory, opened, retained);
+            openedCount++;
+            if (startupBackdrop != null) startupBackdrop.ReportDirectoryProgress(openedCount);
             FileSystemInfo[] entries = new DirectoryInfo(directory).GetFileSystemInfos();
             Array.Sort(entries, delegate(FileSystemInfo left, FileSystemInfo right) { return StringComparer.Ordinal.Compare(left.Name, right.Name); });
             foreach (FileSystemInfo entry in entries)
@@ -929,7 +976,7 @@ namespace ArcaneOS
                 if (child == null) continue;
                 string relative = RelativePath(root, child.FullName);
                 ValidateRelativePath(relative);
-                RetainDirectoryTree(root, child.FullName, opened, retained);
+                RetainDirectoryTreeCore(root, child.FullName, opened, retained, startupBackdrop, ref openedCount);
             }
         }
 
@@ -1038,16 +1085,37 @@ namespace ArcaneOS
             List<ManifestFile> files,
             List<string> excludedHosts,
             Dictionary<string, FileStream> opened,
-            List<FileStream> retained)
+            List<FileStream> retained,
+            StartupBackdrop startupBackdrop = null)
         {
-            foreach (ManifestFile entry in files)
+            long totalBytes = 0;
+            foreach (ManifestFile entry in files) totalBytes += entry.Size;
+            for (int index = 0; index < files.Count; index++)
             {
+                ManifestFile entry = files[index];
                 string path = Path.Combine(root, entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
                 FileStream file = RetainFile(path, opened, retained);
-                if (file.Length != entry.Size || !FixedTimeEquals(HashStream(file), entry.Sha256))
-                    throw new InvalidDataException("Arcane release file changed during verification: " + entry.RelativePath + ".");
+                if (file.Length != entry.Size)
+                    throw new InvalidDataException("Arcane release file changed size during verification: " + entry.RelativePath + ".");
+                if (startupBackdrop != null) startupBackdrop.ReportFileHandleProgress(index + 1, files.Count);
             }
             foreach (string host in excludedHosts) RetainFile(host, opened, retained);
+            if (startupBackdrop != null) startupBackdrop.CompleteStage("handles", files.Count.ToString(CultureInfo.InvariantCulture)
+                + " manifest file handles and protected native-host handles retained.");
+
+            long verifiedBytes = 0;
+            if (startupBackdrop != null) startupBackdrop.BeginHashVerification(files.Count, totalBytes);
+            for (int index = 0; index < files.Count; index++)
+            {
+                ManifestFile entry = files[index];
+                string path = Path.Combine(root, entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                FileStream file = opened[Path.GetFullPath(path)];
+                if (file.Length != entry.Size || !FixedTimeEquals(HashStream(file), entry.Sha256))
+                    throw new InvalidDataException("Arcane release file changed during verification: " + entry.RelativePath + ".");
+                verifiedBytes += entry.Size;
+                if (startupBackdrop != null) startupBackdrop.ReportHashProgress(index + 1, files.Count, verifiedBytes, totalBytes);
+            }
+            if (startupBackdrop != null) startupBackdrop.CompleteHashVerification(files.Count, totalBytes);
         }
 
         private static FileStream RetainFile(string path, Dictionary<string, FileStream> opened, List<FileStream> retained)
@@ -1290,7 +1358,8 @@ namespace ArcaneOS
             string releaseRoot,
             bool canonicalInstalled,
             Dictionary<string, FileStream> retainedByPath,
-            List<FileStream> retained)
+            List<FileStream> retained,
+            StartupBackdrop startupBackdrop = null)
         {
             if (executables == null || executables.Count == 0) throw new InvalidDataException("Arcane release contains no native executables to authenticate.");
             HashSet<string> unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1299,10 +1368,17 @@ namespace ArcaneOS
             bool sawUnsigned = false;
             bool sawUnavailableRevocation = false;
             bool offlineInstalledPolicy = canonicalInstalled && Program.AppMode != "provisioner";
+            HashSet<string> executablePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string executable in executables) executablePaths.Add(Path.GetFullPath(executable));
+            int executableTotal = executablePaths.Count;
+            int executableIndex = 0;
+            if (startupBackdrop != null) startupBackdrop.BeginAuthenticodeVerification(executableTotal);
             foreach (string executable in executables)
             {
                 string fullPath = Path.GetFullPath(executable);
                 if (!unique.Add(fullPath)) continue;
+                executableIndex++;
+                if (startupBackdrop != null) startupBackdrop.ReportAuthenticodeProgress(executableIndex, executableTotal, Path.GetFileName(fullPath), false);
                 AssertRegularFile(fullPath, "Arcane executable");
                 SignatureEvidence evidence;
                 if (offlineInstalledPolicy)
@@ -1332,6 +1408,7 @@ namespace ArcaneOS
                 if (evidence.Status == SignatureStatus.NotSigned)
                 {
                     sawUnsigned = true;
+                    if (startupBackdrop != null) startupBackdrop.ReportAuthenticodeProgress(executableIndex, executableTotal, Path.GetFileName(fullPath), true);
                     continue;
                 }
                 sawValid = true;
@@ -1340,6 +1417,7 @@ namespace ArcaneOS
                 if (String.IsNullOrWhiteSpace(evidence.SignerThumbprint)) throw new InvalidDataException("Arcane could not identify the trusted signer for " + Path.GetFileName(fullPath) + ".");
                 if (signer == null) signer = evidence.SignerThumbprint;
                 else if (!String.Equals(signer, evidence.SignerThumbprint, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Arcane rejected a release containing executables from different publishers.");
+                if (startupBackdrop != null) startupBackdrop.ReportAuthenticodeProgress(executableIndex, executableTotal, Path.GetFileName(fullPath), true);
             }
             if (sawValid && sawUnsigned) throw new InvalidDataException("Arcane rejected a release that mixes signed and unsigned executables.");
             if (sawValid)
@@ -1359,6 +1437,7 @@ namespace ArcaneOS
                     verifiedAt = ValidatePublisherAttestation(releaseRoot, contentBinding, signer, retainedByPath, retained);
                     revocationStatus = "attested-degraded";
                 }
+                if (startupBackdrop != null) startupBackdrop.CompleteAuthenticodeVerification(executableTotal);
                 return new ExecutableSecurityResult("publisher-verified", signer, verifiedAt, revocationStatus, publisherTrustSource, true);
             }
             if (sawUnsigned && allowUnsigned)
@@ -1366,6 +1445,7 @@ namespace ArcaneOS
                 if (!String.Equals(publisherMarker, UnsignedPublisherMarker, StringComparison.Ordinal))
                     throw new InvalidDataException("Arcane rejected an unsigned release without its explicit local-test publisher binding.");
                 AssertUnsignedLocalReleaseAllowed();
+                if (startupBackdrop != null) startupBackdrop.CompleteAuthenticodeVerification(executableTotal);
                 return new ExecutableSecurityResult("unsigned-local-test", null, null, null, null, false);
             }
             throw new InvalidDataException("Arcane requires a publisher-signed release. The unsigned local override must be passed explicitly for controlled testing.");
@@ -2739,25 +2819,79 @@ namespace ArcaneOS
 
     internal sealed class StartupBackdrop : Form
     {
+        private static readonly string[] StageIds = new string[]
+        {
+            "walk", "handles", "hash", "authenticode", "firstboot", "form", "core", "webview", "navigate"
+        };
+
+        private const string BootHtml = @"<!doctype html>
+<html lang=""en""><head><meta charset=""utf-8""><meta http-equiv=""X-UA-Compatible"" content=""IE=edge""><title>Arcane secure startup</title>
+<style>
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:rgb(3,5,10);color:rgb(238,242,255);font-family:'Segoe UI',Arial,sans-serif}
+body{background:radial-gradient(circle at 50% 18%,rgba(76,102,214,.22),rgba(3,5,10,0) 34%),linear-gradient(180deg,rgb(2,4,10),rgb(5,7,13) 58%,rgb(3,5,10))}
+.shell{height:100%;position:relative}.frame{position:absolute;left:22px;right:22px;top:22px;bottom:22px;border:1px solid rgba(145,166,235,.18);border-radius:22px}
+.panel{position:absolute;width:760px;left:50%;top:50%;margin-left:-380px;margin-top:-335px}.eyebrow{color:rgb(146,155,181);font-size:11px;letter-spacing:3px;text-transform:uppercase}
+h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-transform:uppercase}.intro{color:rgb(174,183,210);font-size:14px;line-height:1.6;margin:0 0 22px}
+.trust{border:1px solid rgba(143,124,255,.28);border-radius:16px;background:rgba(8,13,24,.88);box-shadow:0 24px 80px rgba(0,0,0,.30);padding:22px 24px}
+.headline{font-size:15px;margin-bottom:13px}.bar{height:7px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden}.fill{height:100%;width:1%;background:linear-gradient(90deg,rgb(99,118,232),rgb(143,124,255));transition:width .16s ease}
+.steps{list-style:none;margin:20px 0 0;padding:0}.step{position:relative;min-height:39px;padding:0 0 0 34px;color:rgb(146,155,181)}.step:before{content:'';position:absolute;left:5px;top:5px;width:10px;height:10px;border:2px solid rgba(146,155,181,.42);border-radius:50%}.step:after{content:'';position:absolute;left:11px;top:19px;width:1px;height:24px;background:rgba(146,155,181,.22)}.step:last-child:after{display:none}
+.step.active{color:rgb(238,242,255)}.step.active:before{border-color:rgb(143,124,255);background:rgb(143,124,255);box-shadow:0 0 15px rgba(143,124,255,.8)}.step.complete{color:rgb(190,243,212)}.step.complete:before{border-color:rgb(113,215,162);background:rgb(113,215,162)}.step.skipped{color:rgb(174,183,210)}.step.skipped:before{border-color:rgb(174,183,210)}.step.failed{color:rgb(255,198,204)}.step.failed:before{border-color:rgb(255,141,154);background:rgb(255,141,154)}
+.name{display:inline-block;font-size:13px}.state{float:right;font-size:10px;letter-spacing:1.4px;text-transform:uppercase}.detail{display:block;clear:both;padding-top:3px;font-size:11px;color:rgb(146,155,181);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.footer{margin-top:17px;color:rgb(113,215,162);font-size:11px;letter-spacing:1.2px;text-transform:uppercase}.pulse{display:inline-block;width:7px;height:7px;margin-right:9px;border-radius:50%;background:rgb(113,215,162);box-shadow:0 0 14px rgba(113,215,162,.8)}
+</style></head><body><div class=""shell""><div class=""frame""></div><main class=""panel"" aria-labelledby=""boot-title""><div class=""eyebrow"">Trusted startup environment</div><h1 id=""boot-title"">Arcane OS</h1><p class=""intro"">The shell is verifying its protected runtime before granting access to the desktop.</p><section class=""trust"" aria-live=""polite""><div id=""headline"" class=""headline"">Preparing the secure startup sequence…</div><div class=""bar"" role=""progressbar"" aria-label=""Arcane shell startup progress"" aria-valuemin=""0"" aria-valuemax=""100""><div id=""overall-fill"" class=""fill""></div></div><ol class=""steps"">
+<li id=""stage-walk"" class=""step""><span class=""name"">Walk the release directory</span><span id=""state-walk"" class=""state"">Pending</span><span id=""detail-walk"" class=""detail"">Waiting to inspect the release boundary.</span></li>
+<li id=""stage-handles"" class=""step""><span class=""name"">Retain protected directory and file handles</span><span id=""state-handles"" class=""state"">Pending</span><span id=""detail-handles"" class=""detail"">Waiting to bind verified objects to this process.</span></li>
+<li id=""stage-hash"" class=""step""><span class=""name"">Verify SHA-256 content hashes</span><span id=""state-hash"" class=""state"">Pending</span><span id=""detail-hash"" class=""detail"">Waiting for the signed content manifest.</span></li>
+<li id=""stage-authenticode"" class=""step""><span class=""name"">Authenticate native executables</span><span id=""state-authenticode"" class=""state"">Pending</span><span id=""detail-authenticode"" class=""detail"">Waiting to start bounded Windows trust workers.</span></li>
+<li id=""stage-firstboot"" class=""step""><span class=""name"">Apply first-boot user setup</span><span id=""state-firstboot"" class=""state"">Pending</span><span id=""detail-firstboot"" class=""detail"">Runs only when an idempotent setup step is required.</span></li>
+<li id=""stage-form"" class=""step""><span class=""name"">Construct the trusted shell window</span><span id=""state-form"" class=""state"">Pending</span><span id=""detail-form"" class=""detail"">Waiting for security verification.</span></li>
+<li id=""stage-core"" class=""step""><span class=""name"">Start Arcane Core</span><span id=""state-core"" class=""state"">Pending</span><span id=""detail-core"" class=""detail"">Waiting to establish the local protocol bridge.</span></li>
+<li id=""stage-webview"" class=""step""><span class=""name"">Create the WebView2 environment</span><span id=""state-webview"" class=""state"">Pending</span><span id=""detail-webview"" class=""detail"">Waiting to create the isolated renderer controller.</span></li>
+<li id=""stage-navigate"" class=""step""><span class=""name"">Navigate to the verified shell</span><span id=""state-navigate"" class=""state"">Pending</span><span id=""detail-navigate"" class=""detail"">The boot surface remains until navigation succeeds.</span></li>
+</ol><div class=""footer""><span class=""pulse""></span>Local verification in progress</div></section></main></div></body></html>";
+
+        private readonly WebBrowser browser;
+        private readonly Stopwatch updateClock = Stopwatch.StartNew();
+        private bool documentReady;
+        private bool allowClose;
+        private double overallProgress = 0.01;
+
         private StartupBackdrop()
         {
             AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = Program.StartupBackgroundColor;
             FormBorderStyle = FormBorderStyle.None;
-            ShowInTaskbar = false;
+            ShowInTaskbar = true;
             StartPosition = FormStartPosition.Manual;
             Bounds = Screen.PrimaryScreen.Bounds;
             Text = "Starting Arcane";
+            TopMost = true;
+            browser = new WebBrowser
+            {
+                AllowWebBrowserDrop = false,
+                BackColor = Program.StartupBackgroundColor,
+                Dock = DockStyle.Fill,
+                IsWebBrowserContextMenuEnabled = false,
+                ScriptErrorsSuppressed = true,
+                ScrollBarsEnabled = false,
+                Visible = false,
+                WebBrowserShortcutsEnabled = false
+            };
+            browser.DocumentCompleted += delegate
+            {
+                if (browser.Document == null || browser.ReadyState != WebBrowserReadyState.Complete
+                    || browser.Document.GetElementById("boot-title") == null) return;
+                documentReady = true;
+                browser.Visible = true;
+                browser.BringToFront();
+            };
+            Controls.Add(browser);
         }
 
-        protected override void OnPaint(PaintEventArgs eventArgs)
+        protected override void OnFormClosing(FormClosingEventArgs eventArgs)
         {
-            base.OnPaint(eventArgs);
-            using (Brush brush = new SolidBrush(Color.FromArgb(190, 210, 220, 245)))
-            using (Font font = new Font(SystemFonts.MessageBoxFont.FontFamily, 13f, FontStyle.Regular))
-            {
-                eventArgs.Graphics.DrawString("Starting Arcane…", font, brush, new PointF(28f, ClientSize.Height - 58f));
-            }
+            if (!allowClose) { eventArgs.Cancel = true; return; }
+            base.OnFormClosing(eventArgs);
         }
 
         internal static StartupBackdrop ShowNow()
@@ -2766,12 +2900,115 @@ namespace ArcaneOS
             backdrop.Show();
             backdrop.Refresh();
             Application.DoEvents();
+            backdrop.documentReady = false;
+            backdrop.browser.DocumentText = BootHtml;
+            Stopwatch paintDeadline = Stopwatch.StartNew();
+            while (!backdrop.documentReady && paintDeadline.Elapsed < TimeSpan.FromSeconds(2)) Application.DoEvents();
+            if (!backdrop.documentReady)
+            {
+                backdrop.allowClose = true;
+                backdrop.Close();
+                throw new InvalidOperationException("Arcane could not paint its trusted HTML startup surface.");
+            }
+            backdrop.BeginStage("walk", "Preparing to inspect the release boundary…");
             return backdrop;
+        }
+
+        internal void BeginStage(string stageId, string detail) { SetStage(stageId, "active", "In progress", detail, 0.05); }
+        internal void CompleteStage(string stageId, string detail) { SetStage(stageId, "complete", "Verified", detail, 1.0); }
+        internal void SkipStage(string stageId, string detail) { SetStage(stageId, "skipped", "Not required", detail, 1.0); }
+        internal void FailStage(string stageId, string detail) { SetStage(stageId, "failed", "Stopped", detail, 0.0); }
+
+        internal void ReportDirectoryProgress(int openedCount)
+        {
+            if (openedCount > 1 && openedCount % 4 != 0 && updateClock.ElapsedMilliseconds < 60) return;
+            updateClock.Restart();
+            SetStage("walk", "active", "In progress", openedCount.ToString(CultureInfo.InvariantCulture) + " directories inspected.", 0.45);
+            SetStage("handles", "active", "In progress", openedCount.ToString(CultureInfo.InvariantCulture) + " protected directory handles retained.", 0.45);
+        }
+
+        internal void BeginHashVerification(int fileCount, long totalBytes)
+        {
+            BeginStage("hash", "Preparing to verify " + fileCount.ToString(CultureInfo.InvariantCulture) + " files / " + FormatMib(totalBytes) + " MiB.");
+        }
+
+        internal void ReportFileHandleProgress(int current, int total)
+        {
+            if (current < total && updateClock.ElapsedMilliseconds < 55) return;
+            updateClock.Restart();
+            double fraction = total < 1 ? 0.0 : (double)current / total;
+            SetStage("handles", "active", "In progress", current.ToString(CultureInfo.InvariantCulture) + " of "
+                + total.ToString(CultureInfo.InvariantCulture) + " manifest file handles retained.", fraction);
+        }
+
+        internal void ReportHashProgress(int current, int total, long verifiedBytes, long totalBytes)
+        {
+            if (current < total && updateClock.ElapsedMilliseconds < 55) return;
+            updateClock.Restart();
+            double fraction = total < 1 ? 0.0 : (double)current / total;
+            SetStage("hash", "active", "In progress", current.ToString(CultureInfo.InvariantCulture) + " of " + total.ToString(CultureInfo.InvariantCulture)
+                + " files · " + FormatMib(verifiedBytes) + " of " + FormatMib(totalBytes) + " MiB verified.", fraction);
+        }
+
+        internal void CompleteHashVerification(int fileCount, long totalBytes)
+        {
+            CompleteStage("hash", fileCount.ToString(CultureInfo.InvariantCulture) + " files / " + FormatMib(totalBytes) + " MiB match the SHA-256 manifest.");
+        }
+
+        internal void BeginAuthenticodeVerification(int executableCount)
+        {
+            BeginStage("authenticode", "Preparing " + executableCount.ToString(CultureInfo.InvariantCulture) + " bounded Windows trust checks.");
+        }
+
+        internal void ReportAuthenticodeProgress(int current, int total, string fileName, bool complete)
+        {
+            double fraction = total < 1 ? 0.0 : (double)(complete ? current : current - 0.5) / total;
+            string action = complete ? "Authenticated" : "Checking";
+            SetStage("authenticode", "active", "In progress", action + " " + current.ToString(CultureInfo.InvariantCulture) + " of "
+                + total.ToString(CultureInfo.InvariantCulture) + ": " + (fileName ?? "native executable") + ".", fraction);
+        }
+
+        internal void CompleteAuthenticodeVerification(int executableCount)
+        {
+            CompleteStage("authenticode", executableCount.ToString(CultureInfo.InvariantCulture) + " native executables passed the configured trust policy.");
+        }
+
+        private void SetStage(string stageId, string state, string stateLabel, string detail, double fraction)
+        {
+            int index = StageIndex(stageId);
+            if (index < 0 || !documentReady || browser.Document == null) return;
+            HtmlElement row = browser.Document.GetElementById("stage-" + stageId);
+            HtmlElement stateElement = browser.Document.GetElementById("state-" + stageId);
+            HtmlElement detailElement = browser.Document.GetElementById("detail-" + stageId);
+            HtmlElement headline = browser.Document.GetElementById("headline");
+            HtmlElement fill = browser.Document.GetElementById("overall-fill");
+            if (row != null) row.SetAttribute("className", "step " + state);
+            if (stateElement != null) stateElement.InnerText = stateLabel ?? "";
+            if (detailElement != null) detailElement.InnerText = detail ?? "";
+            if (headline != null && (state == "active" || state == "failed")) headline.InnerText = detail ?? "Arcane secure startup is in progress…";
+            double progress = Math.Max(0.01, Math.Min(1.0, (index + Math.Max(0.0, Math.Min(1.0, fraction))) / StageIds.Length));
+            overallProgress = Math.Max(overallProgress, progress);
+            if (fill != null) fill.SetAttribute("style", "width:" + Math.Round(overallProgress * 100.0, 1).ToString(CultureInfo.InvariantCulture) + "%");
+            browser.Update();
+            Update();
+            Application.DoEvents();
+        }
+
+        private static int StageIndex(string stageId)
+        {
+            for (int index = 0; index < StageIds.Length; index++) if (String.Equals(StageIds[index], stageId, StringComparison.Ordinal)) return index;
+            return -1;
+        }
+
+        private static string FormatMib(long bytes)
+        {
+            return ((double)bytes / (1024.0 * 1024.0)).ToString("0.0", CultureInfo.InvariantCulture);
         }
 
         internal static void CloseSafely(StartupBackdrop backdrop)
         {
             if (backdrop == null) return;
+            backdrop.allowClose = true;
             try { backdrop.Close(); } catch { }
             try { backdrop.Dispose(); } catch { }
         }
@@ -2821,8 +3058,6 @@ namespace ArcaneOS
             Shown += delegate
             {
                 NativeWindowTheme.Apply(Handle);
-                StartupBackdrop.CloseSafely(startupBackdrop);
-                startupBackdrop = null;
             };
             SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
             Load += async delegate
@@ -2872,10 +3107,13 @@ namespace ArcaneOS
 #endif
                 if (!File.Exists(appIndex)) throw new FileNotFoundException("Arcane application assets are missing.", appIndex);
 
+                if (startupBackdrop != null) startupBackdrop.BeginStage("core", "Starting the isolated Arcane Core process…");
                 core = ArcaneCoreProcess.Start(bundleRoot, Program.AppMode, launchArgs, releaseSecurity);
                 core.MessageReceived += DeliverCoreMessage;
                 core.Failed += delegate(string message) { BeginInvoke(new Action(delegate { ShowFatal("Arcane Core stopped", message); })); };
+                if (startupBackdrop != null) startupBackdrop.CompleteStage("core", "Arcane Core started and the local protocol bridge is connected.");
 
+                if (startupBackdrop != null) startupBackdrop.BeginStage("webview", "Checking the installed WebView2 Runtime…");
                 await EnsureWebViewRuntimeAsync();
                 string userData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Arcane OS", "WebView2", Program.AppMode);
                 Directory.CreateDirectory(userData);
@@ -2883,6 +3121,7 @@ namespace ArcaneOS
                 CoreWebView2ControllerOptions controllerOptions = environment.CreateCoreWebView2ControllerOptions();
                 controllerOptions.DefaultBackgroundColor = Program.StartupBackgroundColor;
                 await webView.EnsureCoreWebView2Async(environment, controllerOptions);
+                if (startupBackdrop != null) startupBackdrop.CompleteStage("webview", "The isolated WebView2 environment and controller are ready.");
 
                 webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                 webView.CoreWebView2.Settings.AreDevToolsEnabled = HasArg("--devtools");
@@ -2912,6 +3151,9 @@ namespace ArcaneOS
                 {
                     if (!eventArgs.IsSuccess)
                     {
+                        if (startupBackdrop != null) startupBackdrop.FailStage("navigate", "Verified shell navigation failed: " + eventArgs.WebErrorStatus.ToString() + ".");
+                        StartupBackdrop.CloseSafely(startupBackdrop);
+                        startupBackdrop = null;
                         ShowFatal("Arcane application navigation failed", eventArgs.WebErrorStatus.ToString());
                         return;
                     }
@@ -2923,11 +3165,18 @@ namespace ArcaneOS
                         ShellWatchdog.MarkUiReady();
                         watchdogHeartbeatTimer.Start();
                     }
+                    if (startupBackdrop != null) startupBackdrop.CompleteStage("navigate", "Verified shell navigation completed; handing off to Arcane OS.");
+                    StartupBackdrop.CloseSafely(startupBackdrop);
+                    startupBackdrop = null;
                 };
+                if (startupBackdrop != null) startupBackdrop.BeginStage("navigate", "Navigating to the verified Arcane shell document…");
                 webView.Source = new Uri("https://arcane.local" + navigationPath);
             }
             catch (Exception error)
             {
+                if (startupBackdrop != null) startupBackdrop.FailStage("navigate", "Startup stopped before the verified shell could render.");
+                StartupBackdrop.CloseSafely(startupBackdrop);
+                startupBackdrop = null;
                 ShowFatal("Arcane could not start", error.ToString());
             }
         }

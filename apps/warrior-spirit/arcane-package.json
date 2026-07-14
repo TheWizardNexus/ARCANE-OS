@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "warrior-spirit",
+  "displayName": "Warrior Spirit Companion",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "strategy": "adapter",
+  "include": [
+    "BRANDING.md",
+    "README.md",
+    "companion.html",
+    "img/warrior-spirit-logo.png",
+    "home.html",
+    "index.html",
+    "manifest.json",
+    "mental-health.html",
+    "memories.html",
+    "modules",
+    "precrisis-skin.css",
+    "profile.html",
+    "reflection.html",
+    "warrior-spirit.css"
+  ],
+  "exclude": [],
+  "shared": [
+    "browser-runtime"
+  ],
+  "adapter": "scripts/build_public_release.mjs"
+}

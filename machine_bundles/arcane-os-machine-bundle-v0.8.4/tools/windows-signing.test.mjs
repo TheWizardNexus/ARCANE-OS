@@ -125,8 +125,8 @@ test('local development signing creates only a non-exportable current-user ident
   assert.match(source, /-KeyLength 3072/);
   assert.match(source, /-HashAlgorithm SHA256/);
   assert.match(source, /-KeyExportPolicy NonExportable/);
-  assert.match(source, /certutil\.exe/i);
-  assert.match(source, /-user -f -addstore/);
+  assert.match(source, /Import-Certificate/);
+  assert.match(source, /Cert:\\CurrentUser\\\$StoreName/);
   assert.match(source, /Test-ArcaneDevelopmentCertificate/);
   assert.match(source, /CngExportPolicies\]::None/);
   assert.match(source, /CspKeyContainerInfo\.Exportable/);
