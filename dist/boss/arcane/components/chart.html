@@ -70,7 +70,7 @@
     .chart-value{
         background:var(--modal-background);
         border:1px solid var(--chart-grid-color,var(--border-color));
-        border-left:.35em solid var(--chart-line-color,var(--primary-color));
+        border-left:.35em solid var(--chart-line-color,var(--accent-color));
         border-radius:.45em;
         display:grid;
         font-size:.85em;
@@ -84,7 +84,7 @@
 
     .chart-value[data-state="hover"],
     .chart-value[data-state="keyboard"]{
-        border-color:var(--chart-line-color,var(--primary-color));
+        border-color:var(--chart-line-color,var(--accent-color));
         box-shadow:0 0 0 .15em var(--chart-grid-color,var(--border-color));
     }
 
@@ -369,8 +369,8 @@
         );
         const lineColor=options.color||getChartColor(
             '--chart-line-color',
-            '--primary-color',
-            'rgb(0,128,255)'
+            '--accent-color',
+            'rgb(118,87,213)'
         );
         const pointColor=getChartColor(
             '--chart-point-color',

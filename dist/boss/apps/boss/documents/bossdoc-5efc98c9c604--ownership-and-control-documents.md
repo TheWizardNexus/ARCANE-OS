@@ -14,7 +14,7 @@ organizations: ["U.S. Small Business Administration (SBA)"]
 
 ## Description
 
-Part 1: All Applicants: Ownership and Control Documents Document Category Document Name Business Structure
+Part 1: All Applicants: Ownership and Control Documents Document Category Document Name
 
 ## When to surface
 
@@ -24,11 +24,11 @@ Surface when the user's question concerns certification, cybersecurity, formatio
 
 - Part 1: All Applicants: Ownership and Control Documents
 - Document Category Document
-- Name Business Structure
+- Name
+- Business Structure
 - Sole Prop. LLC Partnership Corporation
 - Citizenship
-- (*VOSB/SDVOSB excluded) Birth Certificate
-- 1 of the 4 documents is required to show proof of citizenship for all
+- (*VOSB/SDVOSB excluded)
 
 ## People and links
 

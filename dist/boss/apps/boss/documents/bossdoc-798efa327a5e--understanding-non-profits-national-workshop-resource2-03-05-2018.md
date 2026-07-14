@@ -40,7 +40,7 @@ Surface when the user's question concerns accounting, business planning, cyberse
 - Link: <http://foundationcenter.org/pnd>
 - Link: <http://www.grants.gov/>
 - Link: <https://www.bcorporation.net/b-corp-community>
-- Link: <http://www.agmconnect.org/>
+- Link: <https://philanthropyma.org/>
 - Link: <http://www.philanthropy.com>
 - Link: <http://www.bridgespangroup.org>
 - Link: <http://www.blueavocado.org>

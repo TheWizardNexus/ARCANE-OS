@@ -27,16 +27,17 @@ Surface when the user's question concerns artificial intelligence, business plan
 - Kathleen Sievers
 - Director, Federal IS Research
 - Agenda
-- »8(a) Program Overview & Trends
-- »Overall Federal Trends
+- » 8(a) Program Overview & Trends
+- » Overall Federal Trends
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), APEX Accelerator
 - Link: <https://certifications.sba.gov/>
 - Link: <https://www.deltek.com/en/about/events/webinars>
-- Link: <https://iq.govwin.com/neo/small>
+- Link: <https://iq.govwin.com/neo/small-business-resources>
 - Link: <https://www.census.gov/naics/>
+- Contact: 600 800 1000
 
 ## Next handoff
 

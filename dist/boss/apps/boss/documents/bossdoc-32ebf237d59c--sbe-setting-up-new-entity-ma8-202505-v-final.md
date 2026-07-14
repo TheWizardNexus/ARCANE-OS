@@ -25,22 +25,22 @@ Surface when the user's question concerns accounting, business planning, certifi
 - www.score.org
 - Setting Up a New Business
 - Entity
-- SMALL BUSINESS ESSENTIALS WEBINAR SERIESvMA8 -202505
+- SMALL BUSINESS ESSENTIALS WEBINAR SERIES
+- vMA8-202505
 - Providing free
 - business advice
-- and mentoring
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA)
 - Link: <https://onestop.delaware.gov/Operate_Register>
-- Link: <https://dlcp.dc.gov/service/get>
+- Link: <https://dlcp.dc.gov/service/get-business-license>
 - Link: <https://mytax.dc.gov>
-- Link: <https://www.marylandtaxes.gov/business/sales>
+- Link: <https://www.marylandtaxes.gov/business/sales-use/index.php>
 - Link: <https://egov.maryland.gov/BusinessExpress/>
 - Link: <https://www.nj.gov/treasury/taxation/informationforvendors.shtml>
-- Link: <https://mypath.pa.gov/_/#2>
-- Link: <https://www.tax.virginia.gov/sales>
+- Link: <https://business.pa.gov/operate/state-taxes/file-and-pay-state-taxes/>
+- Link: <https://www.tax.virginia.gov/sales-and-use-tax>
 - Link: <https://onestop.wv.gov/B4WVPublic/>
 
 ## Next handoff

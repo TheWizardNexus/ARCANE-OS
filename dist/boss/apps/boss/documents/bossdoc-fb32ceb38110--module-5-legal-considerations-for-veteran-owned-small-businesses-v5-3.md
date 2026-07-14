@@ -38,13 +38,13 @@ Surface when the user's question concerns accounting, branding, business plannin
 - Link: <http://www.uspto.gov/>
 - Link: <http://www.copyright.gov/learning-engine>
 - Link: <http://www.copyright.gov/>
-- Link: <https://www.uspto.gov/initiatives/entrepreneurship-resources-military-community>
+- Link: <https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community>
 - Link: <http://www.uspto.gov/inventors>
 - Link: <https://www.irs.gov/businesses/small-businesses-self-employed/independent-contractor-self-employed-or-employee>
 - Link: <https://www.uspto.gov/learning-and-resources/access-our-free-services>
 - Link: <https://www.uspto.gov/trademarks/protect>
 - Link: <https://www.uspto.gov/about-us/events>
-- Link: <https://www.score.org/resource/business-contract-rules>
+- Link: <https://www.sba.gov/federal-contracting/contracting-guide/governing-rules-responsibilities>
 - Contact: militaryoutreach@uspto.gov
 
 ## Next handoff

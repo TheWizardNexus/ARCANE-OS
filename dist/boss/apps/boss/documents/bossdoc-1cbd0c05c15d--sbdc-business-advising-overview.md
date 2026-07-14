@@ -35,7 +35,6 @@ Surface when the user's question concerns business planning, certification, disa
 - Organizations: Small Business Development Center (SBDC), University of Houston
 - Link: <https://www.sbdc.uh.edu/sbdc/Consulting1.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp>
-- Link: <https://www.sbdc.uh.edu/sbdc/Locations.asp>
 
 ## Next handoff
 

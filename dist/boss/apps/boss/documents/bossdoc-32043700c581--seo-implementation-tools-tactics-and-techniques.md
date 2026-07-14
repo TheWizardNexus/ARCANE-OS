@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-THE SEO IMPLEMENTATION BLUEPRINT : TOOLS, TACTICS & TECHNIQUES
+THE SEO IMPLEMENTATION BLUEPRINT: TOOLS, TACTICS & TECHNIQUES
 
 ## When to surface
 
@@ -23,7 +23,7 @@ Surface when the user's question concerns artificial intelligence, formation, le
 ## Key information
 
 - THE SEO IMPLEMENTATION
-- BLUEPRINT :
+- BLUEPRINT:
 - TOOLS, TACTICS & TECHNIQUES
 - Jennifer DeRosa
 - Toto SEO

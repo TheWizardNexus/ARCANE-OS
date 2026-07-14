@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-GUIDEMaximize Your Business Opportunity at Each Stage of The Government
+GUIDE Maximize Your Business Opportunity at Each Stage
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns accounting, business planning, certifi
 
 ## Key information
 
-- GUIDEMaximize Your Business
+- GUIDE
+- Maximize Your Business
 - Opportunity at Each Stage
 - of The Government
 - Contracting Lifecycle
 - TABLE OF CONTENTS
 - Introduction
-- Stage 1: Strategic Sales Planning
 
 ## People and links
 

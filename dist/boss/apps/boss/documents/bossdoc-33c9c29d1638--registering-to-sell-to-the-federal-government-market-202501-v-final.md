@@ -25,22 +25,22 @@ Surface when the user's question concerns accounting, business planning, certifi
 - www.score.org
 - Registering to Sell to the
 - Federal Government Market
-- KAREN WILLIAMS, SCORE CERTIFIED MENTORv202106202501vFinal
+- KAREN WILLIAMS, SCORE CERTIFIED MENTOR
+- v202106202501vFinal
 - Providing free
 - business advice
-- and mentoring
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC)
 - Link: <https://www.acquisition.gov/>
-- Link: <https://www.sba.gov/sites/default/files/2022>
-- Link: <https://www.sba.gov/federal>
+- Link: <https://www.sba.gov/sites/default/files/2022-06/FY22%20Small%20Business%20Goaling%20Guidelines_Final_220623%28R%29.pdf>
+- Link: <https://www.sba.gov/federal-contracting/contracting-assistance-programs/small-disadvantaged-business>
 - Link: <https://certifications.sba.gov/>
-- Link: <https://certifications.sba.gov/and>
+- Link: <https://www.sba.gov/federal-contracting>
 - Link: <https://sbaone.atlassian.net/wiki/spaces/UCPUKB/pages/3185574025/Knowledge+Base>
-- Link: <https://www.score.org/washingtondc/event/selling>
 - Contact: 8aquestions@sba.gov
+- Contact: (202) 765-1264
 
 ## Next handoff
 

@@ -9,9 +9,9 @@
     "start": "./apps/boss/chat.html"
   },
   "policySha256": "0a292d605394a97563f3215c5981762f8a9aaef89964e8ef83c8641fe3dee3b3",
-  "fileCount": 1130,
-  "totalBytes": 332248417,
-  "contentSha256": "123178b8e5155fe69b4b073252a5ae50d6f68a5904d324dc7d3d11fc6bfac7b3",
+  "fileCount": 1131,
+  "totalBytes": 334189246,
+  "contentSha256": "a3e926a0b403ce34c628928e4b6fafcd7cd7851cc7a6ef185b5fee9189401e04",
   "files": [
     {
       "path": "apps/boss/admin.html",
@@ -30,8 +30,8 @@
     },
     {
       "path": "apps/boss/chat.html",
-      "bytes": 41005,
-      "sha256": "15bddd36028aadc763234f007c5b0c3ac7afd8df88e6ffe0d6d0236edbcb8c4f"
+      "bytes": 41151,
+      "sha256": "ed8419db9c877d1a5cd3d413c34adc4c51920c40cf1d13dd8181e3cab5ecb78a"
     },
     {
       "path": "apps/boss/components/import-terminal.html",
@@ -115,8 +115,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-04a71b75a3d1--instructor-guide-v5-7-20251215.md",
-      "bytes": 2709,
-      "sha256": "4631ca8972a21dccd18e19bfa4da16e621d931cb62fd0f8fd26fbe4476ef71c8"
+      "bytes": 2789,
+      "sha256": "8c33525de51d73f64689ff8a8db0f594f75c8b5b721ea51df706b24a1ed752d8"
     },
     {
       "path": "apps/boss/documents/bossdoc-04e946a703c6--technology-innovation-route-to-commercialization.md",
@@ -135,8 +135,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-0786d11262a0--teaming-agreements-101-gov-win-deltek-2024.md",
-      "bytes": 2048,
-      "sha256": "39ce84ca3a475450b990d2a19d8e1b615e73d1e0b917f9dbc10005fe07e27e53"
+      "bytes": 1935,
+      "sha256": "79a01d51e03c76e1e1335c5fe65e8fd98565fc5e394e0ef237123d872dbfb7ab"
     },
     {
       "path": "apps/boss/documents/bossdoc-0883e2cc0a75--lee-college-sbdc-baytown-local-routing-for-houston-77084.md",
@@ -160,8 +160,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-0a8a58660824--score-interview-checklist-and-sample-questions-jan-21-25.md",
-      "bytes": 1822,
-      "sha256": "eb24ed2a7dcd09ee4482da32d140913b3ef0a94ad6a8a0c32ebbbce7bdcc9687"
+      "bytes": 1814,
+      "sha256": "1d3da7f1f64722ac2526aa49bf562688565167ff3b2acb9652c1357c3ed4f94e"
     },
     {
       "path": "apps/boss/documents/bossdoc-0aa07f92e94b--need-disaster-contracting-help-route.md",
@@ -175,8 +175,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-0c94d2593132--sba-make-onshoring-great-again-portal.md",
-      "bytes": 2780,
-      "sha256": "0647cf987ec890fc852d5e785e75fe794412d6a3e424b3d5c90323e3d8660b1a"
+      "bytes": 2787,
+      "sha256": "ff5055bedbb031609e4a409cbbd636e75c6deeb937dc5e464871bf44df3895cb"
     },
     {
       "path": "apps/boss/documents/bossdoc-0cad89994485--sba-veteran-owned-businesses.md",
@@ -195,8 +195,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-0d50df45d914--dyi-seo-101.md",
-      "bytes": 1405,
-      "sha256": "bba6a8391b6065d5a54f2fed904ba548244d006d9dc2d673249422b6ad9251bd"
+      "bytes": 1610,
+      "sha256": "f8a3f395c226d767f193024e9eabb526c80c96cd2a524dd64a261bd08608a27b"
     },
     {
       "path": "apps/boss/documents/bossdoc-0d82892fa735--sba-hire-employees-with-disabilities.md",
@@ -210,8 +210,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-0e45c34778ca--sba-district-offices.md",
-      "bytes": 2709,
-      "sha256": "4d757b34eca39ec52a5101a630d250c0d549760e5f3e8d33771fea55cf89c9b2"
+      "bytes": 2713,
+      "sha256": "29dae6ffa3a7938badce523b9ce511788ab54709fa5e29f9fca7446edbfcb057"
     },
     {
       "path": "apps/boss/documents/bossdoc-0e5746cf5062--galveston-county-sbdc-league-city.md",
@@ -245,8 +245,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-11b7af6ffe17--wfg-money-matters-brochure.md",
-      "bytes": 1638,
-      "sha256": "de19eaf1cd9dec9c20fd1b90c37fb187970f25f715ab2fff602a8abedb502a46"
+      "bytes": 1637,
+      "sha256": "448aa811c0a7b136e3226bfb65cd000dfac3b75710308d21a17385c3c18d448b"
     },
     {
       "path": "apps/boss/documents/bossdoc-12749569bfa1--sba-buy-an-existing-business-or-franchise.md",
@@ -255,8 +255,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-129684e6f5cb--score-fundraising-toolkit.md",
-      "bytes": 2970,
-      "sha256": "9d254f42eb4de5fe3d8c31c2e7645f1672417a8d0ee40c175f5632a725cd1687"
+      "bytes": 2897,
+      "sha256": "558d0528418b13e8f1847429dc0d355cea31adcaac26da22096bc0ac857c4b0e"
     },
     {
       "path": "apps/boss/documents/bossdoc-12e88b24b860--sbdc-spanish-webinars-catalog.md",
@@ -285,8 +285,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-13caa14fb9da--texas-chambers-of-commerce.md",
-      "bytes": 2804,
-      "sha256": "f55918d1ba5b7576d03748436ed8775988a1b744deb56b8516d04e81210b98db"
+      "bytes": 2821,
+      "sha256": "365246796ae9b21850b5998a5a2ee0bbfa656ff9057cc58a1ebfea68abd78cd8"
     },
     {
       "path": "apps/boss/documents/bossdoc-13ead90f1fab--score-how-mentoring-works-process.md",
@@ -345,8 +345,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-1cbd0c05c15d--sbdc-business-advising-overview.md",
-      "bytes": 2417,
-      "sha256": "2af35c683ec30f74c327838e827343aa4c95625a166fb07cbe5f59f2671646ac"
+      "bytes": 2364,
+      "sha256": "2e64778764c3058d0401aa820908cf9c3636d74143fa29ccce2ae49a2e423721"
     },
     {
       "path": "apps/boss/documents/bossdoc-1db9ae391885--certifications-and-procurement-webinars.md",
@@ -380,13 +380,13 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-22954eec0dac--seo-blueprint.md",
-      "bytes": 1187,
-      "sha256": "ef8762b3e495e7003b50d82404d162761f462ac94aeb01449f1c35d2e0af425e"
+      "bytes": 1214,
+      "sha256": "85ff3c92cbc8deda36fd21f916317deecd241980aa38eb3576abefca6d32739e"
     },
     {
       "path": "apps/boss/documents/bossdoc-23818bf7b2a8--sba-banks-in-houston.md",
-      "bytes": 1827,
-      "sha256": "bc1a97808f0909824389cca2ee1c1d428992aaa668263d33339fd68e6a2cf86e"
+      "bytes": 1826,
+      "sha256": "3ad45775b9a0807f3d47935b96eaccd3694b379504c81b4eda188358f7d7543d"
     },
     {
       "path": "apps/boss/documents/bossdoc-238937cb7ec3--score-licenses-and-permits-general-education.md",
@@ -470,8 +470,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-298225e621d8--how-to-fund-your-business-without-a-loan-alternative-funding-sources.md",
-      "bytes": 1891,
-      "sha256": "cefd9578a228c5d853c6adfdcacaa5c69ba327cbfdfc845da8b1943184ffd52c"
+      "bytes": 1893,
+      "sha256": "2304c94b849a221c8c0b2a5d9ebe84d25af986fc6e1fdbcdca68957737957c79"
     },
     {
       "path": "apps/boss/documents/bossdoc-29aa657d5cee--score-process-improvement.md",
@@ -480,8 +480,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-29aab151d34c--overview-of-veterans-small-business-resource-guide-for-score-lifelong-learning-v.md",
-      "bytes": 2408,
-      "sha256": "31f123070f46a0ecd2ed35e1c389916f2557b9039e57ece03ad37ba717658669"
+      "bytes": 2451,
+      "sha256": "641885aae7687d01f2c2ac4728504063d367e925952d4e60b6e93c994aa49684"
     },
     {
       "path": "apps/boss/documents/bossdoc-29b901e842b0--delteknavigatingthenewadministrationimpactsopportunitiespart1slides1738679727095.md",
@@ -525,8 +525,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-2c3e916393ab--wfg-where-are-you-financially-brochure.md",
-      "bytes": 1604,
-      "sha256": "01038311e645ad081b489f92855aeac2e07ee7711163e47330d073e00f75ff63"
+      "bytes": 1566,
+      "sha256": "bf0e9c0c3d07e5743b74d737907d5ebc4f180faf13c9a252b6dbd085de174dae"
     },
     {
       "path": "apps/boss/documents/bossdoc-2c87783c2505--score-business-plan-template-for-a-startup-business.md",
@@ -565,8 +565,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-3181a254a9fe--deltekteamingforfederalsetasidesthewhenwhyandhowslides1741031140123.md",
-      "bytes": 1819,
-      "sha256": "1cd3cf0458718c2ebec4b0c38b32ab8cb9c49d1ed7af7f871533f05d133de01f"
+      "bytes": 1817,
+      "sha256": "26b77b30387bf31eb864687c1253ba1d6b65079463cf168d2a8a22d305b938c2"
     },
     {
       "path": "apps/boss/documents/bossdoc-31b399746db0--sbe-quick-business-plan-lean-canvas-worksheet-v-ma1-2024.md",
@@ -580,18 +580,18 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-32043700c581--seo-implementation-tools-tactics-and-techniques.md",
-      "bytes": 1495,
-      "sha256": "2559b000ba41fd64eaf13d8a60772893311fb0426cb1c1a89e4fe5ea24d0274a"
+      "bytes": 1493,
+      "sha256": "131ccac19ffa0c79775c3c240d6c555356e486f02332c1cbf49efe037b8601d5"
     },
     {
       "path": "apps/boss/documents/bossdoc-32ebf237d59c--sbe-setting-up-new-entity-ma8-202505-v-final.md",
-      "bytes": 2230,
-      "sha256": "25271841d2d7db3646f9365802cb1d62409e97de6b85a5a9c26125515bfd9467"
+      "bytes": 2302,
+      "sha256": "90a6929476085580ca375369bf5508d76867b36f88169a4e705258863780301e"
     },
     {
       "path": "apps/boss/documents/bossdoc-3344c806cf88--sba-taking-manufacturing-business-global.md",
-      "bytes": 2638,
-      "sha256": "ae5bfa2a0d04da980a4b40ab90d6b2e11218348c83b4c84a0538fe956be187a6"
+      "bytes": 2643,
+      "sha256": "ba3581f5ee7250915f9d0513fa674ad76b0e8f960d17c88a4c88eb0428324c26"
     },
     {
       "path": "apps/boss/documents/bossdoc-334fd6feb7a3--score-financial-projections-template.md",
@@ -615,8 +615,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-33c9c29d1638--registering-to-sell-to-the-federal-government-market-202501-v-final.md",
-      "bytes": 2384,
-      "sha256": "211d648012e6703290985665bb32762d1c5f2ac16a8ce130bd1234fd8e62b9a7"
+      "bytes": 2490,
+      "sha256": "5a154b64017c2f421211411bd8b566a195fe071391647f8a82fff016b48fb8a6"
     },
     {
       "path": "apps/boss/documents/bossdoc-3423b3618196--sba-interagency-capital-resources-for-small-businesses.md",
@@ -625,8 +625,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-34b3f9aeb984--the-government-contracting-lifecycle-deltek.md",
-      "bytes": 1639,
-      "sha256": "82e9dd03ada4708b3b69af13f81d6287ced4bb0aa37f3df108371c598bbfef02"
+      "bytes": 1589,
+      "sha256": "bea4dc90b274322ae330c54fb6672508a6f492b3bf9f1fd9aae9c54555823bc0"
     },
     {
       "path": "apps/boss/documents/bossdoc-35048e716365--sba-small-business-procurement-scorecard.md",
@@ -635,8 +635,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-35645e07ecb6--module-5-legal-considerations-for-veteran-owned-small-businesses-v5-3-1.md",
-      "bytes": 2081,
-      "sha256": "4b8c5683e30dc3506dbef2c8df9129ea405ba8bff65be9c1939c153893622593"
+      "bytes": 2179,
+      "sha256": "5fcaf6c8e31c83b884866b4eb137621752bfefb36085d28d1de7d81922ce9d50"
     },
     {
       "path": "apps/boss/documents/bossdoc-35ebf8f457c8--sba-establish-business-credit.md",
@@ -710,8 +710,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-3e3cd63cbdfb--module-8-resources-1.md",
-      "bytes": 2508,
-      "sha256": "262c7e3f3dd30a6ba67076174c55e7acb92f517b76d5b7052296e806984614bf"
+      "bytes": 3512,
+      "sha256": "88c00bebf6809f00c5a298cd3589cbd6bac9d11f70abfd528d72a3b919fb5682"
     },
     {
       "path": "apps/boss/documents/bossdoc-3e5c32bf20ac--score-find-a-mentor-process.md",
@@ -725,13 +725,13 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-3f9c8546a8cc--onboarding-handbook-houston-one-score-july-2025.md",
-      "bytes": 2657,
-      "sha256": "ff33e379f30c4fd4da14c8fa45fae86192fc11d624da3365c668f03300819cde"
+      "bytes": 2627,
+      "sha256": "a7f35596014b8eaebf4611170a694f1af0c9b2b90082fede11fe09d1753a4594"
     },
     {
       "path": "apps/boss/documents/bossdoc-3fd79a1bb19e--b2binstructor-faqs-1.md",
-      "bytes": 1862,
-      "sha256": "97dff997eabcc3e6acfdb6e9b2f5397ebedd5ed76afe144311d4c77231775c7a"
+      "bytes": 1859,
+      "sha256": "1cec7e7e9b128508db07765005558bf0454d6753cdc9b84396c9f935bef83606"
     },
     {
       "path": "apps/boss/documents/bossdoc-4015e37f387d--score-what-to-expect-from-mentoring-process.md",
@@ -810,8 +810,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-4893bb653b07--2025-playbook-positioning-for-contracts-and-procurement-wins-for-va.md",
-      "bytes": 1819,
-      "sha256": "048f5b8c33a3f6d3a1c6d656d0756adefd385a75517cf72cc7443ffeb6f5ed6b"
+      "bytes": 1839,
+      "sha256": "aa1b7a7cd53420f892bb6af3236bf1cc6dc8b4b1ab4848f448f6fe2978ce484f"
     },
     {
       "path": "apps/boss/documents/bossdoc-4a1733519623--sba-state-trade-expansion-program-step.md",
@@ -825,8 +825,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-4b3da0b0c223--module-4-the-economics-of-small-business-start-up-v5-0-2023-10-01-1.md",
-      "bytes": 1704,
-      "sha256": "eee92fef5118fd5de31657fec82277b917499889283012739cc852ae617662a7"
+      "bytes": 1681,
+      "sha256": "dd053acee56b0c10dc9c3f21872c88e6e4faa8645e60a2a9e11d070fc1494111"
     },
     {
       "path": "apps/boss/documents/bossdoc-4b43b2f33fa0--sba-manufacturing-success-stories.md",
@@ -860,8 +860,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-4db37ecf2cd6--module-6-introduction-to-business-planning-2023-10-01-1.md",
-      "bytes": 1967,
-      "sha256": "7b63ce3a2d4cf94c4754a5569c830d0d9d18337d47e006a570e0e0c30b5bd272"
+      "bytes": 1969,
+      "sha256": "a0d1f9fa9aecec36cac94d17e318b224bdef60b9dee4b7da0ed93d334e07c8e9"
     },
     {
       "path": "apps/boss/documents/bossdoc-4df65b4491c0--sba-veteran-contracting-assistance-programs.md",
@@ -870,8 +870,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-4e33323c2598--new-venture-feasibility-tool.md",
-      "bytes": 2164,
-      "sha256": "fd8db65bfca9210e8f37b3ce0a913bcbd81b6d50721611a57901a02f62fcbb7f"
+      "bytes": 2068,
+      "sha256": "38c8251d61d630ce5d7e986cf63b3106ccda801a5ef899e00df221058ca84d8b"
     },
     {
       "path": "apps/boss/documents/bossdoc-4e614ffe2fa8--need-bid-review-or-solicitation-help-route.md",
@@ -905,8 +905,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-51acfc3105e5--module-7-financing-your-venture-v5-2.md",
-      "bytes": 1978,
-      "sha256": "e822fa54c699fbb34a7de4e85c8672f82efc15f29baa0f32bc006a0fb3ec167d"
+      "bytes": 1960,
+      "sha256": "91ade1759eb586c49392bd8978d0258328e481568ea733864191170cfa9b3aa4"
     },
     {
       "path": "apps/boss/documents/bossdoc-52d25f296c60--score-brand-positioning.md",
@@ -1040,8 +1040,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-5efc98c9c604--ownership-and-control-documents.md",
-      "bytes": 1773,
-      "sha256": "75165f5772c8631daf9b414d530b753cc681c8066be05d346c73a9b81041122e"
+      "bytes": 1666,
+      "sha256": "73c0a793b8e6e9659bdb88fcbacabca01484f5f71c38acbfc3db31c8a18f474a"
     },
     {
       "path": "apps/boss/documents/bossdoc-5f1ac4dc495d--port-houston.md",
@@ -1150,8 +1150,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-66e69397714b--b2b-virtual-workbook-v5-1.md",
-      "bytes": 2726,
-      "sha256": "19dcfbbd01a1e276ed59339566ac35de672f6bde37ffc3e1f29d399e17c30a39"
+      "bytes": 2596,
+      "sha256": "aa2f558c3fa8b6f3f5146478120ad6fd1000162e0ceea9d91db3c45b7fafdae9"
     },
     {
       "path": "apps/boss/documents/bossdoc-67d92256fc57--sba-local-assistance-overview.md",
@@ -1190,8 +1190,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-6a4bc21b64cf--sbdc-77084-service-area-note-houston-fort-bend-southwest-harris.md",
-      "bytes": 2401,
-      "sha256": "caa859281de2a1319a57899d7b85261f20eaadf7185411636e47c48a9b636616"
+      "bytes": 2406,
+      "sha256": "25b3d848d659258d71c2b77b29ff86d252984a65cfd6fc40e121b78e042a96aa"
     },
     {
       "path": "apps/boss/documents/bossdoc-6aaa5ee42b4f--sba-boss-resource-pack-manifest.md",
@@ -1220,8 +1220,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-6ce8c2202d5c--04-08-2026-sba-resources-for-veteran-owned-small-businesses.md",
-      "bytes": 2671,
-      "sha256": "3b2e8b964dac6d678492d6aaac78d8aeba7026071a2bc0652259e0a92190a203"
+      "bytes": 2621,
+      "sha256": "1fbe13c1b60b3f871d16c6f4fc8933dd3fd2bd26b4e94e79447cdb17eb775eca"
     },
     {
       "path": "apps/boss/documents/bossdoc-6d22509e56e4--texas-gulf-coast-sbdc-network-location-map.md",
@@ -1240,8 +1240,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-6f062d516c56--3316-sb-borrowing-for-sb-wb-iha-final-002.md",
-      "bytes": 2510,
-      "sha256": "8ffbc05c9db17430f0478b52871f821046bc58e22848707073e4ddb6a9224f71"
+      "bytes": 2454,
+      "sha256": "3e549f1516d019169dba5d7a032c1c9655413d57840685ea2f7aa485d30c0cf9"
     },
     {
       "path": "apps/boss/documents/bossdoc-6ff1cdb4db7f--sbdc-financing-and-loan-readiness-guardrails.md",
@@ -1270,13 +1270,13 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-71a0071d1717--deltekkeystobuildinganopppipelineslides1738773766436.md",
-      "bytes": 1839,
-      "sha256": "2964d35c61e6434547b4f5eeac1a7e5b183c7ab9fea05a12371bdccedce64dac"
+      "bytes": 1857,
+      "sha256": "d25683485e0113df3ae78fd5e3dfde9ec85af1893398ad5e369d99b9d2dfb847"
     },
     {
       "path": "apps/boss/documents/bossdoc-738bde7b37e9--module-1-8-combined-document-december-2025.md",
-      "bytes": 2759,
-      "sha256": "f27fe2ea6d664e5cb5f117b7b025f0d4efb1b0fd4b6adcf12dc7369a4a37e28a"
+      "bytes": 2777,
+      "sha256": "9ce45ef99c470056d2d7c6f0620d6dcfd4244d9c29556d3b55c76d4532933a96"
     },
     {
       "path": "apps/boss/documents/bossdoc-742de08dab7a--brazos-valley-sbdc-bryan.md",
@@ -1290,8 +1290,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-74bb0a824fb0--b2b-virtual-workbook-quick-start-guide-1.md",
-      "bytes": 2279,
-      "sha256": "19fe1e996e1981155bfdde026df241d32b0af250f088c480e9b8946ae43586c5"
+      "bytes": 2286,
+      "sha256": "2ea527ad4774913198bd2a32eb26246ff2d90fd6c306356710fbc4bfc06d9e34"
     },
     {
       "path": "apps/boss/documents/bossdoc-754d1682ad3d--sba-7-a-loans.md",
@@ -1310,8 +1310,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-765689dcbac3--sbdc-url-catalog-for-boss-routing.md",
-      "bytes": 3404,
-      "sha256": "caf9f37e07cdb79c836b9079eb27d207bdadefc8549dce06627155e96c70f2be"
+      "bytes": 3356,
+      "sha256": "79840c9a8e73ffa2d67f0cbeac6e29085a9a3c4d7b96c026bbcab1f283dcdc27"
     },
     {
       "path": "apps/boss/documents/bossdoc-76d30c2a4356--score-legal-structure-general-education.md",
@@ -1340,13 +1340,13 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-797a3e9c522a--seo-101.md",
-      "bytes": 1919,
-      "sha256": "6c857215c7f53dc0d25d99c4e702aaca3fecbaee36c1fdd503e9c303bc0a4cad"
+      "bytes": 1882,
+      "sha256": "fcc385e9a14ebd104d328b6a9cfe9a66d4511d60e6e3ec902810fbea53260055"
     },
     {
       "path": "apps/boss/documents/bossdoc-798efa327a5e--understanding-non-profits-national-workshop-resource2-03-05-2018.md",
-      "bytes": 2709,
-      "sha256": "6d8efaccc8ba88eabfeb0f8f4ad5e0623b0d1b6a982874e608eed24bd5677c7a"
+      "bytes": 2710,
+      "sha256": "6653a53789d34fe4cbdbf02938f8428407ed823ed3d654b0570420ccc5da0af2"
     },
     {
       "path": "apps/boss/documents/bossdoc-7a13742fb6b3--score-financial-readiness.md",
@@ -1375,8 +1375,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-7d6152ae9d8f--score-cash-flow-management-basics-20250204-v-final.md",
-      "bytes": 1638,
-      "sha256": "c693facfdab682e742326fffe0e075c79b0c6f9a1d2e2d23c7795cda004b1908"
+      "bytes": 1623,
+      "sha256": "82f8c47c1fb3b678328d64e2a989a9c7334c914d0bdd200bc1f5ee5cc93e1188"
     },
     {
       "path": "apps/boss/documents/bossdoc-7e300770650a--need-apex-eligibility-check-route.md",
@@ -1455,13 +1455,13 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-8aa286134ed5--sba-contact-sba.md",
-      "bytes": 2517,
-      "sha256": "f710c6bfb27778f683e04e5dcf8e21c307f912a857c0d7261c2ad80737654866"
+      "bytes": 2518,
+      "sha256": "d2ed9b04292c24211ef52cc1db7d33022e3b25dc7c47c253e8b375bf2702bc4a"
     },
     {
       "path": "apps/boss/documents/bossdoc-8cc56638e4e9--hinz-strategic-pipeline-analysis-flyer-250113.md",
-      "bytes": 1588,
-      "sha256": "6c5bfdc6b7a79d88fcac8e2ca154f702fc926ce02f71d9927d199650abfaf1af"
+      "bytes": 1522,
+      "sha256": "cd1d6603567d56fc1465925641042025fee71bec8815e67acf6e9ee3aa1c3afe"
     },
     {
       "path": "apps/boss/documents/bossdoc-8cda4df683d0--score-business-plan-template-for-an-established-business.md",
@@ -1470,8 +1470,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-8ce497fa235f--score-startup-business-plan-template.md",
-      "bytes": 3752,
-      "sha256": "f4875aa61c3a4765bf0a90c100554c9f78e7c5e5ca6e05666196bc584ae11cb7"
+      "bytes": 3747,
+      "sha256": "e6f660f7f1aea6bfc528983a39dfa28e7ce6305373282a99c01b4e3e839507e4"
     },
     {
       "path": "apps/boss/documents/bossdoc-8d5421c45f8c--sba-business-guide-process-10-steps-to-start-a-business.md",
@@ -1590,8 +1590,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-9f0bb4b5b75c--veterans-small-business-resource-guide-for-score-clients-v3-2-11-22-24.md",
-      "bytes": 2368,
-      "sha256": "eba2be4659605d237c7a6d8cf4d8cb1ee83abef9c602e9fecc17ab2543f13721"
+      "bytes": 2421,
+      "sha256": "6a2b6a24f0d916289eecf57c2f7906c77731e5df1b126ddbbe54722a3e899305"
     },
     {
       "path": "apps/boss/documents/bossdoc-9f8aba43f3e6--sba-disaster-assistance.md",
@@ -1611,7 +1611,7 @@
     {
       "path": "apps/boss/documents/bossdoc-a1248c8ec8db--brazoria-hispanic-chamber-of-commerce.md",
       "bytes": 2830,
-      "sha256": "955281b5f496ed8a82aba22464117c37092c63466d74fe7708666bf6b37e6388"
+      "sha256": "ec6b1bfaa53b486cb999dc57a26fd157038969b12b5f899e54eafbdc032921a5"
     },
     {
       "path": "apps/boss/documents/bossdoc-a1549043a992--sba-houston-business-name-registration-and-texas-secretary-of-state-context.md",
@@ -1630,8 +1630,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-a29015df3f16--02-23-2026-agenda-virtual-b2b-reboot-houston.md",
-      "bytes": 2650,
-      "sha256": "d93244911e218ebb65ef6c4ead882af35ea71b2754e33da613e9aa85e31a7a0b"
+      "bytes": 2712,
+      "sha256": "fa81d191da52751a46bdef240816085cad719fab30a7e265ed9c30a4d63f0f24"
     },
     {
       "path": "apps/boss/documents/bossdoc-a2e960981b4b--apex-houston-77084-boss-resource-pack-manifest.md",
@@ -1650,8 +1650,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-a3da1dc32b30--module-1-introduction-to-business-ownership-v5-1-1.md",
-      "bytes": 1872,
-      "sha256": "2c4f5c7791a3591ecc50782ca45c83c24dfbe72f41d2540e1dfa12a1840133d8"
+      "bytes": 1860,
+      "sha256": "04aa49981bb4152617155c406f7bc60e790c8fc0788c2cf52fcb6f108e31a1e4"
     },
     {
       "path": "apps/boss/documents/bossdoc-a4f4221a07c1--uh-apex-contact.md",
@@ -1660,8 +1660,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-a53f43c6ef88--module-3-understanding-markets-your-competitive-space-v5-2-1.md",
-      "bytes": 1699,
-      "sha256": "19e86f85048aaf95abea33a34dcd9cf3a92902b5b843b033c420dfb7d72e1c70"
+      "bytes": 1700,
+      "sha256": "804d3baf96a512a73c898847ada924b1ba1f8344fcbc9ae6be17615977206b12"
     },
     {
       "path": "apps/boss/documents/bossdoc-a5ef2c1d31de--sba-regional-innovation-clusters.md",
@@ -1695,8 +1695,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-a74258b20a93--2025-8a-trends.md",
-      "bytes": 2056,
-      "sha256": "5cedea72e9e10fa9e81ad23ee228d42f74672fabf6b933660c57313999252a3f"
+      "bytes": 2101,
+      "sha256": "df66a13dc97dcee925f0adf7816f7bb6f167da398819e440ce58fa709746503d"
     },
     {
       "path": "apps/boss/documents/bossdoc-a7ada41b3ff9--fort-bend-county-sbdc-richmond.md",
@@ -1725,8 +1725,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-aab4634f325d--online-boots-to-business-reboot-houston-vboc-flyer.md",
-      "bytes": 2280,
-      "sha256": "52e881c9626bbf1c1031c9fd91f9c9df3676d5838b76aa4944a175a62aca3954"
+      "bytes": 2256,
+      "sha256": "4f5fbcbc717bd8787af51487de287e42432833155e25c9c801a9c1203a7611da"
     },
     {
       "path": "apps/boss/documents/bossdoc-aab747f25081--sbdc-training-events-process.md",
@@ -1785,8 +1785,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-b186cbed0ca7--workshoppresenterguidelinesscorevolunteer9-22-20.md",
-      "bytes": 1999,
-      "sha256": "222f7c766230cddd439f33922064c9a5f58c5b8278ca57e4c81667e298fd459d"
+      "bytes": 1806,
+      "sha256": "74e810a7e309edf280650deb9686a080796b4ab4fd503633b13b68b2ce48ce5c"
     },
     {
       "path": "apps/boss/documents/bossdoc-b29fc2c50945--boss-sba-resource-partner-handoff-template.md",
@@ -1875,8 +1875,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-bc5df52cb338--veterans-small-business-resource-guide-for-score-mentors-v6-1-11-22-24.md",
-      "bytes": 2429,
-      "sha256": "cebb4f7ab06b8add7bc34c0148252e2a30ef948cbf5a6005e2508bf1c8f39773"
+      "bytes": 2482,
+      "sha256": "25e0407fb1d3ec4cc8af022932e26e0d3186e04e24ced1a7e37dee1191f2019b"
     },
     {
       "path": "apps/boss/documents/bossdoc-bc8a8466c34b--score-employee-to-entrepreneur-hub.md",
@@ -1920,8 +1920,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-bf73a3115a91--sbe-quick-business-plan-v-ma3-202505-v-final.md",
-      "bytes": 1815,
-      "sha256": "b38b577881aa30a650fb3d744c787f5fbe02feda7769eba4d655bf367d09d113"
+      "bytes": 1801,
+      "sha256": "cf77802fc76225faa8826a9ce1bd8583b84340a905294cc800056b6c82ef5e2b"
     },
     {
       "path": "apps/boss/documents/bossdoc-bfa1d8faf587--funding-readiness-route-to-sbdc.md",
@@ -1950,8 +1950,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-c169c29bf951--july-24-lll-gen-ai-final.md",
-      "bytes": 2259,
-      "sha256": "b8d54560cff20dc78fd9f62fc0f9c80c7f531d14f6f82e5c102065e0516534e1"
+      "bytes": 2161,
+      "sha256": "cd8fd9fe4951e87a152f0338dbadc9c85bde735c11bbc4526144465d6309d20e"
     },
     {
       "path": "apps/boss/documents/bossdoc-c1cda8d7cefd--sba-choose-a-business-structure.md",
@@ -1990,8 +1990,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-c66c21f39045--houston-veterans-chamber-of-commerce.md",
-      "bytes": 2833,
-      "sha256": "00c9cdafdedd90e4a6f9cba30867b4a4ba40518279067d9324541e8b849497fa"
+      "bytes": 2816,
+      "sha256": "edf12e5018d0ffe661a6bca14038486de706f36939122796a54d48b9f1be2483"
     },
     {
       "path": "apps/boss/documents/bossdoc-c7487e49f42b--human-resources-specialist-routing.md",
@@ -2175,8 +2175,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-db595e291865--module-1-introduction-to-business-ownership-v5-1.md",
-      "bytes": 6745,
-      "sha256": "31b792e3134904baa03b89f9931136700ad893f97fa4ba460e9d5923ee8d707f"
+      "bytes": 2606,
+      "sha256": "b409238c00cddba7819fe8aadd5bd8f2ba1ff16bfc730926c12bd15958921e12"
     },
     {
       "path": "apps/boss/documents/bossdoc-db5e76eee233--module-4-the-economics-of-small-business-start-up-v5-0-2023-10-01.md",
@@ -2245,8 +2245,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-e1a5649471e0--ucp-external-experience-application-preview-2025.md",
-      "bytes": 1658,
-      "sha256": "ba078ceaf4935ab7ebba350df814e153c8f6c0635995432695c7d3b18449a388"
+      "bytes": 1649,
+      "sha256": "045754b122e3097d39388f5cb7bc46a8d490573dbd87d3184a5b2a0b994085b3"
     },
     {
       "path": "apps/boss/documents/bossdoc-e3cbb5748374--san-jacinto-college-sbdc-deer-park.md",
@@ -2260,8 +2260,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-e54fbdb498de--texas-gulf-coast-sbdc-locations-catalog.md",
-      "bytes": 3123,
-      "sha256": "db4247eea8feec20df1ac745309a26dc57cc0373633ca3b1f1dfebc898461655"
+      "bytes": 3128,
+      "sha256": "60e612da766c28a1d5fda5772b3ff022d9e8a10dba962d0048cea61bc9121228"
     },
     {
       "path": "apps/boss/documents/bossdoc-e6db411d4438--uh-apex-accelerator-services.md",
@@ -2300,13 +2300,13 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-e8e2c17c6005--biz-model-canvas-from-strategyzer-1.md",
-      "bytes": 1813,
-      "sha256": "0c86ee0e28dbe9be9c14890737464456b74d7cce55e64dfab4672ff92ff8fbdf"
+      "bytes": 1814,
+      "sha256": "125c611ea5c68cc99a5f53c944649e76e70621b62934531bec55a251cdb36501"
     },
     {
       "path": "apps/boss/documents/bossdoc-e93d85b3118a--2025-nrg-digital-508c.md",
-      "bytes": 2138,
-      "sha256": "43924f90a7404274f280ee7077a338cdab1077755d3f9c8d3e9ec121f7484724"
+      "bytes": 2064,
+      "sha256": "d52929f576434cbfa9b718c6d5452102f70bb83408f1f97ad4e9e7e238b3f923"
     },
     {
       "path": "apps/boss/documents/bossdoc-e93fa83121e6--sba-funding-programs-overview.md",
@@ -2330,13 +2330,13 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-eb999e56605a--reboot-one-day-virtual-workbook-1.md",
-      "bytes": 2496,
-      "sha256": "bb30548ca5860291a119f2a4ab219fc8c859b46301ce609a5b505e629b4a4d08"
+      "bytes": 2324,
+      "sha256": "44d69926067dff5c01b0d1ae9e87a0d1bb4665dda9cbd736c4dba6f5ab307c65"
     },
     {
       "path": "apps/boss/documents/bossdoc-ec5167ee279b--module-1-8-combined-document-1.md",
-      "bytes": 2629,
-      "sha256": "c25be4a237acd28da2345b096887f6b51bb57ad08a5734d69acfc1130dcfc813"
+      "bytes": 2866,
+      "sha256": "7e49784c1c8c6b8a7d0e5f04599a18a14b88a53304cb41c3360e2ec65d382fca"
     },
     {
       "path": "apps/boss/documents/bossdoc-ec7bda4ed9c7--combined-arms.md",
@@ -2515,8 +2515,8 @@
     },
     {
       "path": "apps/boss/documents/bossdoc-fb32ceb38110--module-5-legal-considerations-for-veteran-owned-small-businesses-v5-3.md",
-      "bytes": 3183,
-      "sha256": "a0398d454b27efe4c53e24e841459cc610f21172eb8977ef6521722c5c0a1004"
+      "bytes": 3224,
+      "sha256": "2fc5a4746c49fefc050974925619eb305ad5aa8b761d6e3b479a5dd04987058f"
     },
     {
       "path": "apps/boss/documents/bossdoc-fc131c90cdcc--score-startup-roadmap.md",
@@ -2555,8 +2555,8 @@
     },
     {
       "path": "apps/boss/documents/document-manifest.json",
-      "bytes": 2159644,
-      "sha256": "1859c4a9e7fe0711af67990d98224251a1949d8da996de8a88bb636907b9feaa"
+      "bytes": 2156332,
+      "sha256": "309c9874485965e2f51590e26b74fbcaddfa414cd04f64822a2da0a0d024d624"
     },
     {
       "path": "apps/boss/export.html",
@@ -5105,8 +5105,8 @@
     },
     {
       "path": "apps/boss/prompts/system.md",
-      "bytes": 6581,
-      "sha256": "0acbde814fa025f3fd6069d9c2372a1b7399990e210aa00b8ae6e3683c3f4a7b"
+      "bytes": 6895,
+      "sha256": "e36ebe9abc451ac6a419f74ddb67ba0802953c8201b345b09c48aaddfbebce3d"
     },
     {
       "path": "arcane/components/app-bar.html",
@@ -5125,8 +5125,8 @@
     },
     {
       "path": "arcane/components/chart.html",
-      "bytes": 20623,
-      "sha256": "418ab098c26bb42b75b6b8c76b70597ffc327c6f7e9a244757e01757adc9cf8f"
+      "bytes": 20621,
+      "sha256": "b85694285e79feae8080f08cb4998faf5b548651bfa2863b3869c773e8b399a7"
     },
     {
       "path": "arcane/components/chat.html",
@@ -5362,6 +5362,11 @@
       "path": "arcane/entities/Weather.js",
       "bytes": 3241,
       "sha256": "b7b7da733d59cf9d2161370ac32d0ddf9d76d7f61a9e951ea913392cc5c5c5a4"
+    },
+    {
+      "path": "arcane/img/arcane-os-everywhere.png",
+      "bytes": 1947047,
+      "sha256": "ea4be2a8ae1dbbe2da9479206e729a1ed5f2add461156752f261c0e1631c54f1"
     },
     {
       "path": "arcane/img/arrow-left.png",
@@ -5660,8 +5665,8 @@
     },
     {
       "path": "PUBLIC_RELEASE.json",
-      "bytes": 254327,
-      "sha256": "8eb0e17c67de84c10bcffa470f19d9a23162d8ac445560a94f8f1e6b67a829f8"
+      "bytes": 254500,
+      "sha256": "6af5b0c588b56d21c8c615041fb60037b7f70d1b0fd98bcd88ed02300de6c757"
     }
   ]
 }

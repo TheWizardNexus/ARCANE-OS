@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)","Small Busine
 
 ## Description
 
-SMALLBUSINESS Reso urce Guide Start, Gro w, Expand,
+SMALLBUSINESS Resource Guide Start, Grow, Expand,
 
 ## When to surface
 
@@ -23,12 +23,12 @@ Surface when the user's question concerns accounting, artificial intelligence, b
 ## Key information
 
 - SMALLBUSINESS
-- Reso urce Guide
-- Start, Gro w, Expand,
-- and Re cover Your
-- Business2025-2026NATIONAL
+- Resource Guide
+- Start, Grow, Expand,
+- and Recover Your
+- Business
+- NATIONAL
 - EDITION
-- SBA 2025-2026 SMALL BUSINESS RESOURCE GUIDETable of Contents
 
 ## People and links
 

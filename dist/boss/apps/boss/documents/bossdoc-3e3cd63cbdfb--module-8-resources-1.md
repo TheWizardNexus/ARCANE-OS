@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)","Small Busine
 
 ## Description
 
-Boots to Business Module 8 Resources to Support Your Efforts
+Boots to Business Module 8Resources to Support Your Efforts Version 5.0 Agenda•SBA Resource Partner network•Other resources & training•B2B Follow-On Training•Next Steps•Q&A
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns business planning, disaster readiness,
 
 ## Key information
 
-- Boots to Business
-- Module 8
-- Resources to Support Your Efforts
+- Boots to Business Module 8Resources to Support Your Efforts
 - Version 5.0
-- Agenda
-- •SBA Resource Partner network
-- •Other resources & training
+- Agenda•SBA Resource Partner network•Other resources & training•B2B Follow-On Training•Next Steps•Q&A
+- Result:•The couple received an SBA-backed loan to help them get started•Bold Mariner Brewing Company opened their doors in 20154
+- •Michael & Kerrie Stacks•Active-Duty sailor and spouse who wanted to start micro-brewery•Connected with local VBOC, who helped them:•Develop a business plan•Create financial projections•Apply for financing
+- VBOC ClientVeterans Business Outreach Centers
+- SCOREServices•Mentoring•Online•In-Person•Business Tools and Templates•Workshops•Online•In-Personhttps://www.score.org/
 
 ## People and links
 
@@ -37,12 +37,13 @@ Surface when the user's question concerns business planning, disaster readiness,
 - Link: <https://www.score.org/>
 - Link: <https://www.sba.gov/tools/local-assistance/sbdc>
 - Link: <https://www.sba.gov/tools/local-assistance/wbc>
-- Link: <https://www.rd.usda.gov/programs-services>
+- Link: <https://www.rd.usda.gov/programs-services/business-programs/business-industry-loan-guarantees>
+- Link: <https://www.rd.usda.gov/programs-services/energy-programs/rural-energy-america-program-renewable-energy-systems-energy-efficiency-improvement-guaranteed-loans>
+- Link: <https://www.rd.usda.gov/programs-services/business-programs/rural-microentrepreneur-assistance-program>
 - Link: <https://www.rd.usda.gov/about-rd/state-offices>
-- Link: <https://sba.my.site.com/B2B>
-- Link: <https://www.sba.gov/local-assistance>
 - Link: <https://sba.my.site.com/>
-- Link: <https://www.sba.gov/sba-learning-platform>
+- Link: <https://www.sba.gov/local-assistance>
+- Link: <https://www.sba.gov/sba-learning-platform/boots-business>
 
 ## Next handoff
 

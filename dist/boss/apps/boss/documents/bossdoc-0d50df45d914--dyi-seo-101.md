@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-START OFF BY FOCUSING ON THESE THREE THINGS KNOW YOUR
+START OFF BY FOCUSING ON THESETHREE THINGS KNOW YOURCUSTOMER CHOOSE GOODKEYWORDS OPTIMIZE ON-PAGE & FOR LOCAL Review Google Search Console
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns artificial intelligence, ecosystem nav
 
 ## Key information
 
-- START OFF BY FOCUSING ON THESE
-- THREE THINGS
-- KNOW YOUR
-- CUSTOMERCHOOSE GOOD
-- KEYWORDSOPTIMIZE
-- ON-PAGE &
-- FOR LOCAL
+- START OFF BY FOCUSING ON THESETHREE THINGS
+- KNOW YOURCUSTOMER CHOOSE GOODKEYWORDS OPTIMIZE ON-PAGE & FOR LOCAL
+- Review Google Search Console
+- Work on local search
+- Promote lead generation
+- Optimize your website
+- Perform keyword research
 
 ## People and links
 

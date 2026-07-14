@@ -34,10 +34,10 @@ Surface when the user's question concerns artificial intelligence, ecosystem nav
 
 - Organizations: SCORE
 - Link: <https://totoseo.com>
-- Link: <https://totocoaching.comhttps://totocoaching.com/seochecklist>
+- Link: <https://totocoaching.com>
+- Link: <https://totocoaching.com/seochecklist>
 - Contact: jennifer@totocoaching.com
 - Contact: jennifer@totoseo.com
-- Contact: totoseo.comjennifer@totocoaching.com
 - Contact: thrivefencing.comjennifer@totocoaching.com
 
 ## Next handoff

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "manifest_version": "sha256:37122d51229f85fdddc427d144acfd0c3809ef118e5bbdb2305bbeca0eb37129",
+  "manifest_version": "sha256:b0ddb2ba166557f4b216e013a0a2107605b035a039b0e803ba49829b1a93a459",
   "builder_version": "boss-public-release-v1",
   "audience": "public",
   "original_root": "../originals/",
@@ -1177,7 +1177,7 @@
         "Module 1: Introduc�on to Business Ownership ........................................................................................... 3",
         "Module 2: Basics of Opportunity Recogni�on ............................................................................................ 18",
         "Module 3: Understanding Markets & Your Compe��ve Space .................................................................. 31",
-        "Module 4: The Economics of Small Business Start -Up ................................................................................ 48"
+        "Module 4: The Economics of Small Business Start-Up ................................................................................ 48"
       ],
       "keywords": [
         "accounting",
@@ -1216,11 +1216,10 @@
         "Exit"
       ],
       "links": [
-        "http://sba.my.force.com/instructor",
-        "https://sbavets.my.force.com/",
-        "https://www.sba.gov/business",
-        "https://www.sba.gov/federal",
-        "https://www.uspto.gov/initiatives/entrepreneurship"
+        "https://www.sba.gov/sba-learning-platform/boots-business",
+        "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure",
+        "https://www.sba.gov/federal-contracting",
+        "https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -1239,7 +1238,7 @@
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Instructor Guide v5.7 20251215.pdf",
-      "source_url": "http://sba.my.force.com/instructor",
+      "source_url": "https://www.sba.gov/sba-learning-platform/boots-business",
       "summary": "Instructor Guide Version 5 Contents",
       "title": "Instructor Guide v5.7 20251215",
       "topics": [
@@ -1515,13 +1514,13 @@
       ],
       "id": "bossdoc-0786d11262a0",
       "key_information": [
-        "GUIDETeaming Agreements 101",
+        "GUIDE",
+        "Teaming Agreements 101",
         "The Value of Partnering in the Federal Government",
         "Contracting Industry",
         "The federal government contracting market is full of opportunity, especially for companies of all",
         "sizes who know how to form teaming agreements that increase their ability to compete. This guide",
-        "outlines what teaming agreements are, how the virtual/hybrid business environment has changed",
-        "the way government contractors make connections, best practices for subcontracting, why small"
+        "outlines what teaming agreements are, how the virtual/hybrid business environment has changed"
       ],
       "keywords": [
         "accounting",
@@ -1562,7 +1561,7 @@
       ],
       "output": "bossdoc-0786d11262a0--teaming-agreements-101-gov-win-deltek-2024.md",
       "people": [],
-      "search_text": "Teaming-Agreements-101-Gov Win-Deltek-2024 | GUIDETeaming Agreements 101 The Value of Partnering in the Federal Government Contracting Industry | accounting business planning certification cybersecurity formation funding government contracting human resources international trade legal and compliance market research marketing | Validation Formation Growth | SCORE U.S. Small Business Administration (SBA) | accounting business planning certification cybersecurity formation funding government contracting human resources international trade legal and compliance market research marketing validation growth score u.s. small business administration (sba) government teaming small contracting you opportunities govwin businesses",
+      "search_text": "Teaming-Agreements-101-Gov Win-Deltek-2024 | GUIDE Teaming Agreements 101 The Value of Partnering in the Federal Government | accounting business planning certification cybersecurity formation funding government contracting human resources international trade legal and compliance market research marketing | Validation Formation Growth | SCORE U.S. Small Business Administration (SBA) | accounting business planning certification cybersecurity formation funding government contracting human resources international trade legal and compliance market research marketing validation growth score u.s. small business administration (sba) government teaming small contracting you opportunities govwin businesses",
       "sensitive": false,
       "slug": "teaming-agreements-101-gov-win-deltek-2024",
       "source_bytes": 1106657,
@@ -1570,7 +1569,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/Deltek/Teaming-Agreements-101-GovWin-Deltek-2024.pdf",
       "source_url": null,
-      "summary": "GUIDETeaming Agreements 101 The Value of Partnering in the Federal Government Contracting Industry",
+      "summary": "GUIDE Teaming Agreements 101 The Value of Partnering in the Federal Government",
       "title": "Teaming-Agreements-101-Gov Win-Deltek-2024",
       "topics": [
         "accounting",
@@ -1963,10 +1962,10 @@
       "id": "bossdoc-0a8a58660824",
       "key_information": [
         "Interview Checklist and Sample Questions",
-        "® Last Updated: Jan 2025",
+        "Last Updated: Jan 2025",
         "Interview Checklist",
         "FOR ALL VOLUNTEERS: Once you receive their application, we strongly recommend that you complete the following checklist.",
-        "NOTE TO SMALLER C HAPTERS: We recognize that you have often accepted an applicant when you ask them to go t o",
+        "NOTE TO SMALLER CHAPTERS: We recognize that you have often accepted an applicant when you ask them to go to",
         "score.org to complete the application. Consider the Step 1 items and insert them where they make sense in your chapter’s",
         "process."
       ],
@@ -1985,16 +1984,16 @@
         "questions",
         "what",
         "interview",
-        "question",
         "volunteer",
+        "question",
         "would",
-        "most",
         "tell",
-        "checklist",
         "chapter",
+        "most",
+        "checklist",
         "values",
-        "discuss",
-        "time"
+        "mentoring",
+        "discuss"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -2007,7 +2006,7 @@
       ],
       "output": "bossdoc-0a8a58660824--score-interview-checklist-and-sample-questions-jan-21-25.md",
       "people": [],
-      "search_text": "SCORE Interview Checklist and Sample Questions Jan 21 25 | Interview Checklist and Sample Questions ® Last Updated: Jan 2025 Interview Checklist | branding formation funding legal and compliance marketing mentoring and advising technology training | Ideation Formation | SCORE | branding formation funding legal and compliance marketing mentoring and advising technology training ideation score you questions what interview question volunteer would most tell checklist chapter values discuss time",
+      "search_text": "SCORE Interview Checklist and Sample Questions Jan 21 25 | Interview Checklist and Sample Questions Last Updated: Jan 2025 Interview Checklist | branding formation funding legal and compliance marketing mentoring and advising technology training | Ideation Formation | SCORE | branding formation funding legal and compliance marketing mentoring and advising technology training ideation score you questions what interview volunteer question would tell chapter most checklist values mentoring discuss",
       "sensitive": false,
       "slug": "score-interview-checklist-and-sample-questions-jan-21-25",
       "source_bytes": 243521,
@@ -2015,7 +2014,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/Interviewing/SCORE Interview Checklist and Sample Questions Jan 21 25.pdf",
       "source_url": null,
-      "summary": "Interview Checklist and Sample Questions ® Last Updated: Jan 2025 Interview Checklist",
+      "summary": "Interview Checklist and Sample Questions Last Updated: Jan 2025 Interview Checklist",
       "title": "SCORE Interview Checklist and Sample Questions Jan 21 25",
       "topics": [
         "branding",
@@ -2256,7 +2255,7 @@
         "Recovery"
       ],
       "links": [
-        "https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again",
+        "https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again-portal",
         "https://www.sba.gov/priorities",
         "https://www.sba.gov/business-guide"
       ],
@@ -2277,7 +2276,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA_Priority_Cutting_Red_Tape_for_Small_Manufacturers.md",
-      "source_url": "https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again",
+      "source_url": "https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again-portal",
       "summary": "Onshoring portal to connect businesses with verified U.S. manufacturers, producers, and suppliers.",
       "title": "SBA Make Onshoring Great Again Portal",
       "topics": [
@@ -2588,13 +2587,13 @@
       ],
       "id": "bossdoc-0d50df45d914",
       "key_information": [
-        "START OFF BY FOCUSING ON THESE",
-        "THREE THINGS",
-        "KNOW YOUR",
-        "CUSTOMERCHOOSE GOOD",
-        "KEYWORDSOPTIMIZE",
-        "ON-PAGE &",
-        "FOR LOCAL"
+        "START OFF BY FOCUSING ON THESETHREE THINGS",
+        "KNOW YOURCUSTOMER CHOOSE GOODKEYWORDS OPTIMIZE ON-PAGE & FOR LOCAL",
+        "Review Google Search Console",
+        "Work on local search",
+        "Promote lead generation",
+        "Optimize your website",
+        "Perform keyword research"
       ],
       "keywords": [
         "artificial intelligence",
@@ -2604,23 +2603,23 @@
         "technology",
         "training",
         "score",
-        "search",
-        "seo",
-        "google",
         "https",
         "com",
+        "google",
+        "search",
+        "seo",
         "local",
-        "website",
         "totoseo",
         "totocoaching",
+        "website",
+        "keyword",
         "dyi",
+        "know",
+        "optimize",
         "on-page",
         "console",
-        "keyword",
-        "research",
-        "audit",
-        "list",
-        "you"
+        "perform",
+        "research"
       ],
       "lifecycle_stages": [],
       "links": [
@@ -2633,7 +2632,7 @@
       ],
       "output": "bossdoc-0d50df45d914--dyi-seo-101.md",
       "people": [],
-      "search_text": "DYI SEO 101 | START OFF BY FOCUSING ON THESE THREE THINGS KNOW YOUR | artificial intelligence ecosystem navigation marketing mentoring and advising technology training | | SCORE | artificial intelligence ecosystem navigation marketing mentoring and advising technology training score search seo google https com local website totoseo totocoaching dyi on-page console keyword research audit list you",
+      "search_text": "DYI SEO 101 | START OFF BY FOCUSING ON THESETHREE THINGS KNOW YOURCUSTOMER CHOOSE GOODKEYWORDS OPTIMIZE ON-PAGE & FOR LOCAL Review Google Search Console | artificial intelligence ecosystem navigation marketing mentoring and advising technology training | | SCORE | artificial intelligence ecosystem navigation marketing mentoring and advising technology training score https com google search seo local totoseo totocoaching website keyword dyi know optimize on-page console perform research",
       "sensitive": false,
       "slug": "dyi-seo-101",
       "source_bytes": 1365820,
@@ -2641,7 +2640,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/SEO/DYI SEO 101.pdf",
       "source_url": "https://totoseo.com",
-      "summary": "START OFF BY FOCUSING ON THESE THREE THINGS KNOW YOUR",
+      "summary": "START OFF BY FOCUSING ON THESETHREE THINGS KNOW YOURCUSTOMER CHOOSE GOODKEYWORDS OPTIMIZE ON-PAGE & FOR LOCAL Review Google Search Console",
       "title": "DYI SEO 101",
       "topics": [
         "artificial intelligence",
@@ -2900,7 +2899,7 @@
         "Recovery"
       ],
       "links": [
-        "https://www.sba.gov/about-sba/sba-locations/district-offices",
+        "https://www.sba.gov/about-sba/sba-locations/sba-district-offices",
         "https://www.sba.gov/district/houston",
         "https://www.sba.gov/local-assistance"
       ],
@@ -2921,7 +2920,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBA/000_MANIFEST_SBA_BOSS_resource_pack.md",
-      "source_url": "https://www.sba.gov/about-sba/sba-locations/district-offices",
+      "source_url": "https://www.sba.gov/about-sba/sba-locations/sba-district-offices",
       "summary": "Directory of SBA district offices. Use when the user is outside Houston or asks for local SBA office by area.",
       "title": "SBA District Offices",
       "topics": [
@@ -3521,7 +3520,7 @@
         "Money Matters",
         "Make it Work for You",
         "A Transamerica Company",
-        "1Everyone has long-term goals and aspirations such as",
+        "Everyone has long-term goals and aspirations such as",
         "buying a home or retiring when and where they want,",
         "but often they require a financial strategy to be put",
         "in place. So, what’s the best strategy for your unique"
@@ -3549,8 +3548,8 @@
         "card",
         "agent",
         "credit",
-        "tax",
-        "money"
+        "years",
+        "tax"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -3562,7 +3561,7 @@
       "organizations": [],
       "output": "bossdoc-11b7af6ffe17--wfg-money-matters-brochure.md",
       "people": [],
-      "search_text": "WFG Money Matters brochure | Money Matters Make it Work for You A Transamerica Company | accounting branding business planning cybersecurity disaster readiness exit and transition formation funding government contracting human resources legal and compliance training | Ideation Formation Recovery | | accounting branding business planning cybersecurity disaster readiness exit and transition formation funding government contracting human resources legal and compliance training ideation recovery you financial insurance debt life card agent credit tax money",
+      "search_text": "WFG Money Matters brochure | Money Matters Make it Work for You A Transamerica Company | accounting branding business planning cybersecurity disaster readiness exit and transition formation funding government contracting human resources legal and compliance training | Ideation Formation Recovery | | accounting branding business planning cybersecurity disaster readiness exit and transition formation funding government contracting human resources legal and compliance training ideation recovery you financial insurance debt life card agent credit years tax",
       "sensitive": false,
       "slug": "wfg-money-matters-brochure",
       "source_bytes": 4350301,
@@ -3689,7 +3688,6 @@
       "category": "AI Training",
       "contacts": [
         "info@scorefoundation.org",
-        "accounting@score.org",
         "marketing@score.org"
       ],
       "document_path": "./bossdoc-129684e6f5cb--score-fundraising-toolkit.md",
@@ -3700,7 +3698,7 @@
       ],
       "id": "bossdoc-129684e6f5cb",
       "key_information": [
-        "A COLLABORATION OF THE SCORE ASSOCIATIO N AND THE SCORE FOUND ATION",
+        "A COLLABORATION OF THE SCORE ASSOCIATION AND THE SCORE FOUNDATION",
         "Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities",
         "through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration",
         "with the SCORE Association, including collective best practices from chapters that have been successful in",
@@ -3742,13 +3740,11 @@
         "Growth"
       ],
       "links": [
-        "https://help.score.org/hc/en",
-        "https://start4.pwc.com/",
-        "https://doublethedonation.com/tips/nonprofit",
+        "https://help.score.org/hc/en-us",
+        "https://doublethedonation.com/tips/nonprofit-fundraising/",
         "https://www.facebook.com/help/990087377765844",
-        "https://plannedgiving.com/about",
-        "https://www.fidelitycharitable.org/giving",
-        "https://fconline.foundationcenter.org/welcome/quick"
+        "https://plannedgiving.com/about-us/what-is-planned-giving/",
+        "https://fconline.foundationcenter.org/welcome/quick-start"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -3758,15 +3754,15 @@
       ],
       "output": "bossdoc-129684e6f5cb--score-fundraising-toolkit.md",
       "people": [],
-      "search_text": "SCORE Fundraising Toolkit | A COLLABORATION OF THE SCORE ASSOCIATIO N AND THE SCORE FOUND ATION Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration | accounting branding business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance marketing | Ideation Formation Launch Operations Growth | SCORE U.S. Small Business Administration (SBA) SCORE Houston | accounting branding business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance marketing ideation launch operations growth score u.s. small business administration (sba) score houston you chapter click fundraising foundation",
+      "search_text": "SCORE Fundraising Toolkit | A COLLABORATION OF THE SCORE ASSOCIATION AND THE SCORE FOUNDATION Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration | accounting branding business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance marketing | Ideation Formation Launch Operations Growth | SCORE U.S. Small Business Administration (SBA) SCORE Houston | accounting branding business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance marketing ideation launch operations growth score u.s. small business administration (sba) score houston you chapter click fundraising foundation",
       "sensitive": false,
       "slug": "score-fundraising-toolkit",
       "source_bytes": 545690,
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/Funding/SCORE Fundraising Toolkit.pdf",
-      "source_url": "https://help.score.org/hc/en",
-      "summary": "A COLLABORATION OF THE SCORE ASSOCIATIO N AND THE SCORE FOUND ATION Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration",
+      "source_url": "https://help.score.org/hc/en-us",
+      "summary": "A COLLABORATION OF THE SCORE ASSOCIATION AND THE SCORE FOUNDATION Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration",
       "title": "SCORE Fundraising Toolkit",
       "topics": [
         "accounting",
@@ -4279,7 +4275,7 @@
         "Exit"
       ],
       "links": [
-        "https://www.lone-star.net/",
+        "https://www.uschamber.com/co/chambers/texas",
         "https://www.sba.gov/district/houston/doing-business-houston-district",
         "https://www.sba.gov/district/houston"
       ],
@@ -4300,7 +4296,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA_Priority_Putting_American_Manufacturers_First.md",
-      "source_url": "https://www.lone-star.net/",
+      "source_url": "https://www.uschamber.com/co/chambers/texas",
       "summary": "Last verified for BOSS pack: 2026-06-24 BOSS operating alignment: - Discover -> Diagnose -> Classify -> Route -> Recommend Next Action.",
       "title": "Texas Chambers of Commerce",
       "topics": [
@@ -5224,12 +5220,12 @@
         "product",
         "benefit",
         "model",
+        "what",
         "problem",
         "customer",
         "new",
         "module",
-        "basics",
-        "recognition"
+        "basics"
       ],
       "lifecycle_stages": [
         "Ideation"
@@ -5239,7 +5235,7 @@
       "organizations": [],
       "output": "bossdoc-1b301c58c795--module-2-basics-of-opportunity-recognition-v5-1-1.md",
       "people": [],
-      "search_text": "Module 2 -Basics of Opportunity Recognition v5.1 (1) | Boots to Business Module 2 The Right Idea? | business planning cybersecurity funding legal and compliance marketing technology training veteran entrepreneurship | Ideation | | business planning cybersecurity funding legal and compliance marketing technology training veteran entrepreneurship ideation value proposition opportunity idea concept you product benefit model problem customer new module basics recognition",
+      "search_text": "Module 2 -Basics of Opportunity Recognition v5.1 (1) | Boots to Business Module 2 The Right Idea? | business planning cybersecurity funding legal and compliance marketing technology training veteran entrepreneurship | Ideation | | business planning cybersecurity funding legal and compliance marketing technology training veteran entrepreneurship ideation value proposition opportunity idea concept you product benefit model what problem customer new module basics",
       "sensitive": false,
       "slug": "module-2-basics-of-opportunity-recognition-v5-1-1",
       "source_bytes": 2119464,
@@ -5319,8 +5315,7 @@
       ],
       "links": [
         "https://www.sbdc.uh.edu/sbdc/Consulting1.asp",
-        "https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp",
-        "https://www.sbdc.uh.edu/sbdc/Locations.asp"
+        "https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to Small Business Development Center (SBDC) or the named qualified resource.",
       "organizations": [
@@ -5890,7 +5885,7 @@
       "access": "public",
       "category": "AI Training",
       "contacts": [
-        "jennifer@totocoaching.com"
+        "jennifer@totocoaching.comtotoseo.comtotocoaching.com"
       ],
       "document_path": "./bossdoc-22954eec0dac--seo-blueprint.md",
       "guardrails": [
@@ -5919,18 +5914,18 @@
         "coaching",
         "revision",
         "march",
-        "blueprint",
-        "totocoaching",
-        "com",
         "keyword",
+        "blueprint",
         "jennifer",
-        "totoseo",
-        "headings",
+        "totocoaching",
         "title",
         "meta",
-        "description",
+        "url",
         "images",
-        "you"
+        "you",
+        "files",
+        "materials",
+        "pdf"
       ],
       "lifecycle_stages": [
         "Formation"
@@ -5942,7 +5937,7 @@
       ],
       "output": "bossdoc-22954eec0dac--seo-blueprint.md",
       "people": [],
-      "search_text": "SEO Blueprint | THE SEO IMPLEMENTATION BLUEPRINT | formation marketing mentoring and advising technology training | Formation | SCORE | formation marketing mentoring and advising technology training score toto seo presented coaching revision march blueprint totocoaching com keyword jennifer totoseo headings title meta description images you",
+      "search_text": "SEO Blueprint | THE SEO IMPLEMENTATION BLUEPRINT | formation marketing mentoring and advising technology training | Formation | SCORE | formation marketing mentoring and advising technology training score toto seo presented coaching revision march keyword blueprint jennifer totocoaching title meta url images you files materials pdf",
       "sensitive": false,
       "slug": "seo-blueprint",
       "source_bytes": 6391067,
@@ -5978,7 +5973,7 @@
         "• Wallis Bank : A top-ranked local lender that provided nearly $60 million in local SBA loans in the",
         "12 months ending June 2025. They o$er 7(a) and 504 programs for real estate, equipment, and",
         "working capital.",
-        "• Frost Bank : An SBA Preferred Lender that recently noted a \"th awing\" in the lending market for"
+        "• Frost Bank : An SBA Preferred Lender that recently noted a \"thawing\" in the lending market for"
       ],
       "keywords": [
         "funding",
@@ -6002,9 +5997,9 @@
         "top",
         "most",
         "active",
+        "ending",
         "june",
-        "real",
-        "capital"
+        "real"
       ],
       "lifecycle_stages": [
         "Launch",
@@ -6017,7 +6012,7 @@
       ],
       "output": "bossdoc-23818bf7b2a8--sba-banks-in-houston.md",
       "people": [],
-      "search_text": "SBA Banks in Houston | Top Local & Regional SBA Lenders These institutions have a strong physical presence in Houston and are among the most active in the region as of early 2026. | funding training | Launch Growth | U.S. Small Business Administration (SBA) | funding training launch growth u.s. small business administration (sba) sba bank houston loans lender local lenders million specialized loan credit national banks top most active june real capital",
+      "search_text": "SBA Banks in Houston | Top Local & Regional SBA Lenders These institutions have a strong physical presence in Houston and are among the most active in the region as of early 2026. | funding training | Launch Growth | U.S. Small Business Administration (SBA) | funding training launch growth u.s. small business administration (sba) sba bank houston loans lender local lenders million specialized loan credit national banks top most active ending june real",
       "sensitive": false,
       "slug": "sba-banks-in-houston",
       "source_bytes": 34678,
@@ -7466,7 +7461,7 @@
       "key_information": [
         "How to Fund Your",
         "Business Without a",
-        "Loan -Alternative",
+        "Loan - Alternative",
         "Funding Sources",
         "Webinar Presented By",
         "Steve Strauss",
@@ -7492,11 +7487,11 @@
         "plan",
         "local",
         "terms",
+        "loan",
         "com",
+        "grants",
         "offer",
-        "free",
-        "fund",
-        "without"
+        "fund"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -7514,7 +7509,7 @@
       ],
       "output": "bossdoc-298225e621d8--how-to-fund-your-business-without-a-loan-alternative-funding-sources.md",
       "people": [],
-      "search_text": "How to Fund Your Business Without a Loan - Alternative Funding Sources | How to Fund Your Business Without a Loan -Alternative | business planning exit and transition formation funding human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship | Ideation Formation Launch Exit | SCORE Small Business Development Center (SBDC) | business planning exit and transition formation funding human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship ideation launch exit score small business development center (sbdc) you plan local terms com offer free fund without",
+      "search_text": "How to Fund Your Business Without a Loan - Alternative Funding Sources | How to Fund Your Business Without a Loan - Alternative | business planning exit and transition formation funding human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship | Ideation Formation Launch Exit | SCORE Small Business Development Center (SBDC) | business planning exit and transition formation funding human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship ideation launch exit score small business development center (sbdc) you plan local terms loan com grants offer fund",
       "sensitive": false,
       "slug": "how-to-fund-your-business-without-a-loan-alternative-funding-sources",
       "source_bytes": 1614535,
@@ -7522,7 +7517,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/How to Fund Your Business Without a Loan - Alternative Funding Sources.pdf",
       "source_url": "https://news.planetsmallbusiness.com",
-      "summary": "How to Fund Your Business Without a Loan -Alternative",
+      "summary": "How to Fund Your Business Without a Loan - Alternative",
       "title": "How to Fund Your Business Without a Loan - Alternative Funding Sources",
       "topics": [
         "business planning",
@@ -7642,7 +7637,7 @@
         "SCORE Bucks County Chapter",
         "norm.phillips@scorevolunteer.org",
         "Transition Challenges for Veterans",
-        "2•Largest stressor during transitioning is finding suitable"
+        "• Largest stressor during transitioning is finding suitable"
       ],
       "keywords": [
         "business planning",
@@ -7681,8 +7676,8 @@
         "Exit"
       ],
       "links": [
-        "https://www.score.org/palmbeachcounty/event/how",
-        "https://www.score.org/longisland/resource/eguide/exiting"
+        "https://www.score.org/palmbeachcounty/event/how-sell-your-business-1",
+        "https://www.score.org/longisland/resource/eguide/exiting-or-selling-a-business"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -7700,7 +7695,7 @@
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Veterans/Overview of Veterans Small Business Resource Guide for SCORE Lifelong Learning v6.0 11-21-24.pdf",
-      "source_url": "https://www.score.org/palmbeachcounty/event/how",
+      "source_url": "https://www.score.org/palmbeachcounty/event/how-sell-your-business-1",
       "summary": "Overview of Veterans Small Business Resource Guide For more information contact Norm Phillips",
       "title": "Overview of Veterans Small Business Resource Guide for SCORE Lifelong Learning v6.0 11-21-24",
       "topics": [
@@ -7758,11 +7753,11 @@
         "federal",
         "all",
         "market",
-        "deltek",
-        "rights",
         "analysis",
-        "inc",
-        "reserved"
+        "deltek",
+        "budget",
+        "rights",
+        "inc"
       ],
       "lifecycle_stages": [
         "Formation",
@@ -7778,7 +7773,7 @@
       ],
       "output": "bossdoc-29b901e842b0--delteknavigatingthenewadministrationimpactsopportunitiespart1slides1738679727095.md",
       "people": [],
-      "search_text": "delteknavigatingthenewadministrationimpactsopportunitiespart1slides1738679727095 | Navigating the New Administration: Impacts and Opportunities (Part 1) | artificial intelligence certification cybersecurity exit and transition formation funding government contracting human resources legal and compliance marketing mentoring and advising operations | Formation Launch Operations Exit | SCORE U.S. Small Business Administration (SBA) | artificial intelligence certification cybersecurity exit and transition formation funding government contracting human resources legal and compliance marketing mentoring and advising operations launch exit score u.s. small business administration (sba) federal all market deltek rights analysis inc reserved",
+      "search_text": "delteknavigatingthenewadministrationimpactsopportunitiespart1slides1738679727095 | Navigating the New Administration: Impacts and Opportunities (Part 1) | artificial intelligence certification cybersecurity exit and transition formation funding government contracting human resources legal and compliance marketing mentoring and advising operations | Formation Launch Operations Exit | SCORE U.S. Small Business Administration (SBA) | artificial intelligence certification cybersecurity exit and transition formation funding government contracting human resources legal and compliance marketing mentoring and advising operations launch exit score u.s. small business administration (sba) federal all market analysis deltek budget rights inc",
       "sensitive": false,
       "slug": "delteknavigatingthenewadministrationimpactsopportunitiespart1slides1738679727095",
       "source_bytes": 1122064,
@@ -8452,11 +8447,11 @@
       "key_information": [
         "Where are you ﬁnancially?",
         "Goal: Protect your loved ones should you pass unexpectedly",
-        "and protect yourself if you live a long lifeDebt",
-        "Responsibility",
+        "and protect yourself if you live a long life",
         "Debt",
-        "ResponsibilityFinancial Independence",
-        "InﬂationRiskT axesHealth"
+        "Responsibility",
+        "Financial Independence",
+        "Inﬂation"
       ],
       "keywords": [
         "formation",
@@ -8467,22 +8462,22 @@
         "agency",
         "world",
         "you",
+        "life",
+        "risk",
         "group",
         "wfg",
         "tax",
+        "fixed",
         "income",
-        "risk",
         "inc",
         "financially",
+        "responsibility",
+        "inflation",
+        "health",
         "wealth",
         "llc",
-        "fixed",
         "brochure",
-        "protect",
-        "responsibility",
-        "building",
-        "person",
-        "responsibilities"
+        "protect"
       ],
       "lifecycle_stages": [
         "Formation"
@@ -8492,7 +8487,7 @@
       "organizations": [],
       "output": "bossdoc-2c3e916393ab--wfg-where-are-you-financially-brochure.md",
       "people": [],
-      "search_text": "WFG Where are you financially brochure | Where are you ﬁnancially? Goal: Protect your loved ones should you pass unexpectedly and protect yourself if you live a long lifeDebt | formation legal and compliance training | Formation | | formation legal and compliance training insurance financial agency world you group wfg tax income risk inc financially wealth llc fixed brochure protect responsibility building person responsibilities",
+      "search_text": "WFG Where are you financially brochure | Where are you ﬁnancially? Goal: Protect your loved ones should you pass unexpectedly and protect yourself if you live a long life | formation legal and compliance training | Formation | | formation legal and compliance training insurance financial agency world you life risk group wfg tax fixed income inc financially responsibility inflation health wealth llc brochure protect",
       "sensitive": false,
       "slug": "wfg-where-are-you-financially-brochure",
       "source_bytes": 51268,
@@ -8500,7 +8495,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/RFM Kimberly Schultz/WFG Where are you financially brochure.pdf",
       "source_url": null,
-      "summary": "Where are you ﬁnancially? Goal: Protect your loved ones should you pass unexpectedly and protect yourself if you live a long lifeDebt",
+      "summary": "Where are you ﬁnancially? Goal: Protect your loved ones should you pass unexpectedly and protect yourself if you live a long life",
       "title": "WFG Where are you financially brochure",
       "topics": [
         "formation",
@@ -9159,7 +9154,7 @@
       ],
       "id": "bossdoc-3181a254a9fe",
       "key_information": [
-        "Teaming for Federal Set -",
+        "Teaming for Federal Set-",
         "Asides: The When, Why,",
         "and How",
         "Meet the Presenter",
@@ -9181,17 +9176,17 @@
         "score",
         "teaming",
         "prot",
-        "mentor",
         "small",
         "work",
+        "mentor",
         "what",
+        "subcontracting",
         "affiliation",
         "you",
+        "joint",
         "jvs",
         "requirements",
-        "subcontracting",
-        "agreement",
-        "subcontract"
+        "agreement"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -9206,7 +9201,7 @@
       ],
       "output": "bossdoc-3181a254a9fe--deltekteamingforfederalsetasidesthewhenwhyandhowslides1741031140123.md",
       "people": [],
-      "search_text": "deltekteamingforfederalsetasidesthewhenwhyandhowslides1741031140123 | Teaming for Federal Set - Asides: The When, Why, and How | artificial intelligence formation funding government contracting human resources legal and compliance market research mentoring and advising training | Ideation Formation | SCORE | artificial intelligence formation funding government contracting human resources legal and compliance market research mentoring and advising training ideation score teaming prot mentor small work what affiliation you jvs requirements subcontracting agreement subcontract",
+      "search_text": "deltekteamingforfederalsetasidesthewhenwhyandhowslides1741031140123 | Teaming for Federal Set- Asides: The When, Why, and How | artificial intelligence formation funding government contracting human resources legal and compliance market research mentoring and advising training | Ideation Formation | SCORE | artificial intelligence formation funding government contracting human resources legal and compliance market research mentoring and advising training ideation score teaming prot small work mentor what subcontracting affiliation you joint jvs requirements agreement",
       "sensitive": false,
       "slug": "deltekteamingforfederalsetasidesthewhenwhyandhowslides1741031140123",
       "source_bytes": 1319494,
@@ -9214,7 +9209,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/GovCon Materials/deltekteamingforfederalsetasidesthewhenwhyandhowslides1741031140123.pdf",
       "source_url": "https://www.linkedin.com/in/mariapanichelli",
-      "summary": "Teaming for Federal Set - Asides: The When, Why, and How",
+      "summary": "Teaming for Federal Set- Asides: The When, Why, and How",
       "title": "deltekteamingforfederalsetasidesthewhenwhyandhowslides1741031140123",
       "topics": [
         "artificial intelligence",
@@ -9406,7 +9401,7 @@
       "id": "bossdoc-32043700c581",
       "key_information": [
         "THE SEO IMPLEMENTATION",
-        "BLUEPRINT :",
+        "BLUEPRINT:",
         "TOOLS, TACTICS & TECHNIQUES",
         "Jennifer DeRosa",
         "Toto SEO",
@@ -9431,12 +9426,12 @@
         "keyword",
         "keywords",
         "intent",
-        "users",
-        "page",
         "optimization",
+        "users",
+        "include",
+        "research",
         "search",
         "primary",
-        "tools",
         "techniques"
       ],
       "lifecycle_stages": [
@@ -9449,7 +9444,7 @@
       ],
       "output": "bossdoc-32043700c581--seo-implementation-tools-tactics-and-techniques.md",
       "people": [],
-      "search_text": "SEO Implementation Tools Tactics and Techniques | THE SEO IMPLEMENTATION BLUEPRINT : TOOLS, TACTICS & TECHNIQUES | artificial intelligence formation legal and compliance marketing mentoring and advising technology training | Formation | SCORE | artificial intelligence formation legal and compliance marketing mentoring and advising technology training score com totoseo jennifer totocoaching content seo keyword keywords intent users page optimization search primary tools techniques",
+      "search_text": "SEO Implementation Tools Tactics and Techniques | THE SEO IMPLEMENTATION BLUEPRINT: TOOLS, TACTICS & TECHNIQUES | artificial intelligence formation legal and compliance marketing mentoring and advising technology training | Formation | SCORE | artificial intelligence formation legal and compliance marketing mentoring and advising technology training score com totoseo jennifer totocoaching content seo keyword keywords intent optimization users include research search primary techniques",
       "sensitive": false,
       "slug": "seo-implementation-tools-tactics-and-techniques",
       "source_bytes": 2294043,
@@ -9457,7 +9452,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/SEO/SEO Implementation Tools Tactics and Techniques.pdf",
       "source_url": null,
-      "summary": "THE SEO IMPLEMENTATION BLUEPRINT : TOOLS, TACTICS & TECHNIQUES",
+      "summary": "THE SEO IMPLEMENTATION BLUEPRINT: TOOLS, TACTICS & TECHNIQUES",
       "title": "SEO Implementation Tools Tactics and Techniques",
       "topics": [
         "artificial intelligence",
@@ -9485,10 +9480,10 @@
         "www.score.org",
         "Setting Up a New Business",
         "Entity",
-        "SMALL BUSINESS ESSENTIALS WEBINAR SERIESvMA8 -202505",
+        "SMALL BUSINESS ESSENTIALS WEBINAR SERIES",
+        "vMA8-202505",
         "Providing free",
-        "business advice",
-        "and mentoring"
+        "business advice"
       ],
       "keywords": [
         "accounting",
@@ -9523,13 +9518,13 @@
       ],
       "links": [
         "https://onestop.delaware.gov/Operate_Register",
-        "https://dlcp.dc.gov/service/get",
+        "https://dlcp.dc.gov/service/get-business-license",
         "https://mytax.dc.gov",
-        "https://www.marylandtaxes.gov/business/sales",
+        "https://www.marylandtaxes.gov/business/sales-use/index.php",
         "https://egov.maryland.gov/BusinessExpress/",
         "https://www.nj.gov/treasury/taxation/informationforvendors.shtml",
-        "https://mypath.pa.gov/_/#2",
-        "https://www.tax.virginia.gov/sales",
+        "https://business.pa.gov/operate/state-taxes/file-and-pay-state-taxes/",
+        "https://www.tax.virginia.gov/sales-and-use-tax",
         "https://onestop.wv.gov/B4WVPublic/"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
@@ -9621,7 +9616,7 @@
         "Recovery"
       ],
       "links": [
-        "https://www.sba.gov/priorities/american-manufacturers/taking-manufacturing-business-global",
+        "https://www.sba.gov/priorities/american-manufacturers/taking-your-manufacturing-business-global",
         "https://www.sba.gov/priorities",
         "https://www.sba.gov/business-guide"
       ],
@@ -9642,7 +9637,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA_Priority_Child_Care_Business_Development_Support.md",
-      "source_url": "https://www.sba.gov/priorities/american-manufacturers/taking-manufacturing-business-global",
+      "source_url": "https://www.sba.gov/priorities/american-manufacturers/taking-your-manufacturing-business-global",
       "summary": "Manufacturing export/global growth page.",
       "title": "SBA Taking Manufacturing Business Global",
       "topics": [
@@ -10027,7 +10022,8 @@
       "access": "public",
       "category": "AI Training",
       "contacts": [
-        "8aquestions@sba.gov"
+        "8aquestions@sba.gov",
+        "(202) 765-1264"
       ],
       "document_path": "./bossdoc-33c9c29d1638--registering-to-sell-to-the-federal-government-market-202501-v-final.md",
       "guardrails": [
@@ -10040,10 +10036,10 @@
         "www.score.org",
         "Registering to Sell to the",
         "Federal Government Market",
-        "KAREN WILLIAMS, SCORE CERTIFIED MENTORv202106202501vFinal",
+        "KAREN WILLIAMS, SCORE CERTIFIED MENTOR",
+        "v202106202501vFinal",
         "Providing free",
-        "business advice",
-        "and mentoring"
+        "business advice"
       ],
       "keywords": [
         "accounting",
@@ -10068,8 +10064,8 @@
         "sba",
         "small",
         "federal",
-        "contracting",
-        "gov"
+        "gov",
+        "government"
       ],
       "lifecycle_stages": [
         "Validation",
@@ -10078,12 +10074,11 @@
       ],
       "links": [
         "https://www.acquisition.gov/",
-        "https://www.sba.gov/sites/default/files/2022",
-        "https://www.sba.gov/federal",
+        "https://www.sba.gov/sites/default/files/2022-06/FY22%20Small%20Business%20Goaling%20Guidelines_Final_220623%28R%29.pdf",
+        "https://www.sba.gov/federal-contracting/contracting-assistance-programs/small-disadvantaged-business",
         "https://certifications.sba.gov/",
-        "https://certifications.sba.gov/and",
-        "https://sbaone.atlassian.net/wiki/spaces/UCPUKB/pages/3185574025/Knowledge+Base",
-        "https://www.score.org/washingtondc/event/selling"
+        "https://www.sba.gov/federal-contracting",
+        "https://sbaone.atlassian.net/wiki/spaces/UCPUKB/pages/3185574025/Knowledge+Base"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -10093,7 +10088,7 @@
       ],
       "output": "bossdoc-33c9c29d1638--registering-to-sell-to-the-federal-government-market-202501-v-final.md",
       "people": [],
-      "search_text": "Registering to Sell to the Federal Government Market 202501 v Final | www.score.org Registering to Sell to the Federal Government Market | accounting business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research | Validation Formation Operations | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) | accounting business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research validation operations score u.s. small business administration (sba) small business development center (sbdc) www org sba small federal contracting gov",
+      "search_text": "Registering to Sell to the Federal Government Market 202501 v Final | www.score.org Registering to Sell to the Federal Government Market | accounting business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research | Validation Formation Operations | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) | accounting business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research validation operations score u.s. small business administration (sba) small business development center (sbdc) www org sba small federal gov government",
       "sensitive": false,
       "slug": "registering-to-sell-to-the-federal-government-market-202501-v-final",
       "source_bytes": 1295314,
@@ -10228,13 +10223,13 @@
       ],
       "id": "bossdoc-34b3f9aeb984",
       "key_information": [
-        "GUIDEMaximize Your Business",
+        "GUIDE",
+        "Maximize Your Business",
         "Opportunity at Each Stage",
         "of The Government",
         "Contracting Lifecycle",
         "TABLE OF CONTENTS",
-        "Introduction",
-        "Stage 1: Strategic Sales Planning"
+        "Introduction"
       ],
       "keywords": [
         "accounting",
@@ -10274,7 +10269,7 @@
       ],
       "output": "bossdoc-34b3f9aeb984--the-government-contracting-lifecycle-deltek.md",
       "people": [],
-      "search_text": "The-Government-Contracting-Lifecycle-Deltek | GUIDEMaximize Your Business Opportunity at Each Stage of The Government | accounting business planning certification formation funding government contracting human resources legal and compliance market research marketing mentoring and advising technology | Formation Operations Growth | SCORE | accounting business planning certification formation funding government contracting human resources legal and compliance market research marketing mentoring and advising technology operations growth score contract government stage contracting opportunity renewal contractors cost businesses",
+      "search_text": "The-Government-Contracting-Lifecycle-Deltek | GUIDE Maximize Your Business Opportunity at Each Stage | accounting business planning certification formation funding government contracting human resources legal and compliance market research marketing mentoring and advising technology | Formation Operations Growth | SCORE | accounting business planning certification formation funding government contracting human resources legal and compliance market research marketing mentoring and advising technology operations growth score contract government stage contracting opportunity renewal contractors cost businesses",
       "sensitive": false,
       "slug": "the-government-contracting-lifecycle-deltek",
       "source_bytes": 874568,
@@ -10282,7 +10277,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/Deltek/The-Government-Contracting-Lifecycle-Deltek.pdf",
       "source_url": null,
-      "summary": "GUIDEMaximize Your Business Opportunity at Each Stage of The Government",
+      "summary": "GUIDE Maximize Your Business Opportunity at Each Stage",
       "title": "The-Government-Contracting-Lifecycle-Deltek",
       "topics": [
         "accounting",
@@ -10413,11 +10408,11 @@
       "key_information": [
         "Boots to Business",
         "Module 5",
-        "Legal Considerations for Veteran- Owned",
+        "Legal Considerations for Veteran-Owned",
         "Small Businesses",
         "Version 5.3",
         "Objective",
-        "•Understand the various legal forms of a business"
+        "• Understand the various legal forms of a business"
       ],
       "keywords": [
         "accounting",
@@ -10440,10 +10435,10 @@
         "legal",
         "liability",
         "personal",
-        "corporation",
         "partnership",
+        "corporation",
         "gov",
-        "businesses"
+        "owners"
       ],
       "lifecycle_stages": [
         "Formation",
@@ -10452,9 +10447,9 @@
         "Recovery"
       ],
       "links": [
-        "https://www.sba.gov/business",
-        "https://www.sba.gov/federal",
-        "https://www.uspto.gov/initiatives/entrepreneurship"
+        "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure",
+        "https://www.sba.gov/federal-contracting",
+        "https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to U.S. Small Business Administration (SBA) or the named qualified resource.",
       "organizations": [
@@ -10462,15 +10457,15 @@
       ],
       "output": "bossdoc-35645e07ecb6--module-5-legal-considerations-for-veteran-owned-small-businesses-v5-3-1.md",
       "people": [],
-      "search_text": "Module 5 - Legal Considerations for Veteran-Owned Small Businesses v5.3 (1) | Boots to Business Module 5 Legal Considerations for Veteran- Owned | accounting branding business planning cybersecurity disaster readiness formation funding government contracting human resources legal and compliance market research marketing | Formation Launch Operations Recovery | U.S. Small Business Administration (SBA) | accounting branding business planning cybersecurity disaster readiness formation funding government contracting human resources legal and compliance market research marketing launch operations recovery u.s. small business administration (sba) tax legal liability personal corporation partnership gov businesses",
+      "search_text": "Module 5 - Legal Considerations for Veteran-Owned Small Businesses v5.3 (1) | Boots to Business Module 5 Legal Considerations for Veteran-Owned | accounting branding business planning cybersecurity disaster readiness formation funding government contracting human resources legal and compliance market research marketing | Formation Launch Operations Recovery | U.S. Small Business Administration (SBA) | accounting branding business planning cybersecurity disaster readiness formation funding government contracting human resources legal and compliance market research marketing launch operations recovery u.s. small business administration (sba) tax legal liability personal partnership corporation gov owners",
       "sensitive": false,
       "slug": "module-5-legal-considerations-for-veteran-owned-small-businesses-v5-3-1",
       "source_bytes": 1702707,
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Module 5 - Legal Considerations for Veteran-Owned Small Businesses v5.3 (1).pdf",
-      "source_url": "https://www.sba.gov/business",
-      "summary": "Boots to Business Module 5 Legal Considerations for Veteran- Owned",
+      "source_url": "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure",
+      "summary": "Boots to Business Module 5 Legal Considerations for Veteran-Owned",
       "title": "Module 5 - Legal Considerations for Veteran-Owned Small Businesses v5.3 (1)",
       "topics": [
         "accounting",
@@ -11653,6 +11648,7 @@
         "insurance",
         "debt",
         "steps",
+        "years",
         "six",
         "world",
         "agency",
@@ -11661,7 +11657,6 @@
         "group",
         "time",
         "wealth",
-        "years",
         "amount"
       ],
       "lifecycle_stages": [
@@ -11673,7 +11668,7 @@
       "organizations": [],
       "output": "bossdoc-3e0118425714--wfg-six-steps-to-financial-independence-1.md",
       "people": [],
-      "search_text": "WFG Six Steps to Financial Independence (1) | A Transamerica Company The Six Steps to Financial Independence | branding business planning cybersecurity exit and transition formation funding legal and compliance training | Ideation Formation | | branding business planning cybersecurity exit and transition formation funding legal and compliance training ideation you financial insurance debt steps six world agency any income group time wealth years amount",
+      "search_text": "WFG Six Steps to Financial Independence (1) | A Transamerica Company The Six Steps to Financial Independence | branding business planning cybersecurity exit and transition formation funding legal and compliance training | Ideation Formation | | branding business planning cybersecurity exit and transition formation funding legal and compliance training ideation you financial insurance debt steps years six world agency any income group time wealth amount",
       "sensitive": false,
       "slug": "wfg-six-steps-to-financial-independence-1",
       "source_bytes": 280594,
@@ -11707,13 +11702,13 @@
       ],
       "id": "bossdoc-3e3cd63cbdfb",
       "key_information": [
-        "Boots to Business",
-        "Module 8",
-        "Resources to Support Your Efforts",
+        "Boots to Business Module 8Resources to Support Your Efforts",
         "Version 5.0",
-        "Agenda",
-        "•SBA Resource Partner network",
-        "•Other resources & training"
+        "Agenda•SBA Resource Partner network•Other resources & training•B2B Follow-On Training•Next Steps•Q&A",
+        "Result:•The couple received an SBA-backed loan to help them get started•Bold Mariner Brewing Company opened their doors in 20154",
+        "•Michael & Kerrie Stacks•Active-Duty sailor and spouse who wanted to start micro-brewery•Connected with local VBOC, who helped them:•Develop a business plan•Create financial projections•Apply for financing",
+        "VBOC ClientVeterans Business Outreach Centers",
+        "SCOREServices•Mentoring•Online•In-Person•Business Tools and Templates•Workshops•Online•In-Personhttps://www.score.org/"
       ],
       "keywords": [
         "business planning",
@@ -11754,12 +11749,13 @@
         "https://www.score.org/",
         "https://www.sba.gov/tools/local-assistance/sbdc",
         "https://www.sba.gov/tools/local-assistance/wbc",
-        "https://www.rd.usda.gov/programs-services",
+        "https://www.rd.usda.gov/programs-services/business-programs/business-industry-loan-guarantees",
+        "https://www.rd.usda.gov/programs-services/energy-programs/rural-energy-america-program-renewable-energy-systems-energy-efficiency-improvement-guaranteed-loans",
+        "https://www.rd.usda.gov/programs-services/business-programs/rural-microentrepreneur-assistance-program",
         "https://www.rd.usda.gov/about-rd/state-offices",
-        "https://sba.my.site.com/B2B",
-        "https://www.sba.gov/local-assistance",
         "https://sba.my.site.com/",
-        "https://www.sba.gov/sba-learning-platform"
+        "https://www.sba.gov/local-assistance",
+        "https://www.sba.gov/sba-learning-platform/boots-business"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -11771,7 +11767,7 @@
       ],
       "output": "bossdoc-3e3cd63cbdfb--module-8-resources-1.md",
       "people": [],
-      "search_text": "Module 8 - Resources (1) | Boots to Business Module 8 Resources to Support Your Efforts | business planning disaster readiness ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research marketing mentoring and advising | Ideation Validation Formation Operations Growth Recovery | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | business planning disaster readiness ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research marketing mentoring and advising ideation validation operations growth recovery score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc) sba training",
+      "search_text": "Module 8 - Resources (1) | Boots to Business Module 8Resources to Support Your Efforts Version 5.0 Agenda•SBA Resource Partner network•Other resources & training•B2B Follow-On Training•Next Steps•Q&A | business planning disaster readiness ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research marketing mentoring and advising | Ideation Validation Formation Operations Growth Recovery | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | business planning disaster readiness ecosystem navigation formation funding government contracting human resources international trade legal and compliance market research marketing mentoring and advising ideation validation operations growth recovery score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc) sba training",
       "sensitive": false,
       "slug": "module-8-resources-1",
       "source_bytes": 1505023,
@@ -11779,7 +11775,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Module 8 - Resources (1).pdf",
       "source_url": "https://www.sba.gov/vboc",
-      "summary": "Boots to Business Module 8 Resources to Support Your Efforts",
+      "summary": "Boots to Business Module 8Resources to Support Your Efforts Version 5.0 Agenda•SBA Resource Partner network•Other resources & training•B2B Follow-On Training•Next Steps•Q&A",
       "title": "Module 8 - Resources (1)",
       "topics": [
         "business planning",
@@ -12013,7 +12009,7 @@
       ],
       "links": [
         "https://www.sba.gov/sites/sbagov/files/2023-06/2023%20Small%20Business%20Resource%20Guide_508c_Final.pdf",
-        "https://volunteer.score.org/sites/default/files/u519636/New%20Volunteer%20SCORE%2090%20Day%20Checklist%2011.27.17.xlsx",
+        "https://supportcenter.score.org/kb/article/163-volunteer-onboarding-steps-and-checklist/",
         "http://www.score.org/",
         "https://help.score.org/hc/en-us/articles/4408508657683-Upcoming-Live-Engage-Trainings",
         "https://www.score.org/houston",
@@ -12065,12 +12061,12 @@
       ],
       "id": "bossdoc-3fd79a1bb19e",
       "key_information": [
-        "P a g e 02/04 /2021",
+        "P a g e 02/04/2021",
         "Boots to Business (B2B)",
         "Instructor FAQs",
         "Question 1: Who is eligible to participate in Boots to Business and Boots to Business |",
         "Reboot?",
-        "Answer : Boots to Business classes are open to transitioning Service members (including",
+        "Answer: Boots to Business classes are open to transitioning Service members (including",
         "National Guard and Reserve) and their spouses. Boots to Business"
       ],
       "keywords": [
@@ -12112,7 +12108,7 @@
       ],
       "output": "bossdoc-3fd79a1bb19e--b2binstructor-faqs-1.md",
       "people": [],
-      "search_text": "B2BInstructor FAQs (1) | 1 | P a g e 02/04 /2021 Boots to Business (B2B) Instructor FAQs | ecosystem navigation exit and transition formation funding legal and compliance mentoring and advising operations training veteran entrepreneurship | Formation Launch Exit | U.S. Small Business Administration (SBA) Veterans Business Outreach Center (VBOC) | ecosystem navigation exit and transition formation funding legal and compliance mentoring and advising operations training veteran entrepreneurship launch exit u.s. small business administration (sba) veterans business outreach center (vboc) boots sba question answer veterans reboot access base class participants b2b",
+      "search_text": "B2BInstructor FAQs (1) | 1 | P a g e 02/04/2021 Boots to Business (B2B) Instructor FAQs | ecosystem navigation exit and transition formation funding legal and compliance mentoring and advising operations training veteran entrepreneurship | Formation Launch Exit | U.S. Small Business Administration (SBA) Veterans Business Outreach Center (VBOC) | ecosystem navigation exit and transition formation funding legal and compliance mentoring and advising operations training veteran entrepreneurship launch exit u.s. small business administration (sba) veterans business outreach center (vboc) boots sba question answer veterans reboot access base class participants b2b",
       "sensitive": false,
       "slug": "b2binstructor-faqs-1",
       "source_bytes": 134493,
@@ -12120,7 +12116,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/B2BInstructorFAQs (1).pdf",
       "source_url": null,
-      "summary": "1 | P a g e 02/04 /2021 Boots to Business (B2B) Instructor FAQs",
+      "summary": "1 | P a g e 02/04/2021 Boots to Business (B2B) Instructor FAQs",
       "title": "B2BInstructor FAQs (1)",
       "topics": [
         "ecosystem navigation",
@@ -13452,10 +13448,10 @@
         "POSITIONING FOR",
         "CONTRACTS +",
         "PROCUREMENT",
-        "WINSY our 2025 Federal Playbook:",
+        "WINS",
+        "Y our 2025 Federal Playbook:",
         "CLICK TO",
-        "EDIT MASTER",
-        "TITLE STYLE"
+        "EDIT MASTER"
       ],
       "keywords": [
         "business planning",
@@ -13478,10 +13474,10 @@
         "proposal",
         "name",
         "contracts",
+        "playbook",
         "will",
-        "you",
         "who",
-        "playbook"
+        "you"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -13490,7 +13486,7 @@
         "Growth"
       ],
       "links": [
-        "https://department.va.gov/administrations"
+        "https://department.va.gov/administrations-and-offices/management/budget/"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -13498,14 +13494,14 @@
       ],
       "output": "bossdoc-4893bb653b07--2025-playbook-positioning-for-contracts-and-procurement-wins-for-va.md",
       "people": [],
-      "search_text": "2025 Playbook Positioning for Contracts and Procurement Wins for VA | POSITIONING FOR CONTRACTS + PROCUREMENT | business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance market research marketing mentoring and advising | Ideation Formation Launch Growth | SCORE | business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance market research marketing mentoring and advising ideation launch growth score what proposal name contracts will you who playbook",
+      "search_text": "2025 Playbook Positioning for Contracts and Procurement Wins for VA | POSITIONING FOR CONTRACTS + PROCUREMENT | business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance market research marketing mentoring and advising | Ideation Formation Launch Growth | SCORE | business planning certification cybersecurity ecosystem navigation formation funding government contracting human resources legal and compliance market research marketing mentoring and advising ideation launch growth score what proposal name contracts playbook will who you",
       "sensitive": false,
       "slug": "2025-playbook-positioning-for-contracts-and-procurement-wins-for-va",
       "source_bytes": 7982465,
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/VA/2025 Playbook_Positioning for Contracts and Procurement Wins for VA.pdf",
-      "source_url": "https://department.va.gov/administrations",
+      "source_url": "https://department.va.gov/administrations-and-offices/management/budget/",
       "summary": "POSITIONING FOR CONTRACTS + PROCUREMENT",
       "title": "2025 Playbook Positioning for Contracts and Procurement Wins for VA",
       "topics": [
@@ -13730,11 +13726,11 @@
       "key_information": [
         "Boots to Business",
         "Module 4",
-        "The Economics of Small Business Start -up",
+        "The Economics of Small Business Start-up",
         "Version 5.0",
         "Objective",
         "Understand the foundation for the cost, price, volume",
-        "relationship, as it informs profit potential and sustainability for the planned venture."
+        "relationship, as it informs profit potential and sustainability for"
       ],
       "keywords": [
         "business planning",
@@ -13751,16 +13747,16 @@
         "sales",
         "you",
         "model",
+        "operating",
         "revenue",
         "margin",
         "cup",
         "total",
-        "operating",
         "what",
         "month",
         "volume",
-        "cost",
-        "price"
+        "leverage",
+        "cost"
       ],
       "lifecycle_stages": [
         "Operations"
@@ -13770,7 +13766,7 @@
       "organizations": [],
       "output": "bossdoc-4b3da0b0c223--module-4-the-economics-of-small-business-start-up-v5-0-2023-10-01-1.md",
       "people": [],
-      "search_text": "Module 4 - The Economics of Small Business Start-up v5.0 -2023.10.01 (1) | Boots to Business Module 4 The Economics of Small Business Start -up | business planning human resources legal and compliance marketing training veteran entrepreneurship | Operations | | business planning human resources legal and compliance marketing training veteran entrepreneurship operations costs fixed per variable sales you model revenue margin cup total operating what month volume cost price",
+      "search_text": "Module 4 - The Economics of Small Business Start-up v5.0 -2023.10.01 (1) | Boots to Business Module 4 The Economics of Small Business Start-up | business planning human resources legal and compliance marketing training veteran entrepreneurship | Operations | | business planning human resources legal and compliance marketing training veteran entrepreneurship operations costs fixed per variable sales you model operating revenue margin cup total what month volume leverage cost",
       "sensitive": false,
       "slug": "module-4-the-economics-of-small-business-start-up-v5-0-2023-10-01-1",
       "source_bytes": 1918217,
@@ -13778,7 +13774,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Module 4 - The Economics of Small Business Start-up v5.0 -2023.10.01 (1).pdf",
       "source_url": null,
-      "summary": "Boots to Business Module 4 The Economics of Small Business Start -up",
+      "summary": "Boots to Business Module 4 The Economics of Small Business Start-up",
       "title": "Module 4 - The Economics of Small Business Start-up v5.0 -2023.10.01 (1)",
       "topics": [
         "business planning",
@@ -14347,8 +14343,8 @@
         "Introduction to Business Planning",
         "Version 5.0",
         "Objectives",
-        "•Understand the concepts and value of business planning",
-        "•Learn about tools and models that can help your business"
+        "• Understand the concepts and value of business planning",
+        "• Learn about tools and models that can help your business"
       ],
       "keywords": [
         "branding",
@@ -14528,13 +14524,13 @@
       ],
       "id": "bossdoc-4e33323c2598",
       "key_information": [
-        "54New Venture Feasibility Analysis Tool",
+        "New Venture Feasibility Analysis Tool",
         "GETTING STARTED",
         "Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive",
-        "past five years. With that said, those that do find success as a business owner, express great personal and professional satisfaction.",
-        "standing where that further research and reflection is required, and thus using this tool as a means to develop a plan of action to conduct the research necessary to support the successful launch of your new business.",
-        "PART I: YOUR ENTREPRENEURIAL MOTIVATION",
-        "COMPLETE ON YOUR OWN"
+        "past five years. With that said, those that do find success as a business owner, express great",
+        "personal and professional satisfaction.",
+        "Importantly, one of the factors that diﬀerentiates those who success as business owners from",
+        "those who don't, is a clear and well understood plan of action related to both the business"
       ],
       "keywords": [
         "business planning",
@@ -14576,7 +14572,7 @@
       ],
       "output": "bossdoc-4e33323c2598--new-venture-feasibility-tool.md",
       "people": [],
-      "search_text": "New Venture Feasibility Tool | 54New Venture Feasibility Analysis Tool GETTING STARTED Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive | business planning ecosystem navigation formation funding legal and compliance market research marketing mentoring and advising training | Ideation Validation Formation Launch Operations | U.S. Small Business Administration (SBA) | business planning ecosystem navigation formation funding legal and compliance market research marketing mentoring and advising training ideation validation launch operations u.s. small business administration (sba) you venture below list tool plan action those threats questions",
+      "search_text": "New Venture Feasibility Tool | New Venture Feasibility Analysis Tool GETTING STARTED Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive | business planning ecosystem navigation formation funding legal and compliance market research marketing mentoring and advising training | Ideation Validation Formation Launch Operations | U.S. Small Business Administration (SBA) | business planning ecosystem navigation formation funding legal and compliance market research marketing mentoring and advising training ideation validation launch operations u.s. small business administration (sba) you venture below list tool plan action those threats questions",
       "sensitive": false,
       "slug": "new-venture-feasibility-tool",
       "source_bytes": 5595424,
@@ -14584,7 +14580,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/New Venture Feasibility Tool.pdf",
       "source_url": null,
-      "summary": "54New Venture Feasibility Analysis Tool GETTING STARTED Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive",
+      "summary": "New Venture Feasibility Analysis Tool GETTING STARTED Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive",
       "title": "New Venture Feasibility Tool",
       "topics": [
         "business planning",
@@ -15135,7 +15131,7 @@
         "Exit"
       ],
       "links": [
-        "https://www.sba.gov/offices/headquarters/ofa/resources/11421"
+        "https://www.sba.gov/funding-programs/loans"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -15151,7 +15147,7 @@
       "source_extension": ".odp",
       "source_mime": "application/vnd.oasis.opendocument.presentation",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Module 7 - Financing Your Venture v5.2.odp",
-      "source_url": "https://www.sba.gov/offices/headquarters/ofa/resources/11421",
+      "source_url": "https://www.sba.gov/funding-programs/loans",
       "summary": "Boots to Business Module 7 Financing Your Venture Version 5.2",
       "title": "Module 7 - Financing Your Venture v5.2",
       "topics": [
@@ -17451,11 +17447,11 @@
       "key_information": [
         "Part 1: All Applicants: Ownership and Control Documents",
         "Document Category Document",
-        "Name Business Structure",
+        "Name",
+        "Business Structure",
         "Sole Prop. LLC Partnership Corporation",
         "Citizenship",
-        "(*VOSB/SDVOSB excluded) Birth Certificate",
-        "1 of the 4 documents is required to show proof of citizenship for all"
+        "(*VOSB/SDVOSB excluded)"
       ],
       "keywords": [
         "certification",
@@ -17470,18 +17466,18 @@
         "training",
         "u.s. small business administration (sba)",
         "must",
-        "ownership",
         "documents",
+        "ownership",
         "agreement",
         "date",
         "meeting",
         "required",
         "owner",
-        "state",
         "most",
+        "provide",
+        "state",
         "birth",
-        "certificate",
-        "recent"
+        "certificate"
       ],
       "lifecycle_stages": [
         "Formation",
@@ -17494,7 +17490,7 @@
       ],
       "output": "bossdoc-5efc98c9c604--ownership-and-control-documents.md",
       "people": [],
-      "search_text": "Ownership and Control Documents | Part 1: All Applicants: Ownership and Control Documents Document Category Document Name Business Structure | certification cybersecurity formation franchising funding human resources legal and compliance mentoring and advising operations training | Formation Operations | U.S. Small Business Administration (SBA) | certification cybersecurity formation franchising funding human resources legal and compliance mentoring and advising operations training u.s. small business administration (sba) must ownership documents agreement date meeting required owner state most birth certificate recent",
+      "search_text": "Ownership and Control Documents | Part 1: All Applicants: Ownership and Control Documents Document Category Document Name | certification cybersecurity formation franchising funding human resources legal and compliance mentoring and advising operations training | Formation Operations | U.S. Small Business Administration (SBA) | certification cybersecurity formation franchising funding human resources legal and compliance mentoring and advising operations training u.s. small business administration (sba) must documents ownership agreement date meeting required owner most provide state birth certificate",
       "sensitive": false,
       "slug": "ownership-and-control-documents",
       "source_bytes": 175586,
@@ -17502,7 +17498,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Certification Process/Ownership and Control Documents.pdf",
       "source_url": null,
-      "summary": "Part 1: All Applicants: Ownership and Control Documents Document Category Document Name Business Structure",
+      "summary": "Part 1: All Applicants: Ownership and Control Documents Document Category Document Name",
       "title": "Ownership and Control Documents",
       "topics": [
         "certification",
@@ -19408,13 +19404,13 @@
       ],
       "id": "bossdoc-66e69397714b",
       "key_information": [
-        "OPENINGGRAND Virtual Workbook Version 5",
+        "OPENING",
+        "GRAND",
+        "Virtual Workbook Version 5",
         "CONTENTS",
         "MODULES",
         "3 Module 1: Introduction to Business Ownership",
-        "26 Module 2: The Right Idea? Basics of Opportunity Recognition",
-        "44 Module 3: Understanding Markets & Your Competitive Space",
-        "66 Module 4: The Economics of Small Business Start -up"
+        "26 Module 2: The Right Idea? Basics of Opportunity Recognition"
       ],
       "keywords": [
         "accounting",
@@ -19476,7 +19472,7 @@
       ],
       "output": "bossdoc-66e69397714b--b2b-virtual-workbook-v5-1.md",
       "people": [],
-      "search_text": "B2B Virtual Workbook v5 (1) | OPENINGGRAND Virtual Workbook Version 5 CONTENTS MODULES | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
+      "search_text": "B2B Virtual Workbook v5 (1) | OPENING GRAND Virtual Workbook Version 5 | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
       "sensitive": false,
       "slug": "b2b-virtual-workbook-v5-1",
       "source_bytes": 11753747,
@@ -19484,7 +19480,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/B2B Virtual Workbook v5 (1).pdf",
       "source_url": "https://www.census.gov/naics/",
-      "summary": "OPENINGGRAND Virtual Workbook Version 5 CONTENTS MODULES",
+      "summary": "OPENING GRAND Virtual Workbook Version 5",
       "title": "B2B Virtual Workbook v5 (1)",
       "topics": [
         "accounting",
@@ -20154,7 +20150,7 @@
       ],
       "lifecycle_stages": [],
       "links": [
-        "https://www.sbdc.uh.edu/sbdc/Locations.asp"
+        "https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to U.S. Small Business Administration (SBA) or the named qualified resource.",
       "organizations": [
@@ -20171,7 +20167,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBDC/014_SBDC_technology_commercialization_routing_process.md",
-      "source_url": "https://www.sbdc.uh.edu/sbdc/Locations.asp",
+      "source_url": "https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp",
       "summary": "## Why this note matters Houston-area ZIP codes can sit near county and service-area boundaries. The SBA ZIP search for 77084 returned Harris County resources, and the UH SBDC locations catalog identifies multiple Harris-area service areas. ## BOSS rule",
       "title": "SBDC 77084 Service Area Note: Houston, Fort Bend, Southwest Harris",
       "topics": [
@@ -20632,9 +20628,11 @@
         "Mark.Winchester@sba.gov",
         "houston@sba.gov",
         "713-773-6508",
+        "713-752-8444",
         "713-487-6565",
+        "956-665-8931",
         "713-681-9232",
-        "713-773-6500"
+        "713-782-3777"
       ],
       "document_path": "./bossdoc-6ce8c2202d5c--04-08-2026-sba-resources-for-veteran-owned-small-businesses.md",
       "guardrails": [
@@ -20648,8 +20646,8 @@
         "Contact Information",
         "Email: Mark.Winchester@sba.gov",
         "Phone: 713-773-6508",
-        "Mark Winchester ,",
-        "District Director –SBA Houston",
+        "Mark Winchester,",
+        "District Director – SBA Houston",
         "START • GROW • EXPAND • RECOVER"
       ],
       "keywords": [
@@ -20675,8 +20673,8 @@
         "veterans business outreach center (vboc)",
         "score houston",
         "sba",
-        "www",
-        "houston"
+        "houston",
+        "www"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -20689,9 +20687,6 @@
         "https://www.score.org/houston",
         "https://www.utrgv.edu/vboc/",
         "https://ghwcc.org/",
-        "https://www.score.org/houstonUTRGV",
-        "https://www.wbea",
-        "http://www.wbea",
         "https://veterans.certify.sba.gov/",
         "https://www.uhapex.uh.edu",
         "https://www.linkedin.com/showcase/sbahouston"
@@ -20707,7 +20702,7 @@
       ],
       "output": "bossdoc-6ce8c2202d5c--04-08-2026-sba-resources-for-veteran-owned-small-businesses.md",
       "people": [],
-      "search_text": "04.08.2026 SBA Resources for Veteran-Owned Small Businesses | Presenter Contact Information Email: Mark.Winchester@sba.gov | business planning certification disaster readiness ecosystem navigation formation funding government contracting international trade legal and compliance marketing mentoring and advising technology | Ideation Formation Operations Recovery | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) SCORE Houston | business planning certification disaster readiness ecosystem navigation formation funding government contracting international trade legal and compliance marketing mentoring and advising technology ideation operations recovery score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc) score houston sba www houston",
+      "search_text": "04.08.2026 SBA Resources for Veteran-Owned Small Businesses | Presenter Contact Information Email: Mark.Winchester@sba.gov | business planning certification disaster readiness ecosystem navigation formation funding government contracting international trade legal and compliance marketing mentoring and advising technology | Ideation Formation Operations Recovery | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) SCORE Houston | business planning certification disaster readiness ecosystem navigation formation funding government contracting international trade legal and compliance marketing mentoring and advising technology ideation operations recovery score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc) score houston sba houston www",
       "sensitive": false,
       "slug": "04-08-2026-sba-resources-for-veteran-owned-small-businesses",
       "source_bytes": 1390992,
@@ -21014,8 +21009,8 @@
         "This guide is for informational purposes only. This content does not constitute business, legal, tax, accounting, financial, or investment advice. Y ou’re encouraged to consult with",
         "competent legal, tax, accounting, financial, or investment professionals based on your specific credit needs and circumstances. We don’t make any warranties as to accuracy or",
         "completeness of this information. We don’t endorse any third-party companies, products, or services, if any, described herein. And we take no liability for your use of this information.",
-        "All loans subject to credit approval. Standard underwriting guidelines and credit policies apply.Participant workbook",
-        "As a small business owner, you want to see your business"
+        "All loans subject to credit approval. Standard underwriting guidelines and credit policies apply.",
+        "Participant workbook"
       ],
       "keywords": [
         "accounting",
@@ -21039,8 +21034,8 @@
         "you",
         "loan",
         "credit",
-        "cash",
         "financing",
+        "cash",
         "borrowing"
       ],
       "lifecycle_stages": [
@@ -21058,7 +21053,7 @@
       ],
       "output": "bossdoc-6f062d516c56--3316-sb-borrowing-for-sb-wb-iha-final-002.md",
       "people": [],
-      "search_text": "3316 SB Borrowing for SB WB IHA Final (002) | Bank on your success™ Borrowing for small businesses This guide is for informational purposes only. This content does not constitute business, legal, tax, accounting, financial, or investment advice. Y ou’re encouraged to consult with | accounting artificial intelligence branding business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising | Ideation Formation Launch Operations Growth | SCORE U.S. Small Business Administration (SBA) | accounting artificial intelligence branding business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising ideation launch operations growth score u.s. small business administration (sba) you loan credit cash financing borrowing",
+      "search_text": "3316 SB Borrowing for SB WB IHA Final (002) | Bank on your success™ Borrowing for small businesses This guide is for informational purposes only. This content does not constitute business, legal, tax, accounting, financial, or investment advice. Y ou’re encouraged to consult with | accounting artificial intelligence branding business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising | Ideation Formation Launch Operations Growth | SCORE U.S. Small Business Administration (SBA) | accounting artificial intelligence branding business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising ideation launch operations growth score u.s. small business administration (sba) you loan credit financing cash borrowing",
       "sensitive": false,
       "slug": "3316-sb-borrowing-for-sb-wb-iha-final-002",
       "source_bytes": 1026814,
@@ -21516,7 +21511,9 @@
       "access": "public",
       "category": "AI Training",
       "contacts": [
-        "tris.carpenter@redteamconsulting.com"
+        "tris.carpenter@redteamconsulting.com",
+        "571-599-7047",
+        "571-242-3414"
       ],
       "document_path": "./bossdoc-71a0071d1717--deltekkeystobuildinganopppipelineslides1738773766436.md",
       "guardrails": [
@@ -21525,13 +21522,13 @@
       ],
       "id": "bossdoc-71a0071d1717",
       "key_information": [
-        "3Part 1: Keys to Building an",
+        "Part 1: Keys to Building an",
         "Opportunity Pipeline",
         "Tris Carpenter",
         "General Manager of Strategic Growth",
         "Red Team Consulting",
         "About Us",
-        "4 Red Team Consulting proprietary material. Duplication or distribution prohibited without prior written consent. Established in March 2004."
+        "4Red Team Consulting proprietary material. Duplication or distribution prohibited without prior written consent."
       ],
       "keywords": [
         "artificial intelligence",
@@ -21552,12 +21549,12 @@
         "exit",
         "score",
         "team",
+        "pipeline",
         "red",
         "consulting",
         "without",
         "proprietary",
-        "material",
-        "duplication"
+        "material"
       ],
       "lifecycle_stages": [
         "Validation",
@@ -21573,7 +21570,7 @@
       ],
       "output": "bossdoc-71a0071d1717--deltekkeystobuildinganopppipelineslides1738773766436.md",
       "people": [],
-      "search_text": "deltekkeystobuildinganopppipelineslides1738773766436 | 3Part 1: Keys to Building an Opportunity Pipeline Tris Carpenter | artificial intelligence branding business planning certification cybersecurity ecosystem navigation exit and transition formation funding government contracting international trade legal and compliance | Validation Formation Operations Growth Exit | SCORE | artificial intelligence branding business planning certification cybersecurity ecosystem navigation exit and transition formation funding government contracting international trade legal and compliance validation operations growth exit score team red consulting without proprietary material duplication",
+      "search_text": "deltekkeystobuildinganopppipelineslides1738773766436 | Part 1: Keys to Building an Opportunity Pipeline Tris Carpenter | artificial intelligence branding business planning certification cybersecurity ecosystem navigation exit and transition formation funding government contracting international trade legal and compliance | Validation Formation Operations Growth Exit | SCORE | artificial intelligence branding business planning certification cybersecurity ecosystem navigation exit and transition formation funding government contracting international trade legal and compliance validation operations growth exit score team pipeline red consulting without proprietary material",
       "sensitive": false,
       "slug": "deltekkeystobuildinganopppipelineslides1738773766436",
       "source_bytes": 3039722,
@@ -21581,7 +21578,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/Deltek/deltekkeystobuildinganopppipelineslides1738773766436.pdf",
       "source_url": null,
-      "summary": "3Part 1: Keys to Building an Opportunity Pipeline Tris Carpenter",
+      "summary": "Part 1: Keys to Building an Opportunity Pipeline Tris Carpenter",
       "title": "deltekkeystobuildinganopppipelineslides1738773766436",
       "topics": [
         "artificial intelligence",
@@ -21657,9 +21654,9 @@
       ],
       "links": [
         "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure",
-        "https://www.score.org/resource/business-contract-rules",
+        "https://www.sba.gov/federal-contracting/contracting-guide/governing-rules-responsibilities",
         "https://www.uspto.gov/sites/default/files/documents/TM-Registration-Toolkit.pdf",
-        "https://www.sba.gov/offices/headquarters/ofa/resources/11421"
+        "https://www.sba.gov/funding-programs/loans"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -21891,7 +21888,8 @@
       "access": "public",
       "category": "AI Training",
       "contacts": [
-        "to-Business@sba.gov"
+        "Boots-to-Business@sba.gov",
+        "(202) 205-8381"
       ],
       "document_path": "./bossdoc-74bb0a824fb0--b2b-virtual-workbook-quick-start-guide-1.md",
       "guardrails": [
@@ -21901,9 +21899,9 @@
       ],
       "id": "bossdoc-74bb0a824fb0",
       "key_information": [
-        "More Questions? Contact the Boots to Business Help Desk : Boots- to-Business@sba.gov or (202) 205 -8381",
+        "More Questions? Contact the Boots to Business Help Desk: Boots-to-Business@sba.gov or (202) 205-8381",
         "Boots to Business Virtual Workbook",
-        "Quick -Start Guide",
+        "Quick-Start Guide",
         "Background:",
         "The B2B Virtual Workbook allows attendees to:",
         "Follow along with and take notes on the applicable pages of the slide presentation",
@@ -21926,12 +21924,12 @@
         "page",
         "virtual",
         "video",
-        "boots",
         "computer",
         "tablet",
         "smartphone",
         "navigation",
         "move",
+        "quick-start",
         "guide",
         "sba"
       ],
@@ -21941,8 +21939,7 @@
         "Formation"
       ],
       "links": [
-        "https://sbavets.force.com/",
-        "https://sbavets.force.com/attendance"
+        "https://www.sba.gov/sba-learning-platform/boots-business"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to U.S. Small Business Administration (SBA) or the named qualified resource.",
       "organizations": [
@@ -21951,15 +21948,15 @@
       ],
       "output": "bossdoc-74bb0a824fb0--b2b-virtual-workbook-quick-start-guide-1.md",
       "people": [],
-      "search_text": "B2B Virtual Workbook Quick-Start Guide (1) | More Questions? Contact the Boots to Business Help Desk : Boots- to-Business@sba.gov or (202) 205 -8381 Boots to Business Virtual Workbook Quick -Start Guide | business planning ecosystem navigation formation legal and compliance training veteran entrepreneurship | Ideation Validation Formation | U.S. Small Business Administration (SBA) Veterans Business Outreach Center (VBOC) | business planning ecosystem navigation formation legal and compliance training veteran entrepreneurship ideation validation u.s. small business administration (sba) veterans business outreach center (vboc) b2b workbook module page virtual video boots computer tablet smartphone navigation move guide sba",
+      "search_text": "B2B Virtual Workbook Quick-Start Guide (1) | More Questions? Contact the Boots to Business Help Desk: Boots-to-Business@sba.gov or (202) 205-8381 Boots to Business Virtual Workbook Quick-Start Guide | business planning ecosystem navigation formation legal and compliance training veteran entrepreneurship | Ideation Validation Formation | U.S. Small Business Administration (SBA) Veterans Business Outreach Center (VBOC) | business planning ecosystem navigation formation legal and compliance training veteran entrepreneurship ideation validation u.s. small business administration (sba) veterans business outreach center (vboc) b2b workbook module page virtual video computer tablet smartphone navigation move quick-start guide sba",
       "sensitive": false,
       "slug": "b2b-virtual-workbook-quick-start-guide-1",
       "source_bytes": 332061,
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/B2B Virtual Workbook Quick-Start Guide (1).pdf",
-      "source_url": "https://sbavets.force.com/",
-      "summary": "More Questions? Contact the Boots to Business Help Desk : Boots- to-Business@sba.gov or (202) 205 -8381 Boots to Business Virtual Workbook Quick -Start Guide",
+      "source_url": "https://www.sba.gov/sba-learning-platform/boots-business",
+      "summary": "More Questions? Contact the Boots to Business Help Desk: Boots-to-Business@sba.gov or (202) 205-8381 Boots to Business Virtual Workbook Quick-Start Guide",
       "title": "B2B Virtual Workbook Quick-Start Guide (1)",
       "topics": [
         "business planning",
@@ -22244,7 +22241,7 @@
         "SBA Houston District resource partners page 2: https://www.sba.gov/local-assistance/district?district=35&page=1",
         "UH Texas Gulf Coast SBDC Network home: https://www.sbdc.uh.edu/sbdc/default.asp",
         "Find Your SBDC: https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp",
-        "Locations: https://www.sbdc.uh.edu/sbdc/Locations.asp",
+        "Locations: https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp",
         "Business Advising: https://www.sbdc.uh.edu/sbdc/Consulting1.asp"
       ],
       "keywords": [
@@ -22284,7 +22281,6 @@
         "https://www.sba.gov/local-assistance/district?district=35&page=1",
         "https://www.sbdc.uh.edu/sbdc/default.asp",
         "https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp",
-        "https://www.sbdc.uh.edu/sbdc/Locations.asp",
         "https://www.sbdc.uh.edu/sbdc/Consulting1.asp",
         "https://www.sbdc.uh.edu/sbdc/Business_Specialists.asp",
         "https://www.sbdc.uh.edu/sbdc/Programs.asp",
@@ -22785,7 +22781,6 @@
       "contacts": [
         "jennifer@totocoaching.com",
         "jennifer@totoseo.com",
-        "totoseo.comjennifer@totocoaching.com",
         "thrivefencing.comjennifer@totocoaching.com"
       ],
       "document_path": "./bossdoc-797a3e9c522a--seo-101.md",
@@ -22827,14 +22822,15 @@
         "keyword",
         "content",
         "services",
-        "building"
+        "local"
       ],
       "lifecycle_stages": [
         "Formation"
       ],
       "links": [
         "https://totoseo.com",
-        "https://totocoaching.comhttps://totocoaching.com/seochecklist"
+        "https://totocoaching.com",
+        "https://totocoaching.com/seochecklist"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -22842,7 +22838,7 @@
       ],
       "output": "bossdoc-797a3e9c522a--seo-101.md",
       "people": [],
-      "search_text": "SEO 101 | Learn the SEO Basics and Boost Your Website Traffic Jennifer has taken over 28 years of web building knowledge | artificial intelligence ecosystem navigation formation market research marketing mentoring and advising technology training veteran entrepreneurship | Formation | SCORE | artificial intelligence ecosystem navigation formation market research marketing mentoring and advising technology training veteran entrepreneurship score com totoseo totocoaching jennifer seo search optimization google website engines keyword content services building",
+      "search_text": "SEO 101 | Learn the SEO Basics and Boost Your Website Traffic Jennifer has taken over 28 years of web building knowledge | artificial intelligence ecosystem navigation formation market research marketing mentoring and advising technology training veteran entrepreneurship | Formation | SCORE | artificial intelligence ecosystem navigation formation market research marketing mentoring and advising technology training veteran entrepreneurship score com totoseo totocoaching jennifer seo search optimization google website engines keyword content services local",
       "sensitive": false,
       "slug": "seo-101",
       "source_bytes": 2992074,
@@ -22928,7 +22924,7 @@
         "http://foundationcenter.org/pnd",
         "http://www.grants.gov/",
         "https://www.bcorporation.net/b-corp-community",
-        "http://www.agmconnect.org/",
+        "https://philanthropyma.org/",
         "http://www.philanthropy.com",
         "http://www.bridgespangroup.org",
         "http://www.blueavocado.org"
@@ -23424,10 +23420,10 @@
         "www.score.org",
         "Cash Flow Management",
         "Basics",
-        "ALBERTO CASADEI, CERTIFIED SCORE MENTORHosted by",
+        "ALBERTO CASADEI, CERTIFIED SCORE MENTOR",
+        "Hosted by",
         "20250204 vFinal",
-        "Providing free",
-        "business advice"
+        "Providing free"
       ],
       "keywords": [
         "accounting",
@@ -23446,8 +23442,8 @@
         "score",
         "cash",
         "org",
-        "www",
         "flow",
+        "www",
         "month",
         "financial",
         "management",
@@ -23467,7 +23463,7 @@
       ],
       "output": "bossdoc-7d6152ae9d8f--score-cash-flow-management-basics-20250204-v-final.md",
       "people": [],
-      "search_text": "SCORE Cash Flow Management Basics 20250204 v Final | www.score.org Cash Flow Management Basics | accounting artificial intelligence business planning ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising operations technology | Formation Operations Growth | SCORE | accounting artificial intelligence business planning ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising operations technology growth score cash org www flow month financial management balance plan actual",
+      "search_text": "SCORE Cash Flow Management Basics 20250204 v Final | www.score.org Cash Flow Management Basics | accounting artificial intelligence business planning ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising operations technology | Formation Operations Growth | SCORE | accounting artificial intelligence business planning ecosystem navigation formation funding human resources legal and compliance marketing mentoring and advising operations technology growth score cash org flow www month financial management balance plan actual",
       "sensitive": false,
       "slug": "score-cash-flow-management-basics-20250204-v-final",
       "source_bytes": 1188696,
@@ -24243,13 +24239,13 @@
         "u.s. small business administration (sba)",
         "score houston",
         "www",
-        "houston",
         "org",
+        "houston",
         "sponsor",
         "clients",
         "businesses",
         "entrepreneurs",
-        "bank"
+        "partner"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -24266,7 +24262,7 @@
       ],
       "output": "bossdoc-852e48e155dd--2026-bank-sponsor-campaign-copy.md",
       "people": [],
-      "search_text": "2026 Bank Sponsor Campaign copy | www.score.org For the Life of Y our Business | branding ecosystem navigation exit and transition funding human resources legal and compliance marketing mentoring and advising training | Ideation Launch Growth Exit | SCORE U.S. Small Business Administration (SBA) SCORE Houston | branding ecosystem navigation exit and transition funding human resources legal and compliance marketing mentoring and advising training ideation launch growth exit score u.s. small business administration (sba) score houston www houston org sponsor clients businesses entrepreneurs bank",
+      "search_text": "2026 Bank Sponsor Campaign copy | www.score.org For the Life of Y our Business | branding ecosystem navigation exit and transition funding human resources legal and compliance marketing mentoring and advising training | Ideation Launch Growth Exit | SCORE U.S. Small Business Administration (SBA) SCORE Houston | branding ecosystem navigation exit and transition funding human resources legal and compliance marketing mentoring and advising training ideation launch growth exit score u.s. small business administration (sba) score houston www org houston sponsor clients businesses entrepreneurs partner",
       "sensitive": false,
       "slug": "2026-bank-sponsor-campaign-copy",
       "source_bytes": 577661,
@@ -24846,7 +24842,7 @@
         "Recovery"
       ],
       "links": [
-        "https://www.sba.gov/about-sba/contact-sba",
+        "https://www.sba.gov/about-sba/organization",
         "https://www.sba.gov/district/houston",
         "https://www.sba.gov/local-assistance"
       ],
@@ -24867,7 +24863,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBA/015_SBA_export_trade_assistance_process.md",
-      "source_url": "https://www.sba.gov/about-sba/contact-sba",
+      "source_url": "https://www.sba.gov/about-sba/organization",
       "summary": "Official contact page for SBA.",
       "title": "SBA Contact SBA",
       "topics": [
@@ -24890,7 +24886,7 @@
       "access": "public",
       "category": "AI Training",
       "contacts": [
-        "info@hinzconsulting.comWHAT"
+        "info@hinzconsulting.com"
       ],
       "document_path": "./bossdoc-8cc56638e4e9--hinz-strategic-pipeline-analysis-flyer-250113.md",
       "guardrails": [
@@ -24900,12 +24896,12 @@
       "id": "bossdoc-8cc56638e4e9",
       "key_information": [
         "FIXED PRICE",
-        "$5495EACH YEAR WE...",
+        "EACH YEAR WE...",
         "SUPPORT 400–500 PURSUITS",
         "PRODUCE 100–200 TURN-KEY PROPOSALS",
         "WORK 100,000+ STAFF HOURS",
-        "SUPPORT 90+ CLIENTSHinz builds you a pipeline of opportunities",
-        "for RFPs/RFIs/SBIRs/GrantsANALYSISSTRATEGIC PIPELINE"
+        "SUPPORT 90+ CLIENTS",
+        "Hinz builds you a pipeline of opportunities"
       ],
       "keywords": [
         "ecosystem navigation",
@@ -24917,21 +24913,21 @@
         "score",
         "pipeline",
         "analysis",
-        "you",
+        "hinz",
+        "strategic",
         "opportunities",
+        "you",
         "rfps",
         "rfis",
         "sbirs",
-        "hinz",
-        "strategic",
+        "grants",
         "flyer",
         "support",
         "builds",
         "rfp",
         "rfi",
         "sbir",
-        "grant",
-        "files"
+        "grant"
       ],
       "lifecycle_stages": [
         "Ideation"
@@ -24943,7 +24939,7 @@
       ],
       "output": "bossdoc-8cc56638e4e9--hinz-strategic-pipeline-analysis-flyer-250113.md",
       "people": [],
-      "search_text": "Hinz - Strategic Pipeline Analysis - Flyer - 250113 | FIXED PRICE $5495EACH YEAR WE... SUPPORT 400–500 PURSUITS | ecosystem navigation funding legal and compliance mentoring and advising training | Ideation | SCORE | ecosystem navigation funding legal and compliance mentoring and advising training ideation score pipeline analysis you opportunities rfps rfis sbirs hinz strategic flyer support builds rfp rfi sbir grant files",
+      "search_text": "Hinz - Strategic Pipeline Analysis - Flyer - 250113 | FIXED PRICE EACH YEAR WE... SUPPORT 400–500 PURSUITS | ecosystem navigation funding legal and compliance mentoring and advising training | Ideation | SCORE | ecosystem navigation funding legal and compliance mentoring and advising training ideation score pipeline analysis hinz strategic opportunities you rfps rfis sbirs grants flyer support builds rfp rfi sbir grant",
       "sensitive": false,
       "slug": "hinz-strategic-pipeline-analysis-flyer-250113",
       "source_bytes": 210825,
@@ -24951,7 +24947,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/Deltek/Hinz - Strategic Pipeline Analysis - Flyer - 250113.pdf",
       "source_url": null,
-      "summary": "FIXED PRICE $5495EACH YEAR WE... SUPPORT 400–500 PURSUITS",
+      "summary": "FIXED PRICE EACH YEAR WE... SUPPORT 400–500 PURSUITS",
       "title": "Hinz - Strategic Pipeline Analysis - Flyer - 250113",
       "topics": [
         "ecosystem navigation",
@@ -25110,7 +25106,7 @@
         "https://www.score.org/resource/opening-day-balance-sheet",
         "https://www.score.org/resource/3-year-cash-flow-statement",
         "https://www.score.org/resource/annual-marketing-budget-template",
-        "http://www.rmahq.org/publications-and-tools/",
+        "https://www.rmahq.org/resources-content",
         "https://www.score.org/resource/start-expenses",
         "https://www.score.org/resource/12-month-cash-flow-statement"
       ],
@@ -27169,10 +27165,10 @@
         "Veterans Small Business Resource Guide",
         "For more information contact Norm Phillips",
         "norm.phillips@scorevolunteer.org",
+        "You served us. Now we serve you.",
         "SCORE Resources & Services",
         "SCORE Primary Services",
-        "3Free Mentoring",
-        "Entrepreneurs can access free, confidential business mentoring in"
+        "Free Mentoring"
       ],
       "keywords": [
         "accounting",
@@ -27211,8 +27207,9 @@
         "Exit"
       ],
       "links": [
-        "https://www.score.org/palmbeachcounty/event/how",
-        "https://www.score.org/longisland/resource/eguide/exiting"
+        "https://www.score.org/find-mentor",
+        "https://www.score.org/palmbeachcounty/event/how-sell-your-business-1",
+        "https://www.score.org/longisland/resource/eguide/exiting-or-selling-a-business"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -27230,7 +27227,7 @@
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Veterans/Veterans Small Business Resource Guide for SCORE Clients v3.2 11-22-24.pdf",
-      "source_url": "https://www.score.org/palmbeachcounty/event/how",
+      "source_url": "https://www.score.org/find-mentor",
       "summary": "Veterans Small Business Resource Guide For more information contact Norm Phillips norm.phillips@scorevolunteer.org",
       "title": "Veterans Small Business Resource Guide for SCORE Clients v3.2 11-22-24",
       "topics": [
@@ -27590,7 +27587,7 @@
         "Exit"
       ],
       "links": [
-        "https://bchispanicchamber.net/",
+        "https://bchispanicchamber.com/",
         "https://www.sba.gov/district/houston/doing-business-houston-district",
         "https://www.sba.gov/district/houston"
       ],
@@ -27611,7 +27608,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBA/Houston_External_SBA_Listed_Texas_State_Law_Library.md",
-      "source_url": "https://bchispanicchamber.net/",
+      "source_url": "https://bchispanicchamber.com/",
       "summary": "Last verified for BOSS pack: 2026-06-24 BOSS operating alignment: - Discover -> Diagnose -> Classify -> Route -> Recommend Next Action.",
       "title": "Brazoria Hispanic Chamber of Commerce",
       "topics": [
@@ -27937,7 +27934,7 @@
       ],
       "id": "bossdoc-a29015df3f16",
       "key_information": [
-        "VETERAN ENTREPRENEURSHIP ONE -DAY",
+        "VETERAN ENTREPRENEURSHIP ONE-DAY",
         "VIRTUAL WORKSHOP",
         "LOCATION: Teams",
         "ACCESS LINK: Click Here to Join the Meeting",
@@ -27982,11 +27979,11 @@
         "https://www.utrgv.edu/vboc/",
         "https://www.sbdc.uh.edu/sbdc/default.asp",
         "https://houston.score.org/",
-        "http://www.wbea",
-        "https://www.wbea",
+        "http://www.wbea-texas.org/alliwbc-1#",
+        "https://www.wbea-texas.org/wbea-wbc-core#",
         "https://ghwcc.org/entrepreneurs/",
         "https://sba.my.site.com/s/",
-        "https://www.sba.gov/sba",
+        "https://www.sba.gov/sba-learning-platform",
         "https://www.sba.gov/local"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
@@ -27999,7 +27996,7 @@
       ],
       "output": "bossdoc-a29015df3f16--02-23-2026-agenda-virtual-b2b-reboot-houston.md",
       "people": [],
-      "search_text": "02.23.2026 AGENDA - VIRTUAL B2B Reboot - HOUSTON | VETERAN ENTREPRENEURSHIP ONE -DAY VIRTUAL WORKSHOP LOCATION: Teams | business planning ecosystem navigation formation franchising funding government contracting legal and compliance market research marketing mentoring and advising training veteran entrepreneurship | Ideation Validation Formation Launch | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) Veterans Business Outreach Center (VBOC) SCORE Houston | business planning ecosystem navigation formation franchising funding government contracting legal and compliance market research marketing mentoring and advising training veteran entrepreneurship ideation validation launch score u.s. small business administration (sba) small business development center (sbdc) veterans business outreach center (vboc) score houston sba houston https center",
+      "search_text": "02.23.2026 AGENDA - VIRTUAL B2B Reboot - HOUSTON | VETERAN ENTREPRENEURSHIP ONE-DAY VIRTUAL WORKSHOP LOCATION: Teams | business planning ecosystem navigation formation franchising funding government contracting legal and compliance market research marketing mentoring and advising training veteran entrepreneurship | Ideation Validation Formation Launch | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) Veterans Business Outreach Center (VBOC) SCORE Houston | business planning ecosystem navigation formation franchising funding government contracting legal and compliance market research marketing mentoring and advising training veteran entrepreneurship ideation validation launch score u.s. small business administration (sba) small business development center (sbdc) veterans business outreach center (vboc) score houston sba houston https center",
       "sensitive": false,
       "slug": "02-23-2026-agenda-virtual-b2b-reboot-houston",
       "source_bytes": 212727,
@@ -28007,7 +28004,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/02.23.2026 AGENDA - VIRTUAL B2B Reboot - HOUSTON.pdf",
       "source_url": "https://www.sba.gov/tx/houston",
-      "summary": "VETERAN ENTREPRENEURSHIP ONE -DAY VIRTUAL WORKSHOP LOCATION: Teams",
+      "summary": "VETERAN ENTREPRENEURSHIP ONE-DAY VIRTUAL WORKSHOP LOCATION: Teams",
       "title": "02.23.2026 AGENDA - VIRTUAL B2B Reboot - HOUSTON",
       "topics": [
         "business planning",
@@ -28301,13 +28298,13 @@
       ],
       "id": "bossdoc-a3da1dc32b30",
       "key_information": [
-        "1Boots to Business Attendance Confirmation",
+        "Boots to Business Attendance Confirmation",
         "If you have not already done so, visit",
-        "tinyurl.com/SBA- B2B or use your",
+        "tinyurl.com/SBA-B2B or use your",
         "smart phone camera to access the",
         "attendance QR Code",
         "Select the B2B or Reboot class you are",
-        "attending from the list of scheduled classes"
+        "attending from the list of scheduled"
       ],
       "keywords": [
         "accounting",
@@ -28328,8 +28325,8 @@
         "u.s. small business administration (sba)",
         "ownership",
         "you",
-        "attendance",
         "paths",
+        "attendance",
         "boots",
         "what",
         "entrepreneurship",
@@ -28347,7 +28344,7 @@
       ],
       "output": "bossdoc-a3da1dc32b30--module-1-introduction-to-business-ownership-v5-1-1.md",
       "people": [],
-      "search_text": "Module 1 - Introduction to Business Ownership v5.1 (1) | 1Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA- B2B or use your | accounting branding business planning ecosystem navigation exit and transition franchising human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship | Ideation Growth Exit | U.S. Small Business Administration (SBA) | accounting branding business planning ecosystem navigation exit and transition franchising human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship ideation growth exit u.s. small business administration (sba) ownership you attendance paths boots what entrepreneurship sba",
+      "search_text": "Module 1 - Introduction to Business Ownership v5.1 (1) | Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA-B2B or use your | accounting branding business planning ecosystem navigation exit and transition franchising human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship | Ideation Growth Exit | U.S. Small Business Administration (SBA) | accounting branding business planning ecosystem navigation exit and transition franchising human resources legal and compliance marketing mentoring and advising training veteran entrepreneurship ideation growth exit u.s. small business administration (sba) ownership you paths attendance boots what entrepreneurship sba",
       "sensitive": false,
       "slug": "module-1-introduction-to-business-ownership-v5-1-1",
       "source_bytes": 3752707,
@@ -28355,7 +28352,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Module 1 - Introduction to Business Ownership v5.1 (1).pdf",
       "source_url": null,
-      "summary": "1Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA- B2B or use your",
+      "summary": "Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA-B2B or use your",
       "title": "Module 1 - Introduction to Business Ownership v5.1 (1)",
       "topics": [
         "accounting",
@@ -28475,7 +28472,7 @@
         "Competitive Space",
         "Version 5.2",
         "Objectives",
-        "•Understand how to conduct market research, the"
+        "• Understand how to conduct market research, the"
       ],
       "keywords": [
         "business planning",
@@ -29064,7 +29061,9 @@
     {
       "access": "public",
       "category": "AI Training",
-      "contacts": [],
+      "contacts": [
+        "600\n800\n1000"
+      ],
       "document_path": "./bossdoc-a74258b20a93--2025-8a-trends.md",
       "guardrails": [
         "The BOSS Libraries Librarian retrieves and routes information; it is not a mentor or a substitute for a qualified professional.",
@@ -29078,8 +29077,8 @@
         "Kathleen Sievers",
         "Director, Federal IS Research",
         "Agenda",
-        "»8(a) Program Overview & Trends",
-        "»Overall Federal Trends"
+        "» 8(a) Program Overview & Trends",
+        "» Overall Federal Trends"
       ],
       "keywords": [
         "artificial intelligence",
@@ -29118,7 +29117,7 @@
       "links": [
         "https://certifications.sba.gov/",
         "https://www.deltek.com/en/about/events/webinars",
-        "https://iq.govwin.com/neo/small",
+        "https://iq.govwin.com/neo/small-business-resources",
         "https://www.census.gov/naics/"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
@@ -29631,7 +29630,7 @@
       "category": "AI Training",
       "contacts": [
         "vboc@utrgv.edu",
-        "boots-to-business@sba.govThursday",
+        "boots-to-business@sba.gov",
         "elizabeth.charles@sba.gov",
         "(956) 665-8931",
         "202-205-8381",
@@ -29649,9 +29648,9 @@
         "Person",
         "For More Information",
         "Email: vboc@utrgv.edu",
-        "Call: (956) 665-8931University of Houston SBDC, 1455 West Loop South, Suite B Houston, Texas 77027",
-        "August 10 &11, 2022",
-        "8:30am - 12:00pm"
+        "Call: (956) 665-8931",
+        "University of Houston SBDC, 1455 West Loop South, Suite B Houston, Texas 77027",
+        "August 10 &11, 2022"
       ],
       "keywords": [
         "business planning",
@@ -29669,15 +29668,15 @@
         "boots",
         "reboot",
         "online",
-        "sba",
         "houston",
+        "sba",
         "b2b",
         "vboc",
         "veterans",
         "information",
         "email",
-        "call",
-        "program"
+        "spouses",
+        "small"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -29696,7 +29695,7 @@
       ],
       "output": "bossdoc-aab4634f325d--online-boots-to-business-reboot-houston-vboc-flyer.md",
       "people": [],
-      "search_text": "ONLINE Boots to Business Reboot - Houston VBOC Flyer | 2-Half Days B2B-Reboot with Houston - In- Person For More Information | business planning formation legal and compliance mentoring and advising training veteran entrepreneurship | Ideation Formation Launch | U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) Veterans Business Outreach Center (VBOC) University of Houston | business planning formation legal and compliance mentoring and advising training veteran entrepreneurship ideation launch u.s. small business administration (sba) small business development center (sbdc) veterans business outreach center (vboc) university of houston boots reboot online sba houston b2b vboc veterans information email call program",
+      "search_text": "ONLINE Boots to Business Reboot - Houston VBOC Flyer | 2-Half Days B2B-Reboot with Houston - In- Person For More Information | business planning formation legal and compliance mentoring and advising training veteran entrepreneurship | Ideation Formation Launch | U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) Veterans Business Outreach Center (VBOC) University of Houston | business planning formation legal and compliance mentoring and advising training veteran entrepreneurship ideation launch u.s. small business administration (sba) small business development center (sbdc) veterans business outreach center (vboc) university of houston boots reboot online houston sba b2b vboc veterans information email spouses small",
       "sensitive": false,
       "slug": "online-boots-to-business-reboot-houston-vboc-flyer",
       "source_bytes": 799572,
@@ -30740,13 +30739,13 @@
       ],
       "id": "bossdoc-b186cbed0ca7",
       "key_information": [
-        "Updated 9/22/20 SCORE Workshop Presenter Guidelines",
+        "Updated 9/22/20",
+        "SCORE Workshop Presenter Guidelines",
         "Due to SCORE’s status as a non-profit association funded through government grants, there are a few",
         "guidelines to which we will ask that you adhere. This document covers guidelines for both",
         "SCORE Volunteers Presenters and non-SCORE Volunteer Presenters.",
-        "By presenting a workshop for SCORE, you a gree to the following:",
-        "1.To not promote, sell or advertise any product or service during the workshop.",
-        "2.To list at least three other resources related to the topic if listing their company as a source of"
+        "By presenting a workshop for SCORE, you agree to the following:",
+        "1.To not promote, sell or advertise any product or service during the workshop."
       ],
       "keywords": [
         "branding",
@@ -30784,7 +30783,7 @@
       ],
       "output": "bossdoc-b186cbed0ca7--workshoppresenterguidelinesscorevolunteer9-22-20.md",
       "people": [],
-      "search_text": "workshoppresenterguidelinesscorevolunteer9.22.20 | Updated 9/22/20 SCORE Workshop Presenter Guidelines Due to SCORE’s status as a non-profit association funded through government grants, there are a few guidelines to which we will ask that you adhere. This document covers guidelines for both | branding formation funding mentoring and advising training | Formation | SCORE | branding formation funding mentoring and advising training score workshop presenters presentation materials clients templates presenter guidelines you volunteers non-score volunteer promote any understand cards may workshoppresenterguidelinesscorevolunteer9",
+      "search_text": "workshoppresenterguidelinesscorevolunteer9.22.20 | Updated 9/22/20 SCORE Workshop Presenter Guidelines Due to SCORE’s status as a non-profit association funded through government grants, there are a few | branding formation funding mentoring and advising training | Formation | SCORE | branding formation funding mentoring and advising training score workshop presenters presentation materials clients templates presenter guidelines you volunteers non-score volunteer promote any understand cards may workshoppresenterguidelinesscorevolunteer9",
       "sensitive": false,
       "slug": "workshoppresenterguidelinesscorevolunteer9-22-20",
       "source_bytes": 174746,
@@ -30792,7 +30791,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/workshoppresenterguidelinesscorevolunteer9.22.20.pdf",
       "source_url": null,
-      "summary": "Updated 9/22/20 SCORE Workshop Presenter Guidelines Due to SCORE’s status as a non-profit association funded through government grants, there are a few guidelines to which we will ask that you adhere. This document covers guidelines for both",
+      "summary": "Updated 9/22/20 SCORE Workshop Presenter Guidelines Due to SCORE’s status as a non-profit association funded through government grants, there are a few",
       "title": "workshoppresenterguidelinesscorevolunteer9.22.20",
       "topics": [
         "branding",
@@ -32323,10 +32322,10 @@
         "Veterans Small Business Resource Guide",
         "For more information contact Norm Phillips",
         "norm.phillips@scorevolunteer.org",
+        "You served us. Now we serve you.",
         "Transition Challenges for Veterans",
-        "3•Largest stressor during transitioning is finding suitable",
-        "employment (2/3 of Veterans)",
-        "•Veterans are significantly more likely to be underemployed than"
+        "• Largest stressor during transitioning is finding suitable",
+        "employment (2/3 of Veterans)"
       ],
       "keywords": [
         "accounting",
@@ -32365,8 +32364,9 @@
         "Exit"
       ],
       "links": [
-        "https://www.score.org/palmbeachcounty/event/how",
-        "https://www.score.org/longisland/resource/eguide/exiting"
+        "https://www.score.org/find-mentor",
+        "https://www.score.org/palmbeachcounty/event/how-sell-your-business-1",
+        "https://www.score.org/longisland/resource/eguide/exiting-or-selling-a-business"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -32384,7 +32384,7 @@
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Veterans/Veterans Small Business Resource Guide for SCORE Mentors v6.1 11-22-24.pdf",
-      "source_url": "https://www.score.org/palmbeachcounty/event/how",
+      "source_url": "https://www.score.org/find-mentor",
       "summary": "Veterans Small Business Resource Guide For more information contact Norm Phillips norm.phillips@scorevolunteer.org",
       "title": "Veterans Small Business Resource Guide for SCORE Mentors v6.1 11-22-24",
       "topics": [
@@ -33112,10 +33112,10 @@
         "www.score.org",
         "Creating a Quick Business Plan (Using",
         "the Lean Canvas)",
-        "SMALL BUSINESS ESSENTIALS WEBINAR SERIESvMA3 -202505",
+        "SMALL BUSINESS ESSENTIALS WEBINAR SERIES",
+        "vMA3-202505",
         "Providing free",
-        "business advice",
-        "and mentoring"
+        "business advice"
       ],
       "keywords": [
         "accounting",
@@ -33139,9 +33139,9 @@
         "www",
         "org",
         "revenue",
-        "customers",
         "value",
-        "product"
+        "customer",
+        "customers"
       ],
       "lifecycle_stages": [
         "Ideation",
@@ -33159,7 +33159,7 @@
       ],
       "output": "bossdoc-bf73a3115a91--sbe-quick-business-plan-v-ma3-202505-v-final.md",
       "people": [],
-      "search_text": "SBE Quick Business Plan v MA3-202505 v Final | www.score.org Creating a Quick Business Plan (Using the Lean Canvas) | accounting business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance market research marketing mentoring and advising technology | Ideation Formation Launch Operations Growth | SCORE | accounting business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance market research marketing mentoring and advising technology ideation launch operations growth score you www org revenue customers value product",
+      "search_text": "SBE Quick Business Plan v MA3-202505 v Final | www.score.org Creating a Quick Business Plan (Using the Lean Canvas) | accounting business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance market research marketing mentoring and advising technology | Ideation Formation Launch Operations Growth | SCORE | accounting business planning cybersecurity ecosystem navigation formation funding human resources legal and compliance market research marketing mentoring and advising technology ideation launch operations growth score you www org revenue value customer customers",
       "sensitive": false,
       "slug": "sbe-quick-business-plan-v-ma3-202505-v-final",
       "source_bytes": 1821150,
@@ -33620,14 +33620,11 @@
       "access": "public",
       "category": "AI Training",
       "contacts": [
-        "matthew.krieger@scorevolunteer.orgSCORE",
-        "marvin.tanner@scorevolunteer.orgSCORE",
-        "john.trenary@scorevolunteer.orgEntrepreneur",
-        "ai@scorevolunteer.org",
-        "ai+subscribe@scorevolunteer.org",
         "matthew.krieger@scorevolunteer.org",
         "marvin.tanner@scorevolunteer.org",
-        "john.trenary@scorevolunteer.org"
+        "john.trenary@scorevolunteer.org",
+        "ai@scorevolunteer.org",
+        "ai+subscribe@scorevolunteer.org"
       ],
       "document_path": "./bossdoc-c169c29bf951--july-24-lll-gen-ai-final.md",
       "guardrails": [
@@ -33679,8 +33676,8 @@
         "Growth"
       ],
       "links": [
-        "https://sites.google.com/scorevolunteer.org/score",
-        "https://help.score.org/hc/en"
+        "https://sites.google.com/scorevolunteer.org/score-ai-community/home",
+        "https://help.score.org/hc/en-us/articles/35997202907411-AI-CoP-FAQs"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -33696,7 +33693,7 @@
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SCORE/SCORE/Training Materials/AI/_July 24 LLL GenAI FINAL.pdf",
-      "source_url": "https://sites.google.com/scorevolunteer.org/score",
+      "source_url": "https://sites.google.com/scorevolunteer.org/score-ai-community/home",
       "summary": "www.score.org Generative AI 101 FOR SCORE MENTORS",
       "title": "July 24 LLL Gen AI FINAL",
       "topics": [
@@ -34413,7 +34410,7 @@
         "Exit"
       ],
       "links": [
-        "https://www.houveteranschamber.org/",
+        "https://hrvcc.org/",
         "https://www.sba.gov/district/houston/doing-business-houston-district",
         "https://www.sba.gov/district/houston"
       ],
@@ -34434,7 +34431,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBA/Houston_External_SBA_Listed_Combined_Arms.md",
-      "source_url": "https://www.houveteranschamber.org/",
+      "source_url": "https://hrvcc.org/",
       "summary": "Last verified for BOSS pack: 2026-06-24 BOSS operating alignment: - Discover -> Diagnose -> Classify -> Route -> Recommend Next Action.",
       "title": "Houston Veterans Chamber of Commerce",
       "topics": [
@@ -35325,13 +35322,13 @@
         "most",
         "partners",
         "activities",
+        "revenue",
         "relationships",
         "who",
         "model",
         "streams",
         "customers",
         "each",
-        "revenue",
         "segments",
         "score-business-model-canvas-template",
         "cost"
@@ -35344,7 +35341,7 @@
       ],
       "output": "bossdoc-cfffc57963be--score-business-model-canvas-template.md",
       "people": [],
-      "search_text": "SCORE-Business-Model-Canvas-Template | Company Name: Date: Key Partners • Who are our Key Partners? | business planning marketing mentoring and advising training | | SCORE | business planning marketing mentoring and advising training score customer key answers what channels value most partners activities relationships who model streams customers each revenue segments score-business-model-canvas-template cost",
+      "search_text": "SCORE-Business-Model-Canvas-Template | Company Name: Date: Key Partners • Who are our Key Partners? | business planning marketing mentoring and advising training | | SCORE | business planning marketing mentoring and advising training score customer key answers what channels value most partners activities revenue relationships who model streams customers each segments score-business-model-canvas-template cost",
       "sensitive": false,
       "slug": "score-business-model-canvas-template",
       "source_bytes": 81819,
@@ -37618,17 +37615,7 @@
       ],
       "links": [
         "https://www.vetfran.org/",
-        "http://tinyurl.com/SBA-B2B",
-        "http://images.google.com/imgres?imgurl=http://philosophies.entrepreneur.com/wp-content/uploads/2008/09/brown-bag-entrepreneur.jpg&imgrefurl=http://philosophies.entrepreneur.com/2008/09/14/brown-bag-lunch/&usg=__2O741EXprpUNOIjV8eOsrtAefJ4=&h=600&w=600&sz=67&hl=en&start=116&um=1&tbnid=hJewDrmrw89P_M:&tbnh=135&tbnw=135&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=108&um=1",
-        "http://images.google.com/imgres?imgurl=http://ncge.files.wordpress.com/2009/02/entrepreneur_recession.jpg&imgrefurl=http://ncge.wordpress.com/2009/02/20/entrepreneurship-he-and-the-recession/&usg=__kqfHraAWVReBlB2ObV3Y1yX-wds=&h=563&w=853&sz=279&hl=en&start=184&um=1&tbnid=yQw07sZUVbpvDM:&tbnh=96&tbnw=145&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=180&um=1",
-        "http://images.google.com/imgres?imgurl=http://smallbusinessonlinecommunity.bankofamerica.com/servlet/JiveServlet/download/1051-1327/women-entrepreneur.jpg&imgrefurl=http://smallbusinessonlinecommunity.bankofamerica.com/blogs/startingABusiness&usg=__-nqlLsiESzebfSf3o4Dda6tpYdQ=&h=360&w=540&sz=66&hl=en&start=93&um=1&tbnid=02wuSlxCgd8huM:&tbnh=88&tbnw=132&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=90&um=1",
-        "http://images.google.com/imgres?imgurl=http://www.coachinabox.co.uk/my_documents/my_pictures/Entrepreneur%20image.png&imgrefurl=http://www.coachinabox.co.uk/our_products/c-3.html&usg=__G_uRfkQvChD3pgk4HhlAd06oGFM=&h=355&w=355&sz=147&hl=en&start=167&um=1&tbnid=rE3rGmqjKusGHM:&tbnh=121&tbnw=121&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=162&um=1",
-        "http://images.google.com/imgres?imgurl=http://rob-thompson.com/wp-content/uploads/2009/03/entrepreneur.jpg&imgrefurl=http://rob-thompson.com/the-top-10-traits-of-successful-entrepreneurs/&usg=__OkeolkKqIF0-je1-HW4RzT0rGTM=&h=291&w=412&sz=161&hl=en&start=183&um=1&tbnid=whsAKE1cbb7j0M:&tbnh=88&tbnw=125&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=180&um=1",
-        "http://images.google.com/imgres?imgurl=http://www.business.ualberta.ca/career-services/images/entrepreneur.jpg&imgrefurl=http://www.business.ualberta.ca/career-services/students/career_dev/career_dev.htm&usg=__hFPcVd3oYjBgJCZE-X9rAtdvyXk=&h=1024&w=1024&sz=161&hl=en&start=298&um=1&tbnid=GVbCg_RQmfK3dM:&tbnh=150&tbnw=150&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=288&um=1",
-        "http://images.google.com/imgres?imgurl=http://www.bbased.com/BROADcast-nov08/images/Harrison-Entrepreneur-big.jpg&imgrefurl=http://bbased.wordpress.com/page/2/&usg=__9RCvC-wCZ1wD7-sisIVexnpNoyA=&h=1035&w=800&sz=244&hl=en&start=202&um=1&tbnid=kCSx3OIq5oIkUM:&tbnh=150&tbnw=116&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=198&um=1",
-        "http://images.google.com/imgres?imgurl=http://www.ccabinc.com/getattachment/bb8f54f8-8ec1-4c6e-83dc-baa0f332124d/Entrepreneur-names-top-Women-led-businesses.aspx&imgrefurl=http://www.ccabinc.com/About-Continental-Cabinets.aspx&usg=__8UY9pkqy2n72YpEbc6EUNxKt7QU=&h=3202&w=2387&sz=1423&hl=en&start=124&um=1&tbnid=39Ko0mWFciNhpM:&tbnh=150&tbnw=112&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=108&um=1",
-        "http://images.google.com/imgres?imgurl=http://www.centralfloridawomannewspaper.com/images/stories/entrepreneur/entrepreneur.jpg&imgrefurl=http://www.centralfloridawomannewspaper.com/index.php?option=com_content&task=blogcategory&id=22&Itemid=78&usg=___VxNftcb5jBNSYaQfFBEouLzNB0=&h=293&w=270&sz=22&hl=en&start=350&um=1&tbnid=UF1jzAj_ZaZfyM:&tbnh=115&tbnw=106&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=342&um=1",
-        "http://images.google.com/imgres?imgurl=http://3.bp.blogspot.com/_Bo2OkHBt4Ng/SQ6BFykPupI/AAAAAAAAB2Q/ynA8zV_in5A/S971-R/Entrepreneur+stories22.JPG&imgrefurl=http://famousyoungsuccessfulentrepreneur.blogspot.com/&usg=__8gk0dMILwD-uAoVwqCWVuHdYCds=&h=424&w=303&sz=22&hl=en&start=74&um=1&tbnid=SdUv5jBIl_XAjM:&tbnh=126&tbnw=90&prev=/images?q=entrepreneur&ndsp=18&hl=en&rlz=1T4GGLL_enUS304US304&sa=N&start=72&um=1"
+        "https://www.sba.gov/sba-learning-platform/boots-business"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -38811,39 +38798,39 @@
       ],
       "id": "bossdoc-e1a5649471e0",
       "key_information": [
-        "MySBA Certifications",
-        "Application Preview",
-        "MySBA -Certifications: Homepage",
-        "MySBA -Certifications: Should I apply? (Ownership)",
-        "MySBA -Certifications: Should I apply? (Ownership) cont’d",
-        "MySBA -Certifications: Should Iapply? (Match)",
-        "MySBA -Certifications: Should I apply? Readiness cont’d"
+        "MySBACertifications",
+        "ApplicationPreview",
+        "MySBA-Certifications: Homepage",
+        "MySBA-Certifications: Should I apply? (Ownership)",
+        "MySBA-Certifications: Should I apply? (Ownership) cont’d",
+        "MySBA-Certifications: Should I apply? (Match)",
+        "MySBA-Certifications: Should I apply? Readiness cont’d"
       ],
       "keywords": [
         "certification",
         "formation",
         "operations",
         "training",
-        "mysba",
-        "certifications",
+        "mysba-certifications",
         "individual",
         "cont",
         "contributor",
         "disadvantage",
         "economic",
-        "ownership",
         "apply",
+        "ownership",
         "core",
         "information",
         "ucp",
         "delegate",
-        "application",
-        "preview",
         "eligibility",
         "claim",
         "program",
         "assign",
-        "control"
+        "control",
+        "relationships",
+        "external",
+        "experience"
       ],
       "lifecycle_stages": [
         "Formation",
@@ -38854,7 +38841,7 @@
       "organizations": [],
       "output": "bossdoc-e1a5649471e0--ucp-external-experience-application-preview-2025.md",
       "people": [],
-      "search_text": "UCP External Experience Application Preview 2025 | MySBA Certifications Application Preview MySBA -Certifications: Homepage | certification formation operations training | Formation Operations | | certification formation operations training mysba certifications individual cont contributor disadvantage economic ownership apply core information ucp delegate application preview eligibility claim program assign control",
+      "search_text": "UCP External Experience Application Preview 2025 | MySBACertifications ApplicationPreview MySBA-Certifications: Homepage | certification formation operations training | Formation Operations | | certification formation operations training mysba-certifications individual cont contributor disadvantage economic apply ownership core information ucp delegate eligibility claim program assign control relationships external experience",
       "sensitive": false,
       "slug": "ucp-external-experience-application-preview-2025",
       "source_bytes": 4046052,
@@ -38862,7 +38849,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Certification Process/UCP External_Experience_Application Preview 2025.pdf",
       "source_url": null,
-      "summary": "MySBA Certifications Application Preview MySBA -Certifications: Homepage",
+      "summary": "MySBACertifications ApplicationPreview MySBA-Certifications: Homepage",
       "title": "UCP External Experience Application Preview 2025",
       "topics": [
         "certification",
@@ -39121,7 +39108,7 @@
       ],
       "lifecycle_stages": [],
       "links": [
-        "https://www.sbdc.uh.edu/sbdc/Locations.asp",
+        "https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp",
         "https://www.sbdc.uh.edu/sbdc/Angelina_College_SBDC.asp",
         "https://www.sbdc.uh.edu/sbdc/Blinn_College_SBDC.asp",
         "https://www.sbdc.uh.edu/sbdc/Brazosport_College_SBDC.asp",
@@ -39149,7 +39136,7 @@
       "source_extension": ".md",
       "source_mime": "text/markdown",
       "source_path": "AI Training/Resource Files For Training/SBDC/SBDC_Fort_Bend_County_Richmond.md",
-      "source_url": "https://www.sbdc.uh.edu/sbdc/Locations.asp",
+      "source_url": "https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp",
       "summary": "## UH Texas Gulf Coast SBDC location catalog Use this as the BOSS master catalog of SBDC centers in the UH Texas Gulf Coast SBDC Network. ## Angelina College SBDC - Lufkin",
       "title": "Texas Gulf Coast SBDC Locations Catalog",
       "topics": [
@@ -39812,7 +39799,7 @@
         "BUSINESS MODEL CANVAS",
         "KEY PARTNERS KEY ACTIVITIES VALUE PROPOSITION CUSTOMER RELATIONSHIPS CUSTOMER SEGMENTS",
         "Who are your key partners? What are the activities you per- What is the value you deliver What relationship does each Who are your customers?",
-        "form every day to deliver your to your customer? What is the customer segment expect you",
+        "form every day to deliver your to your customer ? What is the customer segment expect you",
         "value proposition? customer need that your to establish and maintain?",
         "value proposition addresses?",
         "KEY RESOURCES CHANNELS"
@@ -39887,12 +39874,12 @@
       "id": "bossdoc-e93d85b3118a",
       "key_information": [
         "SMALLBUSINESS",
-        "Reso urce Guide",
-        "Start, Gro w, Expand,",
-        "and Re cover Your",
-        "Business2025-2026NATIONAL",
-        "EDITION",
-        "SBA 2025-2026 SMALL BUSINESS RESOURCE GUIDETable of Contents"
+        "Resource Guide",
+        "Start, Grow, Expand,",
+        "and Recover Your",
+        "Business",
+        "NATIONAL",
+        "EDITION"
       ],
       "keywords": [
         "accounting",
@@ -39941,7 +39928,7 @@
       ],
       "output": "bossdoc-e93d85b3118a--2025-nrg-digital-508c.md",
       "people": [],
-      "search_text": "2025 NRG Digital 508c | SMALLBUSINESS Reso urce Guide Start, Gro w, Expand, | accounting artificial intelligence branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting artificial intelligence branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
+      "search_text": "2025 NRG Digital 508c | SMALLBUSINESS Resource Guide Start, Grow, Expand, | accounting artificial intelligence branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting artificial intelligence branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
       "sensitive": false,
       "slug": "2025-nrg-digital-508c",
       "source_bytes": 6777101,
@@ -39949,7 +39936,7 @@
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/SB Resource Guide/2025 NRG_Digital_508c.pdf",
       "source_url": null,
-      "summary": "SMALLBUSINESS Reso urce Guide Start, Gro w, Expand,",
+      "summary": "SMALLBUSINESS Resource Guide Start, Grow, Expand,",
       "title": "2025 NRG Digital 508c",
       "topics": [
         "accounting",
@@ -40325,13 +40312,13 @@
       ],
       "id": "bossdoc-eb999e56605a",
       "key_information": [
-        "OPENINGGRAND One-Day Reboot Virtual Workbook Version 1",
+        "OPENING",
+        "GRAND",
+        "One-Day Reboot Virtual Workbook Version 1",
         "CONTENTS",
         "MODULES",
         "3 Module 1: Introduction to Business Ownership",
-        "20 Module 2: The Right Idea? Basics of Opportunity Recognition",
-        "34 Module 3: Understanding Markets & Your Competitive Space",
-        "52 Module 4: The Economics of Small Business Start -up"
+        "20 Module 2: The Right Idea? Basics of Opportunity Recognition"
       ],
       "keywords": [
         "accounting",
@@ -40370,13 +40357,11 @@
         "Exit"
       ],
       "links": [
-        "https://www.sba.gov/business",
+        "https://www.sba.gov/business-guide/launch-your-business",
         "https://www.sba.gov/loans",
         "https://www.sba.gov/vboc",
         "https://www.score.org/",
-        "https://www.sba.gov/tools/local",
-        "https://sba.my.site.com/B2B",
-        "https://www.sba.gov/local",
+        "https://www.sba.gov/local-assistance",
         "https://sba.my.site.com/"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
@@ -40389,15 +40374,15 @@
       ],
       "output": "bossdoc-eb999e56605a--reboot-one-day-virtual-workbook-1.md",
       "people": [],
-      "search_text": "Reboot One-Day Virtual Workbook (1) | OPENINGGRAND One-Day Reboot Virtual Workbook Version 1 CONTENTS MODULES | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
+      "search_text": "Reboot One-Day Virtual Workbook (1) | OPENING GRAND One-Day Reboot Virtual Workbook Version 1 | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
       "sensitive": false,
       "slug": "reboot-one-day-virtual-workbook-1",
       "source_bytes": 10157063,
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Reboot One-Day Virtual Workbook (1).pdf",
-      "source_url": "https://www.sba.gov/business",
-      "summary": "OPENINGGRAND One-Day Reboot Virtual Workbook Version 1 CONTENTS MODULES",
+      "source_url": "https://www.sba.gov/business-guide/launch-your-business",
+      "summary": "OPENING GRAND One-Day Reboot Virtual Workbook Version 1",
       "title": "Reboot One-Day Virtual Workbook (1)",
       "topics": [
         "accounting",
@@ -40429,13 +40414,13 @@
       ],
       "id": "bossdoc-ec5167ee279b",
       "key_information": [
-        "1Boots to Business Attendance Confirmation",
+        "Boots to Business Attendance Confirmation",
         "If you have not already done so, visit",
-        "tinyurl.com/SBA- B2B or use your",
+        "tinyurl.com/SBA-B2B or use your",
         "smart phone camera to access the",
         "attendance QR Code",
         "Select the B2B or Reboot class you are",
-        "attending from the list of scheduled classes"
+        "attending from the list of scheduled"
       ],
       "keywords": [
         "accounting",
@@ -40474,16 +40459,18 @@
         "Exit"
       ],
       "links": [
-        "https://www.sba.gov/business",
-        "https://www.sba.gov/federal",
-        "https://www.uspto.gov/initiatives/entrepreneurship",
+        "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure",
+        "https://www.sba.gov/federal-contracting",
+        "https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community",
         "https://www.sba.gov/loans",
         "https://www.sba.gov/vboc",
         "https://www.score.org/",
-        "https://www.sba.gov/tools/local",
-        "https://www.rd.usda.gov/programs",
+        "https://www.sba.gov/tools/local-assistance/sbdc",
+        "https://www.sba.gov/tools/local-assistance/wbc",
+        "https://www.rd.usda.gov/programs-services",
+        "https://www.rd.usda.gov/about-rd/state-offices",
         "https://sba.my.site.com/",
-        "https://www.sba.gov/local"
+        "https://www.sba.gov/local-assistance"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [
@@ -40495,15 +40482,15 @@
       ],
       "output": "bossdoc-ec5167ee279b--module-1-8-combined-document-1.md",
       "people": [],
-      "search_text": "Module 1-8 Combined Document (1) | 1Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA- B2B or use your | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
+      "search_text": "Module 1-8 Combined Document (1) | Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA-B2B or use your | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting | Ideation Validation Formation Launch Operations Growth Recovery Exit | SCORE U.S. Small Business Administration (SBA) Small Business Development Center (SBDC) APEX Accelerator Veterans Business Outreach Center (VBOC) | accounting branding business planning certification cybersecurity disaster readiness ecosystem navigation exit and transition formation franchising funding government contracting ideation validation launch operations growth recovery exit score u.s. small business administration (sba) small business development center (sbdc) apex accelerator veterans business outreach center (vboc)",
       "sensitive": false,
       "slug": "module-1-8-combined-document-1",
       "source_bytes": 9274678,
       "source_extension": ".pdf",
       "source_mime": "application/pdf",
       "source_path": "AI Training/Resource Files For Training/SBA/SBA-RDS-Mundo/Boots to Businss Reboot/Module 1-8 Combined Document (1).pdf",
-      "source_url": "https://www.sba.gov/business",
-      "summary": "1Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA- B2B or use your",
+      "source_url": "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure",
+      "summary": "Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA-B2B or use your",
       "title": "Module 1-8 Combined Document (1)",
       "topics": [
         "accounting",
@@ -41444,12 +41431,12 @@
         "u.s. small business administration (sba)",
         "you",
         "loan",
-        "sba",
         "cash",
+        "sba",
         "financing",
         "credit",
-        "will",
-        "what"
+        "what",
+        "will"
       ],
       "lifecycle_stages": [
         "Formation",
@@ -41467,7 +41454,7 @@
       ],
       "output": "bossdoc-f1270732b29d--module-7-financing-your-venture-v5-1-1.md",
       "people": [],
-      "search_text": "Module 7 - Financing Your Venture v5.1 (1) | Boots to Business Module 7 Financing Your Venture | accounting business planning ecosystem navigation exit and transition formation funding human resources legal and compliance marketing mentoring and advising operations training | Formation Launch Operations Exit | SCORE U.S. Small Business Administration (SBA) | accounting business planning ecosystem navigation exit and transition formation funding human resources legal and compliance marketing mentoring and advising operations training launch exit score u.s. small business administration (sba) you loan sba cash financing credit will what",
+      "search_text": "Module 7 - Financing Your Venture v5.1 (1) | Boots to Business Module 7 Financing Your Venture | accounting business planning ecosystem navigation exit and transition formation funding human resources legal and compliance marketing mentoring and advising operations training | Formation Launch Operations Exit | SCORE U.S. Small Business Administration (SBA) | accounting business planning ecosystem navigation exit and transition formation funding human resources legal and compliance marketing mentoring and advising operations training launch exit score u.s. small business administration (sba) you loan cash sba financing credit what will",
       "sensitive": false,
       "slug": "module-7-financing-your-venture-v5-1-1",
       "source_bytes": 2433564,
@@ -43640,13 +43627,13 @@
         "http://www.uspto.gov/",
         "http://www.copyright.gov/learning-engine",
         "http://www.copyright.gov/",
-        "https://www.uspto.gov/initiatives/entrepreneurship-resources-military-community",
+        "https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community",
         "http://www.uspto.gov/inventors",
         "https://www.irs.gov/businesses/small-businesses-self-employed/independent-contractor-self-employed-or-employee",
         "https://www.uspto.gov/learning-and-resources/access-our-free-services",
         "https://www.uspto.gov/trademarks/protect",
         "https://www.uspto.gov/about-us/events",
-        "https://www.score.org/resource/business-contract-rules"
+        "https://www.sba.gov/federal-contracting/contracting-guide/governing-rules-responsibilities"
       ],
       "next_handoff": "Open the cited source link when available and route follow-up to SCORE or the named qualified resource.",
       "organizations": [

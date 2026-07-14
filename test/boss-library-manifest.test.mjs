@@ -16,6 +16,10 @@ const manifestPath=path.join(documentsDirectory,'document-manifest.json');
 const sourceDirectory=fileURLToPath(
     new URL('../apps/boss/business docs/',import.meta.url)
 );
+const linkPolicy=JSON.parse(await readFile(
+    fileURLToPath(new URL('../apps/boss/link-policy.json',import.meta.url)),
+    'utf8'
+));
 let rawManifest=null;
 try{
     rawManifest=JSON.parse(await readFile(manifestPath,'utf8'));
@@ -26,6 +30,23 @@ try{
 }
 const records=rawManifest?.records||[];
 
+describe('BOSS Libraries link policy',()=>{
+    it('keeps replacements and removals explicit and non-overlapping',()=>{
+        const replacements=Object.entries(linkPolicy.replace);
+        const removals=new Set(linkPolicy.remove);
+
+        assert.equal(replacements.length,41);
+        assert.equal(linkPolicy.remove.length,3);
+        assert.deepEqual(linkPolicy.remove_prefixes,[
+            'http://images.google.com/imgres?',
+            'https://start4.pwc.com/'
+        ]);
+        assert.ok(replacements.every(([source,target])=>source!==target));
+        assert.ok(replacements.every(([,target])=>target.startsWith('https://')));
+        assert.ok(replacements.every(([source])=>!removals.has(source)));
+    });
+});
+
 describe(
     'generated BOSS Libraries corpus',
     {
@@ -34,15 +55,15 @@ describe(
             : 'The private BOSS corpus is intentionally unpublished in this checkout.'
     },
     ()=>{
-    it('represents all 618 source identities with collision-safe Markdown outputs',async()=>{
-        assert.equal(rawManifest.record_count,618);
-        assert.equal(records.length,618);
+    it('represents all 500 source identities with collision-safe Markdown outputs',async()=>{
+        assert.equal(rawManifest.record_count,500);
+        assert.equal(records.length,500);
         assert.match(rawManifest.manifest_version,/^sha256:[a-f0-9]{64}$/);
 
         const ids=new Set(records.map(record=>record.id));
         const outputs=new Set(records.map(record=>record.output));
-        assert.equal(ids.size,618);
-        assert.equal(outputs.size,618);
+        assert.equal(ids.size,500);
+        assert.equal(outputs.size,500);
 
         for(const record of records){
             assert.match(record.id,/^bossdoc-[a-f0-9]{12}$/);
@@ -56,33 +77,45 @@ describe(
         }
 
         const generated=await readdir(documentsDirectory);
-        assert.equal(generated.filter(name=>name.startsWith('bossdoc-')&&name.endsWith('.md')).length,618);
+        assert.equal(generated.filter(name=>name.startsWith('bossdoc-')&&name.endsWith('.md')).length,500);
         assert.equal(generated.filter(name=>/\.(?:pdf|docx|pptx|xlsx|png|jpg|mp4)$/i.test(name)).length,0);
     });
 
-    it('preserves content-derived titles, human visual descriptions, and restricted safeguards',()=>{
+    it('preserves content-derived titles and human visual descriptions',()=>{
         const shuffled=records.find(
             record=>record.source_path.endsWith('/SCORE/000_MANIFEST_SCORE_BOSS_resource_pack.md')
         );
         assert.equal(shuffled?.title,'SCORE Contact and Support');
 
         const images=records.filter(record=>['.jpg','.png'].includes(record.source_extension));
-        assert.equal(images.length,15);
+        assert.equal(images.length,6);
         assert.ok(images.every(record=>record.extraction.title_source==='human_visual_description'));
         assert.ok(images.every(record=>record.summary.length>60));
 
-        const restricted=records.filter(record=>record.access==='restricted');
-        assert.equal(restricted.length,60);
-        assert.ok(restricted.every(record=>record.sensitive===true));
-        assert.ok(restricted.every(record=>!/[0-9]{2}-[0-9]{7}/.test(record.summary)));
-        assert.ok(restricted.every(record=>!record.contacts.length));
+    });
+
+    it('applies the reviewed link repairs to generated records',()=>{
+        const links=records.flatMap(record=>record.links||[]);
+
+        for(const stale of Object.keys(linkPolicy.replace)){
+            assert.ok(!links.includes(stale),`Stale replaced URL remains: ${stale}`);
+        }
+        for(const removed of linkPolicy.remove){
+            assert.ok(!links.includes(removed),`Removed URL remains: ${removed}`);
+        }
+        for(const prefix of linkPolicy.remove_prefixes){
+            assert.ok(!links.some(link=>link.startsWith(prefix)),`Removed URL prefix remains: ${prefix}`);
+        }
+        assert.ok(links.includes('https://bchispanicchamber.com/'));
+        assert.ok(links.includes('https://supportcenter.score.org/kb/article/163-volunteer-onboarding-steps-and-checklist/'));
+        assert.ok(links.includes('https://www.sba.gov/federal-contracting'));
     });
 
     it('normalizes the live manifest and retrieves a relevant official routing record',()=>{
         const normalized=normalizeBossLibraryManifest(rawManifest,{
             manifestUrl:new URL('../apps/boss/documents/document-manifest.json',import.meta.url).href
         });
-        assert.equal(normalized.documents.length,618);
+        assert.equal(normalized.documents.length,500);
         assert.ok(normalized.documents.every(record=>record.originalUrl));
         assert.ok(normalized.documents.every(record=>record.sourceExtension));
         assert.ok(normalized.documents.every(record=>record.sourceBytes>0));

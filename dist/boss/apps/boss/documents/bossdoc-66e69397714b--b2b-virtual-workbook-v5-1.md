@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)","Small Busine
 
 ## Description
 
-OPENINGGRAND Virtual Workbook Version 5 CONTENTS MODULES
+OPENING GRAND Virtual Workbook Version 5
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns accounting, branding, business plannin
 
 ## Key information
 
-- OPENINGGRAND Virtual Workbook Version 5
+- OPENING
+- GRAND
+- Virtual Workbook Version 5
 - CONTENTS
 - MODULES
 - 3 Module 1: Introduction to Business Ownership
 - 26 Module 2: The Right Idea? Basics of Opportunity Recognition
-- 44 Module 3: Understanding Markets & Your Competitive Space
-- 66 Module 4: The Economics of Small Business Start -up
 
 ## People and links
 

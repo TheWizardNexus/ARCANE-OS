@@ -14,7 +14,7 @@ organizations: ["U.S. Small Business Administration (SBA)"]
 
 ## Description
 
-54New Venture Feasibility Analysis Tool GETTING STARTED Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive
+New Venture Feasibility Analysis Tool GETTING STARTED Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns business planning, ecosystem navigatio
 
 ## Key information
 
-- 54New Venture Feasibility Analysis Tool
+- New Venture Feasibility Analysis Tool
 - GETTING STARTED
 - Starting a new business is diﬀicult and the hard truth is that most new businesses don't survive
-- past five years. With that said, those that do find success as a business owner, express great personal and professional satisfaction.
-- standing where that further research and reflection is required, and thus using this tool as a means to develop a plan of action to conduct the research necessary to support the successful launch of your new business.
-- PART I: YOUR ENTREPRENEURIAL MOTIVATION
-- COMPLETE ON YOUR OWN
+- past five years. With that said, those that do find success as a business owner, express great
+- personal and professional satisfaction.
+- Importantly, one of the factors that diﬀerentiates those who success as business owners from
+- those who don't, is a clear and well understood plan of action related to both the business
 
 ## People and links
 

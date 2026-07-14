@@ -14,7 +14,7 @@ organizations: ["U.S. Small Business Administration (SBA)","Veterans Business Ou
 
 ## Description
 
-More Questions? Contact the Boots to Business Help Desk : Boots- to-Business@sba.gov or (202) 205 -8381 Boots to Business Virtual Workbook Quick -Start Guide
+More Questions? Contact the Boots to Business Help Desk: Boots-to-Business@sba.gov or (202) 205-8381 Boots to Business Virtual Workbook Quick-Start Guide
 
 ## When to surface
 
@@ -22,9 +22,9 @@ Surface when the user's question concerns business planning, ecosystem navigatio
 
 ## Key information
 
-- More Questions? Contact the Boots to Business Help Desk : Boots- to-Business@sba.gov or (202) 205 -8381
+- More Questions? Contact the Boots to Business Help Desk: Boots-to-Business@sba.gov or (202) 205-8381
 - Boots to Business Virtual Workbook
-- Quick -Start Guide
+- Quick-Start Guide
 - Background:
 - The B2B Virtual Workbook allows attendees to:
 - Follow along with and take notes on the applicable pages of the slide presentation
@@ -33,9 +33,9 @@ Surface when the user's question concerns business planning, ecosystem navigatio
 ## People and links
 
 - Organizations: U.S. Small Business Administration (SBA), Veterans Business Outreach Center (VBOC)
-- Link: <https://sbavets.force.com/>
-- Link: <https://sbavets.force.com/attendance>
-- Contact: to-Business@sba.gov
+- Link: <https://www.sba.gov/sba-learning-platform/boots-business>
+- Contact: Boots-to-Business@sba.gov
+- Contact: (202) 205-8381
 
 ## Next handoff
 

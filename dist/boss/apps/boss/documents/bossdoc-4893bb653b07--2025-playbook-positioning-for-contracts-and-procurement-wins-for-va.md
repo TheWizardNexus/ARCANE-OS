@@ -25,15 +25,15 @@ Surface when the user's question concerns business planning, certification, cybe
 - POSITIONING FOR
 - CONTRACTS +
 - PROCUREMENT
-- WINSY our 2025 Federal Playbook:
+- WINS
+- Y our 2025 Federal Playbook:
 - CLICK TO
 - EDIT MASTER
-- TITLE STYLE
 
 ## People and links
 
 - Organizations: SCORE
-- Link: <https://department.va.gov/administrations>
+- Link: <https://department.va.gov/administrations-and-offices/management/budget/>
 - Contact: krystn@summitstrategywins.com
 
 ## Next handoff

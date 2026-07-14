@@ -33,7 +33,7 @@ The user seeks U.S. suppliers, manufacturers, producers, or onshoring connection
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), Veterans Business Outreach Center (VBOC), SCORE Houston
-- Link: <https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again>
+- Link: <https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again-portal>
 - Link: <https://www.sba.gov/priorities>
 - Link: <https://www.sba.gov/business-guide>
 

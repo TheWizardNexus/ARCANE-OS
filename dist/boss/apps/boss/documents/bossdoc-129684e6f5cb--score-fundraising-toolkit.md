@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)","SCORE Housto
 
 ## Description
 
-A COLLABORATION OF THE SCORE ASSOCIATIO N AND THE SCORE FOUND ATION Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration
+A COLLABORATION OF THE SCORE ASSOCIATION AND THE SCORE FOUNDATION Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration
 
 ## When to surface
 
@@ -22,7 +22,7 @@ Surface when the user's question concerns accounting, branding, business plannin
 
 ## Key information
 
-- A COLLABORATION OF THE SCORE ASSOCIATIO N AND THE SCORE FOUND ATION
+- A COLLABORATION OF THE SCORE ASSOCIATION AND THE SCORE FOUNDATION
 - Thank you for everything you do to support SCORE’s mission of fostering vibrant small business communities
 - through mentoring and education. We are thrilled to present this Fundraising Toolkit, created in collaboration
 - with the SCORE Association, including collective best practices from chapters that have been successful in
@@ -33,15 +33,12 @@ Surface when the user's question concerns accounting, branding, business plannin
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), SCORE Houston
-- Link: <https://help.score.org/hc/en>
-- Link: <https://start4.pwc.com/>
-- Link: <https://doublethedonation.com/tips/nonprofit>
+- Link: <https://help.score.org/hc/en-us>
+- Link: <https://doublethedonation.com/tips/nonprofit-fundraising/>
 - Link: <https://www.facebook.com/help/990087377765844>
-- Link: <https://plannedgiving.com/about>
-- Link: <https://www.fidelitycharitable.org/giving>
-- Link: <https://fconline.foundationcenter.org/welcome/quick>
+- Link: <https://plannedgiving.com/about-us/what-is-planned-giving/>
+- Link: <https://fconline.foundationcenter.org/welcome/quick-start>
 - Contact: info@scorefoundation.org
-- Contact: accounting@score.org
 - Contact: marketing@score.org
 
 ## Next handoff

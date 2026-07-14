@@ -34,9 +34,9 @@ Surface when the user's question concerns accounting, artificial intelligence, b
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), APEX Accelerator, Veterans Business Outreach Center (VBOC)
 - Link: <https://www.sba.gov/business-guide/launch-your-business/choose-business-structure>
-- Link: <https://www.score.org/resource/business-contract-rules>
+- Link: <https://www.sba.gov/federal-contracting/contracting-guide/governing-rules-responsibilities>
 - Link: <https://www.uspto.gov/sites/default/files/documents/TM-Registration-Toolkit.pdf>
-- Link: <https://www.sba.gov/offices/headquarters/ofa/resources/11421>
+- Link: <https://www.sba.gov/funding-programs/loans>
 
 ## Next handoff
 

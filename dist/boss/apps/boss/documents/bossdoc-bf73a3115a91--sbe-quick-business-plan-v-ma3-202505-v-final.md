@@ -25,10 +25,10 @@ Surface when the user's question concerns accounting, business planning, cyberse
 - www.score.org
 - Creating a Quick Business Plan (Using
 - the Lean Canvas)
-- SMALL BUSINESS ESSENTIALS WEBINAR SERIESvMA3 -202505
+- SMALL BUSINESS ESSENTIALS WEBINAR SERIES
+- vMA3-202505
 - Providing free
 - business advice
-- and mentoring
 
 ## People and links
 

@@ -33,7 +33,7 @@ Surface when the user's question concerns formation, marketing, mentoring and ad
 ## People and links
 
 - Organizations: SCORE
-- Contact: jennifer@totocoaching.com
+- Contact: jennifer@totocoaching.comtotoseo.comtotocoaching.com
 
 ## Next handoff
 

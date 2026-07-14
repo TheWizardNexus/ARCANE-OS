@@ -33,7 +33,7 @@ Surface when the user's question concerns legal and compliance, technology, trai
 ## People and links
 
 - Organizations: U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), University of Houston
-- Link: <https://www.sbdc.uh.edu/sbdc/Locations.asp>
+- Link: <https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp>
 
 ## Next handoff
 

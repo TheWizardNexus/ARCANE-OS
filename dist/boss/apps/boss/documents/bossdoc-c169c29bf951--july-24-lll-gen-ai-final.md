@@ -33,16 +33,13 @@ Surface when the user's question concerns artificial intelligence, business plan
 ## People and links
 
 - Organizations: SCORE, Small Business Development Center (SBDC)
-- Link: <https://sites.google.com/scorevolunteer.org/score>
-- Link: <https://help.score.org/hc/en>
-- Contact: matthew.krieger@scorevolunteer.orgSCORE
-- Contact: marvin.tanner@scorevolunteer.orgSCORE
-- Contact: john.trenary@scorevolunteer.orgEntrepreneur
-- Contact: ai@scorevolunteer.org
-- Contact: ai+subscribe@scorevolunteer.org
+- Link: <https://sites.google.com/scorevolunteer.org/score-ai-community/home>
+- Link: <https://help.score.org/hc/en-us/articles/35997202907411-AI-CoP-FAQs>
 - Contact: matthew.krieger@scorevolunteer.org
 - Contact: marvin.tanner@scorevolunteer.org
 - Contact: john.trenary@scorevolunteer.org
+- Contact: ai@scorevolunteer.org
+- Contact: ai+subscribe@scorevolunteer.org
 
 ## Next handoff
 

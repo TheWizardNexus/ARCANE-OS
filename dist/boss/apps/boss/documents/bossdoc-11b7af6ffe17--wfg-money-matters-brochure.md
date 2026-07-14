@@ -25,7 +25,7 @@ Surface when the user's question concerns accounting, branding, business plannin
 - Money Matters
 - Make it Work for You
 - A Transamerica Company
-- 1Everyone has long-term goals and aspirations such as
+- Everyone has long-term goals and aspirations such as
 - buying a home or retiring when and where they want,
 - but often they require a financial strategy to be put
 - in place. So, what’s the best strategy for your unique

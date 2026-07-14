@@ -33,7 +33,7 @@ The manufacturer wants to sell globally.
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), Veterans Business Outreach Center (VBOC), SCORE Houston
-- Link: <https://www.sba.gov/priorities/american-manufacturers/taking-manufacturing-business-global>
+- Link: <https://www.sba.gov/priorities/american-manufacturers/taking-your-manufacturing-business-global>
 - Link: <https://www.sba.gov/priorities>
 - Link: <https://www.sba.gov/business-guide>
 

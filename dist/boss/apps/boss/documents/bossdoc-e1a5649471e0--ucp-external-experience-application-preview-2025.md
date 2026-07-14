@@ -14,7 +14,7 @@ organizations: []
 
 ## Description
 
-MySBA Certifications Application Preview MySBA -Certifications: Homepage
+MySBACertifications ApplicationPreview MySBA-Certifications: Homepage
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns certification, formation, operations d
 
 ## Key information
 
-- MySBA Certifications
-- Application Preview
-- MySBA -Certifications: Homepage
-- MySBA -Certifications: Should I apply? (Ownership)
-- MySBA -Certifications: Should I apply? (Ownership) cont’d
-- MySBA -Certifications: Should Iapply? (Match)
-- MySBA -Certifications: Should I apply? Readiness cont’d
+- MySBACertifications
+- ApplicationPreview
+- MySBA-Certifications: Homepage
+- MySBA-Certifications: Should I apply? (Ownership)
+- MySBA-Certifications: Should I apply? (Ownership) cont’d
+- MySBA-Certifications: Should I apply? (Match)
+- MySBA-Certifications: Should I apply? Readiness cont’d
 
 ## People and links
 

@@ -28,16 +28,15 @@ Surface when the user's question concerns accounting, artificial intelligence, b
 - Module 1: Introduc�on to Business Ownership ........................................................................................... 3
 - Module 2: Basics of Opportunity Recogni�on ............................................................................................ 18
 - Module 3: Understanding Markets & Your Compe��ve Space .................................................................. 31
-- Module 4: The Economics of Small Business Start -Up ................................................................................ 48
+- Module 4: The Economics of Small Business Start-Up ................................................................................ 48
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), APEX Accelerator, Veterans Business Outreach Center (VBOC)
-- Link: <http://sba.my.force.com/instructor>
-- Link: <https://sbavets.my.force.com/>
-- Link: <https://www.sba.gov/business>
-- Link: <https://www.sba.gov/federal>
-- Link: <https://www.uspto.gov/initiatives/entrepreneurship>
+- Link: <https://www.sba.gov/sba-learning-platform/boots-business>
+- Link: <https://www.sba.gov/business-guide/launch-your-business/choose-business-structure>
+- Link: <https://www.sba.gov/federal-contracting>
+- Link: <https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community>
 - Contact: militaryoutreach@uspto.gov
 
 ## Next handoff

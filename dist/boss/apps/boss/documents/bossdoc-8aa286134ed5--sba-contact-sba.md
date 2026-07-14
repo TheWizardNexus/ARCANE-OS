@@ -33,7 +33,7 @@ The user needs official contact routes.
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), Veterans Business Outreach Center (VBOC), SCORE Houston
-- Link: <https://www.sba.gov/about-sba/contact-sba>
+- Link: <https://www.sba.gov/about-sba/organization>
 - Link: <https://www.sba.gov/district/houston>
 - Link: <https://www.sba.gov/local-assistance>
 

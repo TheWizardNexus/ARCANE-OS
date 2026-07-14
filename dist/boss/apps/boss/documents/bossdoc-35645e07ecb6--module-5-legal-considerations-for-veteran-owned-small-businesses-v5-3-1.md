@@ -14,7 +14,7 @@ organizations: ["U.S. Small Business Administration (SBA)"]
 
 ## Description
 
-Boots to Business Module 5 Legal Considerations for Veteran- Owned
+Boots to Business Module 5 Legal Considerations for Veteran-Owned
 
 ## When to surface
 
@@ -24,18 +24,18 @@ Surface when the user's question concerns accounting, branding, business plannin
 
 - Boots to Business
 - Module 5
-- Legal Considerations for Veteran- Owned
+- Legal Considerations for Veteran-Owned
 - Small Businesses
 - Version 5.3
 - Objective
-- •Understand the various legal forms of a business
+- • Understand the various legal forms of a business
 
 ## People and links
 
 - Organizations: U.S. Small Business Administration (SBA)
-- Link: <https://www.sba.gov/business>
-- Link: <https://www.sba.gov/federal>
-- Link: <https://www.uspto.gov/initiatives/entrepreneurship>
+- Link: <https://www.sba.gov/business-guide/launch-your-business/choose-business-structure>
+- Link: <https://www.sba.gov/federal-contracting>
+- Link: <https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community>
 - Contact: militaryoutreach@uspto.gov
 
 ## Next handoff

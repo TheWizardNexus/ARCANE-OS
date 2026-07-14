@@ -14,7 +14,7 @@ organizations: []
 
 ## Description
 
-Boots to Business Module 4 The Economics of Small Business Start -up
+Boots to Business Module 4 The Economics of Small Business Start-up
 
 ## When to surface
 
@@ -24,11 +24,11 @@ Surface when the user's question concerns business planning, human resources, le
 
 - Boots to Business
 - Module 4
-- The Economics of Small Business Start -up
+- The Economics of Small Business Start-up
 - Version 5.0
 - Objective
 - Understand the foundation for the cost, price, volume
-- relationship, as it informs profit potential and sustainability for the planned venture.
+- relationship, as it informs profit potential and sustainability for
 
 ## People and links
 

@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)","Small Busine
 
 ## Description
 
-1Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA- B2B or use your
+Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA-B2B or use your
 
 ## When to surface
 
@@ -22,27 +22,29 @@ Surface when the user's question concerns accounting, branding, business plannin
 
 ## Key information
 
-- 1Boots to Business Attendance Confirmation
+- Boots to Business Attendance Confirmation
 - If you have not already done so, visit
-- tinyurl.com/SBA- B2B or use your
+- tinyurl.com/SBA-B2B or use your
 - smart phone camera to access the
 - attendance QR Code
 - Select the B2B or Reboot class you are
-- attending from the list of scheduled classes
+- attending from the list of scheduled
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), APEX Accelerator, Veterans Business Outreach Center (VBOC)
-- Link: <https://www.sba.gov/business>
-- Link: <https://www.sba.gov/federal>
-- Link: <https://www.uspto.gov/initiatives/entrepreneurship>
+- Link: <https://www.sba.gov/business-guide/launch-your-business/choose-business-structure>
+- Link: <https://www.sba.gov/federal-contracting>
+- Link: <https://www.uspto.gov/about-us/events/entrepreneurship-essentials-military-community>
 - Link: <https://www.sba.gov/loans>
 - Link: <https://www.sba.gov/vboc>
 - Link: <https://www.score.org/>
-- Link: <https://www.sba.gov/tools/local>
-- Link: <https://www.rd.usda.gov/programs>
+- Link: <https://www.sba.gov/tools/local-assistance/sbdc>
+- Link: <https://www.sba.gov/tools/local-assistance/wbc>
+- Link: <https://www.rd.usda.gov/programs-services>
+- Link: <https://www.rd.usda.gov/about-rd/state-offices>
 - Link: <https://sba.my.site.com/>
-- Link: <https://www.sba.gov/local>
+- Link: <https://www.sba.gov/local-assistance>
 - Contact: militaryoutreach@uspto.gov
 
 ## Next handoff

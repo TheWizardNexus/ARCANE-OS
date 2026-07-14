@@ -33,7 +33,7 @@ Surface when the user's question concerns certification, government contracting,
 ## People and links
 
 - Organizations: U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), University of Houston
-- Link: <https://www.sbdc.uh.edu/sbdc/Locations.asp>
+- Link: <https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Angelina_College_SBDC.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Blinn_College_SBDC.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Brazosport_College_SBDC.asp>

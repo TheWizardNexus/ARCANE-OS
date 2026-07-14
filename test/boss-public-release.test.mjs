@@ -119,7 +119,7 @@ describe('BOSS public website release',()=>{
         assert.equal(publicManifest.record_count,500);
         assert.equal(publicRecords.length,500);
         assert.equal(approvedRecords.length,500);
-        assert.equal(nonPublicRecords.length,118);
+        assert.equal(nonPublicRecords.length,0);
         assert.equal(releasedIds.size,publicRecords.length);
         assert.deepEqual(
             [...releasedIds].sort(),

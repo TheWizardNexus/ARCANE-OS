@@ -25,16 +25,17 @@ Surface when the user's question concerns accounting, business planning, certifi
 - Veterans Small Business Resource Guide
 - For more information contact Norm Phillips
 - norm.phillips@scorevolunteer.org
+- You served us. Now we serve you.
 - Transition Challenges for Veterans
-- 3•Largest stressor during transitioning is finding suitable
+- • Largest stressor during transitioning is finding suitable
 - employment (2/3 of Veterans)
-- •Veterans are significantly more likely to be underemployed than
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), APEX Accelerator, Veterans Business Outreach Center (VBOC)
-- Link: <https://www.score.org/palmbeachcounty/event/how>
-- Link: <https://www.score.org/longisland/resource/eguide/exiting>
+- Link: <https://www.score.org/find-mentor>
+- Link: <https://www.score.org/palmbeachcounty/event/how-sell-your-business-1>
+- Link: <https://www.score.org/longisland/resource/eguide/exiting-or-selling-a-business>
 - Contact: norm.phillips@scorevolunteer.org
 
 ## Next handoff

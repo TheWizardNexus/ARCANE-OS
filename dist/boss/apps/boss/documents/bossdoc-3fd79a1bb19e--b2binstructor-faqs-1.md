@@ -14,7 +14,7 @@ organizations: ["U.S. Small Business Administration (SBA)","Veterans Business Ou
 
 ## Description
 
-1 | P a g e 02/04 /2021 Boots to Business (B2B) Instructor FAQs
+1 | P a g e 02/04/2021 Boots to Business (B2B) Instructor FAQs
 
 ## When to surface
 
@@ -22,12 +22,12 @@ Surface when the user's question concerns ecosystem navigation, exit and transit
 
 ## Key information
 
-- P a g e 02/04 /2021
+- P a g e 02/04/2021
 - Boots to Business (B2B)
 - Instructor FAQs
 - Question 1: Who is eligible to participate in Boots to Business and Boots to Business |
 - Reboot?
-- Answer : Boots to Business classes are open to transitioning Service members (including
+- Answer: Boots to Business classes are open to transitioning Service members (including
 - National Guard and Reserve) and their spouses. Boots to Business
 
 ## People and links

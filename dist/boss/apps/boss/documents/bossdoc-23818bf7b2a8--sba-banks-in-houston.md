@@ -28,7 +28,7 @@ Surface when the user's question concerns funding, training during Launch, Growt
 - • Wallis Bank : A top-ranked local lender that provided nearly $60 million in local SBA loans in the
 - 12 months ending June 2025. They o$er 7(a) and 504 programs for real estate, equipment, and
 - working capital.
-- • Frost Bank : An SBA Preferred Lender that recently noted a "th awing" in the lending market for
+- • Frost Bank : An SBA Preferred Lender that recently noted a "thawing" in the lending market for
 
 ## People and links
 

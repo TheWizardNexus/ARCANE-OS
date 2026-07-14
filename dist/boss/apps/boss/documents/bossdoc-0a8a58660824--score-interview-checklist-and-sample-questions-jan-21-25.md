@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-Interview Checklist and Sample Questions ® Last Updated: Jan 2025 Interview Checklist
+Interview Checklist and Sample Questions Last Updated: Jan 2025 Interview Checklist
 
 ## When to surface
 
@@ -23,10 +23,10 @@ Surface when the user's question concerns branding, formation, funding during Id
 ## Key information
 
 - Interview Checklist and Sample Questions
-- ® Last Updated: Jan 2025
+- Last Updated: Jan 2025
 - Interview Checklist
 - FOR ALL VOLUNTEERS: Once you receive their application, we strongly recommend that you complete the following checklist.
-- NOTE TO SMALLER C HAPTERS: We recognize that you have often accepted an applicant when you ask them to go t o
+- NOTE TO SMALLER CHAPTERS: We recognize that you have often accepted an applicant when you ask them to go to
 - score.org to complete the application. Consider the Step 1 items and insert them where they make sense in your chapter’s
 - process.
 

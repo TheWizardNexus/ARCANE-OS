@@ -28,13 +28,13 @@ Surface when the user's question concerns business planning, certification, disa
 - SCORE Bucks County Chapter
 - norm.phillips@scorevolunteer.org
 - Transition Challenges for Veterans
-- 2•Largest stressor during transitioning is finding suitable
+- • Largest stressor during transitioning is finding suitable
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), APEX Accelerator, Veterans Business Outreach Center (VBOC)
-- Link: <https://www.score.org/palmbeachcounty/event/how>
-- Link: <https://www.score.org/longisland/resource/eguide/exiting>
+- Link: <https://www.score.org/palmbeachcounty/event/how-sell-your-business-1>
+- Link: <https://www.score.org/longisland/resource/eguide/exiting-or-selling-a-business>
 - Contact: norm.phillips@scorevolunteer.org
 
 ## Next handoff

@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)","Small Busine
 
 ## Description
 
-OPENINGGRAND One-Day Reboot Virtual Workbook Version 1 CONTENTS MODULES
+OPENING GRAND One-Day Reboot Virtual Workbook Version 1
 
 ## When to surface
 
@@ -22,24 +22,22 @@ Surface when the user's question concerns accounting, branding, business plannin
 
 ## Key information
 
-- OPENINGGRAND One-Day Reboot Virtual Workbook Version 1
+- OPENING
+- GRAND
+- One-Day Reboot Virtual Workbook Version 1
 - CONTENTS
 - MODULES
 - 3 Module 1: Introduction to Business Ownership
 - 20 Module 2: The Right Idea? Basics of Opportunity Recognition
-- 34 Module 3: Understanding Markets & Your Competitive Space
-- 52 Module 4: The Economics of Small Business Start -up
 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), APEX Accelerator, Veterans Business Outreach Center (VBOC)
-- Link: <https://www.sba.gov/business>
+- Link: <https://www.sba.gov/business-guide/launch-your-business>
 - Link: <https://www.sba.gov/loans>
 - Link: <https://www.sba.gov/vboc>
 - Link: <https://www.score.org/>
-- Link: <https://www.sba.gov/tools/local>
-- Link: <https://sba.my.site.com/B2B>
-- Link: <https://www.sba.gov/local>
+- Link: <https://www.sba.gov/local-assistance>
 - Link: <https://sba.my.site.com/>
 
 ## Next handoff

@@ -14,7 +14,7 @@ organizations: ["SCORE","Small Business Development Center (SBDC)"]
 
 ## Description
 
-How to Fund Your Business Without a Loan -Alternative
+How to Fund Your Business Without a Loan - Alternative
 
 ## When to surface
 
@@ -24,7 +24,7 @@ Surface when the user's question concerns business planning, exit and transition
 
 - How to Fund Your
 - Business Without a
-- Loan -Alternative
+- Loan - Alternative
 - Funding Sources
 - Webinar Presented By
 - Steve Strauss

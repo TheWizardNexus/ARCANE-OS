@@ -14,7 +14,7 @@ organizations: []
 
 ## Description
 
-Where are you ﬁnancially? Goal: Protect your loved ones should you pass unexpectedly and protect yourself if you live a long lifeDebt
+Where are you ﬁnancially? Goal: Protect your loved ones should you pass unexpectedly and protect yourself if you live a long life
 
 ## When to surface
 
@@ -24,11 +24,11 @@ Surface when the user's question concerns formation, legal and compliance, train
 
 - Where are you ﬁnancially?
 - Goal: Protect your loved ones should you pass unexpectedly
-- and protect yourself if you live a long lifeDebt
-- Responsibility
+- and protect yourself if you live a long life
 - Debt
-- ResponsibilityFinancial Independence
-- InﬂationRiskT axesHealth
+- Responsibility
+- Financial Independence
+- Inﬂation
 
 ## People and links
 

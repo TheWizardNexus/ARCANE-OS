@@ -33,7 +33,7 @@ The client is in Greater Houston / ZIP 77084 and needs local ecosystem support. 
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), Veterans Business Outreach Center (VBOC), SCORE Houston
-- Link: <https://bchispanicchamber.net/>
+- Link: <https://bchispanicchamber.com/>
 - Link: <https://www.sba.gov/district/houston/doing-business-houston-district>
 - Link: <https://www.sba.gov/district/houston>
 

@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-Teaming for Federal Set - Asides: The When, Why, and How
+Teaming for Federal Set- Asides: The When, Why, and How
 
 ## When to surface
 
@@ -22,7 +22,7 @@ Surface when the user's question concerns artificial intelligence, formation, fu
 
 ## Key information
 
-- Teaming for Federal Set -
+- Teaming for Federal Set-
 - Asides: The When, Why,
 - and How
 - Meet the Presenter

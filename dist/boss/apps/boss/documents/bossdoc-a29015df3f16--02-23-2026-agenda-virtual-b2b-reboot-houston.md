@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)","Small Busine
 
 ## Description
 
-VETERAN ENTREPRENEURSHIP ONE -DAY VIRTUAL WORKSHOP LOCATION: Teams
+VETERAN ENTREPRENEURSHIP ONE-DAY VIRTUAL WORKSHOP LOCATION: Teams
 
 ## When to surface
 
@@ -22,7 +22,7 @@ Surface when the user's question concerns business planning, ecosystem navigatio
 
 ## Key information
 
-- VETERAN ENTREPRENEURSHIP ONE -DAY
+- VETERAN ENTREPRENEURSHIP ONE-DAY
 - VIRTUAL WORKSHOP
 - LOCATION: Teams
 - ACCESS LINK: Click Here to Join the Meeting
@@ -37,11 +37,11 @@ Surface when the user's question concerns business planning, ecosystem navigatio
 - Link: <https://www.utrgv.edu/vboc/>
 - Link: <https://www.sbdc.uh.edu/sbdc/default.asp>
 - Link: <https://houston.score.org/>
-- Link: <http://www.wbea>
-- Link: <https://www.wbea>
+- Link: <http://www.wbea-texas.org/alliwbc-1#>
+- Link: <https://www.wbea-texas.org/wbea-wbc-core#>
 - Link: <https://ghwcc.org/entrepreneurs/>
 - Link: <https://sba.my.site.com/s/>
-- Link: <https://www.sba.gov/sba>
+- Link: <https://www.sba.gov/sba-learning-platform>
 - Link: <https://www.sba.gov/local>
 - Contact: elizabeth.charles@sba.gov
 - Contact: juan.medrano07@utrgv.edu

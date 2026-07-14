@@ -27,8 +27,8 @@ Surface when the user's question concerns branding, business planning, disaster 
 - Introduction to Business Planning
 - Version 5.0
 - Objectives
-- •Understand the concepts and value of business planning
-- •Learn about tools and models that can help your business
+- • Understand the concepts and value of business planning
+- • Learn about tools and models that can help your business
 
 ## People and links
 

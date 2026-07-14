@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-3Part 1: Keys to Building an Opportunity Pipeline Tris Carpenter
+Part 1: Keys to Building an Opportunity Pipeline Tris Carpenter
 
 ## When to surface
 
@@ -22,18 +22,20 @@ Surface when the user's question concerns artificial intelligence, branding, bus
 
 ## Key information
 
-- 3Part 1: Keys to Building an
+- Part 1: Keys to Building an
 - Opportunity Pipeline
 - Tris Carpenter
 - General Manager of Strategic Growth
 - Red Team Consulting
 - About Us
-- 4 Red Team Consulting proprietary material. Duplication or distribution prohibited without prior written consent. Established in March 2004.
+- 4Red Team Consulting proprietary material. Duplication or distribution prohibited without prior written consent.
 
 ## People and links
 
 - Organizations: SCORE
 - Contact: tris.carpenter@redteamconsulting.com
+- Contact: 571-599-7047
+- Contact: 571-242-3414
 
 ## Next handoff
 

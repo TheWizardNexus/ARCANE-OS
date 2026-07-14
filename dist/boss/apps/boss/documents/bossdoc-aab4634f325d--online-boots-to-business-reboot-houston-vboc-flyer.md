@@ -26,16 +26,16 @@ Surface when the user's question concerns business planning, formation, legal an
 - Person
 - For More Information
 - Email: vboc@utrgv.edu
-- Call: (956) 665-8931University of Houston SBDC, 1455 West Loop South, Suite B Houston, Texas 77027
+- Call: (956) 665-8931
+- University of Houston SBDC, 1455 West Loop South, Suite B Houston, Texas 77027
 - August 10 &11, 2022
-- 8:30am - 12:00pm
 
 ## People and links
 
 - Organizations: U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), Veterans Business Outreach Center (VBOC), University of Houston
 - Link: <http://bit.ly/46PGDD3>
 - Contact: vboc@utrgv.edu
-- Contact: boots-to-business@sba.govThursday
+- Contact: boots-to-business@sba.gov
 - Contact: elizabeth.charles@sba.gov
 - Contact: (956) 665-8931
 - Contact: 202-205-8381

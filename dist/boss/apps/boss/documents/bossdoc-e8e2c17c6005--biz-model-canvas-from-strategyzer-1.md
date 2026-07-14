@@ -25,7 +25,7 @@ Surface when the user's question concerns business planning, marketing, training
 - BUSINESS MODEL CANVAS
 - KEY PARTNERS KEY ACTIVITIES VALUE PROPOSITION CUSTOMER RELATIONSHIPS CUSTOMER SEGMENTS
 - Who are your key partners? What are the activities you per- What is the value you deliver What relationship does each Who are your customers?
-- form every day to deliver your to your customer? What is the customer segment expect you
+- form every day to deliver your to your customer ? What is the customer segment expect you
 - value proposition? customer need that your to establish and maintain?
 - value proposition addresses?
 - KEY RESOURCES CHANNELS

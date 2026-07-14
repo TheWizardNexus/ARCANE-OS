@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-Updated 9/22/20 SCORE Workshop Presenter Guidelines Due to SCORE’s status as a non-profit association funded through government grants, there are a few guidelines to which we will ask that you adhere. This document covers guidelines for both
+Updated 9/22/20 SCORE Workshop Presenter Guidelines Due to SCORE’s status as a non-profit association funded through government grants, there are a few
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns branding, formation, funding during Fo
 
 ## Key information
 
-- Updated 9/22/20 SCORE Workshop Presenter Guidelines
+- Updated 9/22/20
+- SCORE Workshop Presenter Guidelines
 - Due to SCORE’s status as a non-profit association funded through government grants, there are a few
 - guidelines to which we will ask that you adhere. This document covers guidelines for both
 - SCORE Volunteers Presenters and non-SCORE Volunteer Presenters.
-- By presenting a workshop for SCORE, you a gree to the following:
+- By presenting a workshop for SCORE, you agree to the following:
 - 1.To not promote, sell or advertise any product or service during the workshop.
-- 2.To list at least three other resources related to the topic if listing their company as a source of
 
 ## People and links
 

@@ -26,8 +26,8 @@ Surface when the user's question concerns business planning, certification, disa
 - Contact Information
 - Email: Mark.Winchester@sba.gov
 - Phone: 713-773-6508
-- Mark Winchester ,
-- District Director –SBA Houston
+- Mark Winchester,
+- District Director – SBA Houston
 - START • GROW • EXPAND • RECOVER
 
 ## People and links
@@ -37,18 +37,17 @@ Surface when the user's question concerns business planning, certification, disa
 - Link: <https://www.score.org/houston>
 - Link: <https://www.utrgv.edu/vboc/>
 - Link: <https://ghwcc.org/>
-- Link: <https://www.score.org/houstonUTRGV>
-- Link: <https://www.wbea>
-- Link: <http://www.wbea>
 - Link: <https://veterans.certify.sba.gov/>
 - Link: <https://www.uhapex.uh.edu>
 - Link: <https://www.linkedin.com/showcase/sbahouston>
 - Contact: Mark.Winchester@sba.gov
 - Contact: houston@sba.gov
 - Contact: 713-773-6508
+- Contact: 713-752-8444
 - Contact: 713-487-6565
+- Contact: 956-665-8931
 - Contact: 713-681-9232
-- Contact: 713-773-6500
+- Contact: 713-782-3777
 
 ## Next handoff
 

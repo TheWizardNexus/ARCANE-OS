@@ -25,10 +25,10 @@ Surface when the user's question concerns accounting, artificial intelligence, b
 - www.score.org
 - Cash Flow Management
 - Basics
-- ALBERTO CASADEI, CERTIFIED SCORE MENTORHosted by
+- ALBERTO CASADEI, CERTIFIED SCORE MENTOR
+- Hosted by
 - 20250204 vFinal
 - Providing free
-- business advice
 
 ## People and links
 

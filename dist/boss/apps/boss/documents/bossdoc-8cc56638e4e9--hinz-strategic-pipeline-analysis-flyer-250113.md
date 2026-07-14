@@ -14,7 +14,7 @@ organizations: ["SCORE"]
 
 ## Description
 
-FIXED PRICE $5495EACH YEAR WE... SUPPORT 400–500 PURSUITS
+FIXED PRICE EACH YEAR WE... SUPPORT 400–500 PURSUITS
 
 ## When to surface
 
@@ -23,17 +23,17 @@ Surface when the user's question concerns ecosystem navigation, funding, legal a
 ## Key information
 
 - FIXED PRICE
-- $5495EACH YEAR WE...
+- EACH YEAR WE...
 - SUPPORT 400–500 PURSUITS
 - PRODUCE 100–200 TURN-KEY PROPOSALS
 - WORK 100,000+ STAFF HOURS
-- SUPPORT 90+ CLIENTSHinz builds you a pipeline of opportunities
-- for RFPs/RFIs/SBIRs/GrantsANALYSISSTRATEGIC PIPELINE
+- SUPPORT 90+ CLIENTS
+- Hinz builds you a pipeline of opportunities
 
 ## People and links
 
 - Organizations: SCORE
-- Contact: info@hinzconsulting.comWHAT
+- Contact: info@hinzconsulting.com
 
 ## Next handoff
 

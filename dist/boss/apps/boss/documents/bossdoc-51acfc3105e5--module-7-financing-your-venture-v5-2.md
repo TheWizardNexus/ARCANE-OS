@@ -33,7 +33,7 @@ Surface when the user's question concerns accounting, business planning, cyberse
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA)
-- Link: <https://www.sba.gov/offices/headquarters/ofa/resources/11421>
+- Link: <https://www.sba.gov/funding-programs/loans>
 
 ## Next handoff
 

@@ -42,7 +42,7 @@ Surface when the user's question concerns accounting, branding, business plannin
 - Link: <https://www.score.org/resource/opening-day-balance-sheet>
 - Link: <https://www.score.org/resource/3-year-cash-flow-statement>
 - Link: <https://www.score.org/resource/annual-marketing-budget-template>
-- Link: <http://www.rmahq.org/publications-and-tools/>
+- Link: <https://www.rmahq.org/resources-content>
 - Link: <https://www.score.org/resource/start-expenses>
 - Link: <https://www.score.org/resource/12-month-cash-flow-statement>
 

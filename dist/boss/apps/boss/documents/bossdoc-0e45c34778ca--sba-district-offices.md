@@ -33,7 +33,7 @@ The user is outside Houston or needs a district office.
 ## People and links
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), Veterans Business Outreach Center (VBOC), SCORE Houston
-- Link: <https://www.sba.gov/about-sba/sba-locations/district-offices>
+- Link: <https://www.sba.gov/about-sba/sba-locations/sba-district-offices>
 - Link: <https://www.sba.gov/district/houston>
 - Link: <https://www.sba.gov/local-assistance>
 

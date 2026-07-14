@@ -34,7 +34,7 @@ Surface when the user's question concerns accounting, artificial intelligence, b
 
 - Organizations: SCORE, U.S. Small Business Administration (SBA), Google Workspace, SCORE Houston
 - Link: <https://www.sba.gov/sites/sbagov/files/2023-06/2023%20Small%20Business%20Resource%20Guide_508c_Final.pdf>
-- Link: <https://volunteer.score.org/sites/default/files/u519636/New%20Volunteer%20SCORE%2090%20Day%20Checklist%2011.27.17.xlsx>
+- Link: <https://supportcenter.score.org/kb/article/163-volunteer-onboarding-steps-and-checklist/>
 - Link: <http://www.score.org/>
 - Link: <https://help.score.org/hc/en-us/articles/4408508657683-Upcoming-Live-Engage-Trainings>
 - Link: <https://www.score.org/houston>

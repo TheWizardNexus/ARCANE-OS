@@ -14,7 +14,7 @@ organizations: ["U.S. Small Business Administration (SBA)"]
 
 ## Description
 
-1Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA- B2B or use your
+Boots to Business Attendance Confirmation If you have not already done so, visit tinyurl.com/SBA-B2B or use your
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns accounting, branding, business plannin
 
 ## Key information
 
-- 1Boots to Business Attendance Confirmation
+- Boots to Business Attendance Confirmation
 - If you have not already done so, visit
-- tinyurl.com/SBA- B2B or use your
+- tinyurl.com/SBA-B2B or use your
 - smart phone camera to access the
 - attendance QR Code
 - Select the B2B or Reboot class you are
-- attending from the list of scheduled classes
+- attending from the list of scheduled
 
 ## People and links
 

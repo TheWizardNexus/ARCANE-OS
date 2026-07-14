@@ -28,7 +28,7 @@ Surface when the user's question concerns business planning, certification, ecos
 - Competitive Space
 - Version 5.2
 - Objectives
-- •Understand how to conduct market research, the
+- • Understand how to conduct market research, the
 
 ## People and links
 

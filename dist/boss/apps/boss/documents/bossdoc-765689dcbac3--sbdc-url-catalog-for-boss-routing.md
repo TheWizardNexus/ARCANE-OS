@@ -27,7 +27,7 @@ Surface when the user's question concerns artificial intelligence, cybersecurity
 - SBA Houston District resource partners page 2: https://www.sba.gov/local-assistance/district?district=35&page=1
 - UH Texas Gulf Coast SBDC Network home: https://www.sbdc.uh.edu/sbdc/default.asp
 - Find Your SBDC: https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp
-- Locations: https://www.sbdc.uh.edu/sbdc/Locations.asp
+- Locations: https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp
 - Business Advising: https://www.sbdc.uh.edu/sbdc/Consulting1.asp
 
 ## People and links
@@ -38,7 +38,6 @@ Surface when the user's question concerns artificial intelligence, cybersecurity
 - Link: <https://www.sba.gov/local-assistance/district?district=35&page=1>
 - Link: <https://www.sbdc.uh.edu/sbdc/default.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Find_Your_SBDC.asp>
-- Link: <https://www.sbdc.uh.edu/sbdc/Locations.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Consulting1.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Business_Specialists.asp>
 - Link: <https://www.sbdc.uh.edu/sbdc/Programs.asp>

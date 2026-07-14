@@ -27,8 +27,8 @@ Surface when the user's question concerns accounting, artificial intelligence, b
 - This guide is for informational purposes only. This content does not constitute business, legal, tax, accounting, financial, or investment advice. Y ou’re encouraged to consult with
 - competent legal, tax, accounting, financial, or investment professionals based on your specific credit needs and circumstances. We don’t make any warranties as to accuracy or
 - completeness of this information. We don’t endorse any third-party companies, products, or services, if any, described herein. And we take no liability for your use of this information.
-- All loans subject to credit approval. Standard underwriting guidelines and credit policies apply.Participant workbook
-- As a small business owner, you want to see your business
+- All loans subject to credit approval. Standard underwriting guidelines and credit policies apply.
+- Participant workbook
 
 ## People and links
 

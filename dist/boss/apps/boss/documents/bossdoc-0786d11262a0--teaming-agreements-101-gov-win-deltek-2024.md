@@ -14,7 +14,7 @@ organizations: ["SCORE","U.S. Small Business Administration (SBA)"]
 
 ## Description
 
-GUIDETeaming Agreements 101 The Value of Partnering in the Federal Government Contracting Industry
+GUIDE Teaming Agreements 101 The Value of Partnering in the Federal Government
 
 ## When to surface
 
@@ -22,13 +22,13 @@ Surface when the user's question concerns accounting, business planning, certifi
 
 ## Key information
 
-- GUIDETeaming Agreements 101
+- GUIDE
+- Teaming Agreements 101
 - The Value of Partnering in the Federal Government
 - Contracting Industry
 - The federal government contracting market is full of opportunity, especially for companies of all
 - sizes who know how to form teaming agreements that increase their ability to compete. This guide
 - outlines what teaming agreements are, how the virtual/hybrid business environment has changed
-- the way government contractors make connections, best practices for subcontracting, why small
 
 ## People and links
 
