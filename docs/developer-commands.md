@@ -46,7 +46,7 @@ This is the authoritative table of supported system-level commands used to set u
 
 | Command | Purpose | Signing requirement | Result / output |
 |---|---|---|---|
-| `npm run signing:bootstrap:dev:windows` | Creates/reuses and trusts the current user's non-exportable Arcane development certificate. | None; creates development identity only. | Current-user development certificate and trust. |
+| `npm run signing:bootstrap:dev:windows` | Creates/reuses and trusts the current user's non-exportable Arcane development certificate. Windows may request one-time confirmation before trusting the self-signed certificate. | None; creates development identity only. | Current-user development certificate and trust. |
 | `npm run build:dev:windows` | Builds the complete Windows distribution with the development certificate. | Development bootstrap. | Development-signed `dist/windows`. |
 | `npm run build:dev:apps:windows` | Builds all Windows apps with the development certificate. | Development bootstrap. | Development-signed app executables. |
 | `npm run build:dev:app:windows -- -AppId <app-id>` | Builds one Windows app with the development certificate. | Development bootstrap. | One development-signed app executable. |

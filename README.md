@@ -245,7 +245,7 @@ npm run build:dev:app:windows -- -AppId boss
 | [Arcane API Reference](./docs/arcane-api.md) | Application-facing native API methods, parameters, returns, and descriptions. |
 | [Developer Reference Maintenance SOP](./docs/developer-reference-sop.md) | Required synchronization rules for system commands and Arcane API methods. |
 
-The bootstrap creates a non-exportable, per-developer Code Signing certificate and directly trusts only that non-CA certificate under the current Windows user. It does not configure GitHub or official release signing. Development-signed executables open without `--allow-unsigned-local-release`; Microsoft Defender SmartScreen may still present its normal unfamiliar-file warning. See the machine bundle's [double-clickable local development build instructions](./machine_bundles/arcane-os-machine-bundle-v0.8.4/README.md#double-clickable-local-development-builds) for the trust scope and publisher-continuity limits.
+The bootstrap creates a non-exportable, per-developer Code Signing certificate and directly trusts only that non-CA certificate under the current Windows user. Windows may request one-time confirmation before adding the self-signed certificate to the current user's trusted root store. It does not configure GitHub or official release signing. Development-signed executables open without `--allow-unsigned-local-release`; Microsoft Defender SmartScreen may still present its normal unfamiliar-file warning. See the machine bundle's [double-clickable local development build instructions](./machine_bundles/arcane-os-machine-bundle-v0.8.4/README.md#double-clickable-local-development-builds) for the trust scope and publisher-continuity limits.
 
 ## Verification
 

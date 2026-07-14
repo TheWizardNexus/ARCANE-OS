@@ -37,7 +37,7 @@
     "build:core:linux": "pkg runtime/arcane-core.cjs --targets node22-linux-x64 --output dist/ArcaneCore",
     "build:distribution:windows": "npm run verify:winhost && npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-windows-release.ps1",
     "build:dev:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/build-windows-dev-signed.ps1 -Target release",
-    "signing:bootstrap:dev:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/build-windows-dev-signed.ps1 -BootstrapOnly",
+    "signing:bootstrap:dev:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-windows-dev-signed.ps1 -BootstrapOnly",
     "build:signed:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/build-windows-signed.ps1 -Target release",
     "signing:preflight:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/build-windows-signed.ps1 -Target release -PreflightOnly",
     "build:distribution:windows:unsigned-local-test": "npm run verify:winhost && npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-windows-release.ps1 -AllowUnsignedLocalRelease",

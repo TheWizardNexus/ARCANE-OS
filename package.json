@@ -27,7 +27,7 @@
     "build:dev:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -Target release",
     "build:dev:apps:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -Target apps",
     "build:dev:app:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -Target app",
-    "signing:bootstrap:dev:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -BootstrapOnly",
+    "signing:bootstrap:dev:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -BootstrapOnly",
     "build:signed:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target release",
     "build:signed:apps:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target apps",
     "build:signed:app:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target app",

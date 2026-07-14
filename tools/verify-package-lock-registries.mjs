@@ -4,7 +4,11 @@ import { promisify } from 'node:util';
 
 const run = promisify(execFile);
 const approvedRegistryHosts = new Set(['registry.npmjs.org']);
-const { stdout } = await run('git', ['ls-files', '--', '*package-lock.json'], {
+const { stdout } = await run('git', [
+  'ls-files', '--',
+  'package-lock.json',
+  'machine_bundles/*/package-lock.json',
+], {
   cwd: new URL('..', import.meta.url),
   encoding: 'utf8',
 });

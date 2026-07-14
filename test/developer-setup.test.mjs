@@ -5,10 +5,12 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const [setup, launcher, manifest] = await Promise.all([
+const [setup, launcher, verifier, manifest, bundleManifest] = await Promise.all([
   fs.readFile(path.join(root, 'tools', 'setup-developer.ps1'), 'utf8'),
   fs.readFile(path.join(root, 'setup-developer.bat'), 'utf8'),
+  fs.readFile(path.join(root, 'tools', 'verify-package-lock-registries.mjs'), 'utf8'),
   fs.readFile(path.join(root, 'package.json'), 'utf8').then(JSON.parse),
+  fs.readFile(path.join(root, 'machine_bundles', 'arcane-os-machine-bundle-v0.8.4', 'package.json'), 'utf8').then(JSON.parse),
 ]);
 
 test('developer setup owns one fail-closed Windows bootstrap contract', () => {
@@ -53,4 +55,15 @@ test('developer setup is exposed through one root launcher and npm command', () 
     manifest.scripts['setup:developer'],
     'powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup-developer.ps1',
   );
+});
+
+test('developer setup uses deterministic lockfiles and permits one-time Windows trust confirmation', () => {
+  assert.match(verifier, /'package-lock[.]json'/);
+  assert.match(verifier, /'machine_bundles[/][*][/]package-lock[.]json'/);
+  assert.doesNotMatch(verifier, /'[*]package-lock[.]json'/);
+  for (const packageManifest of [manifest, bundleManifest]) {
+    const bootstrap = packageManifest.scripts['signing:bootstrap:dev:windows'];
+    assert.match(bootstrap, /-BootstrapOnly/);
+    assert.doesNotMatch(bootstrap, /-NonInteractive/);
+  }
 });
