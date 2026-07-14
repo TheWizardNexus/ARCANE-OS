@@ -203,7 +203,17 @@ Do not serve an individual application directory by itself. These pages intentio
 
 ## Windows native development builds
 
-Install the Windows SDK so SignTool is available, then run the explicit one-time local signing bootstrap before building native applications:
+From a Windows checkout, run the single developer setup entry point:
+
+```powershell
+.\setup-developer.bat
+```
+
+The setup detects or installs Git, pinned Node.js 22, npm, and the Windows 10.0.26100 SDK; verifies public dependency sources; installs both locked dependency trees and Git hooks; runs the repository checks; initializes the per-user development signer; and builds the development-signed Windows distribution. It never reads or configures production signing material.
+
+The same process is available after Node.js is installed as `npm run setup:developer`. Advanced reruns may pass `-SkipPrerequisiteInstall`, `-SkipChecks`, `-SkipSigning`, or `-SkipBuild` through the batch launcher. `-SkipSigning` produces the explicitly labeled unsigned-local-test distribution when builds are enabled.
+
+The individual commands remain available for focused maintenance:
 
 ```powershell
 npm run signing:bootstrap:dev:windows

@@ -76,6 +76,17 @@ When adding a new `machine_bundles/<version>` directory:
 - update root scripts and documentation that intentionally select the current bundle version;
 - verify no generated output, caches, secrets, or signing material are tracked.
 
+## Unified developer setup
+
+- `setup-developer.bat` and `tools/setup-developer.ps1` are the authoritative Windows developer bootstrap.
+- The default workflow must install or verify public prerequisites, validate dependency sources before `npm ci`, install both dependency trees, configure hooks, run checks, initialize only the per-user development signer, and build the development-signed distribution.
+- System packages installed by the bootstrap must use exact public WinGet identifiers. Pin major toolchains when Arcane's build contract depends on them.
+- Optional skip switches may shorten an intentional rerun, but must never silently weaken production signing or convert a failed step into success.
+- On Windows, preserve an existing pnpm hardlinked dependency tree under ignored `tmp/` before switching that checkout to `npm ci`; npm may return a negative `EPERM` status while unlinking pnpm hardlinks.
+- If npm expands an intentionally tracked vendored dependency, remove only files that Git reports as untracked and only within that dependency's validated directory boundary.
+- Use an ignored repository-local npm cache for unified setup so corrupted or permission-restricted user-global cache state cannot affect the build.
+- Keep a focused source-contract test for step order, package identifiers, exit-code propagation, and the prohibition on production signing material.
+
 ## Required handoff
 
 Report:
