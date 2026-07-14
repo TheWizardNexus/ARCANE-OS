@@ -172,6 +172,18 @@ describe('BOSS Libraries chat integration',()=>{
     it('uses focused librarian tools instead of dumping every document',()=>{
         assert.match(chat,/name:'search_boss_library'/);
         assert.match(chat,/name:'prepare_boss_handoff'/);
+        assert.match(
+            chat,
+            /call it with a narrower or corrected query whenever the automatically supplied library context does not directly support/
+        );
+        assert.match(
+            prompt,
+            /If those records do not directly support the requested answer, call `search_boss_library` with a narrower or corrected query/
+        );
+        assert.match(
+            prompt,
+            /Do not fall back to general model knowledge merely because the first search was incomplete/
+        );
         assert.doesNotMatch(chat,/check_for_related_resources/);
         assert.doesNotMatch(chat,/getAll\(['"]documents['"]\)/);
         assert.doesNotMatch(chat,/# Documents\s*:/);
