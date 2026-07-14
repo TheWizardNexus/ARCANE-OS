@@ -1,4 +1,20 @@
-const frame=document.querySelector('iframe[data-precrisis-page]');
+const OPENAI_PROVIDER='OPENAI';
+const PROFILE_REQUIREMENT_PAGES=new Set(['chat.html','journal.html']);
+
+export function warriorProfileRequirements(user={}){
+    const provider=String(user?.preferredModels?.[0]??'').trim().toUpperCase();
+    const missingName=!String(user?.username??'').trim();
+    const missingLicense=provider===OPENAI_PROVIDER
+        &&!String(user?.license_key??'').trim();
+
+    return {
+        missingLicense,
+        missingName,
+        required:missingName||missingLicense
+    };
+}
+
+const frame=globalThis.document?.querySelector('iframe[data-precrisis-page]');
 
 if(frame){
     const pageName=frame.dataset.precrisisPage;
@@ -40,6 +56,7 @@ if(frame){
         [/\bassessment\b/g,'Companion check-in']
     ];
     let supportWindowOpened=false;
+    const guardedProfileDocuments=new WeakSet();
 
     frame.ready=false;
 
@@ -105,6 +122,66 @@ if(frame){
             if(event)host.addEventListener(event,complete);
             complete();
         });
+    }
+
+    function whenUserReady(window){
+        return new Promise(resolve=>{
+            const complete=event=>{
+                const user=event?.detail?.user||window.user;
+                if(user?.ready!==true)return;
+                window.removeEventListener('user-entity-loaded',complete);
+                resolve(user);
+            };
+            window.addEventListener('user-entity-loaded',complete);
+            complete();
+        });
+    }
+
+    function profileRequirementContent(document,requirements){
+        const section=document.createElement('section');
+        const heading=document.createElement('h1');
+        const introduction=document.createElement('p');
+        const list=document.createElement('ul');
+        const privacy=document.createElement('p');
+        const button=document.createElement('button');
+
+        section.dataset.warriorProfileRequired='';
+        heading.textContent='Finish setting up your Companion';
+        introduction.textContent='Before you begin, the Companion needs the profile details that help it recognize you and connect to your chosen AI.';
+        if(requirements.missingName){
+            const item=document.createElement('li');
+            item.textContent='Add your name or a private ID so the Companion knows how to address you.';
+            list.append(item);
+        }
+        if(requirements.missingLicense){
+            const item=document.createElement('li');
+            item.textContent='Add your Warrior Spirit AI Licence key to use Cloud AI with the Companion.';
+            list.append(item);
+        }
+        privacy.textContent='These details are stored with your on-device PreCrisis profile.';
+        button.type='button';
+        button.autofocus=true;
+        button.dataset.warriorProfileLink='';
+        button.textContent='Go to Profile';
+        button.addEventListener('click',()=>{
+            globalThis.location.assign(new URL('profile.html',appRoot).href);
+        });
+        section.append(heading,introduction,list,privacy,button);
+        return section;
+    }
+
+    async function prepareProfileRequirements(window,document){
+        if(!PROFILE_REQUIREMENT_PAGES.has(pageName)||guardedProfileDocuments.has(document))return;
+        guardedProfileDocuments.add(document);
+        const user=await whenUserReady(window);
+        const requirements=warriorProfileRequirements(user);
+        if(!requirements.required)return;
+        const modal=await whenComponentReady(
+            document.getElementById('modal'),
+            {event:'modal-ready',methods:['populate','open']}
+        );
+        await modal.populate(profileRequirementContent(document,requirements),false);
+        await modal.open();
     }
 
     function addNavigationBrand(root,document){
@@ -224,10 +301,10 @@ if(frame){
             section.hidden=false;
             const heading=section.querySelector('h1');
             const description=section.querySelector('p');
-            if(heading)heading.textContent='OpenAI API Key';
-            if(description)description.textContent='Stored with your on-device PreCrisis profile. It is used only when this app sends a request to OpenAI.';
+            if(heading)heading.textContent='Warrior Spirit AI Licence key';
+            if(description)description.textContent='Stored with your on-device PreCrisis profile. It is used only when the Companion sends a request to your chosen AI.';
             input.type='password';
-            input.placeholder='OpenAI API key';
+            input.placeholder='Warrior Spirit AI Licence key';
             input.autocomplete='off';
             input.spellcheck=false;
         }
@@ -240,6 +317,16 @@ if(frame){
         if(supportSection){
             supportSection.hidden=true;
             supportSection.setAttribute('aria-hidden','true');
+        }
+        for(const selector of [
+            'section.model-preference',
+            'section.model-select',
+            'section.developer-preference'
+        ]){
+            const profileSection=document.querySelector(selector);
+            if(!profileSection)continue;
+            profileSection.hidden=true;
+            profileSection.setAttribute('aria-hidden','true');
         }
     }
 
@@ -666,6 +753,7 @@ if(frame){
                 prepareMemories(document),
                 prepareSafety(window,document)
             ]);
+            await prepareProfileRequirements(window,document);
             frame.ready=true;
             frame.dispatchEvent(new CustomEvent('precrisis-frame-ready',{bubbles:true,detail:{pageName}}));
         }catch(error){

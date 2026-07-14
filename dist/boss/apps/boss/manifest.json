@@ -1,0 +1,18 @@
+{
+    "name": "BOSS Libraries",
+    "short_name": "BOSS Libraries",
+    "description": "Business Operator Solutions & Services resource library and librarian.",
+    "start_url": "./chat.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#F7E5C6",
+    "theme_color": "#022241",
+    "icons": [
+        {
+            "src": "./img/Draft BOSS logo design V4.jpg",
+            "sizes": "1024x1024",
+            "type": "image/jpeg",
+            "purpose": "any"
+        }
+    ]
+}

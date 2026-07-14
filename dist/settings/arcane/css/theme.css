@@ -1,0 +1,112 @@
+/* Arcane OS shared appearance layer.
+ * Load after legacy layout.css (when used) and before primitives or app CSS.
+ * Explicit user preferences use data-color-scheme; otherwise the device
+ * preference selects the light or dark base.
+ */
+
+:root,
+:root[data-color-scheme="light"]{
+    color-scheme:light;
+    --background:rgb(244, 246, 251);
+    --modal-background:rgb(255, 255, 255);
+    --text-color:rgb(23, 34, 56);
+    --primary-color:rgb(23, 34, 56);
+    --secondary-color:rgb(229, 233, 243);
+    --accent-color:var(--focus-color);
+    --button-text-color:rgb(255, 255, 255);
+    --border-color:rgb(203, 211, 226);
+    --focus-color:rgb(118, 87, 213);
+    --muted-text-color:rgb(95, 107, 130);
+    --success-color:rgb(39, 122, 75);
+    --warning-color:rgb(154, 101, 0);
+    --danger-color:rgb(165, 56, 56);
+    --review-color:rgb(133, 85, 165);
+    --shadow-color:rgba(23, 34, 56, .16);
+    --platinum:rgb(102, 112, 133);
+    --icon-filter:none;
+    --file-icon-filter:hue-rotate(8deg) saturate(.62) brightness(.86);
+}
+
+:root[data-color-scheme="dark"]{
+    color-scheme:dark;
+    --background:rgb(13, 18, 32);
+    --modal-background:rgb(21, 28, 45);
+    --text-color:rgb(237, 241, 250);
+    --primary-color:rgb(36, 43, 66);
+    --secondary-color:rgb(26, 33, 52);
+    --accent-color:var(--focus-color);
+    --button-text-color:rgb(255, 255, 255);
+    --border-color:rgb(59, 69, 94);
+    --focus-color:rgb(171, 148, 255);
+    --muted-text-color:rgb(174, 184, 204);
+    --success-color:rgb(97, 201, 144);
+    --warning-color:rgb(233, 184, 95);
+    --danger-color:rgb(240, 128, 128);
+    --review-color:rgb(198, 165, 242);
+    --shadow-color:rgba(0, 0, 0, .42);
+    --platinum:rgb(155, 167, 189);
+    --icon-filter:invert(.9) saturate(.7);
+    --file-icon-filter:invert(.84) sepia(.08) saturate(.72) hue-rotate(184deg) brightness(1.04);
+}
+
+@media (prefers-color-scheme:dark){
+    :root:not([data-color-scheme]){
+        color-scheme:dark;
+        --background:rgb(13, 18, 32);
+        --modal-background:rgb(21, 28, 45);
+        --text-color:rgb(237, 241, 250);
+        --primary-color:rgb(36, 43, 66);
+        --secondary-color:rgb(26, 33, 52);
+        --accent-color:var(--focus-color);
+        --button-text-color:rgb(255, 255, 255);
+        --border-color:rgb(59, 69, 94);
+        --focus-color:rgb(171, 148, 255);
+        --muted-text-color:rgb(174, 184, 204);
+        --success-color:rgb(97, 201, 144);
+        --warning-color:rgb(233, 184, 95);
+        --danger-color:rgb(240, 128, 128);
+        --review-color:rgb(198, 165, 242);
+        --shadow-color:rgba(0, 0, 0, .42);
+        --platinum:rgb(155, 167, 189);
+        --icon-filter:invert(.9) saturate(.7);
+        --file-icon-filter:invert(.84) sepia(.08) saturate(.72) hue-rotate(184deg) brightness(1.04);
+    }
+}
+
+html{
+    background:var(--background);
+    color:var(--text-color);
+}
+
+body{
+    background-color:var(--background);
+    color:var(--text-color);
+}
+
+@media (prefers-reduced-motion:reduce){
+    :root:not([data-reduce-motion="false"]){
+        scroll-behavior:auto;
+    }
+
+    :root:not([data-reduce-motion="false"]) *,
+    :root:not([data-reduce-motion="false"]) *::before,
+    :root:not([data-reduce-motion="false"]) *::after{
+        animation-duration:.01ms !important;
+        animation-iteration-count:1 !important;
+        scroll-behavior:auto !important;
+        transition-duration:.01ms !important;
+    }
+}
+
+:root[data-reduce-motion="true"]{
+    scroll-behavior:auto;
+}
+
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    scroll-behavior:auto !important;
+    transition-duration:.01ms !important;
+}

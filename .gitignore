@@ -4,11 +4,12 @@
 /node_modules/*
 !/node_modules/strong-type/
 !/node_modules/strong-type/**
+!dist/*/node_modules/
+dist/*/node_modules/*
+!dist/*/node_modules/strong-type/
+!dist/*/node_modules/strong-type/**
 .pnpm-store/
 /pnpm-lock.yaml
-dist/*
-!dist/warrior-spirit/
-!dist/warrior-spirit/**
 machine_bundles/**/dist/
 local/
 tmp/

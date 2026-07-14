@@ -10,8 +10,8 @@
   },
   "policySha256": "bfabd93145d837e6a1a0c1bfe05ec7f27d508ae8214693ba49c59a6824a33ff1",
   "fileCount": 164,
-  "totalBytes": 3590705,
-  "contentSha256": "280351b676fb9c52177ab5cabc534f7d81f2719d5208ab831d01fb2a03867913",
+  "totalBytes": 3595604,
+  "contentSha256": "ba31d48abe2e44a46439b2f5deba753908d4fff69e360b421136482420025119",
   "files": [
     {
       "path": "apps/precrisis/admin.html",
@@ -206,12 +206,12 @@
     {
       "path": "apps/warrior-spirit/companion.html",
       "bytes": 1125,
-      "sha256": "dd0d73841736db4701e5c880d9155d87eb25dba3759cf85b578015b7bad8564a"
+      "sha256": "edbedf51dd43897523bc9aa42467774d3df728c3e9c7bf186c2d1dbabff050a8"
     },
     {
       "path": "apps/warrior-spirit/home.html",
-      "bytes": 8313,
-      "sha256": "83892e63eb60ec11683096a238bae5e333441885f8b219aa4f78d7ff7525bf2b"
+      "bytes": 9371,
+      "sha256": "4c2af547771968a3e6a28257f05fd159d3654920d9542c9c800cc0a73fd7e6ae"
     },
     {
       "path": "apps/warrior-spirit/img/warrior-spirit-logo.png",
@@ -221,7 +221,7 @@
     {
       "path": "apps/warrior-spirit/index.html",
       "bytes": 1232,
-      "sha256": "dacd9c0196dac3e0cd7675e5ab2e6dc378228df0bfcf7fdcdc7adf2dd5c96be9"
+      "sha256": "faf8dbfe6943b97021f455efb7083633eebfbead8b8848e754dd2cf4851c307b"
     },
     {
       "path": "apps/warrior-spirit/manifest.json",
@@ -231,17 +231,17 @@
     {
       "path": "apps/warrior-spirit/memories.html",
       "bytes": 1156,
-      "sha256": "685e2eb8c28b60d651a3b050d71d848f095567e7e9539ab3e728a46b6cc2c4d5"
+      "sha256": "2f3ec7f8a5f7111806aa534ea26516c020b8b07e3afec6f517f48d4f3cdc6ab2"
     },
     {
       "path": "apps/warrior-spirit/mental-health.html",
       "bytes": 1143,
-      "sha256": "81401b8de26708a84ed8a02b0281c159db3913d921bf2b1b16fc27100c3b91a1"
+      "sha256": "083a307c5c12dfff48387a1838d2e56045944e05ba5f8335cbb4cfe0485cc507"
     },
     {
       "path": "apps/warrior-spirit/modules/PreCrisisFrame.js",
-      "bytes": 33860,
-      "sha256": "28a1e071f8ebc7a503493ff495df57ef106ac7414f31e48ab41434715d3f33b8"
+      "bytes": 37603,
+      "sha256": "c734998e8b15b6519768016ce77472c6eb3d802f06ae3fa3c5b5e67343a33496"
     },
     {
       "path": "apps/warrior-spirit/modules/WarriorSpiritHome.js",
@@ -266,17 +266,17 @@
     {
       "path": "apps/warrior-spirit/profile.html",
       "bytes": 1121,
-      "sha256": "c9f43a092101c5f48591dad8990e61453bda76547d865450052a82e6ce0a21ef"
+      "sha256": "afcf85d456babdb1b6b976170748b2331ec90c6ef5568ff2104520aa75c68be0"
     },
     {
       "path": "apps/warrior-spirit/README.md",
-      "bytes": 2090,
-      "sha256": "fc9ef6ad837ee0fd25572440c6caa5e2d4aa2bf57801c98def74990b80fd5843"
+      "bytes": 2188,
+      "sha256": "682db102c24167ec091b15ad253f0e87a10350262dfba90d32190d4d725d7a61"
     },
     {
       "path": "apps/warrior-spirit/reflection.html",
       "bytes": 1122,
-      "sha256": "9831b9d4189bfac1ab6079c07e78b0ae5c7c96cf505ab47c5f9809f8a4f57290"
+      "sha256": "a65f9f18fc715f244d333675dba29b847c7cd9e59965eef39e1bff3bf774114e"
     },
     {
       "path": "apps/warrior-spirit/warrior-spirit.css",
