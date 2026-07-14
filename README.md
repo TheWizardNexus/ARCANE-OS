@@ -1,5 +1,7 @@
 # ARCANE Operating System
 
+![ARCANE OS running across desktop, server, laptop, phone, tablet, vehicle dashboard, and kiosk](./arcane/img/arcane-os-everywhere.png)
+
 > Start here before working on ARCANE. This README gives human and AI contributors the product context, architectural boundaries, repository map, and required reading needed to make changes without weakening the operating system's purpose or trust model.
 
 ## About
@@ -98,7 +100,7 @@ Knowledge without ethics is dangerous. Ethics without capability is ineffective.
 
 This repository contains two related implementation surfaces:
 
-- The repository-level `arcane/`, `apps/`, and `example/` trees provide the shared application interface runtime, reusable browser components, application-specific composition, development pages, and public application packaging.
+- The repository-level `arcane/`, `apps/`, and `example/` trees provide the shared application interface runtime, reusable browser components, application-specific composition, development pages, and browser-context application packaging.
 - [`machine_bundles/arcane-os-machine-bundle-v0.8.4/`](./machine_bundles/arcane-os-machine-bundle-v0.8.4/) contains the native-capable machine runtime and its authoritative release documentation for that version.
 
 In the current machine bundle:
@@ -121,7 +123,7 @@ The longer-range product direction prefers JavaScript and Node.js for orchestrat
 - [`AGENTS.md`](./AGENTS.md) — repository-wide instructions for human and AI contributors.
 - [`docs/app-building.md`](./docs/app-building.md) — mandatory reuse-first capability design, placement, theming, contracts, testing, examples, and completion rules.
 - [`docs/debugging.md`](./docs/debugging.md) — mandatory no-assumptions debugging and clean-state verification process.
-- [`docs/app-packaging.md`](./docs/app-packaging.md) — public application package manifests, versioning, isolation, and verification.
+- [`docs/app-packaging.md`](./docs/app-packaging.md) — browser-context application package manifests, versioning, isolation, and verification.
 
 ### Product and architecture direction
 
@@ -230,9 +232,9 @@ npm run release:check
 
 Verification must match the affected boundary. A successful unit test does not replace contract, browser, packaging, native, privilege, recovery, or clean-state verification when those surfaces changed.
 
-## Package public applications
+## Package ARCANE applications for browser contexts
 
-The public-app packager creates isolated website roots under `dist/<app>` from explicit application and shared-payload manifests:
+ARCANE applications are not websites or generic web apps. When hosted by ARCANE OS, they can use explicitly granted native ARCANE capabilities. When distributed for a standard browser, the public-app packager creates an isolated, sandboxed browser-context application under `dist/<app>` from explicit application and shared-payload manifests. Running in a browser does not grant native ARCANE capabilities.
 
 ```powershell
 npm run apps:list
@@ -253,11 +255,12 @@ npm run app:bump -- redress 1.0.0
 
 The root [`arcane-packager.json`](./arcane-packager.json) defines named shared payloads. Each `apps/<app>/arcane-package.json` defines the application identity, version, entry point, allowlisted content, defensive exclusions, shared payloads, and packaging strategy. See [`docs/app-packaging.md`](./docs/app-packaging.md) for the complete contract.
 
-Never deploy or publicly serve this working repository. Build, verify, and publish only the intended isolated package. For example, the BOSS public website must be served from `dist/boss/`, not from the repository root.
+Never deploy or publicly serve this working repository. Build, verify, and publish only the intended isolated package. For example, the BOSS browser-context package must be served from `dist/boss/`, not from the repository root.
 
 ## Language and naming
 
 - Product name: **ARCANE** or **ARCANE Operating System**.
+- Application category: **ARCANE application**. Under ARCANE OS it may use explicitly granted native capabilities; in a standard browser it runs as a sandboxed ARCANE application in a web context.
 - Expansion: **Adaptive Runtime for Cognitive AI Native Environments**. Use the expansion where it adds technical meaning; do not force it into every user-facing surface.
 - Category: **AI-native operating environment**.
 - Parent organization: **The Wizard Nexus**.
