@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin">
+        <link rel="manifest" href="./apps/precrisis/manifest.json" crossorigin="use-credentials">
+        <link rel="icon" href="./apps/precrisis/img/favicon.png" type="image/png">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <style>
+            main.contents{
+                display:block;
+                padding-right:.5em;
+            }
+
+            .dashboard-heading{
+                align-items:flex-start;
+                display:flex;
+                gap:1em;
+                justify-content:space-between;
+            }
+
+            .dashboard-heading h2{
+                margin-top:0;
+            }
+
+            .dashboard-config{
+                flex:0 0 auto;
+            }
+
+            .chart-grid{
+                display:grid;
+                gap:1em;
+                grid-template-columns:repeat(auto-fit,minmax(min(35em,100%),1fr));
+                margin-top:1em;
+            }
+
+            .dashboard-chart{
+                min-height:18em;
+                min-width:0;
+            }
+
+            .dashboard-chart-placeholder{
+                align-items:center;
+                background:var(--chart-background,var(--background));
+                border:.1em solid var(--chart-grid-color,var(--border-color));
+                border-radius:.5em;
+                box-sizing:border-box;
+                color:var(--chart-text-color,var(--text-color));
+                display:flex;
+                flex-direction:column;
+                justify-content:center;
+                padding:1em;
+            }
+
+            .dashboard-chart-placeholder h2,
+            .dashboard-chart-placeholder p{
+                margin:.25em 0;
+            }
+
+            .dashboard-chart-placeholder p{
+                opacity:.6;
+            }
+
+            .dashboard-chart.full-width{
+                grid-column:1 / -1;
+            }
+
+            .notes-section{
+                margin-top:2em;
+                overflow-x:auto;
+            }
+
+            input.search-notes{
+                margin-bottom:15px;
+            }
+
+            table{
+                background:var(--background);
+                border:1px solid var(--border-color);
+                border-collapse:collapse;
+                border-radius:.5em;
+                box-shadow:0 .2em .7em var(--shadow-color);
+                display:table;
+                margin:auto;
+                min-width:55em;
+                overflow-x:auto;
+                width:calc(100% - .5em);
+            }
+
+            thead,
+            tbody{
+                display:table;
+                table-layout:fixed;
+                width:100%;
+            }
+
+            tbody tr{
+                min-height:8em;
+            }
+
+            thead tr{
+                background:var(--background);
+                border-radius:.5em .5em 0 0;
+                color:var(--platinum);
+            }
+
+            tr{
+                display:grid;
+                grid-template-columns:10em 1fr 1fr 1fr;
+            }
+
+            tr:hover{
+                background:var(--secondary-color);
+            }
+
+            th,
+            td{
+                text-align:left;
+                word-wrap:break-word;
+            }
+
+            th{
+                border:0;
+                padding:.4em;
+            }
+
+            td{
+                border:1px solid var(--border-color);
+                max-height:15em;
+                overflow:auto;
+                padding:.4em;
+            }
+
+            @media (max-width:48em){
+                .dashboard-heading{
+                    align-items:stretch;
+                    flex-direction:column;
+                }
+
+                .dashboard-config{
+                    align-self:flex-start;
+                }
+
+                .dashboard-chart.full-width{
+                    grid-column:span 1;
+                }
+            }
+
+        </style>
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+            <section class="dashboard-heading">
+                <div>
+                    <h2><span id="idDisplay"></span>Personal Mental Health Center</h2>
+                    <p>Your historic ratings for various symptoms, conditions, and risks. Here you can see the progress you are making and issues that may need attention.</p>
+                </div>
+                <html-import
+                    id="dashboardConfig"
+                    class="dashboard-config"
+                    href="./arcane/components/dashboard-config.html?v=4"
+                ></html-import>
+            </section>
+
+            <section id="chartGrid" class="chart-grid" aria-label="Dashboard charts"></section>
+
+            <section class="notes-section">
+                <h1>Mental Health Notes</h1>
+                <p>These notes may help you understand changes over time and recall recommendations and suggestions.</p>
+                <input type="search" id="searchNotes" class="search-notes" placeholder="Search Notes">
+                <table class="notes">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Mental Health Assessment</th>
+                            <th>Topics of Discussion or Activities</th>
+                            <th>Treatment Options</th>
+                        </tr>
+                    </thead>
+                    <tbody id="noteRows"></tbody>
+                </table>
+            </section>
+        </main>
+    </body>
+
+    <script type="module">
+        import Notes from './apps/precrisis/entities/Notes.js?v=2';
+        import Scores from './apps/precrisis/entities/Scores.js';
+        import './arcane/entities/User.js';
+        import {dashboardCharts,getDashboardChart} from './apps/precrisis/modules/DashboardCharts.js';
+        import {
+            collectDashboardChartData,
+            dashboardNoteKeys
+        } from './apps/precrisis/modules/DashboardData.js';
+        import waitForComponent from './arcane/modules/WaitForComponent.js';
+
+        const config=new URLSearchParams(window.location.search);
+        const selectedUser=config.get('id');
+        const idDisplay=document.querySelector('#idDisplay');
+        const chartGrid=document.querySelector('#chartGrid');
+        const dashboardConfig=document.querySelector('#dashboardConfig');
+        const searchNotes=document.querySelector('#searchNotes');
+        const noteRows=document.querySelector('#noteRows');
+        const queuedChartData=new WeakMap();
+        const chartObserver=typeof IntersectionObserver==='function'
+            ?new IntersectionObserver(loadVisibleCharts,{rootMargin:'300px 0px'})
+            :null;
+
+        let currentChartData=new Map();
+        let populatePromise=null;
+        let renderGeneration=0;
+
+        window.addEventListener('dbopfs-ready',populateUI);
+        window.addEventListener('user-entity-loaded',populateUI);
+        chartGrid.addEventListener('chart-remove',removeChart);
+        dashboardConfig.addEventListener(
+            'dashboard-config-change',
+            e=>setChartVisibility(e.detail?.key,e.detail?.visible)
+        );
+        dashboardConfig.addEventListener(
+            'dashboard-config-closed',
+            ()=>renderCharts(currentChartData)
+        );
+        searchNotes.addEventListener('input',filterNotes);
+
+        if(window.dbopfs?.ready&&window.user?.ready){
+            populateUI();
+        }
+
+        async function populateUI(){
+            if(!window.dbopfs?.ready||!window.user?.ready){
+                return false;
+            }
+
+            if(populatePromise){
+                return populatePromise;
+            }
+
+            populatePromise=loadDashboard();
+
+            try{
+                return await populatePromise;
+            }finally{
+                populatePromise=null;
+            }
+        }
+
+        async function loadDashboard(){
+            const configComponent=await waitForComponent(
+                dashboardConfig,
+                {
+                    methods:['configure','setVisibility','open'],
+                    property:'ready',
+                    event:'dashboard-config-ready'
+                }
+            );
+            configComponent.configure(
+                {
+                    definitions:dashboardCharts,
+                    visibility:window.user.dashboard.charts,
+                    heading:'Configure Dashboard',
+                    description:'Choose which charts appear on your dashboard. Changes save automatically.',
+                    triggerLabel:'Configure Dashboard'
+                }
+            );
+            idDisplay.innerText=selectedUser?`${selectedUser}'s `:'';
+
+            const [scores,notes]=await Promise.all(
+                [
+                    Scores.getAll(),
+                    Notes.getAll()
+                ]
+            );
+
+            currentChartData=collectDashboardChartData(scores,selectedUser);
+            renderCharts(currentChartData);
+            renderNotes(notes);
+            return true;
+        }
+
+        function renderCharts(data=new Map()){
+            clearCharts();
+
+            const generation=renderGeneration;
+            const visibility=window.user.dashboard.charts;
+            dashboardConfig.setVisibility?.(visibility);
+            const fragment=document.createDocumentFragment();
+            const pending=[];
+            const observed=[];
+
+            for(let i=0;i<dashboardCharts.length;i++){
+                const definition=dashboardCharts[i];
+
+                const isVisible=typeof visibility[definition.key]==='boolean'
+                    ?visibility[definition.key]
+                    :definition.defaultVisible!==false;
+
+                if(!isVisible){
+                    continue;
+                }
+
+                const chartData=data.get(definition.key)||[];
+
+                if(chartObserver){
+                    const placeholder=createChartPlaceholder(definition);
+                    queuedChartData.set(
+                        placeholder,
+                        {
+                            data:chartData,
+                            definition:definition,
+                            generation:generation
+                        }
+                    );
+                    fragment.append(placeholder);
+                    observed.push(placeholder);
+                }else{
+                    const chart=createChartElement(definition);
+                    fragment.append(chart);
+                    pending.push(
+                        prepareChart(chart,chartData,generation)
+                    );
+                }
+            }
+
+            chartGrid.append(fragment);
+
+            for(let i=0;i<observed.length;i++){
+                chartObserver.observe(observed[i]);
+            }
+
+            Promise.allSettled(pending).then(
+                results=>{
+                    const failed=results.filter(result=>result.status==='rejected');
+
+                    if(failed.length){
+                        console.error(`${failed.length} dashboard charts could not initialize.`);
+                    }
+                }
+            );
+        }
+
+        function createChartElement(definition={}){
+            const chart=document.createElement('html-import');
+
+            chart.className='dashboard-chart';
+            chart.dataset.chartKey=definition.key;
+            chart.dataset.title=definition.title;
+            chart.dataset.info=definition.description||'';
+            chart.dataset.chartStyle=definition.style;
+            chart.dataset.min=`${definition.min}`;
+            chart.dataset.max=`${definition.max}`;
+            chart.dataset.seriesLabel=definition.seriesLabel;
+            chart.dataset.valueLabel=definition.valueLabel;
+            chart.dataset.timeLabel=definition.timeLabel;
+            chart.dataset.removable=`${definition.removable===true}`;
+            chart.dataset.removeLabel=`Remove ${definition.title} from dashboard`;
+            chart.setAttribute('href','./arcane/components/chart.html?v=5');
+
+            if(definition.fullWidth){
+                chart.classList.add('full-width');
+            }
+
+            return chart;
+        }
+
+        function createChartPlaceholder(definition={}){
+            const placeholder=document.createElement('section');
+            const title=document.createElement('h2');
+            const status=document.createElement('p');
+
+            placeholder.className='dashboard-chart dashboard-chart-placeholder';
+            placeholder.dataset.chartKey=definition.key;
+            title.innerText=definition.title;
+            status.innerText='Loading chart...';
+
+            if(definition.fullWidth){
+                placeholder.classList.add('full-width');
+            }
+
+            placeholder.append(title,status);
+            return placeholder;
+        }
+
+        async function prepareChart(chart,data,generation){
+            await waitForComponent(
+                chart,
+                {
+                    methods:['populate','update','addData'],
+                    property:'ready',
+                    event:'chart-ready'
+                }
+            );
+
+            if(generation!==renderGeneration||!chart.isConnected){
+                return false;
+            }
+
+            await chart.populate(data);
+            return true;
+        }
+
+        function loadVisibleCharts(entries=[]){
+            for(let i=0;i<entries.length;i++){
+                const entry=entries[i];
+
+                if(!entry.isIntersecting){
+                    continue;
+                }
+
+                chartObserver.unobserve(entry.target);
+                const queued=queuedChartData.get(entry.target);
+
+                if(
+                    !queued
+                    || queued.generation!==renderGeneration
+                    || !entry.target.isConnected
+                ){
+                    continue;
+                }
+
+                const chart=createChartElement(queued.definition);
+                entry.target.replaceWith(chart);
+                prepareChart(
+                    chart,
+                    queued.data,
+                    queued.generation
+                ).catch(
+                    error=>console.error('Unable to draw dashboard chart:',error)
+                );
+            }
+        }
+
+        function removeChart(e){
+            const key=e.detail?.key;
+
+            if(!setChartVisibility(key,false)){
+                return;
+            }
+
+            const chart=e.target.closest('[data-chart-key]');
+
+            if(chart){
+                chartObserver?.unobserve(chart);
+                chart.destroy?.();
+                chart.remove();
+            }
+        }
+
+        function setChartVisibility(key='',visible=true){
+            if(!getDashboardChart(key)||typeof visible!=='boolean'){
+                return false;
+            }
+
+            const dashboard=window.user.dashboard;
+            dashboard.charts[key]=visible;
+            window.user.dashboard=dashboard;
+            dashboardConfig.setVisibility?.(dashboard.charts);
+            return true;
+        }
+
+        function clearCharts(){
+            renderGeneration++;
+            chartObserver?.disconnect();
+
+            chartGrid.querySelectorAll('[data-chart-key]').forEach(
+                chart=>chart.destroy?.()
+            );
+            chartGrid.replaceChildren();
+        }
+
+        function renderNotes(records=[]){
+            const rows={};
+            const noteTypes={
+                'assessment note':'mental_health_assessment',
+                'topics of discussion':'topics_of_discussion_or_activities',
+                'treatment options':'treatment_options'
+            };
+
+            for(let i=0;i<records.length;i++){
+                const note=records[i];
+
+                if(!note||typeof note!=='object'){
+                    continue;
+                }
+
+                if(selectedUser&&`${note.username}`!==selectedUser){
+                    continue;
+                }
+
+                const noteType=noteTypes[note.type];
+
+                if(!noteType||!note.timestamps){
+                    continue;
+                }
+
+                const timestamp=Number(note.timestamps);
+                const hasUsername=`${note.username||''}`.length>0;
+                const date=Number.isFinite(timestamp)
+                    ?(hasUsername?timestamp:Math.floor(timestamp/60000)*60000)
+                    :note.timestamps;
+
+                if(!rows[date]){
+                    rows[date]={};
+                }
+
+                rows[date][noteType]=note.note;
+            }
+
+            noteRows.replaceChildren();
+
+            const dates=Object.keys(rows).sort(
+                (a,b)=>Number(a)-Number(b)
+            );
+
+            for(let i=0;i<dates.length;i++){
+                const date=dates[i];
+                const row=document.createElement('tr');
+                const dateValue=Number(date);
+                const displayDate=Number.isFinite(dateValue)
+                    ?new Date(dateValue).toLocaleString()
+                    :date;
+
+                row.id=`note-${date}`.replace(/[: ]/g,'_');
+                row.append(
+                    createCell(displayDate),
+                    createCell(rows[date][dashboardNoteKeys[0]]||''),
+                    createCell(rows[date][dashboardNoteKeys[1]]||''),
+                    createCell(rows[date][dashboardNoteKeys[2]]||'')
+                );
+                noteRows.append(row);
+            }
+        }
+
+        function createCell(value=''){
+            const cell=document.createElement('td');
+            cell.innerText=value;
+            return cell;
+        }
+
+        function filterNotes(){
+            const value=searchNotes.value.trim().toLowerCase();
+
+            noteRows.querySelectorAll('tr').forEach(
+                row=>row.classList.toggle(
+                    'hidden',
+                    !row.innerText.toLowerCase().includes(value)
+                )
+            );
+        }
+    </script>
+</html>

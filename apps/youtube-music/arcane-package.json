@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"youtube-music","displayName":"Arcane YouTube Music","version":"0.1.0","entry":"index.html","strategy":"static","include":["img","index.html","manifest.json","modules","youtube-music.css"],"exclude":[],"shared":["browser-runtime"]}

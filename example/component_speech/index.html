@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<title>PreCrisis.AI Speech Example</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="referrer" content="origin" />
+
+		<base href="/" />
+
+		<link rel="manifest" href="/apps/precrisis/manifest.json" crossorigin="use-credentials" />
+		<link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png">
+
+		<!-- Styles -->
+		<link rel="stylesheet" href="/arcane/css/layout.css">
+
+		<script async type="module" src="/arcane/modules/HTMLImport.js"></script>
+
+		<script async type="module" src="/arcane/modules/Errors.js"></script>
+	</head>
+
+	<body>
+		<html-import class="header" href="/arcane/components/header.html"></html-import>
+		<nav class="nav"></nav>
+		<main class="contents">
+			<h1>Speech Example</h1>
+			<pre id="speech-output">Waiting...</pre>
+		    <html-import class="speech" href="/arcane/components/speech.html"></html-import>
+		</main>
+
+
+	</body>
+
+	<script>
+		const speech = document.querySelector('.speech');
+		const output = document.querySelector('#speech-output');
+
+		speech.addEventListener(
+			'speech-transcription-complete',
+			function speechExample(e) {
+				output.textContent = e?.detail?.text || 'No transcription returned.';
+			}
+		);
+	</script>
+
+</html>

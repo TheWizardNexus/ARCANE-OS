@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"messages","displayName":"Arcane Messages","version":"0.1.0","entry":"index.html","strategy":"static","include":["img","index.html","manifest.json","messages.css","modules"],"exclude":[],"shared":["browser-runtime"]}

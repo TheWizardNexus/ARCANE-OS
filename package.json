@@ -1,0 +1,43 @@
+{
+  "name": "arcane-os",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared application interface runtime and native-capable application workspace for Arcane OS.",
+  "scripts": {
+    "test": "node --test test/ai.test.mjs test/ollama.test.mjs test/ollama-settings.test.mjs test/app-packager.test.mjs test/basic-user-apps.test.mjs test/boss-chat-integration.test.mjs test/boss-library-manifest.test.mjs test/boss-library-page.test.mjs test/boss-library-runtime.test.mjs test/boss-library-setup.test.mjs test/boss-modelfile.test.mjs test/communications.test.mjs test/component-contracts.test.mjs test/configured-ai-chat-session.test.mjs test/developer-app.test.mjs test/development-workspace.test.mjs test/directory-picker.test.mjs test/errors.test.mjs test/file-manager-component.test.mjs test/mail-transport.test.mjs test/machine-check-order.test.mjs test/modal-component.test.mjs test/redress-behavior-components.test.mjs test/redress-shared-shell-components.test.mjs test/theme-manager-system-appearance.test.mjs test/terminal.test.mjs test/utility-apps.test.mjs test/warrior-spirit-app.test.mjs",
+    "model:ensure": "node tools/ensure-arcane-model.mjs",
+    "test:redress": "node --test apps/redress/test/app-shell.test.mjs apps/redress/test/case-importer.test.mjs apps/redress/test/case-model.test.mjs apps/redress/test/case-repository.test.mjs apps/redress/test/evidence-descriptor.test.mjs apps/redress/test/legal-prompts.test.mjs apps/redress/test/modelfile.test.mjs",
+    "apps:list": "node tools/package-app.mjs list",
+    "app:inspect": "node tools/package-app.mjs inspect",
+    "app:package": "node tools/package-app.mjs package",
+    "app:release": "node tools/package-app.mjs release",
+    "app:check": "node tools/package-app.mjs check",
+    "app:bump": "node tools/package-app.mjs bump",
+    "test:app-packager": "node --test test/app-packager.test.mjs",
+    "build:boss-public": "node tools/package-app.mjs package boss",
+    "lock:boss-public": "node apps/boss/scripts/build_public_release.mjs --refresh-lock-only",
+    "test:boss-public": "node --test test/boss-public-release.test.mjs",
+    "check:boss-public": "npm run test:boss-public && node tools/package-app.mjs check boss",
+    "check:public-apps": "npm run test:boss-public && node tools/package-app.mjs check --all",
+    "test:machine": "npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.4 run check",
+    "check": "npm test && npm run test:redress && npm run check:public-apps && npm run test:machine",
+    "check:windows": "npm --prefix machine_bundles/arcane-os-machine-bundle-v0.8.4 run check:windows",
+    "build:dev:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -Target release",
+    "build:dev:apps:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -Target apps",
+    "build:dev:app:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -Target app",
+    "signing:bootstrap:dev:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-dev-signed.ps1 -BootstrapOnly",
+    "build:signed:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target release",
+    "build:signed:apps:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target apps",
+    "build:signed:app:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target app",
+    "signing:preflight:windows": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File machine_bundles/arcane-os-machine-bundle-v0.8.4/tools/build-windows-signed.ps1 -Target release -PreflightOnly",
+    "prepush": "npm test",
+    "release:check": "npm run check && npm run check:windows",
+    "hooks:install": "node tools/install-git-hooks.mjs",
+    "prepare": "node tools/install-git-hooks.mjs"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "strong-type": "^1.1.0"
+  }
+}

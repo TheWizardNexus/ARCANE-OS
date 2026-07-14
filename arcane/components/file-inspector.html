@@ -1,0 +1,293 @@
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+<style>
+    :host{display:block;min-width:0}
+    .inspector{overflow:hidden}
+    .title-wrap{display:grid;gap:var(--arcane-space-1);min-width:0}
+    .title,.path{overflow-wrap:anywhere}
+    .path{color:var(--arcane-muted);font-size:.86rem;margin:0}
+    .status{flex:0 0 auto}
+    .metadata{
+        display:grid;
+        gap:var(--arcane-space-3);
+        grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr));
+        margin:0;
+    }
+    .metadata>div{display:grid;gap:var(--arcane-space-1);min-width:0}
+    .metadata dt{color:var(--arcane-muted);font-size:.8rem;font-weight:650;text-transform:uppercase}
+    .metadata dd{margin:0;overflow-wrap:anywhere}
+    .preview-shell{
+        background:var(--arcane-surface);
+        border:1px solid var(--arcane-border);
+        border-radius:var(--arcane-radius-medium);
+        margin-top:var(--arcane-space-4);
+        max-height:32rem;
+        min-height:8rem;
+        overflow:auto;
+        padding:var(--arcane-space-4);
+    }
+    .preview-shell pre{font:inherit;margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+    .preview-empty{color:var(--arcane-muted);margin:0}
+    .actions{display:flex;flex-wrap:wrap;gap:var(--arcane-space-2)}
+    .state{margin:var(--arcane-space-4)}
+</style>
+
+<section id="region" class="inspector arcane-card" aria-label="File inspector">
+    <p id="empty" class="state arcane-state arcane-state--empty">Select an item to inspect.</p>
+    <div id="content" hidden>
+        <header class="arcane-card__header">
+            <div class="title-wrap">
+                <slot name="title"><h2 id="inspectorTitle" class="title arcane-section-heading"></h2></slot>
+                <p id="path" class="path"></p>
+            </div>
+            <span id="status" class="status arcane-badge" hidden></span>
+        </header>
+        <div class="arcane-card__body">
+            <slot name="metadata"><dl id="metadata" class="metadata"></dl></slot>
+            <div id="previewShell" class="preview-shell" aria-label="Preview">
+                <slot name="preview"><div id="preview"></div></slot>
+            </div>
+        </div>
+        <footer id="footer" class="arcane-card__footer" hidden>
+            <slot name="actions"><div id="actions" class="actions"></div></slot>
+        </footer>
+    </div>
+</section>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const region=root.querySelector('#region');
+    const empty=root.querySelector('#empty');
+    const content=root.querySelector('#content');
+    const title=root.querySelector('#inspectorTitle');
+    const path=root.querySelector('#path');
+    const status=root.querySelector('#status');
+    const metadata=root.querySelector('#metadata');
+    const previewShell=root.querySelector('#previewShell');
+    const preview=root.querySelector('#preview');
+    const footer=root.querySelector('#footer');
+    const actions=root.querySelector('#actions');
+
+    let actionItems=[];
+    let current=null;
+    let options={};
+
+    host.clear=clear;
+    host.configure=configure;
+    host.setActions=setActions;
+    host.setBusy=setBusy;
+    host.setError=setError;
+    host.setPreview=setPreview;
+    host.show=show;
+
+    Object.defineProperties(host,{
+        file:{get:()=>current?{...current}:null,set:show},
+        options:{get:()=>({...options}),set:configure}
+    });
+
+    actions.addEventListener('click',handleAction);
+
+    function datasetOptions(){
+        return {
+            ariaLabel:host.dataset.ariaLabel||'File inspector',
+            emptyLabel:host.dataset.emptyLabel||'Select an item to inspect.',
+            previewLabel:host.dataset.previewLabel||'Preview'
+        };
+    }
+
+    function configure(input={}){
+        options={...datasetOptions(),...options,...input};
+        region.setAttribute('aria-label',`${options.ariaLabel||'File inspector'}`);
+        empty.innerText=`${options.emptyLabel||'Select an item to inspect.'}`;
+        previewShell.setAttribute('aria-label',`${options.previewLabel||'Preview'}`);
+        return {...options};
+    }
+
+    function show(input={}){
+        if(!input){
+            clear();
+            return null;
+        }
+        current={...input};
+        empty.hidden=true;
+        content.hidden=false;
+        title.innerText=`${input.title??input.name??input.path??'Item'}`;
+        path.innerText=`${input.path??''}`;
+        path.hidden=!path.innerText;
+        setStatus(input.status||'');
+        renderMetadata(input.metadata??defaultMetadata(input));
+        setActions(input.actions||[]);
+        setPreview(input.preview??input.content??'');
+        host.dispatchEvent(new CustomEvent('file-inspector-change',{
+            bubbles:true,
+            composed:true,
+            detail:{file:{...current}}
+        }));
+        return {...current};
+    }
+
+    function defaultMetadata(input={}){
+        return [
+            ['Type',input.mimeType||input.type||''],
+            ['Size',formatSize(input.size)],
+            ['Modified',formatDate(input.lastModified)]
+        ].filter(([,value])=>value);
+    }
+
+    function renderMetadata(input=[]){
+        const entries=Array.isArray(input)
+            ?input.map(entry=>Array.isArray(entry)?entry:[entry.label,entry.value])
+            :Object.entries(input||{});
+        const fragment=document.createDocumentFragment();
+        for(const [label,value] of entries){
+            if(value===undefined||value===null||value===''){
+                continue;
+            }
+            const group=document.createElement('div');
+            const term=document.createElement('dt');
+            const description=document.createElement('dd');
+            term.innerText=`${label}`;
+            description.innerText=`${value}`;
+            group.append(term,description);
+            fragment.append(group);
+        }
+        metadata.replaceChildren(fragment);
+        metadata.hidden=!metadata.children.length;
+    }
+
+    function setPreview(value=''){
+        preview.replaceChildren();
+        if(typeof Node!=='undefined'&&value instanceof Node){
+            preview.append(value);
+        }else if(`${value??''}`){
+            const text=document.createElement('pre');
+            text.innerText=`${value}`;
+            preview.append(text);
+        }else{
+            const message=document.createElement('p');
+            message.className='preview-empty';
+            message.innerText='No preview available.';
+            preview.append(message);
+        }
+        return value;
+    }
+
+    function setActions(values=[]){
+        actionItems=Array.from(values||[]).map((value,index)=>({
+            disabled:Boolean(value.disabled),
+            id:`${value.id??value.action??`action-${index+1}`}`,
+            label:`${value.label??value.title??'Action'}`,
+            variant:`${value.variant??(index?'secondary':'action')}`
+        }));
+        const fragment=document.createDocumentFragment();
+        for(const action of actionItems){
+            const button=document.createElement('button');
+            button.type='button';
+            button.className=`arcane-button ${action.variant==='secondary'?'arcane-button--secondary':action.variant==='tertiary'?'arcane-button--tertiary':''}`.trim();
+            button.dataset.inspectorAction=action.id;
+            button.disabled=action.disabled;
+            button.innerText=action.label;
+            fragment.append(button);
+        }
+        actions.replaceChildren(fragment);
+        footer.hidden=!actionItems.length;
+        return actionItems.map(action=>({...action}));
+    }
+
+    function handleAction(event){
+        const button=event.target.closest('[data-inspector-action]');
+        const action=actionItems.find(candidate=>candidate.id===button?.dataset.inspectorAction);
+        if(!button||!action||action.disabled){
+            return;
+        }
+        host.dispatchEvent(new CustomEvent('file-inspector-action',{
+            bubbles:true,
+            cancelable:true,
+            composed:true,
+            detail:{action:{...action},file:current?{...current}:null,id:action.id}
+        }));
+    }
+
+    function setStatus(value=''){
+        const next=typeof value==='object'?value:{label:value,status:value};
+        status.innerText=`${next.label||''}`;
+        status.dataset.status=`${next.status||''}`;
+        status.hidden=!status.innerText;
+    }
+
+    function setBusy(value=true,message='Loading preview…'){
+        const busy=Boolean(value);
+        previewShell.setAttribute('aria-busy',`${busy}`);
+        if(busy){
+            preview.replaceChildren();
+            const state=document.createElement('p');
+            state.className='arcane-state arcane-state--loading';
+            state.innerText=`${message}`;
+            preview.append(state);
+        }
+        return busy;
+    }
+
+    function setError(message=''){
+        const text=`${message||''}`;
+        preview.replaceChildren();
+        if(text){
+            const state=document.createElement('p');
+            state.className='arcane-state arcane-state--error';
+            state.innerText=text;
+            preview.append(state);
+            host.dispatchEvent(new CustomEvent('file-inspector-error',{
+                bubbles:true,
+                composed:true,
+                detail:{file:current?{...current}:null,message:text}
+            }));
+        }
+        return text;
+    }
+
+    function formatSize(value){
+        const bytes=Number(value);
+        if(!Number.isFinite(bytes)||bytes<0){
+            return '';
+        }
+        if(bytes<1024){
+            return `${bytes} B`;
+        }
+        const units=['KB','MB','GB','TB'];
+        let amount=bytes/1024;
+        let unit=0;
+        while(amount>=1024&&unit<units.length-1){
+            amount/=1024;
+            unit+=1;
+        }
+        return `${amount.toFixed(amount>=10?1:2)} ${units[unit]}`;
+    }
+
+    function formatDate(value){
+        if(value===undefined||value===null||value===''){
+            return '';
+        }
+        const date=new Date(value);
+        return Number.isNaN(date.getTime())?'':date.toLocaleString();
+    }
+
+    function clear(){
+        current=null;
+        actionItems=[];
+        content.hidden=true;
+        empty.hidden=false;
+        title.innerText='';
+        path.innerText='';
+        metadata.replaceChildren();
+        preview.replaceChildren();
+        actions.replaceChildren();
+        footer.hidden=true;
+        host.dispatchEvent(new CustomEvent('file-inspector-cleared',{bubbles:true,composed:true}));
+        return true;
+    }
+
+    configure(datasetOptions());
+    clear();
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('file-inspector-ready',{bubbles:true,composed:true}));
+</script>

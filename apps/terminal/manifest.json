@@ -1,0 +1,11 @@
+{
+  "name": "Arcane Terminal",
+  "short_name": "Terminal",
+  "description": "A native command terminal with integrated Arcane APIs, sessions, search, themes, and keyboard-first controls.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050a09",
+  "theme_color": "#0b1714",
+  "icons": [{"src":"./img/arcane-terminal.png","sizes":"512x512","type":"image/png"}]
+}

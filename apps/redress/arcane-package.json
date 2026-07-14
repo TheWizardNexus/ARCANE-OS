@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "redress",
+  "displayName": "Redress Legal Workbench",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "strategy": "static",
+  "include": [
+    "case-tree.css",
+    "components",
+    "index.html",
+    "manifest.json",
+    "modules",
+    "prompts",
+    "redress.css",
+    "redress-modal.css"
+  ],
+  "exclude": [
+    ".agents",
+    ".git",
+    "ARCHITECTURE.md",
+    "Modelfile",
+    "README.md",
+    "scripts",
+    "test"
+  ],
+  "shared": [
+    "browser-runtime"
+  ]
+}

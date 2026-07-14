@@ -1,0 +1,227 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3" />
+<style>
+    button{
+        width:16em;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    button:active{
+        opacity:.5;
+    } 
+
+    button.pressed{
+        opacity:.6;
+        border:.2em;
+        border-color:var(--border-color);
+    }
+
+    .end{
+        background-color:var(--danger-color);
+        margin-left:1em;
+    }
+
+    .mute{
+        float:right;
+    }
+    
+    @media (max-width: 48em) {
+        body {
+            grid-template-columns: 2.2em 1fr;
+        }
+        
+        button {
+            width:100%;
+        }
+        
+        .end{
+            margin:0;
+        }
+    }
+    
+    
+</style>
+
+<p class="hidden">Will auto send after X seconds of silence set in code.</p>
+<button id="recordButton">Push To Talk</button>
+<button id="stopButton" class='hidden' disabled>Send</button>
+<button id="endButton" class="end">Complete</button>
+<button id="muteButton" class="mute">Mute</button>
+
+<script type="module">
+    import('../modules/DBLS.js');
+    import('../modules/AI.js?v=3');
+
+    const audioElement = new Audio();
+    const host=this;
+    const shadowRoot=host.shadowRoot;
+    const recordButton = shadowRoot.querySelector('#recordButton');
+    const stopButton = shadowRoot.querySelector('#stopButton');
+    const muteButton = shadowRoot.querySelector('#muteButton');
+    const sourceNodes = [];
+    const audioRecordingChunks=[];
+    const silenceDuration=0;//2000;
+    
+    let mediaRecorder = MediaRecorder;
+    let audioMessageChunks = '';
+    let isSpeaking = false;
+    let silenceTimer;
+    
+    host.muted=false;
+
+    recordButton.addEventListener(
+        'mousedown', 
+        record
+    );
+
+    recordButton.addEventListener(
+        'touchstart', 
+        record
+    );
+
+    recordButton.addEventListener(
+        'mouseup', 
+        stop
+    );
+
+    recordButton.addEventListener(
+        'touchend', 
+        stop
+    );
+
+    // recordButton.addEventListener(
+    //     'click', 
+    //     record
+    // );
+
+    // stopButton.addEventListener(
+    //     'click', 
+    //     stop
+    // );
+
+    muteButton.addEventListener(
+        'click', 
+        muteToggle
+    );
+
+    shadowRoot.querySelector('#endButton').addEventListener(
+        'click',
+        (e)=>{
+            e.target.disabled=true;
+            transcribe('End now, run all tool functions.');
+        }
+    );
+
+    window.addEventListener(
+        'ai-ready',
+        function aiReadyHandler(){
+            muteButton.click();
+        }
+    );
+
+    if(window.ai?.ready){
+        muteButton.click();
+    }
+
+    async function muteToggle(e){
+        if(!host.muted){
+            e.target.innerText='UnMute';
+            ai.muted=host.muted=true;
+            ai.stopAudio();
+            return
+        }
+
+        e.target.innerText='Mute';
+        ai.muted=host.muted=false;    
+    }
+
+    async function transcribe(transcription=''){
+        const transcriptionEvent = new CustomEvent(
+            'speech-transcription-complete', 
+            {
+                detail: { text: transcription }
+            }
+        );
+
+        host.dispatchEvent(transcriptionEvent);
+    }
+
+    async function record() {
+        ai.stopAudio();
+        audioRecordingChunks.splice(0);
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        processor.onaudioprocess = function(event) {
+            const input = event.inputBuffer.getChannelData(0);
+            const isSilent = input.every(sample => Math.abs(sample) < 0.05); // Threshold for silence
+            
+            if (isSilent&&silenceDuration) {
+                console.log('silent');
+                if(!silenceTimer){
+                    silenceTimer = setTimeout(() => {
+                        
+                        //console.log('TIMER SAYS STOPPING');
+                        stop();
+                        clearTimeout(silenceTimer);
+                    }, silenceDuration); // wait for specified milliseconds of silence
+                }
+            } else {
+                clearTimeout(silenceTimer);
+                silenceTimer=false;
+            }
+        };
+
+        mediaRecorder.ondataavailable = event => {
+            audioRecordingChunks.push(event.data);
+        };
+        
+        mediaRecorder.onstop = async () => {
+            processor.disconnect();
+            source.disconnect();
+            
+            const audioBlob = new Blob(audioRecordingChunks, { type: 'audio/webm; codecs=opus' });
+            const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
+            //console.log(audioFile)
+
+            //playBackAudio(audioBlob);
+
+            const transcription = await ai.fetchSTT(audioFile);
+
+            transcribe(transcription);
+
+            console.log(transcription);
+        };
+        
+        mediaRecorder.start();
+        // recordButton.disabled = true;
+        // stopButton.disabled = false;
+    }
+
+    async function stop() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        // recordButton.disabled = false;
+        // stopButton.disabled = true;
+    }
+
+    async function playBackAudio(audioBlob) {
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioElement.src = audioUrl;
+        audioElement.play();
+    }
+
+    
+</script>

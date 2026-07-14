@@ -1,0 +1,264 @@
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+<style>
+    :host{display:block}
+    .file-drop{overflow:hidden}
+    .drop-zone{
+        align-items:center;
+        border:2px dashed var(--arcane-border);
+        border-radius:var(--arcane-radius-medium);
+        display:grid;
+        gap:var(--arcane-space-3);
+        justify-items:center;
+        min-height:9rem;
+        padding:var(--arcane-space-5);
+        text-align:center;
+        transition:background-color 160ms ease,border-color 160ms ease;
+    }
+    .drop-zone[data-drag-active="true"]{
+        background:color-mix(in srgb,var(--arcane-action) 9%,var(--arcane-surface));
+        border-color:var(--arcane-action);
+    }
+    .drop-zone[aria-busy="true"]{cursor:wait;opacity:.72}
+    .drop-title{font-weight:700;margin:0}
+    .drop-hint{color:var(--arcane-muted);margin:0;max-width:36rem}
+    input[type="file"]{display:none}
+    .progress-wrap{display:grid;gap:var(--arcane-space-2);padding-top:var(--arcane-space-3)}
+    progress{accent-color:var(--arcane-action);width:100%}
+    .status{min-height:1.4em}
+</style>
+
+<section class="file-drop arcane-card" aria-labelledby="fileDropTitle">
+    <div id="dropZone" class="drop-zone">
+        <p id="fileDropTitle" class="drop-title">Add files</p>
+        <p id="fileDropHint" class="drop-hint">Drop files here or choose them from this device.</p>
+        <button id="choose" class="arcane-button" type="button">Choose files</button>
+        <input id="picker" type="file" aria-describedby="fileDropHint">
+    </div>
+    <div id="feedback" class="arcane-card__body" hidden>
+        <div id="progressWrap" class="progress-wrap" hidden>
+            <progress id="progress" max="100"></progress>
+            <span id="progressLabel"></span>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+    </div>
+</section>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const dropZone=root.querySelector('#dropZone');
+    const title=root.querySelector('#fileDropTitle');
+    const hint=root.querySelector('#fileDropHint');
+    const choose=root.querySelector('#choose');
+    const picker=root.querySelector('#picker');
+    const feedback=root.querySelector('#feedback');
+    const progressWrap=root.querySelector('#progressWrap');
+    const progressElement=root.querySelector('#progress');
+    const progressLabel=root.querySelector('#progressLabel');
+    const statusElement=root.querySelector('#status');
+
+    let dragDepth=0;
+    let busy=false;
+    let currentFiles=[];
+    let progress=null;
+    let options={};
+
+    host.clear=clear;
+    host.configure=configure;
+    host.openPicker=openPicker;
+    host.setBusy=setBusy;
+    host.setError=setError;
+    host.setProgress=setProgress;
+
+    Object.defineProperties(host,{
+        busy:{get:()=>busy,set:setBusy},
+        files:{get:()=>currentFiles.slice()},
+        options:{get:getOptions,set:configure},
+        progress:{get:()=>progress,set:setProgress}
+    });
+
+    choose.addEventListener('click',openPicker);
+    picker.addEventListener('change',()=>acceptFiles(picker.files,'picker'));
+    dropZone.addEventListener('dragenter',dragEnter);
+    dropZone.addEventListener('dragover',dragOver);
+    dropZone.addEventListener('dragleave',dragLeave);
+    dropZone.addEventListener('drop',dropFiles);
+
+    function datasetOptions(){
+        return {
+            accept:host.dataset.accept||'',
+            chooseLabel:host.dataset.chooseLabel||'Choose files',
+            hint:host.dataset.hint||'Drop files here or choose them from this device.',
+            maxFiles:numberOr(host.dataset.maxFiles,0),
+            multiple:host.dataset.multiple!=='false',
+            title:host.dataset.title||'Add files'
+        };
+    }
+
+    function configure(input={}){
+        const previous={...datasetOptions(),...options};
+        options={
+            ...previous,
+            ...input,
+            accept:`${input.accept??previous.accept??''}`,
+            maxFiles:numberOr(input.maxFiles??previous.maxFiles,0),
+            multiple:input.multiple===undefined?Boolean(previous.multiple):Boolean(input.multiple)
+        };
+        title.innerText=`${options.title||'Add files'}`;
+        hint.innerText=`${options.hint||''}`;
+        choose.innerText=`${options.chooseLabel||'Choose files'}`;
+        picker.multiple=options.multiple;
+        if(options.accept){
+            picker.accept=options.accept;
+        }else{
+            picker.removeAttribute('accept');
+        }
+        return getOptions();
+    }
+
+    function getOptions(){
+        return {...options};
+    }
+
+    function openPicker(){
+        if(busy){
+            return false;
+        }
+        picker.click();
+        return true;
+    }
+
+    function dragEnter(event){
+        event.preventDefault();
+        if(busy){
+            return;
+        }
+        dragDepth+=1;
+        dropZone.dataset.dragActive='true';
+    }
+
+    function dragOver(event){
+        event.preventDefault();
+        if(event.dataTransfer){
+            event.dataTransfer.dropEffect=busy?'none':'copy';
+        }
+    }
+
+    function dragLeave(event){
+        event.preventDefault();
+        dragDepth=Math.max(0,dragDepth-1);
+        if(!dragDepth){
+            dropZone.dataset.dragActive='false';
+        }
+    }
+
+    function dropFiles(event){
+        event.preventDefault();
+        dragDepth=0;
+        dropZone.dataset.dragActive='false';
+        if(busy){
+            return;
+        }
+        acceptFiles(event.dataTransfer?.files||[],'drop');
+    }
+
+    function acceptFiles(fileList=[],source='api'){
+        const files=Array.from(fileList||[]).filter(Boolean);
+        if(!files.length){
+            return false;
+        }
+        if(options.maxFiles>0&&files.length>options.maxFiles){
+            setError(`Select no more than ${options.maxFiles} file${options.maxFiles===1?'':'s'}.`);
+            return false;
+        }
+        currentFiles=options.multiple?files:files.slice(0,1);
+        setError('');
+        feedback.hidden=false;
+        statusElement.className='status';
+        statusElement.innerText=`${currentFiles.length} file${currentFiles.length===1?'':'s'} selected.`;
+        host.dispatchEvent(new CustomEvent('file-drop-selected',{
+            bubbles:true,
+            cancelable:false,
+            composed:true,
+            detail:{files:currentFiles.slice(),source}
+        }));
+        return currentFiles.slice();
+    }
+
+    function setBusy(value=true,message=''){
+        busy=Boolean(value);
+        choose.disabled=busy;
+        picker.disabled=busy;
+        dropZone.setAttribute('aria-busy',`${busy}`);
+        host.toggleAttribute('data-busy',busy);
+        if(message){
+            feedback.hidden=false;
+            statusElement.className='status';
+            statusElement.innerText=`${message}`;
+        }
+        host.dispatchEvent(new CustomEvent('file-drop-state',{
+            bubbles:true,
+            composed:true,
+            detail:{busy,progress}
+        }));
+        return busy;
+    }
+
+    function setProgress(value=null,label=''){
+        const numeric=Number(value);
+        progress=value===null||value===undefined||!Number.isFinite(numeric)
+            ?null
+            :Math.min(100,Math.max(0,numeric));
+        feedback.hidden=progress===null&&!statusElement.innerText;
+        progressWrap.hidden=progress===null;
+        if(progress!==null){
+            progressElement.value=progress;
+            progressLabel.innerText=label||`${Math.round(progress)}%`;
+        }else{
+            progressElement.removeAttribute('value');
+            progressLabel.innerText='';
+        }
+        host.dispatchEvent(new CustomEvent('file-drop-progress',{
+            bubbles:true,
+            composed:true,
+            detail:{progress,label:progressLabel.innerText}
+        }));
+        return progress;
+    }
+
+    function setError(message=''){
+        const text=`${message||''}`;
+        feedback.hidden=!text&&progress===null;
+        statusElement.innerText=text;
+        statusElement.className=text?'status arcane-error':'status';
+        if(text){
+            host.dispatchEvent(new CustomEvent('file-drop-error',{
+                bubbles:true,
+                composed:true,
+                detail:{message:text}
+            }));
+        }
+        return text;
+    }
+
+    function clear(){
+        currentFiles=[];
+        picker.value='';
+        setBusy(false);
+        setProgress(null);
+        setError('');
+        feedback.hidden=true;
+        return true;
+    }
+
+    function numberOr(value,fallback){
+        const numeric=Number(value);
+        return Number.isFinite(numeric)&&numeric>=0?numeric:fallback;
+    }
+
+    configure(datasetOptions());
+    dropZone.dataset.dragActive='false';
+    setBusy(false);
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('file-drop-ready',{bubbles:true,composed:true}));
+</script>

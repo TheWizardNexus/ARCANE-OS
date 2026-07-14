@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="./apps/precrisis/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/precrisis/img/favicon.png" type="image/png">
+        
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+        <!-- Tiny, dependency-free QR library (≈20 kB, MIT) -->
+        <script defer src="./arcane/modules/QRCode.min.js"></script>
+
+        <style>
+            section{
+                padding:3em;
+            }
+        </style>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+            <section>
+                <h1>Export Data To Share or Sync.</h1>
+                <br>
+
+                <button disabled id="backupBtn">Backup Database</button>
+
+                <h2>How to Share?</h2>
+                <p>Save the file and share.</p>
+                <ul>
+                    <li>Click "Backup Database".</li>
+                    <li>Open up your email or other chat app.</li>
+                    <li>Attach the file.</li>
+                    <li>Send it.</li>
+                </ul>
+                <br>
+
+                <h2>Disclaimer</h2>
+                <p>By using our AI, you agree to these terms and understand the limitations regarding data storage and device usage. Your privacy and security are our top priorities, and we strive to provide a safe and secure environment for all users.</p>
+                <br>
+            </section>
+        </main>
+        <script type="module">
+            import UserEntity from './arcane/entities/User.js';
+            const user=new UserEntity();
+
+            window.addEventListener(
+                'user-entity-loaded',
+                initBackupButton
+            );
+
+            function initBackupButton(){
+
+                const button=document.querySelector('#backupBtn');
+
+                button.disabled=false;
+                button.addEventListener(
+                    'click',
+                    async function backupDB(){
+
+                        const filename=`${user.username}-PreCrisis_Backup`;
+
+                        button.disabled=true;
+                        const originalText=button.textContent;
+                        button.textContent='Creating Backup...';
+                        await dbopfs.downloadCompressedPNG(filename);
+                        button.disabled=false;
+                        button.textContent=originalText;
+                    }
+                );
+            }
+        </script>
+    </body>
+</html>

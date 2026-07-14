@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <base href="../../" />
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>BOSS Libraries | Profile</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <meta name="description" content="Manage your BOSS Libraries profile, appearance, and AI settings." />
+        <meta name="theme-color" content="#022241" />
+        <link rel="manifest" href="./apps/boss/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/boss/img/boss-libraries-logo-stacked.png" type="image/png">
+        
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./apps/boss/boss.css?v=7">
+        <style>
+            body{
+                grid-template-rows: auto auto 1fr;
+            }
+
+            main{
+                grid-column:1 / -1;
+            }
+
+            section{
+                padding:3em;
+            }
+
+            section.model-preference label {
+                display: grid;
+                grid-template-columns: 3em 1fr;
+                padding-top: 2em;
+            }
+
+            section.model-select label {
+                display: grid;
+                padding-top: 2em;
+            }
+
+            section.voices label,
+            section.color-table label{
+                display: grid;
+                grid-template-columns: 3em 11em minmax(0,1fr);
+                padding-top:2em;
+            }
+
+            section.model-preference, 
+            section.model-select {
+                padding-left: 0;
+            }
+
+            section.input-container {
+                margin: 2em 0;
+            }
+
+            section.input-container label {
+                display: block;
+                margin-bottom: .5em;
+                font-weight: bold;
+            }
+
+            textarea {
+                height: 6em;
+                resize: vertical;
+            }
+
+            .color-preview {
+                display: flex;
+                gap: 0.5em;
+                align-items: center;
+                justify-content: flex-start;
+                min-height: 2em;
+            }
+
+            .color-box {
+                width: 1.5em;
+                height: 1.5em;
+                border:1px solid var(--border-color);
+                border-radius: 0.25em;
+                box-shadow: 0 0 0.2em rgba(0, 0, 0, 0.2);
+            }
+
+            .swatch-background{background:var(--background)}
+            .swatch-surface{background:var(--modal-background)}
+            .swatch-text{background:var(--text-color)}
+            .swatch-primary{background:var(--primary-color)}
+            .swatch-secondary{background:var(--secondary-color)}
+            .swatch-accent{background:var(--accent-color)}
+            .swatch-border{background:var(--border-color)}
+
+            .palette-folder {
+                width:2em;
+                height:2em;
+                margin-left:.4em;
+                filter:var(--file-icon-filter,none);
+            }
+
+            .palette-note,
+            .api-key-note {
+                color:var(--platinum);
+                font-size:.92em;
+                line-height:1.55;
+            }
+
+            .api-key-row {
+                display:flex;
+                align-items:center;
+                gap:.65em;
+                max-width:52rem;
+            }
+
+            .api-key-row input {
+                flex:1 1 auto;
+                min-width:0;
+                width:auto;
+            }
+
+            .api-key-row button {
+                flex:0 0 auto;
+                min-width:5.5em;
+                margin:.5em 0;
+            }
+
+            #char-count {
+                margin-top: 5px;
+                font-size: 12px;
+                color:var(--platinum);
+            }
+
+            input[type="radio"],
+            input[type="checkbox"] {
+                width: 1em;
+                height: 1em;
+                margin:.5em 1em .5em 0;
+                padding:0;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                background-color:var(--modal-background);
+                border:2px solid var(--platinum);
+                border-radius: 0;
+                outline: none;
+                cursor: pointer;
+                position: relative;
+            }
+            input[type="radio"]:checked::before,
+            input[type="checkbox"]:checked::before {
+                content: "";
+                width:.5em;
+                height:.5em;
+                background-color:var(--primary-color);
+                position: absolute;
+                top:.125em;
+                left:.125em;
+                border-radius: 0;
+            }
+
+            input[type="checkbox"]:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            audio {
+                display: block;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                width: 100%;
+            }
+            
+            audio::-webkit-media-controls-enclosure {
+              max-width: none
+            }
+            
+            audio::-webkit-media-controls-panel {
+              background-color: transparent
+            }
+            
+            /* audio::-webkit-media-controls-play-button {
+
+            } */
+            
+            audio::-webkit-media-controls-mute-button {
+              -webkit-appearance: none;
+            }
+            
+            
+            audio::-webkit-media-controls-timeline-container,
+            audio::-webkit-media-controls-current-time-display,
+            audio::-webkit-media-controls-time-remaining-display {
+                display:none;
+            }
+            
+            label {
+                font-size: 1.2em;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+            }
+            
+            textarea, input {
+                width: calc(100% - 2em);
+            }
+            
+            .input-animate {
+                animation: greenFlash 0.3s;
+            }
+            
+            @keyframes greenFlash {
+                from { background-color: rgba(182, 247, 187, .1); }
+                to { background-color: inherit; }
+            }
+            
+            @media (max-width: 48em) {
+                section {
+                    padding: 0;
+                }
+
+                section.voices label, section.color-table label {
+                    display: grid;
+                    grid-template-columns: 2em 8em minmax(0,1fr);
+                    padding-top: 2em;
+                }
+                
+                .color-preview {
+                    gap: 0.1em;
+                }
+
+                .palette-folder {
+                    margin-left:.15em;
+                }
+
+                .api-key-row {
+                    align-items:stretch;
+                    flex-direction:column;
+                    gap:0;
+                }
+
+                .api-key-row button {
+                    margin:0 0 .5em;
+                }
+            }
+        </style>
+        
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/entities/User.js"></script>
+
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/DBLS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=10"></html-import>
+
+        <main class="contents">
+            <section>
+                <h1>BOSS Libraries Profile</h1>
+                <p>Personal information is optional; you may use an ID instead.</p>
+                <input id="username" placeholder="Your Name or ID" />
+                <br>
+                <input id="email" placeholder="optional Email" />
+                <br>
+                <input id="phone" placeholder="optional Phone" />
+            </section>
+            <section class="api-key-section">
+                <h1>OpenAI API Key</h1>
+                <p id="openai-key-help">
+                    Optional. Add your own key to use OpenAI models; leave it blank when you use a local Ollama model.
+                </p>
+                <div class="api-key-row">
+                    <input
+                        id="license_key"
+                        type="password"
+                        placeholder="sk-..."
+                        value=""
+                        autocomplete="off"
+                        spellcheck="false"
+                        aria-describedby="openai-key-help openai-key-storage-note"
+                    />
+                    <button
+                        id="toggle-api-key"
+                        type="button"
+                        aria-controls="license_key"
+                        aria-pressed="false"
+                    >Show</button>
+                </div>
+                <p id="openai-key-storage-note" class="api-key-note">
+                    The key is saved in this browser's local BOSS profile. It is not encrypted, so do not enter it on a shared device or include it in exports you plan to share.
+                </p>
+            </section>
+
+            <section class="color-table">
+                <h1>BOSS Color Palette</h1>
+                <p class="palette-note">
+                    Every appearance uses the approved BOSS Libraries colors. The folder at the end previews the file-shelf color for that appearance.
+                </p>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="default">
+                                    <span>Classic Library</span>
+                                    <span class="color-preview boss-palette-default" aria-label="Classic Library palette with a navy folder">
+                                        <span class="color-box swatch-background" title="Background"></span>
+                                        <span class="color-box swatch-surface" title="Panel"></span>
+                                        <span class="color-box swatch-text" title="Text"></span>
+                                        <span class="color-box swatch-primary" title="Primary"></span>
+                                        <span class="color-box swatch-secondary" title="Secondary"></span>
+                                        <span class="color-box swatch-accent" title="Accent"></span>
+                                        <span class="color-box swatch-border" title="Border"></span>
+                                        <img class="palette-folder" src="./arcane/img/folder.svg" alt="">
+                                    </span>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="warm">
+                                    <span>Heritage</span>
+                                    <span class="color-preview boss-palette-warm" aria-label="Heritage palette with a red folder">
+                                        <span class="color-box swatch-background" title="Background"></span>
+                                        <span class="color-box swatch-surface" title="Panel"></span>
+                                        <span class="color-box swatch-text" title="Text"></span>
+                                        <span class="color-box swatch-primary" title="Primary"></span>
+                                        <span class="color-box swatch-secondary" title="Secondary"></span>
+                                        <span class="color-box swatch-accent" title="Accent"></span>
+                                        <span class="color-box swatch-border" title="Border"></span>
+                                        <img class="palette-folder" src="./arcane/img/folder.svg" alt="">
+                                    </span>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="curious">
+                                    <span>Growth</span>
+                                    <span class="color-preview boss-palette-curious" aria-label="Growth palette with a green folder">
+                                        <span class="color-box swatch-background" title="Background"></span>
+                                        <span class="color-box swatch-surface" title="Panel"></span>
+                                        <span class="color-box swatch-text" title="Text"></span>
+                                        <span class="color-box swatch-primary" title="Primary"></span>
+                                        <span class="color-box swatch-secondary" title="Secondary"></span>
+                                        <span class="color-box swatch-accent" title="Accent"></span>
+                                        <span class="color-box swatch-border" title="Border"></span>
+                                        <img class="palette-folder" src="./arcane/img/folder.svg" alt="">
+                                    </span>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="hopeful">
+                                    <span>Knowledge</span>
+                                    <span class="color-preview boss-palette-hopeful" aria-label="Knowledge palette with a blue folder">
+                                        <span class="color-box swatch-background" title="Background"></span>
+                                        <span class="color-box swatch-surface" title="Panel"></span>
+                                        <span class="color-box swatch-text" title="Text"></span>
+                                        <span class="color-box swatch-primary" title="Primary"></span>
+                                        <span class="color-box swatch-secondary" title="Secondary"></span>
+                                        <span class="color-box swatch-accent" title="Accent"></span>
+                                        <span class="color-box swatch-border" title="Border"></span>
+                                        <img class="palette-folder" src="./arcane/img/folder.svg" alt="">
+                                    </span>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="harmony">
+                                    <span>Balanced</span>
+                                    <span class="color-preview boss-palette-harmony" aria-label="Balanced palette with a green folder">
+                                        <span class="color-box swatch-background" title="Background"></span>
+                                        <span class="color-box swatch-surface" title="Panel"></span>
+                                        <span class="color-box swatch-text" title="Text"></span>
+                                        <span class="color-box swatch-primary" title="Primary"></span>
+                                        <span class="color-box swatch-secondary" title="Secondary"></span>
+                                        <span class="color-box swatch-accent" title="Accent"></span>
+                                        <span class="color-box swatch-border" title="Border"></span>
+                                        <img class="palette-folder" src="./arcane/img/folder.svg" alt="">
+                                    </span>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="warrior">
+                                    <span>Bold</span>
+                                    <span class="color-preview boss-palette-warrior" aria-label="Bold palette with a red folder">
+                                        <span class="color-box swatch-background" title="Background"></span>
+                                        <span class="color-box swatch-surface" title="Panel"></span>
+                                        <span class="color-box swatch-text" title="Text"></span>
+                                        <span class="color-box swatch-primary" title="Primary"></span>
+                                        <span class="color-box swatch-secondary" title="Secondary"></span>
+                                        <span class="color-box swatch-accent" title="Accent"></span>
+                                        <span class="color-box swatch-border" title="Border"></span>
+                                        <img class="palette-folder" src="./arcane/img/folder.svg" alt="">
+                                    </span>
+                                </label>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="voices">
+                <h1>AI Voice</h1>
+                <label>
+                    <input type="radio" name="audio" value="alloy">
+                    Alloy
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/alloy.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="ash">
+                    Ash
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/ash.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="coral">
+                    Coral
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/coral.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="echo">
+                    Echo
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/echo.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="fable">
+                    Fable
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/fable.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="nova">
+                    Nova
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/nova.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="onyx">
+                    Onyx
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/onyx.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="sage">
+                    Sage
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/sage.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="shimmer">
+                    Shimmer
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/shimmer.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+            </section>
+
+            <section class="developer-preference">
+                <h1>Developer Options</h1>
+                <label for="developer">
+                    <input
+                        type="checkbox"
+                        id="developer"
+                        name="developer"
+                    >
+                    Enable developer mode
+                </label>
+            </section>
+
+            <section class="model-select" id="Model_preferences">
+                <h1>Model Preferences</h1>
+                <label for="Preferred_model_provider">
+                    <span>Preferred Language Model Provider</span>
+                    <select id="Preferred_model_provider">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="OLLAMA">OLLAMA</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_stt_provider">
+                    <span>Preferred Transcription Model Provider</span>
+                    <select id="Preferred_stt_provider">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL_SPEACH">LOCAL_SPEACH</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_tts_provider">
+                    <span>Preferred Speech Model Provider</span>
+                    <select id="Preferred_tts_provider">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL_SPEACH">LOCAL_SPEACH</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_model">
+                    <span>Preferred Language Model</span>
+                    <select id="Preferred_model">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="BOSS_26">BOSS 26b</option>
+                        <option value="BOSS_120">BOSS 120b</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_stt_model">
+                    <span>Preferred Transcription Model</span>
+                    <select id="Preferred_stt_model">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL">LOCAL</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_tts_model">
+                    <span>Preferred Speech Model</span>
+                    <select id="Preferred_tts_model">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL">LOCAL</option>
+                    </select>
+                </label>
+            </section>
+            
+
+            <script type="module">
+                import UserEntity from './arcane/entities/User.js';
+
+                const user=new UserEntity();
+                const apiKeyInput=document.querySelector('#license_key');
+                const toggleApiKey=document.querySelector('#toggle-api-key');
+
+                toggleApiKey.addEventListener(
+                    'click',
+                    ()=>{
+                        const reveal=apiKeyInput.type==='password';
+
+                        apiKeyInput.type=reveal?'text':'password';
+                        toggleApiKey.textContent=reveal?'Hide':'Show';
+                        toggleApiKey.setAttribute('aria-pressed',String(reveal));
+                    }
+                );
+
+                window.addEventListener(
+                    'user-entity-loaded',
+                    populateUI
+                );
+
+                if (window.user?.ready) {
+                    populateUI();
+                }
+
+                // Update data when input changes
+                document.querySelector('main').addEventListener(
+                    'input',
+                    function(e){
+                        e.target.classList.remove('input-animate');
+                        void e.target.offsetWidth;
+                        e.target.classList.add('input-animate');
+                        
+                        updateData();
+                    }
+                );
+
+                async function isOllamaAvailableInRuntime() {
+                    let ollamaAvailable = false;
+
+                    // Check if local models are ready
+                    try {
+                        // Endpoint for local tts/stt server
+                        const response = await fetch(
+                            "http://127.0.0.1:8011/health",
+                            {
+                                method: "GET",
+                                credentials: "omit",
+                            }
+                        );
+
+                        if (!response.ok) {
+                            return ollamaAvailable;
+                        }
+
+                        const data = await response.json();
+
+                        ollamaAvailable = (data.available === true);
+                    }
+                    catch {}
+
+                    return ollamaAvailable;
+                }
+
+                async function updateData() {
+                    let selectedModels=[];// get some selects from the UI which you populate from the available models from AI
+
+                    // Get list of model proviiders and preferences from UI
+                    const preferredModelElements = document.querySelectorAll("section#Model_preferences select");
+                    selectedModels = Array.from(preferredModelElements, elem => elem.value);
+
+                    user.explicit={
+                        username: username.value || '',
+                        email: email.value || '',
+                        phone: phone.value || '',
+                        license_key: apiKeyInput.value || '',
+                        AI_voice: document.querySelector('[name="audio"]:checked')?.value || '',
+                        skin: document.querySelector('[name="theme"]:checked')?.value || 'default', // Save selected skin
+                        developer:document.getElementById('developer').checked,
+                        preferredModels:selectedModels
+                    }
+
+                    // Apply the selected skin live
+                    const selectedSkin = document.querySelector('[name="theme"]:checked')?.value || 'default';
+                    document.body.className = selectedSkin; // Update body class
+                }
+
+                async function populateUI() {
+
+                    username.value = user.username || '';
+                    email.value = user.email || '';
+                    phone.value = user.phone || '';
+                    apiKeyInput.value = user.license_key || '';
+
+                    // Need preferred models so it gets populated in multiple check boxes
+                    const preferredModelElements = document.querySelectorAll("section#Model_preferences select");
+                    preferredModelElements.forEach((elem, i) => elem.value = user.explicit.preferredModels[i]);
+
+
+                    const defaultVoice = 'alloy';
+                    const desiredVoice = String(user.AI_voice || defaultVoice);
+                    const selectedVoice = document.querySelector(`input[name="audio"][value="${desiredVoice}"]`)
+                        || document.querySelector(`input[name="audio"][value="${defaultVoice}"]`);
+                    if (selectedVoice) {
+                        selectedVoice.checked = true;
+                    }
+                    
+                    // Set the selected skin
+                    const defaultSkin = 'default';
+                    const skinValue = user.skin || defaultSkin;
+                    const skinCheckbox = document.querySelector(`[name="theme"][value="${skinValue}"]`);
+                    if (skinCheckbox) {
+                        skinCheckbox.checked = true;
+                    }
+                    document.body.className = skinValue; // Apply the skin to body
+
+                    // Developer mode checkbox
+                    document.getElementById('developer').checked = user.developer;
+                }
+
+            </script>
+        </main>
+    </body>
+</html>

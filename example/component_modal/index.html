@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Header Example</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+
+        <base href="/" />
+
+        <link rel="manifest" href="/apps/precrisis/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png">
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="/arcane/css/layout.css">
+        
+        <script async type="module" src="/arcane/modules/HTMLImport.js"></script>
+        
+        <script async type="module" src="/arcane/modules/Errors.js"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="/arcane/components/header.html"></html-import>
+        <nav class="nav"></nav>
+        <main class="contents">
+            MODAL
+        </main>
+
+        <html-import class="modal" href="/arcane/components/modal.html"></html-import>
+
+    </body>
+
+    <script>
+        const modal = document.querySelector('.modal');
+        modal.addEventListener(
+            'modal-ready',
+            function modalExample(){
+                modal.populate('<h1>Modal Example</h1><p>This is a modal example.</p>');
+                modal.open();
+            }
+        );
+        
+    </script>
+
+</html>

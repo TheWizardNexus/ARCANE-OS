@@ -1,0 +1,28 @@
+name: Arcane checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            machine_bundles/arcane-os-machine-bundle-v0.8.4/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix machine_bundles/arcane-os-machine-bundle-v0.8.4
+      - name: Run portable mandatory checks
+        run: npm run check
+      - name: Build and verify unified Windows distribution
+        run: npm run check:windows --prefix machine_bundles/arcane-os-machine-bundle-v0.8.4

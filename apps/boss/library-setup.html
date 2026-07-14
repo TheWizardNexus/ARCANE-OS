@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <base href="../../">
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin">
+        <meta name="description" content="Import the packaged BOSS Libraries Markdown collection into this browser's private library.">
+        <meta name="theme-color" content="#022241">
+        <title>BOSS Libraries | Library Setup</title>
+        <link rel="manifest" href="./apps/boss/manifest.json" crossorigin="use-credentials">
+        <link rel="icon" href="./apps/boss/img/boss-libraries-logo-stacked.png" type="image/png">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./apps/boss/boss.css?v=7">
+        <style>
+            .setup-main{
+                box-sizing:border-box;
+                grid-column:1 / -1;
+                width:100%;
+                min-width:0;
+                overflow:auto;
+                padding:clamp(1rem,3vw,2.4rem);
+                background:var(--background);
+            }
+
+            .setup-shell{
+                display:grid;
+                gap:1rem;
+                width:min(100%,72rem);
+                margin:0 auto;
+            }
+
+            .setup-intro,
+            .setup-actions{
+                padding:clamp(1rem,2.6vw,1.6rem);
+                border:1px solid var(--border-color);
+                border-radius:.9rem;
+                background:var(--modal-background);
+                box-shadow:0 .3rem 1.1rem color-mix(in srgb,var(--shadow-color) 64%,transparent);
+            }
+
+            .setup-kicker{
+                margin:0 0 .3rem;
+                color:var(--accent-color);
+                font-size:.78rem;
+                font-weight:800;
+                letter-spacing:.1em;
+                text-transform:uppercase;
+            }
+
+            .setup-intro h1{
+                margin:.1rem 0 .55rem;
+                color:var(--primary-color);
+                font-size:clamp(1.55rem,4vw,2.35rem);
+                line-height:1.08;
+            }
+
+            .setup-intro p{
+                max-width:68ch;
+                margin:.45rem 0 0;
+                line-height:1.55;
+            }
+
+            .setup-actions{
+                display:flex;
+                justify-content:space-between;
+                gap:1rem;
+                align-items:center;
+                flex-wrap:wrap;
+            }
+
+            .setup-status{
+                flex:1 1 24rem;
+                margin:0;
+                color:var(--text-color);
+                line-height:1.45;
+            }
+
+            .setup-buttons{
+                display:flex;
+                gap:.65rem;
+                align-items:center;
+                flex-wrap:wrap;
+            }
+
+            .setup-buttons a,
+            .setup-buttons button{
+                box-sizing:border-box;
+                min-height:2.65rem;
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                margin:0;
+                padding:.65rem 1rem;
+                border:1px solid var(--border-color);
+                border-radius:.55rem;
+                font:inherit;
+                font-weight:750;
+                text-decoration:none;
+                cursor:pointer;
+            }
+
+            .setup-buttons button{
+                border-color:var(--primary-color);
+                background:var(--primary-color);
+                color:var(--button-text-color,#fff);
+            }
+
+            .setup-buttons button:hover,
+            .setup-buttons button:focus-visible{
+                border-color:var(--accent-color);
+                background:var(--accent-color);
+                color:var(--button-hover-text-color,#fff);
+            }
+
+            .setup-buttons button:disabled{
+                cursor:wait;
+                opacity:.62;
+            }
+
+            .setup-buttons a{
+                background:var(--modal-background);
+                color:var(--accent-color);
+            }
+
+            .setup-buttons a:hover,
+            .setup-buttons a:focus-visible{
+                border-color:var(--accent-color);
+            }
+
+            @media(max-width:40rem){
+                .setup-actions{align-items:stretch;flex-direction:column}
+                .setup-status{flex-basis:auto}
+                .setup-buttons{width:100%}
+                .setup-buttons a,
+                .setup-buttons button{flex:1 1 100%}
+            }
+        </style>
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+    </head>
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=10"></html-import>
+
+        <main class="setup-main">
+            <div class="setup-shell">
+                <section class="setup-intro" aria-labelledby="setupTitle">
+                    <p class="setup-kicker">First-time library setup</p>
+                    <h1 id="setupTitle">Import the BOSS documents</h1>
+                    <p>
+                        This copies the packaged BOSS Markdown collection into the private
+                        <strong>documents</strong> area for this browser. Your own uploaded documents are left unchanged.
+                    </p>
+                    <p>Keep this page open until verification finishes. You will then return to the BOSS Librarian automatically.</p>
+                </section>
+
+                <html-import
+                    id="importTerminal"
+                    data-max-lines="350"
+                    href="./apps/boss/components/import-terminal.html?v=1"
+                ></html-import>
+
+                <section class="setup-actions" aria-label="Library setup controls">
+                    <p id="pageStatus" class="setup-status" role="status" aria-live="polite">Checking this browser's BOSS Library&hellip;</p>
+                    <div class="setup-buttons">
+                        <button id="startImport" type="button" disabled>Import BOSS documents</button>
+                        <button id="retryImport" type="button" hidden>Retry import</button>
+                        <a id="backToLibrarian" href="./apps/boss/chat.html">Back to Librarian</a>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <script type="module">
+            import './arcane/modules/DBOPFS.js';
+            import {
+                inspectBossLibrarySeedState,
+                loadBossLibraryManifest,
+                seedBossLibraryDocuments
+            } from './apps/boss/boss-library.js?v=4';
+
+            const MANIFEST_URL=new URL(
+                './apps/boss/documents/document-manifest.json',
+                document.baseURI
+            ).href;
+            const LIBRARIAN_URL=new URL('./apps/boss/chat.html',document.baseURI);
+            const urlParameters=new URL(window.location.href).searchParams;
+            const autoStart=urlParameters.get('start')==='1';
+            const returnUrl=validatedReturnUrl(urlParameters.get('return'));
+            const elements={
+                back:document.querySelector('#backToLibrarian'),
+                retry:document.querySelector('#retryImport'),
+                start:document.querySelector('#startImport'),
+                status:document.querySelector('#pageStatus'),
+                terminal:document.querySelector('#importTerminal')
+            };
+            let libraryManifest=null;
+            let opfs=null;
+            let running=false;
+            let terminal=null;
+            let allowNavigation=false;
+
+            elements.back.href=returnUrl.href;
+            elements.start.addEventListener('click',()=>startImport());
+            elements.retry.addEventListener('click',()=>prepareLibrary(true));
+            document.addEventListener('click',blockNavigationWhileRunning,true);
+            window.addEventListener('beforeunload',event=>{
+                if(!running||allowNavigation){
+                    return;
+                }
+
+                event.preventDefault();
+                event.returnValue='';
+            });
+
+            function blockNavigationWhileRunning(event){
+                if(!running||allowNavigation){
+                    return;
+                }
+
+                const link=event.composedPath().find(
+                    node=>node instanceof HTMLAnchorElement
+                );
+                if(!link){
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                setPageStatus('Import is still running. Keep this page open until verification finishes.');
+            }
+
+            function validatedReturnUrl(value=''){
+                const safe=new URL(LIBRARIAN_URL.href);
+
+                if(!value){
+                    return safe;
+                }
+
+                try{
+                    const candidate=new URL(String(value),window.location.href);
+
+                    if(
+                        candidate.origin!==window.location.origin
+                        ||candidate.pathname!==LIBRARIAN_URL.pathname
+                    ){
+                        return safe;
+                    }
+
+                    const query=String(candidate.searchParams.get('q')||'')
+                        .trim()
+                        .slice(0,500);
+                    if(query){
+                        safe.searchParams.set('q',query);
+                    }
+                }catch{
+                    return safe;
+                }
+
+                return safe;
+            }
+
+            function waitForReadyComponent(host,{event,methods=[]}={}){
+                const isReady=()=>host?.ready===true
+                    &&methods.every(method=>typeof host?.[method]==='function');
+
+                if(isReady()){
+                    return Promise.resolve(host);
+                }
+
+                return new Promise((resolve,reject)=>{
+                    const timeout=window.setTimeout(()=>{
+                        cleanup();
+                        reject(new Error('The import display did not become ready.'));
+                    },15000);
+                    const ready=()=>{
+                        if(!isReady()){
+                            return;
+                        }
+                        cleanup();
+                        resolve(host);
+                    };
+                    const cleanup=()=>{
+                        window.clearTimeout(timeout);
+                        host?.removeEventListener(event,ready);
+                    };
+
+                    host?.addEventListener(event,ready);
+                    queueMicrotask(ready);
+                });
+            }
+
+            function waitForDbopfs(){
+                if(window.dbopfs?.ready){
+                    return Promise.resolve(window.dbopfs);
+                }
+
+                return new Promise((resolve,reject)=>{
+                    const timeout=window.setTimeout(()=>{
+                        cleanup();
+                        reject(new Error('Private browser storage did not become available.'));
+                    },15000);
+                    const ready=event=>{
+                        const value=event.detail?.dbopfs||window.dbopfs;
+                        if(!value?.ready){
+                            return;
+                        }
+                        cleanup();
+                        resolve(value);
+                    };
+                    const cleanup=()=>{
+                        window.clearTimeout(timeout);
+                        window.removeEventListener('dbopfs-ready',ready);
+                    };
+
+                    window.addEventListener('dbopfs-ready',ready);
+                    if(window.dbopfs?.ready){
+                        ready({detail:{dbopfs:window.dbopfs}});
+                    }
+                });
+            }
+
+            function setPageStatus(message=''){
+                elements.status.textContent=String(message||'');
+            }
+
+            function setBusy(value){
+                running=value===true;
+                if(running){
+                    elements.start.disabled=true;
+                    elements.retry.disabled=true;
+                }else{
+                    elements.retry.disabled=false;
+                }
+                elements.back.setAttribute('aria-disabled',String(running));
+                elements.back.inert=running;
+                for(const shell of [
+                    document.querySelector('.header'),
+                    document.querySelector('.nav')
+                ]){
+                    if(shell){
+                        shell.inert=running;
+                    }
+                }
+                return running;
+            }
+
+            function errorMessage(error,fallback='Library setup could not be completed.'){
+                const message=String(error?.message||error||'').trim();
+                return message||fallback;
+            }
+
+            function inspectionError(inspection){
+                const messages=(inspection?.errors||[])
+                    .map(error=>errorMessage(error,''))
+                    .filter(Boolean);
+                return new Error(messages.join(' ')||'Unable to inspect the private BOSS document library.');
+            }
+
+            async function prepareLibrary(startWhenReady=false){
+                if(running){
+                    return false;
+                }
+
+                elements.retry.hidden=true;
+                elements.start.disabled=true;
+                setPageStatus('Checking this browser\'s BOSS Library…');
+
+                try{
+                    terminal=await waitForReadyComponent(
+                        elements.terminal,
+                        {
+                            event:'import-terminal-ready',
+                            methods:['clear','write','setProgress','setStatus','complete','fail']
+                        }
+                    );
+                    terminal.clear();
+                    terminal.setStatus('Inspecting','working');
+                    terminal.write('Opening private browser storage…','muted');
+
+                    opfs=await waitForDbopfs();
+                    terminal.write('Private browser storage is ready.','success');
+                    terminal.write('Loading the packaged BOSS document manifest…','muted');
+
+                    const loaded=await loadBossLibraryManifest({manifestUrl:MANIFEST_URL});
+                    if(!loaded.ok){
+                        throw loaded.error||new Error('The BOSS document manifest is unavailable.');
+                    }
+
+                    libraryManifest=loaded.manifest;
+                    terminal.write(
+                        `Manifest ${libraryManifest.version||'current'} loaded with ${libraryManifest.documents.length.toLocaleString()} indexed records.`,
+                        'success'
+                    );
+
+                    const inspection=await inspectBossLibrarySeedState({
+                        manifest:libraryManifest,
+                        manifestUrl:MANIFEST_URL,
+                        opfs
+                    });
+                    if(!inspection.ok){
+                        throw inspectionError(inspection);
+                    }
+
+                    terminal.setProgress(inspection.present,inspection.expected);
+                    terminal.write(
+                        `${inspection.present.toLocaleString()} of ${inspection.expected.toLocaleString()} packaged Markdown documents are present.`,
+                        inspection.complete?'success':'warning'
+                    );
+
+                    if(inspection.complete){
+                        await finishAndReturn(inspection,'The BOSS Library is already complete and verified.');
+                        return true;
+                    }
+
+                    terminal.setStatus('Ready to import','warning');
+                    setPageStatus(
+                        inspection.firstRun
+                            ?`This browser needs ${inspection.expected.toLocaleString()} BOSS documents. Select Import to begin.`
+                            :inspection.missing>0
+                                ?`${inspection.missing.toLocaleString()} BOSS documents need to be imported or refreshed.`
+                                :'The packaged BOSS Library needs to be refreshed to the current manifest version.'
+                    );
+                    elements.start.disabled=false;
+
+                    if(startWhenReady){
+                        return await startImport();
+                    }
+
+                    return true;
+                }catch(error){
+                    showFailure(error);
+                    return false;
+                }
+            }
+
+            function handleProgress(detail={}){
+                const current=Math.max(0,Number(detail.processed)||0);
+                const total=Math.max(0,Number(detail.total)||0);
+
+                if(total||current){
+                    terminal.setProgress(current,total);
+                }
+
+                switch(detail.phase){
+                    case 'inspect':
+                        terminal.setStatus('Inspecting local documents','working');
+                        terminal.write(
+                            `Inspection found ${Number(detail.present||0).toLocaleString()} present and ${Number(detail.missing||0).toLocaleString()} missing documents.`,
+                            'muted'
+                        );
+                        break;
+                    case 'start':
+                        terminal.setStatus('Importing documents','working');
+                        terminal.write(
+                            `Import queue started with ${Number(detail.pending||0).toLocaleString()} documents.`,
+                            'working'
+                        );
+                        break;
+                    case 'batch':
+                        terminal.setStatus(
+                            `Importing batch ${Number(detail.batch||0).toLocaleString()}`,
+                            'working'
+                        );
+                        break;
+                    case 'document':
+                        terminal.write(
+                            `[${current.toLocaleString()}/${total.toLocaleString()}] ${detail.status==='failed'?'Unable to import':'Imported'}: ${detail.title||detail.fileName||'BOSS document'}`,
+                            detail.status==='failed'?'error':'success'
+                        );
+                        break;
+                    case 'cleanup':
+                        terminal.write('Removed an outdated packaged document.','muted');
+                        break;
+                    case 'marker':
+                        terminal.setStatus('Recording library version','working');
+                        terminal.write('Stored the local BOSS manifest version.','muted');
+                        break;
+                    case 'complete':
+                        terminal.setStatus('Verifying import','working');
+                        terminal.write('Document transfer finished. Verifying the local library…','muted');
+                        break;
+                }
+            }
+
+            async function startImport(){
+                if(running||!terminal||!libraryManifest||!opfs){
+                    return false;
+                }
+
+                setBusy(true);
+                elements.retry.hidden=true;
+                setPageStatus('Importing the packaged BOSS Markdown documents…');
+                terminal.setStatus('Importing documents','working');
+                terminal.write('Beginning the BOSS Library import. Keep this page open.','working');
+
+                try{
+                    const result=await seedBossLibraryDocuments({
+                        manifest:libraryManifest,
+                        manifestUrl:MANIFEST_URL,
+                        opfs,
+                        batchSize:8,
+                        onProgress:handleProgress
+                    });
+
+                    if(!result.ok){
+                        const messages=(result.errors||[])
+                            .slice(0,4)
+                            .map(error=>errorMessage(error,''))
+                            .filter(Boolean);
+                        throw new Error(
+                            messages.join(' ')||'One or more BOSS documents could not be imported.'
+                        );
+                    }
+
+                    const verified=await inspectBossLibrarySeedState({
+                        manifest:libraryManifest,
+                        manifestUrl:MANIFEST_URL,
+                        opfs
+                    });
+                    if(!verified.ok){
+                        throw inspectionError(verified);
+                    }
+                    if(!verified.complete){
+                        throw new Error(
+                            `Verification found ${verified.missing.toLocaleString()} missing BOSS documents. Select Retry import to continue.`
+                        );
+                    }
+
+                    await finishAndReturn(
+                        verified,
+                        `Verified ${verified.present.toLocaleString()} BOSS Markdown documents.`
+                    );
+                    return true;
+                }catch(error){
+                    showFailure(error);
+                    return false;
+                }finally{
+                    if(document.visibilityState!=='hidden'){
+                        setBusy(false);
+                    }
+                }
+            }
+
+            async function finishAndReturn(inspection,message){
+                terminal.setProgress(inspection.present,inspection.expected);
+                terminal.complete(message);
+                elements.start.hidden=true;
+                elements.retry.hidden=true;
+                setPageStatus('Import complete. Returning to the BOSS Librarian…');
+                setBusy(true);
+                await new Promise(resolve=>window.setTimeout(resolve,900));
+                allowNavigation=true;
+                window.location.replace(returnUrl.href);
+            }
+
+            function showFailure(error){
+                const message=errorMessage(error);
+
+                if(terminal){
+                    terminal.fail(message);
+                }
+                console.warn('BOSS Library setup failed.',error);
+                setPageStatus(`${message} You can retry without losing documents that were already imported.`);
+                setBusy(false);
+                elements.start.disabled=true;
+                elements.retry.hidden=false;
+            }
+
+            prepareLibrary(autoStart);
+        </script>
+    </body>
+</html>

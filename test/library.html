@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Boss Library Beta Test</title>
+    <link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png">
+    <link rel="stylesheet" href="./library/library-layout.css">
+    <link rel="stylesheet" href="./library/library-sidebar.css">
+    <link rel="stylesheet" href="./library/library-chat.css">
+    <link rel="stylesheet" href="./library/library-modal.css">
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <h1>Boss Library Beta Test</h1>
+
+            <div class="search-wrap">
+                <input id="search-files" type="search" placeholder="Search files">
+            </div>
+
+            <nav class="categories">
+                <button id="folder-all" class="folder-btn" type="button" data-folder="all">
+                    <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                    <span>New Chat</span>
+                </button>
+                <button id="folder-chats" class="folder-btn" type="button" data-folder="chats">
+                    <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                    <span>Chats</span>
+                </button>
+                <button id="folder-documents" class="folder-btn" type="button" data-folder="documents">
+                    <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                    <span>Documents</span>
+                </button>
+                <button id="folder-images" class="folder-btn" type="button" data-folder="images">
+                    <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                    <span>Images</span>
+                </button>
+            </nav>
+            <div class="divider"></div>
+            <section class="recent">
+                <h2 id="list-title">New Chat</h2>
+                <ul id="recent-list" class="recent-list"></ul>
+            </section>
+        </aside>
+
+        <section class="content">
+            <section class="center-zone">
+                <section id="chat-shell" class="chat-shell">
+                    <header class="chat-head">
+                        <h2>Library Assistant</h2>
+                    </header>
+
+                    <section class="context-wrap">
+                        <p class="context-title">Chat Context Files</p>
+                        <div id="context-chips" class="context-chips"></div>
+                    </section>
+
+                    <section id="chat-log" class="chat-log"></section>
+
+                    <form id="chat-form" class="chat-compose">
+                        <textarea id="chat-input" placeholder="Ask about your selected files..." aria-label="Chat input"></textarea>
+                        <div class="compose-actions">
+                            <button id="upload-btn" class="upload-btn-chat" type="button">Upload Files</button>
+                            <button id="send-btn" type="submit">Send</button>
+                        </div>
+                        <input id="file-input" type="file" hidden multiple>
+                    </form>
+                    <p id="status" class="status"></p>
+                </section>
+            </section>
+        </section>
+    </div>
+
+    <section id="preview-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-file">
+        <div id="modal-backdrop" class="modal-backdrop"></div>
+        <article class="modal-card">
+            <div class="modal-titlebar">
+                <div id="modal-file" class="viewer-file">Preview</div>
+                <div class="modal-actions">
+                    <button id="use-in-chat-btn" class="modal-btn" type="button">Use in Chat</button>
+                    <button id="download-btn" class="modal-btn" type="button">Download</button>
+                    <button id="close-btn" class="modal-btn" type="button">Close</button>
+                </div>
+            </div>
+            <div id="viewer-content" class="modal-sheet"></div>
+        </article>
+    </section>
+
+    <script type="module" src="./library/library-app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+{
+    "name":"Redress Legal Workbench",
+    "short_name":"Redress",
+    "description":"A record-grounded Arcane workspace for legal case files, evidence, analysis, drafting, research, and hearing preparation.",
+    "start_url":"./index.html",
+    "scope":"./",
+    "display":"standalone",
+    "background_color":"#F3EFE7",
+    "theme_color":"#172238"
+}

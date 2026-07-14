@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"capture","displayName":"Arcane Capture","version":"0.1.0","entry":"index.html","strategy":"static","include":["capture.css","img","index.html","manifest.json","modules"],"exclude":[],"shared":["browser-runtime"]}

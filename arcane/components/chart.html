@@ -1,0 +1,655 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<link rel="stylesheet" href="./arcane/modules/uPlot.min.css">
+<style>
+    :host{
+        display:block;
+        min-height:18em;
+        min-width:0;
+    }
+
+    .chart{
+        background:var(--chart-background,var(--background));
+        border:.1em solid var(--chart-grid-color,var(--border-color));
+        border-radius:.5em;
+        box-sizing:border-box;
+        color:var(--chart-text-color,var(--text-color));
+        display:grid;
+        grid-template-rows:auto auto minmax(11em,1fr) auto auto;
+        height:100%;
+        min-height:18em;
+        padding:1em;
+        position:relative;
+    }
+
+    h2{
+        font-size:1.15em;
+        margin:0 2em .4em 0;
+    }
+
+    .chart-info{
+        font-size:.88em;
+        margin:0 0 .65em;
+        opacity:.75;
+    }
+
+    .remove-chart{
+        background:transparent;
+        border:0;
+        box-shadow:none;
+        color:inherit;
+        font-size:1.5em;
+        line-height:1;
+        margin:0;
+        opacity:.25;
+        padding:.2em;
+        position:absolute;
+        right:.35em;
+        top:.25em;
+        transition:opacity 150ms ease-out;
+        z-index:2;
+    }
+
+    .remove-chart:hover,
+    .remove-chart:focus-visible{
+        opacity:1;
+    }
+
+    .plot{
+        min-height:11em;
+        min-width:0;
+        outline:none;
+        overflow:hidden;
+        position:relative;
+    }
+
+    .plot:focus-visible{
+        outline:2px solid currentColor;
+        outline-offset:.2em;
+    }
+
+    .chart-value{
+        background:var(--modal-background);
+        border:1px solid var(--chart-grid-color,var(--border-color));
+        border-left:.35em solid var(--chart-line-color,var(--primary-color));
+        border-radius:.45em;
+        display:grid;
+        font-size:.85em;
+        gap:.25em 1em;
+        grid-template-columns:minmax(0,1fr) auto;
+        margin:.55em 0 0;
+        min-height:3.5em;
+        padding:.5em .65em;
+        transition:box-shadow 120ms ease-out,border-color 120ms ease-out;
+    }
+
+    .chart-value[data-state="hover"],
+    .chart-value[data-state="keyboard"]{
+        border-color:var(--chart-line-color,var(--primary-color));
+        box-shadow:0 0 0 .15em var(--chart-grid-color,var(--border-color));
+    }
+
+    .value-context{
+        font-weight:bold;
+        grid-column:1 / -1;
+    }
+
+    .value-context::before{
+        color:var(--chart-point-color,var(--accent-color));
+        content:'\25cf';
+        margin-right:.4em;
+    }
+
+    .value-field{
+        display:flex;
+        flex-direction:column;
+        min-width:0;
+    }
+
+    .value-field:last-child{
+        text-align:right;
+    }
+
+    .value-label{
+        font-size:.72em;
+        font-weight:bold;
+        letter-spacing:.06em;
+        opacity:.7;
+        text-transform:uppercase;
+    }
+
+    .value-date,
+    .value-score{
+        font-size:1.05em;
+        font-weight:bold;
+    }
+
+    .empty{
+        align-self:center;
+        font-size:.85em;
+        justify-self:center;
+        margin:.4em 0 0;
+        min-height:1.2em;
+        opacity:.65;
+    }
+
+    .hidden{
+        display:none;
+    }
+
+    .uplot{
+        font-family:inherit;
+    }
+</style>
+
+<section class="chart">
+    <button id="removeChart" class="remove-chart hidden" type="button" title="Remove chart" aria-label="Remove chart" disabled>&times;</button>
+    <h2 id="chartTitle"></h2>
+    <p id="chartInfo" class="chart-info hidden"></p>
+    <div id="plot" class="plot" tabindex="0" aria-describedby="chartValue"></div>
+    <section id="chartValue" class="chart-value" data-state="latest" aria-live="polite" aria-atomic="true">
+        <span id="valueContext" class="value-context"></span>
+        <span class="value-field">
+            <span id="timeLabel" class="value-label"></span>
+            <time id="valueDate" class="value-date"></time>
+        </span>
+        <span class="value-field">
+            <span id="valueLabel" class="value-label"></span>
+            <strong id="valueScore" class="value-score"></strong>
+        </span>
+    </section>
+    <p id="empty" class="empty hidden"></p>
+</section>
+
+<script type="module">
+    const host=this;
+    const componentURL=new URL(
+        host.getAttribute('href')||'./arcane/components/chart.html',
+        document.baseURI
+    );
+    const moduleURL=name=>new URL(`../modules/${name}`,componentURL).href;
+    const {default:loadChartLibrary}=await import(moduleURL('ChartLibrary.js'));
+    const {
+        normalizeChartOptions,
+        normalizeChartRows
+    }=await import(moduleURL('ComponentContracts.js'));
+    const title=host.shadowRoot.querySelector('#chartTitle');
+    const info=host.shadowRoot.querySelector('#chartInfo');
+    const plot=host.shadowRoot.querySelector('#plot');
+    const chartValue=host.shadowRoot.querySelector('#chartValue');
+    const valueContext=host.shadowRoot.querySelector('#valueContext');
+    const timeLabel=host.shadowRoot.querySelector('#timeLabel');
+    const valueDate=host.shadowRoot.querySelector('#valueDate');
+    const valueLabel=host.shadowRoot.querySelector('#valueLabel');
+    const valueScore=host.shadowRoot.querySelector('#valueScore');
+    const empty=host.shadowRoot.querySelector('#empty');
+    const removeButton=host.shadowRoot.querySelector('#removeChart');
+
+    let rows=[];
+    let chart=null;
+    let uPlot=null;
+    let selectedIndex=-1;
+    let resizeFrame=0;
+    let renderGeneration=0;
+    let options=normalizeChartOptions(optionsFromDataset());
+
+    host.addData=addData;
+    host.configure=configure;
+    host.destroy=destroy;
+    host.populate=populate;
+    host.setData=update;
+    host.update=update;
+
+    Object.defineProperties(
+        host,
+        {
+            chartStyle:{
+                get:()=>options.style,
+                set:value=>void configure({style:value})
+            },
+            chartTitle:{
+                get:()=>options.title,
+                set:value=>void configure({title:value})
+            },
+            dataSet:{
+                get:()=>rows.map(row=>row.slice()),
+                set:value=>void update(value)
+            },
+            options:{
+                get:getOptions,
+                set:value=>void configure(value)
+            }
+        }
+    );
+
+    removeButton.addEventListener(
+        'click',
+        ()=>host.dispatchEvent(
+            new CustomEvent(
+                'chart-remove',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{key:options.key}
+                }
+            )
+        )
+    );
+    plot.addEventListener('keydown',navigatePoints);
+    plot.addEventListener(
+        'pointerleave',
+        ()=>updateSelectedValue(selectedIndex,'selected')
+    );
+
+    const resizeObserver=typeof ResizeObserver==='function'
+        ?new ResizeObserver(scheduleResize)
+        :null;
+    resizeObserver?.observe(host);
+    if(!resizeObserver){
+        globalThis.addEventListener?.('resize',scheduleResize);
+    }
+
+    function optionsFromDataset(){
+        const dataset=host.dataset||{};
+        const mapped={};
+        const fields={
+            chartKey:'key',
+            chartStyle:'style',
+            color:'color',
+            emptyLabel:'emptyLabel',
+            info:'info',
+            removeLabel:'removeLabel',
+            seriesLabel:'seriesLabel',
+            timeLabel:'timeLabel',
+            title:'title',
+            unit:'unit',
+            valueLabel:'valueLabel',
+            xKey:'xKey',
+            yKey:'yKey'
+        };
+        for(const [source,target] of Object.entries(fields)){
+            if(dataset[source]!==undefined){
+                mapped[target]=dataset[source];
+            }
+        }
+        for(const field of ['min','max']){
+            if(dataset[field]!==undefined&&dataset[field]!==''){
+                mapped[field]=dataset[field];
+            }
+        }
+        if(dataset.removable!==undefined){
+            mapped.removable=dataset.removable==='true';
+        }
+        if(dataset.time!==undefined){
+            mapped.time=dataset.time!=='false';
+        }
+        return mapped;
+    }
+
+    async function configure(input={}){
+        const suppliedData=Object.prototype.hasOwnProperty.call(input||{},'data')
+            ||Object.prototype.hasOwnProperty.call(input||{},'dataset')
+            ||Object.prototype.hasOwnProperty.call(input||{},'datasets');
+        options=normalizeChartOptions(input,options);
+        renderOptions();
+
+        if(suppliedData){
+            return update(options.data);
+        }
+        if(rows.length&&uPlot){
+            createChart();
+        }
+        return getOptions();
+    }
+
+    async function populate(data=[],input={}){
+        options=normalizeChartOptions(input,options);
+        renderOptions();
+        return update(data);
+    }
+
+    async function update(data=[]){
+        rows=normalizeChartRows(data,options);
+        options={...options,data};
+        return renderRows();
+    }
+
+    async function renderRows(){
+        const generation=++renderGeneration;
+        selectedIndex=rows.length-1;
+
+        if(!rows.length){
+            destroyChart();
+            plot.classList.add('hidden');
+            chartValue.classList.add('hidden');
+            empty.classList.remove('hidden');
+            updateSelectedValue(-1);
+            return [];
+        }
+
+        plot.classList.remove('hidden');
+        chartValue.classList.remove('hidden');
+        empty.classList.add('hidden');
+        uPlot=uPlot||await loadChartLibrary();
+
+        if(generation!==renderGeneration){
+            return host.dataSet;
+        }
+        if(chart){
+            chart.setData(toChartData(rows));
+            updateSelectedValue(selectedIndex,'latest');
+        }else{
+            createChart();
+        }
+        return host.dataSet;
+    }
+
+    async function addData(data=[]){
+        const additions=normalizeChartRows(data,options);
+        const merged=new Map(rows.concat(additions).map(row=>[row[0],row]));
+        rows=[...merged.values()].sort((left,right)=>left[0]-right[0]);
+        options={...options,data:host.dataSet};
+        return renderRows();
+    }
+
+    function toChartData(data=[]){
+        return [
+            data.map(row=>options.time?row[0]/1000:row[0]),
+            data.map(row=>row[1])
+        ];
+    }
+
+    function createChart(){
+        if(!uPlot||!rows.length||plot.clientWidth<1){
+            return false;
+        }
+        const color=getChartColor(
+            '--chart-text-color',
+            '--text-color',
+            'rgb(60,60,60)'
+        );
+        const lineColor=options.color||getChartColor(
+            '--chart-line-color',
+            '--primary-color',
+            'rgb(0,128,255)'
+        );
+        const pointColor=getChartColor(
+            '--chart-point-color',
+            '--accent-color',
+            lineColor
+        );
+        const gridColor=getChartColor(
+            '--chart-grid-color',
+            '--border-color',
+            'rgba(90,90,90,.35)'
+        );
+        const areaColor=getChartColor(
+            '--chart-area-color',
+            '--secondary-color',
+            lineColor
+        );
+        const height=Math.max(176,plot.clientHeight||176);
+        const width=Math.max(280,plot.clientWidth||280);
+        const defaultOptions={
+            width,
+            height,
+            cursor:{
+                drag:{x:true,y:false,setScale:true},
+                points:{size:8}
+            },
+            legend:{show:false},
+            scales:{
+                x:{time:options.time},
+                y:createYScale()
+            },
+            axes:[
+                {stroke:color,grid:{stroke:gridColor}},
+                {stroke:color,grid:{stroke:gridColor},size:38}
+            ],
+            series:[
+                {},
+                {
+                    label:options.seriesLabel,
+                    stroke:lineColor,
+                    width:options.style==='points'?0:2,
+                    fill:options.style==='area'?areaColor:null,
+                    points:{show:true,stroke:pointColor,size:7,width:2}
+                }
+            ],
+            hooks:{
+                setCursor:[
+                    instance=>{
+                        if(Number.isInteger(instance.cursor.idx)){
+                            selectedIndex=instance.cursor.idx;
+                            updateSelectedValue(selectedIndex,'hover');
+                        }
+                    }
+                ]
+            }
+        };
+        const supplied=typeof options.chartOptions==='function'
+            ?options.chartOptions({
+                defaults:defaultOptions,
+                options:getOptions(),
+                rows:host.dataSet
+            })
+            :options.chartOptions;
+        if(supplied!==null&&supplied!==undefined&&(
+            !supplied||typeof supplied!=='object'||Array.isArray(supplied)
+        )){
+            throw new TypeError('chartOptions must resolve to an object or null');
+        }
+
+        const plotOptions=mergePlotOptions(defaultOptions,supplied||{});
+        destroyChart();
+        chart=new uPlot(
+            plotOptions,
+            toChartData(rows),
+            plot
+        );
+        updateSelectedValue(selectedIndex,'latest');
+        return true;
+    }
+
+    function createYScale(){
+        if(options.min===null&&options.max===null){
+            return {auto:true};
+        }
+        return {
+            auto:false,
+            range:(instance,dataMin,dataMax)=>[
+                options.min??dataMin,
+                options.max??dataMax
+            ]
+        };
+    }
+
+    function mergePlotOptions(defaults,supplied){
+        const merged={...defaults,...supplied};
+        merged.cursor={...defaults.cursor,...(supplied.cursor||{})};
+        merged.cursor.drag={
+            ...defaults.cursor.drag,
+            ...(supplied.cursor?.drag||{})
+        };
+        merged.cursor.points={
+            ...defaults.cursor.points,
+            ...(supplied.cursor?.points||{})
+        };
+        merged.scales={...defaults.scales,...(supplied.scales||{})};
+        if(Array.isArray(supplied.series)){
+            merged.series=defaults.series.map(
+                (series,index)=>({...series,...(supplied.series[index]||{})})
+            );
+        }
+        merged.hooks={...defaults.hooks};
+        for(const [name,callbacks] of Object.entries(supplied.hooks||{})){
+            merged.hooks[name]=[
+                ...(defaults.hooks[name]||[]),
+                ...(Array.isArray(callbacks)?callbacks:[callbacks])
+            ].filter(callback=>typeof callback==='function');
+        }
+        return merged;
+    }
+
+    function getChartColor(name='',fallbackName='',fallback=''){
+        const styles=getComputedStyle(host);
+        return styles.getPropertyValue(name).trim()
+            ||styles.getPropertyValue(fallbackName).trim()
+            ||fallback;
+    }
+
+    function navigatePoints(event){
+        if(!rows.length||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+            return;
+        }
+        event.preventDefault();
+        if(event.key==='Home'){
+            selectedIndex=0;
+        }else if(event.key==='End'){
+            selectedIndex=rows.length-1;
+        }else if(event.key==='ArrowLeft'){
+            selectedIndex=Math.max(0,selectedIndex-1);
+        }else{
+            selectedIndex=Math.min(rows.length-1,selectedIndex+1);
+        }
+        updateSelectedValue(selectedIndex,'keyboard');
+    }
+
+    function updateSelectedValue(index=-1,state='selected'){
+        const row=rows[index];
+        if(!row){
+            valueContext.innerText=options.labels.noSelection;
+            valueDate.removeAttribute('datetime');
+            valueDate.innerText='';
+            valueScore.innerText='';
+            plot.setAttribute('aria-label',`${options.title}. ${options.labels.empty}`);
+            return;
+        }
+
+        const displayedTime=formatTime(row[0]);
+        const score=formatValue(row[1]);
+        const maximum=options.max===null?'':formatValue(options.max);
+        const contexts={
+            hover:options.labels.hover,
+            keyboard:options.labels.keyboard,
+            latest:options.labels.latest,
+            selected:options.labels.selected
+        };
+
+        chartValue.dataset.state=state;
+        valueContext.innerText=contexts[state]||contexts.selected;
+        if(options.time&&Number.isFinite(new Date(row[0]).getTime())){
+            valueDate.dateTime=new Date(row[0]).toISOString();
+        }else{
+            valueDate.removeAttribute('datetime');
+        }
+        valueDate.innerText=displayedTime;
+        valueScore.innerText=maximum?`${score} / ${maximum}`:score;
+        const valueDescription=maximum?`${score} / ${maximum}`:score;
+        plot.setAttribute(
+            'aria-label',
+            `${options.title}. ${options.labels.time}: ${displayedTime}. ${options.labels.value}: ${valueDescription}. ${options.labels.navigation}`
+        );
+    }
+
+    function formatTime(value){
+        if(options.formatTime){
+            return `${options.formatTime(value)}`;
+        }
+        if(!options.time){
+            return `${value}`;
+        }
+        const date=new Date(value);
+        return Number.isFinite(date.getTime())?date.toLocaleString():`${value}`;
+    }
+
+    function formatValue(value=0){
+        const formatted=options.formatValue
+            ?`${options.formatValue(value)}`
+            :Number.isInteger(value)
+                ?`${value}`
+                :value.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+        return options.unit?`${formatted} ${options.unit}`:formatted;
+    }
+
+    function renderOptions(){
+        title.innerText=options.title;
+        info.innerText=options.info;
+        info.classList.toggle('hidden',!options.info);
+        timeLabel.innerText=options.labels.time;
+        valueLabel.innerText=options.labels.value||options.seriesLabel;
+        empty.innerText=options.labels.empty;
+        removeButton.classList.toggle('hidden',!options.removable);
+        removeButton.disabled=!options.removable;
+        const removeLabel=options.removeLabel||`Remove ${options.title}`;
+        removeButton.setAttribute('aria-label',removeLabel);
+        removeButton.title=removeLabel;
+        if(options.key){
+            host.dataset.chartKey=options.key;
+        }else{
+            delete host.dataset.chartKey;
+        }
+    }
+
+    function getOptions(){
+        return {
+            ...options,
+            labels:{...options.labels},
+            chartOptions:typeof options.chartOptions==='object'&&options.chartOptions!==null
+                ?{...options.chartOptions}
+                :options.chartOptions,
+            data:Array.isArray(options.data)?options.data.slice():options.data
+        };
+    }
+
+    function scheduleResize(){
+        if(resizeFrame){
+            cancelAnimationFrame(resizeFrame);
+        }
+        resizeFrame=requestAnimationFrame(resizeChart);
+    }
+
+    function resizeChart(){
+        resizeFrame=0;
+        if(plot.clientWidth<1){
+            return;
+        }
+        if(!chart&&rows.length){
+            createChart();
+            return;
+        }
+        if(!chart){
+            return;
+        }
+        chart.setSize({
+            width:Math.max(280,plot.clientWidth),
+            height:Math.max(176,plot.clientHeight||176)
+        });
+    }
+
+    function destroyChart(){
+        chart?.destroy();
+        chart=null;
+        plot.replaceChildren();
+    }
+
+    function destroy(){
+        renderGeneration++;
+        resizeObserver?.disconnect();
+        if(!resizeObserver){
+            globalThis.removeEventListener?.('resize',scheduleResize);
+        }
+        if(resizeFrame){
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame=0;
+        }
+        destroyChart();
+        rows=[];
+    }
+
+    renderOptions();
+    updateSelectedValue(-1);
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent('chart-ready',{bubbles:true,composed:true})
+    );
+</script>

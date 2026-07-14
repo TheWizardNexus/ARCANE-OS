@@ -1,0 +1,326 @@
+<style>
+    :host{
+        display:block;
+        min-width:0;
+        color:var(--boss-terminal-text,#E8F2EA);
+        font-family:"Cascadia Code","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+    }
+
+    .terminal{
+        overflow:hidden;
+        border:1px solid color-mix(in srgb,var(--boss-gold,#D5A021) 48%,var(--border-color,#4A5A66));
+        border-radius:.85rem;
+        background:var(--boss-terminal-background,#071723);
+        box-shadow:0 .7rem 2rem color-mix(in srgb,var(--shadow-color,rgba(0,0,0,.3)) 72%,transparent);
+    }
+
+    .terminal-header{
+        display:flex;
+        justify-content:space-between;
+        gap:1rem;
+        align-items:center;
+        padding:.72rem .9rem;
+        border-bottom:1px solid color-mix(in srgb,var(--boss-gold,#D5A021) 28%,transparent);
+        background:linear-gradient(120deg,#0D2A40,#15364B);
+    }
+
+    .terminal-title{
+        display:flex;
+        gap:.55rem;
+        align-items:center;
+        min-width:0;
+        font-family:inherit;
+        font-size:.82rem;
+        font-weight:750;
+        letter-spacing:.045em;
+        color:#F7E5C6;
+    }
+
+    .terminal-lights{
+        display:inline-flex;
+        gap:.3rem;
+        flex:0 0 auto;
+    }
+
+    .terminal-light{
+        width:.58rem;
+        height:.58rem;
+        border-radius:50%;
+        background:#BB2E2A;
+    }
+
+    .terminal-light:nth-child(2){background:#D5A021}
+    .terminal-light:nth-child(3){background:#5FA46F}
+
+    .terminal-status{
+        overflow:hidden;
+        color:#C8D8E2;
+        font-size:.74rem;
+        text-align:right;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+    }
+
+    .terminal-status[data-tone="success"]{color:#91D69E}
+    .terminal-status[data-tone="error"]{color:#FF9793}
+    .terminal-status[data-tone="working"],
+    .terminal-status[data-tone="warning"]{color:#F2CE72}
+
+    .progress-shell{
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        gap:.7rem;
+        align-items:center;
+        padding:.62rem .9rem 0;
+    }
+
+    progress{
+        width:100%;
+        height:.5rem;
+        overflow:hidden;
+        border:0;
+        border-radius:999px;
+        accent-color:var(--boss-gold,#D5A021);
+        background:#183548;
+    }
+
+    progress::-webkit-progress-bar{background:#183548}
+    progress::-webkit-progress-value{background:var(--boss-gold,#D5A021)}
+    progress::-moz-progress-bar{background:var(--boss-gold,#D5A021)}
+
+    .progress-label{
+        min-width:7.5ch;
+        color:#B8CAD5;
+        font-size:.72rem;
+        font-variant-numeric:tabular-nums;
+        text-align:right;
+    }
+
+    .terminal-log{
+        box-sizing:border-box;
+        min-height:18rem;
+        max-height:min(52vh,34rem);
+        margin:.62rem 0 0;
+        padding:.8rem .9rem 1rem;
+        overflow:auto;
+        overscroll-behavior:contain;
+        scrollbar-color:#476478 #071723;
+        color:var(--boss-terminal-text,#E8F2EA);
+        font-size:clamp(.72rem,1.7vw,.84rem);
+        line-height:1.48;
+        white-space:pre-wrap;
+        overflow-wrap:anywhere;
+    }
+
+    .terminal-line{
+        display:grid;
+        grid-template-columns:auto minmax(0,1fr);
+        gap:.62rem;
+    }
+
+    .terminal-time{
+        color:#718B9B;
+        font-variant-numeric:tabular-nums;
+        user-select:none;
+    }
+
+    .terminal-message{color:inherit}
+    .terminal-line[data-tone="muted"] .terminal-message{color:#9EB2BF}
+    .terminal-line[data-tone="success"] .terminal-message{color:#91D69E}
+    .terminal-line[data-tone="warning"] .terminal-message{color:#F2CE72}
+    .terminal-line[data-tone="error"] .terminal-message{color:#FF9793}
+
+    .visually-hidden{
+        position:absolute;
+        width:1px;
+        height:1px;
+        padding:0;
+        margin:-1px;
+        overflow:hidden;
+        clip:rect(0,0,0,0);
+        white-space:nowrap;
+        border:0;
+    }
+
+    @media(max-width:34rem){
+        .terminal-header{align-items:flex-start;flex-direction:column;gap:.35rem}
+        .terminal-status{text-align:left;white-space:normal}
+        .terminal-log{min-height:15rem}
+    }
+
+    @media(prefers-reduced-motion:reduce){
+        .terminal-log{scroll-behavior:auto}
+    }
+</style>
+
+<section class="terminal" aria-labelledby="terminalTitle">
+    <header class="terminal-header">
+        <div id="terminalTitle" class="terminal-title">
+            <span class="terminal-lights" aria-hidden="true">
+                <span class="terminal-light"></span>
+                <span class="terminal-light"></span>
+                <span class="terminal-light"></span>
+            </span>
+            <span>BOSS LIBRARY IMPORT</span>
+        </div>
+        <span id="status" class="terminal-status" data-tone="idle">Waiting</span>
+    </header>
+    <div class="progress-shell">
+        <progress id="progress" max="1" value="0" aria-label="Document import progress"></progress>
+        <span id="progressLabel" class="progress-label">0 / 0</span>
+    </div>
+    <div
+        id="log"
+        class="terminal-log"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-atomic="false"
+        tabindex="0"
+    ></div>
+    <span id="announcement" class="visually-hidden" role="status" aria-live="polite"></span>
+</section>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const log=root.querySelector('#log');
+    const progress=root.querySelector('#progress');
+    const progressLabel=root.querySelector('#progressLabel');
+    const status=root.querySelector('#status');
+    const announcement=root.querySelector('#announcement');
+    const allowedTones=new Set([
+        'idle','working','success','warning','error','muted','info'
+    ]);
+    const configuredLimit=Number(host.dataset.maxLines);
+    const maxLines=Number.isFinite(configuredLimit)
+        ?Math.max(50,Math.min(1000,Math.trunc(configuredLimit)))
+        :300;
+    let current=0;
+    let total=0;
+    let lastAnnouncedProgress=0;
+
+    host.clear=clear;
+    host.write=write;
+    host.setProgress=setProgress;
+    host.setStatus=setStatus;
+    host.complete=complete;
+    host.fail=fail;
+
+    Object.defineProperties(host,{
+        lineCount:{get:()=>log.childElementCount},
+        progress:{get:()=>({current,total})}
+    });
+
+    function normalizedTone(value='info'){
+        const tone=String(value||'info').toLowerCase();
+        return allowedTones.has(tone)?tone:'info';
+    }
+
+    function clear(){
+        log.replaceChildren();
+        lastAnnouncedProgress=0;
+        announcement.textContent='';
+        setProgress(0,0);
+        setStatus('Waiting','idle');
+        return true;
+    }
+
+    function write(message='',tone='info'){
+        const line=document.createElement('div');
+        const time=document.createElement('span');
+        const text=document.createElement('span');
+
+        line.className='terminal-line';
+        line.dataset.tone=normalizedTone(tone);
+        line.setAttribute('aria-hidden','true');
+        time.className='terminal-time';
+        time.textContent=new Date().toLocaleTimeString([],{
+            hour:'2-digit',
+            minute:'2-digit',
+            second:'2-digit'
+        });
+        text.className='terminal-message';
+        text.textContent=String(message??'');
+        line.append(time,text);
+        log.append(line);
+
+        while(log.childElementCount>maxLines){
+            log.firstElementChild?.remove();
+        }
+
+        log.scrollTop=log.scrollHeight;
+        return line;
+    }
+
+    function setProgress(value=0,maximum=0){
+        const safeMaximum=Math.max(0,Number(maximum)||0);
+        const safeValue=Math.max(0,Math.min(safeMaximum,Number(value)||0));
+
+        current=safeValue;
+        total=safeMaximum;
+        progress.max=Math.max(1,total);
+        progress.value=current;
+        progressLabel.textContent=`${current.toLocaleString()} / ${total.toLocaleString()}`;
+        progress.setAttribute(
+            'aria-valuetext',
+            total?`${current} of ${total} documents`:'No documents counted yet'
+        );
+        if(
+            total>0
+            &&(
+                current===total
+                ||current===0
+                ||current-lastAnnouncedProgress>=25
+            )
+        ){
+            announcement.textContent=`Imported ${current.toLocaleString()} of ${total.toLocaleString()} BOSS documents.`;
+            lastAnnouncedProgress=current;
+        }
+        return {current,total};
+    }
+
+    function setStatus(message='',tone='idle'){
+        status.textContent=String(message??'');
+        status.dataset.tone=normalizedTone(tone);
+        return status.textContent;
+    }
+
+    function complete(message='Import complete.'){
+        if(total>0){
+            setProgress(total,total);
+        }
+        setStatus('Complete','success');
+        if(message){
+            write(message,'success');
+        }
+        announcement.textContent=String(message||'BOSS document import complete.');
+        host.dispatchEvent(new CustomEvent('import-terminal-complete',{
+            bubbles:true,
+            composed:true,
+            detail:{current,total,message:String(message??'')}
+        }));
+        return true;
+    }
+
+    function fail(message='Import failed.'){
+        setStatus('Action needed','error');
+        if(message){
+            write(message,'error');
+        }
+        announcement.textContent=String(message||'BOSS document import needs attention.');
+        host.dispatchEvent(new CustomEvent('import-terminal-failed',{
+            bubbles:true,
+            composed:true,
+            detail:{current,total,message:String(message??'')}
+        }));
+        return false;
+    }
+
+    clear();
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('import-terminal-ready',{
+        bubbles:true,
+        composed:true
+    }));
+</script>

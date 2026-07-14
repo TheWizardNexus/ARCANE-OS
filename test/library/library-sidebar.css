@@ -1,0 +1,205 @@
+.sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1rem;
+    min-height: 0;
+}
+
+.sidebar h1 {
+    margin: 0;
+    font-size: 1.22rem;
+    letter-spacing: 0.01em;
+}
+
+.search-wrap {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.45rem 0.6rem;
+    background: #fbfdff;
+}
+
+#search-files {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font-size: 0.92rem;
+}
+
+.categories {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.folder-btn {
+    border: 1px solid transparent;
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.5rem 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.94rem;
+}
+
+.folder-btn:hover {
+    background: #f4f8ff;
+    border-color: #e2ebfa;
+}
+
+.folder-btn.active {
+    border-left-color: var(--blue);
+    border-color: #d8e6ff;
+    background: var(--blue-soft);
+    color: #1543ab;
+    font-weight: 600;
+}
+
+.folder-icon {
+    width: 1.08rem;
+    height: 1.08rem;
+    flex: 0 0 1.08rem;
+    display: block;
+    object-fit: contain;
+}
+
+.divider {
+    border-top: 1px solid var(--border);
+    margin: 0.35rem 0 0;
+}
+
+.recent h2 {
+    margin: 0 0 0.5rem;
+    font-size: 0.96rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.recent {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.recent-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    gap: 0.35rem;
+    align-content: start;
+}
+
+.file-row-wrap {
+    position: relative;
+}
+
+.file-item {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.5rem 2.75rem 0.5rem 0.5rem;
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 0.5rem;
+}
+
+.file-item:hover {
+    border-color: #d9dee8;
+    background: #f4f6f9;
+}
+
+.file-item.active {
+    border-color: #c8d0dd;
+    background: #ebeff5;
+}
+
+.delete-btn {
+    border: 1px solid #f0c9d0;
+    background: #fff4f6;
+    color: #8f2032;
+    border-radius: 999px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: absolute;
+    right: 0.45rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+.delete-btn:hover {
+    background: #ffe8ed;
+    border-color: #e8a9b4;
+}
+
+.delete-btn img {
+    width: 15px;
+    height: 15px;
+    display: block;
+}
+
+.file-badge {
+    width: 22px;
+    height: 22px;
+    display: block;
+    object-fit: contain;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.65);
+    box-shadow: inset 0 0 0 1px rgba(30, 40, 60, 0.08);
+}
+
+.file-name {
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+    min-height: calc(1.2em * 2);
+    max-height: calc(1.2em * 2);
+}
+
+.file-meta {
+    margin-top: 0.15rem;
+    color: var(--muted);
+    font-size: 0.74rem;
+    line-height: 1.2;
+}
+
+.empty {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+    font-style: italic;
+}
+
+@media (max-width: 920px) {
+    .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+    }
+}

@@ -1,0 +1,259 @@
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+<style>
+    :host{display:block;min-width:0}
+    .output-panel{overflow:hidden}
+    .title-wrap{display:grid;gap:var(--arcane-space-2);min-width:0}
+    .title{overflow-wrap:anywhere}
+    .meta{align-items:center;display:flex;flex-wrap:wrap;gap:var(--arcane-space-2)}
+    .coverage{color:var(--arcane-muted);font-size:.88rem;overflow-wrap:anywhere}
+    .header-actions,.footer-actions{display:flex;flex-wrap:wrap;gap:var(--arcane-space-2)}
+    .body{line-height:1.55;min-height:6rem;min-width:0;overflow-wrap:anywhere}
+    .body pre{font:inherit;margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+    .state{margin:0}
+    @media(max-width:36rem){
+        .header-actions{width:100%}
+        .header-actions>.arcane-button{flex:1 1 auto}
+    }
+</style>
+
+<section id="region" class="output-panel arcane-card" aria-label="Output">
+    <header class="arcane-card__header">
+        <div class="title-wrap">
+            <slot name="title"><h2 id="outputTitle" class="title arcane-section-heading">Output</h2></slot>
+            <div class="meta">
+                <span id="status" class="arcane-badge" hidden></span>
+                <slot name="coverage"><span id="coverage" class="coverage"></span></slot>
+            </div>
+        </div>
+        <slot name="header-actions"><div id="headerActions" class="header-actions"></div></slot>
+    </header>
+    <div class="arcane-card__body">
+        <div id="body" class="body" role="region" aria-live="polite">
+            <slot name="body" id="bodySlot"></slot>
+            <div id="bodyContent">
+                <p class="state arcane-state arcane-state--empty">No output yet.</p>
+            </div>
+        </div>
+    </div>
+    <footer id="footer" class="arcane-card__footer" hidden>
+        <slot name="actions"><div id="footerActions" class="footer-actions"></div></slot>
+    </footer>
+</section>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const region=root.querySelector('#region');
+    const title=root.querySelector('#outputTitle');
+    const status=root.querySelector('#status');
+    const coverage=root.querySelector('#coverage');
+    const headerActions=root.querySelector('#headerActions');
+    const body=root.querySelector('#body');
+    const bodySlot=root.querySelector('#bodySlot');
+    const bodyContent=root.querySelector('#bodyContent');
+    const footer=root.querySelector('#footer');
+    const footerActions=root.querySelector('#footerActions');
+
+    let actions=[];
+    let output=null;
+    let options={};
+
+    host.clear=clear;
+    host.configure=configure;
+    host.setActions=setActions;
+    host.setBody=setBody;
+    host.setCoverage=setCoverage;
+    host.setError=setError;
+    host.setOutput=setOutput;
+    host.setPending=setPending;
+    host.setStatus=setStatus;
+
+    Object.defineProperties(host,{
+        options:{get:()=>({...options}),set:configure},
+        output:{get:()=>output?{...output}:null,set:setOutput}
+    });
+
+    headerActions.addEventListener('click',handleAction);
+    footerActions.addEventListener('click',handleAction);
+    bodySlot.addEventListener('slotchange',syncBodySlot);
+
+    function datasetOptions(){
+        return {
+            ariaLabel:host.dataset.ariaLabel||'Output',
+            bodyLabel:host.dataset.bodyLabel||'Output',
+            emptyLabel:host.dataset.emptyLabel||'No output yet.',
+            title:host.dataset.title||'Output'
+        };
+    }
+
+    function configure(input={}){
+        options={...datasetOptions(),...options,...input};
+        region.setAttribute('aria-label',`${options.ariaLabel||'Output'}`);
+        body.setAttribute('aria-label',`${options.bodyLabel||'Output'}`);
+        if(!output){
+            title.innerText=`${options.title||'Output'}`;
+            renderState(options.emptyLabel||'No output yet.','empty');
+        }
+        return {...options};
+    }
+
+    function setOutput(input={}){
+        if(!input){
+            clear();
+            return null;
+        }
+        output={...input};
+        title.innerText=`${input.title??options.title??'Output'}`;
+        setStatus(input.status||'');
+        setCoverage(input.coverage||'');
+        setActions(input.actions||[]);
+        if(input.pending){
+            setPending(true,input.pendingMessage||'Working…');
+        }else if(input.error){
+            setError(input.error);
+        }else{
+            setBody(input.body??input.content??'');
+        }
+        emitChange();
+        return {...output};
+    }
+
+    function setBody(value=''){
+        bodyContent.replaceChildren();
+        if(typeof Node!=='undefined'&&value instanceof Node){
+            bodyContent.append(value);
+        }else if(`${value??''}`){
+            const text=document.createElement('pre');
+            text.innerText=`${value}`;
+            bodyContent.append(text);
+        }else{
+            renderState(options.emptyLabel||'No output yet.','empty');
+        }
+        body.setAttribute('aria-busy','false');
+        return value;
+    }
+
+    function setCoverage(value=''){
+        const next=typeof value==='object'?value:{label:value};
+        coverage.innerText=`${next.label??next.text??''}`;
+        coverage.hidden=!coverage.innerText;
+        return coverage.innerText;
+    }
+
+    function setStatus(value=''){
+        const next=typeof value==='object'?value:{label:value,status:value};
+        status.innerText=`${next.label||''}`;
+        status.dataset.status=`${next.status||''}`;
+        status.hidden=!status.innerText;
+        return status.innerText;
+    }
+
+    function setActions(values=[]){
+        actions=Array.from(values||[]).map((value,index)=>({
+            disabled:Boolean(value.disabled),
+            id:`${value.id??value.action??`action-${index+1}`}`,
+            label:`${value.label??value.title??'Action'}`,
+            location:value.location==='header'?'header':'footer',
+            variant:`${value.variant??(index?'secondary':'action')}`
+        }));
+        renderActions(headerActions,actions.filter(action=>action.location==='header'));
+        const footerItems=actions.filter(action=>action.location==='footer');
+        renderActions(footerActions,footerItems);
+        footer.hidden=!footerItems.length;
+        return actions.map(action=>({...action}));
+    }
+
+    function renderActions(container,values){
+        const fragment=document.createDocumentFragment();
+        for(const action of values){
+            const button=document.createElement('button');
+            button.type='button';
+            button.className=`arcane-button ${action.variant==='secondary'?'arcane-button--secondary':action.variant==='tertiary'?'arcane-button--tertiary':''}`.trim();
+            button.dataset.outputAction=action.id;
+            button.disabled=action.disabled;
+            button.innerText=action.label;
+            fragment.append(button);
+        }
+        container.replaceChildren(fragment);
+    }
+
+    function handleAction(event){
+        const button=event.target.closest('[data-output-action]');
+        const action=actions.find(candidate=>candidate.id===button?.dataset.outputAction);
+        if(!button||!action||action.disabled){
+            return;
+        }
+        host.dispatchEvent(new CustomEvent('output-panel-action',{
+            bubbles:true,
+            cancelable:true,
+            composed:true,
+            detail:{action:{...action},id:action.id,output:output?{...output}:null}
+        }));
+    }
+
+    function setPending(value=true,message='Working…'){
+        const pending=Boolean(value);
+        body.setAttribute('aria-busy',`${pending}`);
+        if(pending){
+            renderState(message,'loading');
+        }
+        host.dispatchEvent(new CustomEvent('output-panel-state',{
+            bubbles:true,
+            composed:true,
+            detail:{pending,state:pending?'loading':'ready'}
+        }));
+        return pending;
+    }
+
+    function setError(message=''){
+        const text=`${message||''}`;
+        body.setAttribute('aria-busy','false');
+        if(text){
+            renderState(text,'error');
+            host.dispatchEvent(new CustomEvent('output-panel-error',{
+                bubbles:true,
+                composed:true,
+                detail:{message:text,output:output?{...output}:null}
+            }));
+        }
+        return text;
+    }
+
+    function renderState(message,type){
+        const state=document.createElement('p');
+        state.className=`state arcane-state arcane-state--${type}`;
+        state.innerText=`${message}`;
+        bodyContent.replaceChildren(state);
+    }
+
+    function syncBodySlot(){
+        bodyContent.hidden=bodySlot.assignedNodes({flatten:true}).length>0;
+    }
+
+    function emitChange(){
+        host.dispatchEvent(new CustomEvent('output-panel-change',{
+            bubbles:true,
+            composed:true,
+            detail:{output:output?{...output}:null}
+        }));
+    }
+
+    function clear(){
+        output=null;
+        actions=[];
+        title.innerText=`${options.title||'Output'}`;
+        setStatus('');
+        setCoverage('');
+        setActions([]);
+        renderState(options.emptyLabel||'No output yet.','empty');
+        body.setAttribute('aria-busy','false');
+        host.dispatchEvent(new CustomEvent('output-panel-cleared',{bubbles:true,composed:true}));
+        return true;
+    }
+
+    configure(datasetOptions());
+    clear();
+    syncBodySlot();
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('output-panel-ready',{bubbles:true,composed:true}));
+</script>

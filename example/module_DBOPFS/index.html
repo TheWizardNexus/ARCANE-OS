@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+		<title>PreCrisis.AI Header Example</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="referrer" content="origin" />
+
+		<base href="/" />
+
+		<link rel="manifest" href="/apps/precrisis/manifest.json" crossorigin="use-credentials" />
+		<link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png" />
+
+		<!-- Shared Arcane styles -->
+		<link rel="stylesheet" href="/arcane/css/layout.css" />
+
+		<!-- Core modules -->
+		<script async type="module" src="/arcane/modules/DBOPFS.js"></script>
+		<script async type="module" src="/arcane/modules/HTMLImport.js"></script>
+		<script async type="module" src="/arcane/modules/Errors.js"></script>
+	</head>
+
+	<body>
+        <html-import class="header" href="/arcane/components/header.html"></html-import>
+        <html-import class="nav" href="/apps/precrisis/components/nav.html"></html-import>
+        <main class="contents">
+			<button id="run-example">Run DBOPFS Example</button>
+			<h2>Output</h2>
+			<pre id="output"></pre>
+        </main>
+			
+
+		<script type="module">
+			const button=document.querySelector('#run-example')
+			const output=document.querySelector('#output')
+
+			function logJSON(obj){
+				output.textContent=JSON.stringify(obj,null,4)
+			}
+
+			async function runExample(){
+				if(!window.dbopfs){
+					logJSON({ error:'dbopfs not available' })
+					return
+				}
+
+				output.textContent='Running example...'
+
+				await window.dbopfs.set(
+					'notes',
+                    {
+                        title:'Notes',
+                        content:'This is an example note stored in DBOPFS.',
+                        timestamp:Date.now()
+                    }
+				)
+
+				const tables=await window.dbopfs.getAll()
+
+				const summary={}
+				for(const tableName of Object.keys(tables)){
+					summary[tableName]=Object.keys(tables[tableName] || {}).length
+				}
+				const result={
+					message:'DBOPFS tables and record counts',
+					tables:summary
+				}
+
+				console.log('DBOPFS example data',tables)
+				logJSON(result)
+			}
+
+			function init(){
+				button.addEventListener('click', runExample)
+				output.textContent='DBOPFS ready. Click "Run DBOPFS Example".'
+			}
+
+			if(window.dbopfs?.ready){
+				init()
+			}else{
+				window.addEventListener('dbopfs-ready', init)
+			}
+		</script>
+	</body>
+</html>
+

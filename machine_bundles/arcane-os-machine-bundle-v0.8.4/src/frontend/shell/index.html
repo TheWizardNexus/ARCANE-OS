@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' __ARCANE_SCRIPT_HASHES__; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'">
+  <meta http-equiv="Permissions-Policy" content="accelerometer=(), ambient-light-sensor=(), autoplay=(), bluetooth=(), camera=(), clipboard-read=(), clipboard-write=(self), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(self), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), usb=(), web-share=(), xr-spatial-tracking=()">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#03050a">
+  <link rel="icon" type="image/x-icon" href="../shared/arcane-sigil.ico">
+  <link rel="icon" type="image/png" sizes="512x512" href="../shared/arcane-sigil-512.png">
+  <link rel="apple-touch-icon" href="../shared/arcane-sigil-512.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Arcane OS</title>
+  <style>
+    :root{color-scheme:dark;--bg:#03050a;--panel:rgba(10,16,29,.82);--line:rgba(150,170,255,.18);--text:#eef2ff;--muted:#929bb5;--violet:#8f7cff;--amber:#e6ad63;--green:#71d7a2;--danger:#ff8d9a}
+    *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{overflow:auto;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% 15%,rgba(77,105,220,.18),transparent 30%),radial-gradient(circle at 50% 70%,rgba(113,76,220,.12),transparent 40%),linear-gradient(180deg,#02040a,#05070d 55%,#03050a)}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.42;background-image:radial-gradient(circle at 8% 20%,rgba(255,255,255,.28) 0 1px,transparent 1.6px),radial-gradient(circle at 21% 77%,rgba(255,255,255,.16) 0 1px,transparent 1.7px),radial-gradient(circle at 69% 17%,rgba(255,255,255,.2) 0 1px,transparent 1.5px),radial-gradient(circle at 88% 60%,rgba(255,255,255,.15) 0 1px,transparent 1.4px);background-size:260px 220px,320px 290px,400px 360px,500px 430px}
+    button{font:inherit}.frame{position:fixed;inset:22px;border:1px solid rgba(145,166,235,.13);border-radius:22px;pointer-events:none}.top,.bottom{position:fixed;z-index:3;left:46px;right:46px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);text-transform:uppercase;letter-spacing:.16em;font-size:11px}.top{top:34px}.bottom{bottom:34px}.brand,.actions,.status{display:flex;align-items:center;gap:12px}.mini{width:32px;height:32px;filter:drop-shadow(0 0 10px rgba(127,112,255,.4))}.mini img,.sigil img{display:block;width:100%;height:100%;object-fit:contain}.state{color:var(--amber)}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 18px rgba(113,215,162,.8)}
+    main{min-height:100vh;padding:132px 58px 104px}.workspace{width:min(1180px,100%);margin:0 auto;display:grid;grid-template-columns:minmax(280px,.8fr) minmax(420px,1.4fr);gap:28px;align-items:start}.core{text-align:center;padding:24px 10px}.sigil{width:min(19vw,170px);height:min(19vw,170px);margin:auto;filter:drop-shadow(0 0 34px rgba(128,111,255,.34));animation:breathe 5s ease-in-out infinite}@keyframes breathe{50%{transform:scale(1.018);filter:drop-shadow(0 0 50px rgba(128,111,255,.5))}}h1{font-size:clamp(30px,4vw,54px);font-weight:300;letter-spacing:.18em;margin:24px 0 10px;text-transform:uppercase}.subtitle{color:var(--muted);font-size:clamp(13px,1.3vw,16px);line-height:1.7}.cards{display:grid;grid-template-columns:1fr;gap:10px;margin-top:28px;text-align:left}.card{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);backdrop-filter:blur(16px)}.label{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}.value{margin-top:7px;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .security-warning{position:fixed;z-index:4;top:76px;left:50%;transform:translateX(-50%);width:min(720px,calc(100vw - 72px));padding:10px 16px;border:1px solid rgba(230,173,99,.48);border-radius:12px;background:rgba(49,31,9,.96);color:#ffe1b6;text-align:center;font-size:12px;line-height:1.45;box-shadow:0 14px 44px rgba(0,0,0,.4)}.security-warning[hidden]{display:none}
+    .launcher{min-height:430px;border:1px solid var(--line);border-radius:22px;background:rgba(8,13,24,.78);backdrop-filter:blur(18px);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.22)}.launcher-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:20px}.launcher h2{font-size:23px;font-weight:450;letter-spacing:.04em;margin:0}.launcher-intro{color:var(--muted);font-size:12px;line-height:1.55;margin:6px 0 0}.catalog-badge{white-space:nowrap;border:1px solid rgba(113,215,162,.27);border-radius:999px;padding:7px 10px;color:#bdf3d4;background:rgba(15,52,38,.55);font-size:10px;text-transform:uppercase;letter-spacing:.12em}.catalog-state{min-height:52px;display:grid;place-items:center;text-align:center;color:var(--muted);line-height:1.55;padding:12px}.catalog-state.error-state{color:#ffd1d7;border:1px solid rgba(255,141,154,.25);border-radius:14px;background:rgba(53,13,24,.44)}.catalog-state[hidden]{display:none}.app-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.app-grid[aria-busy="true"]{opacity:.76}.app-card{position:relative;min-height:146px;width:100%;display:grid;grid-template-columns:48px minmax(0,1fr);gap:14px;align-content:start;text-align:left;padding:17px;border:1px solid var(--line);border-radius:16px;color:var(--text);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));cursor:pointer;transition:transform .16s,border-color .16s,background .16s}.app-card:hover:not([aria-disabled="true"]),.app-card:focus-visible{transform:translateY(-2px);border-color:rgba(143,124,255,.7);background:linear-gradient(145deg,rgba(143,124,255,.14),rgba(255,255,255,.025));outline:none}.app-card:focus-visible{box-shadow:0 0 0 3px rgba(143,124,255,.25)}.app-card[aria-disabled="true"]{cursor:wait}.app-icon,.app-icon-fallback{grid-row:1 / span 3;width:48px;height:48px;border-radius:13px;background:rgba(3,5,10,.72);border:1px solid rgba(155,173,255,.16);object-fit:contain;padding:7px}.app-icon-fallback{display:grid;place-items:center;color:#c8c0ff;font-size:19px;font-weight:600;padding:0}.app-name{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis}.app-description{color:var(--muted);font-size:12px;line-height:1.48;min-height:36px}.app-meta{color:#aeb7d2;font-size:10px;text-transform:uppercase;letter-spacing:.1em}.retry{margin-top:10px}
+    .session-button{border-radius:999px;padding:10px 16px;cursor:pointer;text-transform:uppercase;letter-spacing:.12em;font-size:10px}.session-button:disabled{opacity:.45;cursor:wait}.lock,.settings{border:1px solid rgba(143,124,255,.32);color:#e0dcff;background:rgba(36,29,73,.58)}.lock:hover:not(:disabled),.settings:hover:not(:disabled){border-color:rgba(143,124,255,.74);background:rgba(52,42,101,.78)}.logout{border:1px solid rgba(255,141,154,.28);color:#ffd8dc;background:rgba(48,13,24,.55)}.logout:hover:not(:disabled){border-color:rgba(255,141,154,.7);background:rgba(73,20,34,.8)}
+    dialog{border:1px solid rgba(165,180,255,.22);border-radius:20px;background:rgba(8,12,22,.97);color:var(--text);box-shadow:0 30px 120px #000;padding:24px;width:min(440px,calc(100vw - 36px))}dialog::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(8px)}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}.btn{padding:11px 15px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer}.btn.danger{border-color:rgba(255,141,154,.35);color:#ffd8dc;background:rgba(72,18,31,.65)}.setting-field{display:grid;gap:8px;margin-top:20px}.setting-field label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}.setting-field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#101526;color:var(--text);font:inherit}.setting-note{color:var(--muted);font-size:12px;line-height:1.55}.setting-summary{padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(143,124,255,.07);font-size:12px;line-height:1.55}
+    .error{position:fixed;right:28px;bottom:74px;width:min(600px,calc(100vw - 56px));max-height:58vh;overflow:auto;border:1px solid rgba(255,141,154,.4);border-radius:16px;background:rgba(29,7,14,.96);padding:18px;box-shadow:0 22px 70px #000;display:none}.error.visible{display:block}.error p{color:#ffd8dc;line-height:1.5}.error details{margin-top:12px}.error pre{white-space:pre-wrap;color:#eebbc2;font-size:11px}.error-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.toast{position:fixed;left:50%;bottom:72px;transform:translateX(-50%) translateY(20px);opacity:0;padding:10px 14px;border:1px solid rgba(113,215,162,.35);border-radius:999px;background:rgba(11,38,29,.96);color:#d8ffea;transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media(max-width:900px){main{padding:120px 38px 104px}.workspace{grid-template-columns:1fr}.core{display:grid;grid-template-columns:130px 1fr;gap:20px;text-align:left;align-items:center}.sigil{width:130px;height:130px}.core h1{margin-top:0}.cards{grid-column:1/-1;grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:640px){main{padding:126px 28px 106px}.top,.bottom{left:28px;right:28px}.identity{display:none}.core{display:block;text-align:center}.sigil{width:120px;height:120px}.cards,.app-grid{grid-template-columns:1fr}.launcher{padding:18px}.launcher-head{display:block}.catalog-badge{display:inline-block;margin-top:12px}.security-warning{width:calc(100vw - 56px)}}
+    .operation-notice{position:fixed;z-index:5;right:28px;top:76px;width:min(420px,calc(100vw - 56px));display:none;padding:16px 17px;border:1px solid rgba(143,124,255,.42);border-radius:16px;background:rgba(10,15,29,.97);box-shadow:0 24px 80px rgba(0,0,0,.58)}.operation-notice.visible{display:block}.operation-notice.complete{border-color:rgba(113,215,162,.45)}.operation-notice.failed{border-color:rgba(255,141,154,.5)}.operation-notice-label{text-transform:uppercase;letter-spacing:.14em;color:var(--amber);font-size:9px}.operation-notice-message{margin:7px 0 11px;color:var(--text);font-size:13px;line-height:1.45}.operation-notice progress{display:block;width:100%;height:9px;accent-color:var(--violet)}.operation-notice-percent{display:block;margin-top:7px;text-align:right;color:var(--muted);font-size:10px}
+  </style>
+</head>
+<body>
+  <div class="frame"></div>
+  <header class="top">
+    <div class="brand"><div class="mini"><img src="../shared/arcane-sigil.svg" alt=""></div><span>Arcane OS</span><span class="state" id="version">starting</span></div>
+    <div class="actions"><span class="identity" id="identity">Detecting user</span><button class="session-button settings" id="settings">Settings</button><button class="session-button lock" id="lock">Lock</button><button class="session-button logout" id="logout">Log out</button></div>
+  </header>
+  <div class="security-warning" id="securityWarning" role="status" aria-live="polite">Arcane has not yet verified this release as publisher-signed. Do not treat this session as a production installation.</div>
+  <main>
+    <section class="workspace">
+      <section class="core" aria-labelledby="arcaneTitle">
+        <div class="sigil"><img src="../shared/arcane-sigil.svg" alt="Arcane"></div>
+        <div><h1 id="arcaneTitle">Arcane</h1><p class="subtitle">The operating environment is active. Choose a verified application to begin.</p></div>
+        <div class="cards">
+          <div class="card"><div class="label">User</div><div class="value" id="userValue">—</div></div>
+          <div class="card"><div class="label">Operating system</div><div class="value" id="osValue">—</div></div>
+          <div class="card"><div class="label">Host</div><div class="value" id="hostValue">—</div></div>
+        </div>
+      </section>
+      <section class="launcher" aria-labelledby="applicationsTitle">
+        <div class="launcher-head"><div><h2 id="applicationsTitle">Applications</h2><p class="launcher-intro">Only applications verified by the installed Arcane catalog appear here.</p></div><span class="catalog-badge" id="catalogBadge">Verifying</span></div>
+        <div class="catalog-state" id="catalogState" role="status" aria-live="polite">Verifying installed applications…</div>
+        <div class="app-grid" id="appGrid" aria-busy="true" aria-describedby="catalogState"></div>
+      </section>
+    </section>
+  </main>
+  <footer class="bottom"><div class="status"><span class="dot"></span><span id="status">Connecting to Arcane Core</span></div><span id="clock"></span></footer>
+
+  <dialog id="logoutDialog">
+    <h2>Log out of this machine?</h2>
+    <p id="logoutText">Arcane will ask the operating system to end the current user session.</p>
+    <div class="dialog-actions"><button class="btn" id="cancelLogout">Cancel</button><button class="btn danger" id="confirmLogout">Log out</button></div>
+  </dialog>
+
+  <dialog id="settingsDialog">
+    <h2>Arcane Settings</h2>
+    <p class="setting-note">Choose the local Arcane model. Automatic uses GPU memory to select the model that fits this machine.</p>
+    <div class="setting-field">
+      <label for="modelPreference">Local AI model</label>
+      <select id="modelPreference">
+        <option value="auto">Automatic (recommended)</option>
+        <option value="20b">Arcane 20B</option>
+        <option value="120b">Arcane 120B</option>
+      </select>
+    </div>
+    <p class="setting-summary" id="modelSelectionSummary">Checking GPU and model selection…</p>
+    <p class="setting-note">Arcane 120B is approximately a 65 GB download and is intended for a single GPU with at least 80 GB of dedicated memory. A manual override is allowed and may use slower CPU or split-GPU execution.</p>
+    <div class="dialog-actions"><button class="btn" id="cancelSettings">Cancel</button><button class="btn" id="saveSettings">Save model</button></div>
+  </dialog>
+
+  <section class="operation-notice" id="operationNotice" role="status" aria-live="polite" aria-atomic="true">
+    <div class="operation-notice-label" id="operationNoticeLabel">Arcane model</div>
+    <div class="operation-notice-message" id="operationNoticeMessage">Checking the local model...</div>
+    <progress id="operationNoticeProgress" max="100" value="0" aria-label="Arcane model setup progress"></progress>
+    <span class="operation-notice-percent" id="operationNoticePercent">0%</span>
+  </section>
+
+  <section class="error" id="errorPanel" role="alert">
+    <h3 id="errorTitle">Arcane error</h3>
+    <p id="errorMessage"></p>
+    <p id="errorResolution"></p>
+    <details><summary>See full diagnostics</summary><pre id="errorBody"></pre></details>
+    <div class="error-actions"><button class="btn" id="copyError">Copy full diagnostics</button><button class="btn" id="dismissError">Dismiss</button></div>
+  </section>
+  <div class="toast" id="toast">Copied ✓</div>
+
+  <script src="../shared/arcane-api.js"></script>
+  <script>
+    'use strict';
+    const $ = (selector) => document.querySelector(selector);
+    let lastError = '';
+    let installedApplications = [];
+    let launchingApplicationId = null;
+    let sessionActionPending = false;
+    let modelSelection = null;
+
+    function showToast(message) {
+      const node = $('#toast');
+      node.textContent = message || 'Copied ✓';
+      node.classList.add('visible');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => node.classList.remove('visible'), 1500);
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const area = document.createElement('textarea');
+        area.value = text; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove();
+      }
+      showToast('Full diagnostics copied ✓');
+    }
+
+    async function showError(title, error) {
+      let hostDiagnostic = null;
+      if (error && error.diagnosticId) {
+        try { hostDiagnostic = await Arcane.diagnostics.get(error.diagnosticId); } catch (_) {}
+      }
+      const details = {
+        time: new Date().toISOString(),
+        message: error && error.message ? error.message : String(error),
+        resolution: error && error.resolution ? error.resolution : null,
+        code: error && error.code ? error.code : null,
+        diagnosticId: error && error.diagnosticId ? error.diagnosticId : null,
+        hostDiagnostic,
+        stack: error && error.stack ? error.stack : null,
+      };
+      lastError = JSON.stringify(details, null, 2);
+      $('#errorTitle').textContent = title;
+      $('#errorMessage').textContent = details.message;
+      $('#errorResolution').textContent = details.resolution || 'Open full diagnostics for the technical cause, then correct the reported issue and try again.';
+      $('#errorBody').textContent = lastError;
+      $('#errorPanel').classList.add('visible');
+      $('#status').textContent = title;
+    }
+
+    window.addEventListener('error', (event) => showError('Arcane interface error', event.error || new Error(event.message)));
+    window.addEventListener('unhandledrejection', (event) => showError('Arcane interface error', event.reason instanceof Error ? event.reason : new Error(String(event.reason))));
+    $('#dismissError').addEventListener('click', () => $('#errorPanel').classList.remove('visible'));
+    $('#copyError').addEventListener('click', async () => { try { await copyText(lastError); } catch (error) { showToast('Clipboard access unavailable'); } });
+
+    function updateClock() { $('#clock').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+    setInterval(updateClock, 1000); updateClock();
+
+    function showOperationNotice(event) {
+      clearTimeout(showOperationNotice.timer);
+      const notice = $('#operationNotice');
+      notice.classList.remove('complete', 'failed');
+      notice.classList.add('visible');
+      $('#operationNoticeLabel').textContent = String(event && event.operationType || 'Arcane operation').replaceAll('.', ' ');
+      $('#operationNoticeMessage').textContent = 'Preparing...';
+      $('#operationNoticeProgress').value = 0;
+      $('#operationNoticePercent').textContent = '0%';
+    }
+    function updateOperationNotice(event) {
+      const progress = Math.max(0, Math.min(100, Number(event && event.progress || 0)));
+      $('#operationNotice').classList.add('visible');
+      $('#operationNoticeMessage').textContent = event && event.message || 'Operation in progress...';
+      $('#operationNoticeProgress').value = progress;
+      $('#operationNoticePercent').textContent = `${Math.round(progress)}%`;
+    }
+    function finishOperationNotice(failed) {
+      const notice = $('#operationNotice');
+      notice.classList.add('visible', failed ? 'failed' : 'complete');
+      $('#operationNoticeProgress').value = failed ? Number($('#operationNoticeProgress').value || 0) : 100;
+      $('#operationNoticePercent').textContent = failed ? 'Needs attention' : '100%';
+      if (!failed) showOperationNotice.timer = setTimeout(() => notice.classList.remove('visible'), 5000);
+    }
+
+    Arcane.events.on('core.ready', (event) => {
+      $('#status').textContent = `Arcane Core ${event.version} connected`;
+    });
+    Arcane.events.on('operation.started', showOperationNotice);
+    Arcane.events.on('operation.progress', (event) => {
+      if (event && event.message) $('#status').textContent = event.message;
+      updateOperationNotice(event);
+    });
+    Arcane.events.on('operation.completed', () => finishOperationNotice(false));
+    Arcane.events.on('operation.failed', (event) => {
+      finishOperationNotice(true);
+      if (event && event.error) showError('Arcane operation failed', event.error);
+    });
+
+    function setSecurityMode(mode, publisherTrustSource, revocationStatus) {
+      const warning = $('#securityWarning');
+      const firstUsePinPending = mode === 'publisher-verified' && publisherTrustSource === 'fresh-unpinned';
+      const revocationDegraded = mode === 'publisher-verified' && revocationStatus === 'attested-degraded';
+      warning.hidden = mode === 'publisher-verified' && !firstUsePinPending && !revocationDegraded;
+      warning.textContent = mode === 'unsigned-local-test'
+        ? 'Unsigned local test mode is active. Application integrity is still checked, but this Arcane release is not publisher-signed and must not be treated as a production installation.'
+        : firstUsePinPending
+        ? 'Windows validated this signature, but Arcane has no administrator policy or prior installed signer pin. Use Provisioner with administrator approval to establish publisher continuity before treating this as production.'
+        : revocationDegraded
+        ? 'Arcane is using a recent protected offline publisher attestation and is retrying strict revocation verification. A revoked or invalid refresh will close this Shell and open the Windows desktop.'
+        : 'Arcane has not verified this release as publisher-signed. Do not treat this session as a production installation.';
+    }
+
+    function sameOriginIconUrl(value) {
+      if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null;
+      try {
+        const url = new URL(value, window.location.href);
+        return url.origin === window.location.origin && (url.protocol === 'https:' || url.protocol === 'http:') ? url.href : null;
+      } catch (_) { return null; }
+    }
+
+    function setCatalogState(kind, message) {
+      const state = $('#catalogState');
+      state.hidden = false;
+      state.classList.toggle('error-state', kind === 'repair');
+      state.setAttribute('role', kind === 'repair' ? 'alert' : 'status');
+      state.replaceChildren();
+      const text = document.createElement('span');
+      text.textContent = message;
+      state.appendChild(text);
+      $('#catalogBadge').textContent = kind === 'loading' ? 'Verifying' : kind === 'ready' ? 'Verified' : kind === 'empty' ? 'No apps' : 'Repair needed';
+      $('#appGrid').setAttribute('aria-busy', kind === 'loading' || launchingApplicationId ? 'true' : 'false');
+      if (kind === 'repair') {
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'btn retry';
+        retry.textContent = 'Check again';
+        retry.addEventListener('click', loadApplications);
+        state.appendChild(retry);
+      }
+    }
+
+    function applicationIcon(application) {
+      const safeUrl = sameOriginIconUrl(application.iconUrl);
+      if (safeUrl) {
+        const icon = document.createElement('img');
+        icon.className = 'app-icon';
+        icon.setAttribute('src', safeUrl);
+        icon.alt = '';
+        icon.referrerPolicy = 'no-referrer';
+        return icon;
+      }
+      const fallback = document.createElement('span');
+      fallback.className = 'app-icon-fallback';
+      fallback.setAttribute('aria-hidden', 'true');
+      fallback.textContent = application.displayName.slice(0, 1).toUpperCase();
+      return fallback;
+    }
+
+    function renderApplications() {
+      const grid = $('#appGrid');
+      grid.replaceChildren();
+      grid.setAttribute('aria-busy', launchingApplicationId ? 'true' : 'false');
+      for (const application of installedApplications) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'app-card';
+        button.dataset.applicationId = application.id;
+        button.dataset.displayName = application.displayName;
+        button.dataset.versionLabel = application.version ? `Version ${application.version}` : 'Open application';
+        button.setAttribute('aria-disabled', 'false');
+        button.setAttribute('aria-label', `Open ${application.displayName}`);
+        button.appendChild(applicationIcon(application));
+
+        const name = document.createElement('span');
+        name.className = 'app-name';
+        name.textContent = application.displayName;
+        button.appendChild(name);
+
+        const description = document.createElement('span');
+        description.className = 'app-description';
+        description.textContent = application.description || 'Arcane application';
+        button.appendChild(description);
+
+        const metadata = document.createElement('span');
+        metadata.className = 'app-meta';
+        metadata.textContent = button.dataset.versionLabel;
+        button.appendChild(metadata);
+        button.addEventListener('click', () => {
+          if (button.getAttribute('aria-disabled') !== 'true') launchApplication(application, button);
+        });
+        grid.appendChild(button);
+      }
+    }
+
+    function updateApplicationBusyState() {
+      const busy = Boolean(launchingApplicationId);
+      $('#appGrid').setAttribute('aria-busy', busy ? 'true' : 'false');
+      for (const button of $('#appGrid').querySelectorAll('.app-card')) {
+        const current = button.dataset.applicationId === launchingApplicationId;
+        button.setAttribute('aria-disabled', busy ? 'true' : 'false');
+        button.setAttribute('aria-label', `${current ? 'Opening' : 'Open'} ${button.dataset.displayName}`);
+        const metadata = button.querySelector('.app-meta');
+        if (metadata) metadata.textContent = current ? 'Opening…' : button.dataset.versionLabel;
+      }
+    }
+
+    async function launchApplication(application, button) {
+      if (launchingApplicationId) return;
+      launchingApplicationId = application.id;
+      updateApplicationBusyState();
+      setCatalogState('ready', `Opening ${application.displayName}…`);
+      try {
+        await Arcane.applications.launch(application.id);
+        $('#status').textContent = `${application.displayName} launch accepted`;
+        setCatalogState('ready', `${application.displayName} is opening.`);
+      } catch (error) {
+        setCatalogState('repair', `${application.displayName} could not be verified at launch. Repair Arcane OS if retrying does not resolve this.`);
+        await showError(`Unable to open ${application.displayName}`, error);
+      } finally {
+        launchingApplicationId = null;
+        updateApplicationBusyState();
+        button.focus();
+      }
+    }
+
+    async function loadApplications() {
+      installedApplications = [];
+      launchingApplicationId = null;
+      $('#appGrid').replaceChildren();
+      setCatalogState('loading', 'Verifying installed applications…');
+      try {
+        const catalog = await Arcane.applications.list();
+        if (!catalog || catalog.verified !== true || !Array.isArray(catalog.applications)) throw new Error('Arcane returned an unverified application catalog.');
+        setSecurityMode(catalog.securityMode, catalog.publisherTrustSource, catalog.revocationStatus);
+        installedApplications = catalog.applications.slice();
+        if (!installedApplications.length) {
+          setCatalogState('empty', 'No verified Arcane applications are installed. Use Arcane Provisioner to repair or install the application bundle.');
+          return;
+        }
+        renderApplications();
+        setCatalogState('ready', `${installedApplications.length} verified application${installedApplications.length === 1 ? '' : 's'} ready.`);
+      } catch (error) {
+        setCatalogState('repair', 'Arcane could not verify the installed application catalog. Repair or reinstall the complete Arcane OS release.');
+        await showError('Unable to load Arcane applications', error);
+      }
+    }
+
+    async function initialize() {
+      try {
+        await Arcane.system.ping();
+        const [version, user, platform, application] = await Promise.all([
+          Arcane.version.current(), Arcane.user.current(), Arcane.platform.status(), Arcane.app.current()
+        ]);
+        setSecurityMode(application.securityMode, application.publisherTrustSource, application.revocationStatus);
+        $('#version').textContent = 'v' + (version.version || version);
+        $('#identity').textContent = user.accountName || user.username;
+        $('#userValue').textContent = user.displayName || user.username;
+        $('#osValue').textContent = platform.os && platform.os.displayName || platform.displayName || platform.platform;
+        $('#hostValue').textContent = platform.os && platform.os.hostname || platform.hostname || 'Local machine';
+        $('#status').textContent = 'Arcane host connected';
+        await loadApplications();
+      } catch (error) { showError('Unable to initialize Arcane', error); }
+    }
+
+    function setSessionActionPending(value) {
+      sessionActionPending = Boolean(value);
+      $('#lock').disabled = sessionActionPending;
+      $('#logout').disabled = sessionActionPending;
+      $('#settings').disabled = sessionActionPending;
+    }
+
+    function formatModelSelection(selection) {
+      if (!selection) return 'Model selection is unavailable.';
+      const gpuNames = selection.gpu && Array.isArray(selection.gpu.devices) ? selection.gpu.devices.map((device) => device.name).filter(Boolean) : [];
+      const memory = selection.gpu && selection.gpu.largestMemoryBytes ? `${(selection.gpu.largestMemoryBytes / 1e9).toFixed(1)} GB dedicated memory` : 'dedicated GPU memory unavailable';
+      return `Detected: ${gpuNames.join(', ') || 'no supported GPU inventory'} (${memory}). Automatic recommends Arcane ${String(selection.recommendedVariant).toUpperCase()}. Effective model: Arcane ${String(selection.effectiveVariant).toUpperCase()}.`;
+    }
+
+    $('#settings').addEventListener('click', async () => {
+      try {
+        modelSelection = await Arcane.ollama.selection();
+        $('#modelPreference').value = modelSelection.preference || 'auto';
+        $('#modelSelectionSummary').textContent = formatModelSelection(modelSelection);
+        $('#settingsDialog').showModal();
+      } catch (error) { showError('Unable to load Arcane settings', error); }
+    });
+    $('#cancelSettings').addEventListener('click', () => $('#settingsDialog').close());
+    $('#saveSettings').addEventListener('click', async () => {
+      const preference = $('#modelPreference').value;
+      $('#saveSettings').disabled = true;
+      $('#cancelSettings').disabled = true;
+      try {
+        await Arcane.ollama.select(preference);
+        modelSelection = await Arcane.ollama.selection();
+        $('#modelSelectionSummary').textContent = formatModelSelection(modelSelection);
+        $('#settingsDialog').close();
+        showToast(`Arcane ${String(modelSelection.effectiveVariant).toUpperCase()} selected`);
+      } catch (error) { await showError('Unable to select the Arcane model', error); }
+      finally { $('#saveSettings').disabled = false; $('#cancelSettings').disabled = false; }
+    });
+
+    $('#lock').addEventListener('click', async () => {
+      if (sessionActionPending) return;
+      setSessionActionPending(true);
+      $('#status').textContent = 'Requesting operating-system lock…';
+      try {
+        const response = await Arcane.system.lock();
+        $('#status').textContent = response && response.simulated ? 'Lock was simulated' : 'Operating-system lock accepted';
+      } catch (error) {
+        await showError('Operating-system lock failed', error);
+      } finally {
+        setSessionActionPending(false);
+      }
+    });
+
+    $('#logout').addEventListener('click', () => { if (!sessionActionPending) $('#logoutDialog').showModal(); });
+    $('#cancelLogout').addEventListener('click', () => $('#logoutDialog').close());
+    $('#confirmLogout').addEventListener('click', async () => {
+      if (sessionActionPending) return;
+      setSessionActionPending(true);
+      $('#confirmLogout').disabled = true;
+      $('#cancelLogout').disabled = true;
+      $('#logoutText').textContent = 'Requesting operating-system logout…';
+      try {
+        const response = await Arcane.session.logout();
+        $('#logoutText').textContent = response && response.simulated ? 'Logout was simulated.' : 'The operating system accepted the logout request.';
+        if (response && response.simulated) setTimeout(() => location.reload(), 1200);
+      } catch (error) {
+        $('#logoutDialog').close();
+        setSessionActionPending(false);
+        $('#confirmLogout').disabled = false;
+        $('#cancelLogout').disabled = false;
+        showError('Operating-system logout failed', error);
+      }
+    });
+
+    initialize();
+  </script>
+</body>
+</html>

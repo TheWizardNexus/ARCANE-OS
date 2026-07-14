@@ -1,0 +1,112 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<style>
+    :host{
+        display:block;
+    }
+
+    button{
+        margin:0;
+    }
+</style>
+
+<button id="openMaintenance" type="button" aria-haspopup="dialog">Maintenance</button>
+<html-import id="maintenanceModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
+
+<script type="module">
+    const host=this;
+    const openButton=host.shadowRoot.querySelector('#openMaintenance');
+    const maintenanceModal=host.shadowRoot.querySelector('#maintenanceModal');
+    const {default:waitForComponent}=await import('../modules/WaitForComponent.js');
+    const {clearEmptyChatsAndMemories}=await import('../modules/DataMaintenance.js?v=3');
+
+    let content=null;
+
+    host.open=openMaintenance;
+
+    openButton.addEventListener(
+        'click',
+        ()=>openMaintenance().catch(
+            error=>console.error('Unable to open maintenance:',error)
+        )
+    );
+
+    async function openMaintenance(){
+        const modal=await waitForComponent(
+            maintenanceModal,
+            {
+                methods:['populate','open'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+
+        if(!content){
+            content=createContent();
+            await modal.populate(content,false);
+        }
+
+        modal.open();
+    }
+
+    function createContent(){
+        const section=document.createElement('section');
+        const heading=document.createElement('h1');
+        const message=document.createElement('p');
+        const clearButton=document.createElement('button');
+        const status=document.createElement('p');
+
+        heading.innerText='Data Maintenance';
+        message.innerText='Remove chat logs with no user entries, their associated memories, and memory records with no content.';
+        clearButton.type='button';
+        clearButton.innerText='Clear Empty Chats & Memories';
+        status.setAttribute('aria-live','polite');
+
+        clearButton.addEventListener(
+            'click',
+            async function clearChats(){
+                clearButton.disabled=true;
+                status.innerText='Checking chat logs...';
+
+                try{
+                    const result=await clearEmptyChatsAndMemories();
+
+                    if(result.deletedChats||result.deletedMemories){
+                        status.innerText=`Deleted ${result.deletedChats} empty ${result.deletedChats===1?'chat':'chats'} and ${result.deletedMemories} empty or associated ${result.deletedMemories===1?'memory':'memories'}.`;
+                    }else{
+                        status.innerText='No empty chats or memories were found.';
+                    }
+
+                    if(result.failed){
+                        status.innerText+=` ${result.failed} could not be deleted.`;
+                    }
+
+                    host.dispatchEvent(
+                        new CustomEvent(
+                            'data-maintenance-complete',
+                            {detail:result}
+                        )
+                    );
+                }catch(error){
+                    status.innerText='Unable to complete data maintenance.';
+                    console.error('Unable to clear empty chats and memories:',error);
+                }finally{
+                    clearButton.disabled=false;
+                }
+            }
+        );
+
+        section.append(
+            heading,
+            message,
+            clearButton,
+            status
+        );
+
+        return section;
+    }
+
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent('data-maintenance-ready')
+    );
+</script>

@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"browser","displayName":"Arcane Browser","version":"0.1.0","entry":"index.html","strategy":"static","include":["browser.css","img","index.html","manifest.json","modules"],"exclude":[],"shared":["browser-runtime"]}

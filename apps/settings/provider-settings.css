@@ -1,0 +1,1 @@
+.provider-form{background:var(--secondary-color);border:1px solid var(--border-color);border-radius:.8rem;display:grid;gap:1rem;padding:1rem}.openai-controls,.ollama-runtime-controls{display:grid;gap:1rem}.openai-controls{border-top:1px solid var(--border-color);padding-top:1rem}.provider-form>.arcane-button{justify-self:start}

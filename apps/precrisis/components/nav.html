@@ -1,0 +1,196 @@
+<style>
+    .logo-container {
+        padding: 0em 1em;
+        color:var(--silver);
+    }
+
+    .logo {
+        height: 9em;
+        -webkit-app-region: no-drag;
+        cursor: pointer;
+    }
+
+    nav>ul {
+        list-style: none;
+        word-wrap: break-word;
+        padding: 0em 1em;
+        margin: 0;
+    }
+
+    nav>ul>li {
+        margin: 1.5em 0;
+    }
+
+    nav a {
+        border-radius:.4em;
+        color: var(--platinum);
+        display:block;
+        padding:.35em .5em;
+        text-decoration: none;
+        transition:background-color 180ms,color 180ms;
+    }
+
+    nav a:hover,
+    nav a[aria-current="page"] {
+        background:var(--secondary-color);
+        color:var(--text-color);
+    }
+
+    nav aside {
+        position: absolute;
+        bottom: 1em;
+        left: 1em;
+        color: var(--gunmetal-light);
+        text-align: center;
+    }
+    
+    /* hide icons by default, show labels */
+    nav .icon {
+      display: none;
+      font-size: 1.2em;
+      padding:.7em .5em;
+    }
+    nav .label {
+      display: inline;
+    }
+
+    #user-photo {
+        height: 70px;
+        width: 70px;
+        padding: 0em 1em;
+        border-radius: 50%;
+    }
+    
+    /* single media‐query to collapse at 48em */
+    @media (max-width: 48em) {
+        /* 2) collapse the nav width and hide its header text */
+        .logo-container h2 {
+            display: none;
+        }
+        
+        /* 3) center icons, hide labels */
+        nav ul {
+            padding: 1rem 0;
+        }
+        nav>ul>li {
+            margin: 0;
+        }
+        nav a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        nav .label {
+            display: none;
+        }
+        nav .icon {
+            display: inline-block;
+        }
+    }
+
+</style>
+
+<nav part="nav">
+  <div class="logo-container">
+    <h2>PreCrisis</h2>
+  </div>
+  <ul>
+    <li>
+      <a href="./apps/precrisis/dashboard.html">
+        <span class="icon">🏠</span>
+        <span class="label">Mental Health Center</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/chat.html">
+        <span class="icon">💬</span>
+        <span class="label">Assessment</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/journal.html">
+        <span class="icon">&#128214;</span>
+        <span class="label">Journal</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/soc.html">
+        <span class="icon">&#128221;</span>
+        <span class="label">Stream of Consciousness</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/data.html">
+        <span class="icon">&#128193;</span>
+        <span class="label">Data</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/admin.html">
+        <span class="icon">👤</span>
+        <span class="label">Profile</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/dashboard-clinical.html">
+        <span class="icon">🩺</span>
+        <span class="label">Clinician</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/dashboard-leadership.html">
+        <span class="icon">🎖️</span>
+        <span class="label">Leadership</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/export.html">
+        <span class="icon">📤</span>
+        <span class="label">Export</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/import.html">
+        <span class="icon">📥</span>
+        <span class="label">Import</span>
+      </a>
+    </li>
+    <li>
+      <a href="./apps/precrisis/import-many.html">
+        <span class="icon">📦</span>
+        <span class="label">Import Many</span>
+      </a>
+    </li>
+  </ul>
+  <aside>
+    <br>
+    <span id="AIReq"></span>
+  </aside>
+</nav>
+
+
+<script type="module">
+    const host=this;
+    const shadowRoot=host.shadowRoot;
+    const nav=shadowRoot.querySelector('nav');
+    const currentPath=new URL(window.location.href).pathname;
+
+    nav.querySelectorAll('a').forEach(
+        link=>{
+            if(new URL(link.href).pathname===currentPath){
+                link.setAttribute('aria-current','page');
+            }
+        }
+    );
+    
+    nav.addEventListener(
+        'click',
+        async (e)=>{
+            if(e.target!==host){
+                return;
+            }
+
+            nav.classList.toggle('mini')
+        }
+    )
+</script>

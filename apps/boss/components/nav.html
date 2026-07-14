@@ -1,0 +1,98 @@
+<style>
+    :host{
+        --boss-navy:#022241;
+        --boss-gold:#E7AA3B;
+        --boss-cream:#F7E5C6;
+        --nav-start:var(--boss-nav-start,var(--boss-navy));
+        --nav-end:var(--boss-nav-end,#073A60);
+        --nav-text:var(--boss-nav-text,var(--boss-cream));
+        --nav-border:var(--boss-nav-border,var(--boss-gold));
+        --nav-active-bg:var(--boss-nav-active-bg,var(--boss-gold));
+        --nav-active-border:var(--boss-nav-active-border,#F5D58E);
+        --nav-active-text:var(--boss-nav-active-text,var(--boss-navy));
+        --nav-focus:var(--boss-nav-focus,var(--boss-gold));
+        --nav-shadow:var(--boss-nav-shadow,rgba(2,34,65,.24));
+        display:block;
+    }
+
+    #appBar{
+        --app-bar-surface:linear-gradient(125deg,var(--nav-start),var(--nav-end));
+        --app-bar-text:var(--nav-text);
+        --app-bar-accent:var(--nav-active-bg);
+        --app-bar-active-text:var(--nav-active-text);
+        --app-bar-border:var(--nav-border);
+    }
+
+    #appBar::part(nav){
+        min-height:5rem;
+        border-bottom:.2rem solid var(--nav-border);
+        box-shadow:0 .5rem 1.4rem var(--nav-shadow);
+    }
+
+    #appBar::part(brand-mark){
+        position:relative;
+        width:clamp(9.75rem,14vw,10.5rem);
+        height:3.65rem;
+        box-sizing:border-box;
+        padding:0;
+        overflow:hidden;
+        border:.06rem solid color-mix(in srgb,var(--nav-border) 48%,transparent);
+        border-radius:.5rem;
+        background:linear-gradient(
+            135deg,
+            color-mix(in srgb,var(--boss-cream) 72%,var(--nav-start)),
+            color-mix(in srgb,var(--boss-cream) 60%,var(--nav-end))
+        );
+        box-shadow:0 .14rem .4rem rgba(0,0,0,.12);
+    }
+
+    #appBar::part(product-name){display:none}
+
+    .logo{
+        position:absolute;
+        inset:0;
+        display:block;
+        width:100%;
+        height:100%;
+        box-sizing:border-box;
+        padding:.12rem .3rem;
+        object-fit:contain;
+        object-position:50% 50%;
+        transform:none;
+        filter:none;
+    }
+
+    .section-link{
+        font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        font-weight:700;
+        letter-spacing:.025em;
+    }
+
+    .icon{display:none;min-width:1.45rem;font-size:.68rem;font-weight:850;letter-spacing:.04em;text-align:center}
+    .label{display:inline}
+    #AIReq{font:600 .75rem/1.2 Inter,ui-sans-serif,sans-serif;text-align:center}
+
+    @media(max-width:48rem){
+        #appBar::part(nav){min-height:4.4rem}
+        #appBar::part(brand-mark){width:7.5rem;height:2.75rem}
+        .logo{padding:.08rem .16rem}
+        .label{display:none}
+        .icon{display:inline-block}
+        #AIReq{display:none}
+    }
+
+    @media(max-width:30rem){
+        #appBar::part(brand-mark){width:6.25rem;height:2.35rem}
+    }
+</style>
+
+<html-import id="appBar" href="./arcane/components/app-bar.html?v=3" data-label="BOSS Libraries navigation" data-brand-href="./apps/boss/chat.html">
+    <img slot="brand-mark" class="logo" src="./apps/boss/img/boss-libraries-logo-horizontal-transparent.png?v=2" alt="BOSS Libraries — Business Operator Solutions &amp; Services">
+    <span slot="product-name">BOSS Libraries</span>
+    <a slot="navigation" class="section-link" href="./apps/boss/chat.html" aria-label="BOSS Libraries AI Librarian"><span class="icon" aria-hidden="true">AI</span><span class="label">Librarian</span></a>
+    <a slot="navigation" class="section-link" href="./apps/boss/library.html" aria-label="BOSS Libraries documents"><span class="icon" aria-hidden="true">LB</span><span class="label">Library</span></a>
+    <a slot="navigation" class="section-link" href="./apps/boss/admin.html" aria-label="Profile settings"><span class="icon" aria-hidden="true">PR</span><span class="label">Profile</span></a>
+    <a slot="navigation" class="section-link" href="./apps/boss/export.html" aria-label="Export BOSS Libraries data"><span class="icon" aria-hidden="true">EX</span><span class="label">Export</span></a>
+    <a slot="navigation" class="section-link" href="./apps/boss/import.html" aria-label="Import BOSS Libraries data"><span class="icon" aria-hidden="true">IM</span><span class="label">Import</span></a>
+    <span id="AIReq" slot="status"></span>
+</html-import>

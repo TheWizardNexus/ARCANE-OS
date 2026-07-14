@@ -1,0 +1,974 @@
+<style>
+
+    * {
+        box-sizing: border-box;
+    }
+
+
+    button,
+    input,
+    textarea {
+        font: inherit;
+        color: inherit;
+    }
+
+    .app {
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        overflow: hidden;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    @media (max-width: 920px) {
+        .app {
+            grid-template-columns: 1fr;
+            height: auto;
+            min-height: 100vh;
+            overflow: visible;
+        }
+    }
+
+    .sidebar {
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        padding: 1rem;
+        min-height: 0;
+    }
+
+    .sidebar h1 {
+        margin: 0;
+        font-size: 1.22rem;
+        letter-spacing: 0.01em;
+    }
+
+    .search-wrap {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.45rem 0.6rem;
+        background: #fbfdff;
+    }
+
+    #search-files {
+        width: 100%;
+        border: 0;
+        outline: none;
+        background: transparent;
+        font-size: 0.92rem;
+    }
+
+    .categories {
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .folder-btn {
+        border: 1px solid transparent;
+        border-left: 3px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        padding: 0.5rem 0.6rem;
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.94rem;
+    }
+
+    .folder-btn:hover {
+        background: #f4f8ff;
+        border-color: #e2ebfa;
+    }
+
+    .folder-btn.active {
+        border-left-color: var(--blue);
+        border-color: #d8e6ff;
+        background: var(--blue-soft);
+        color: #1543ab;
+        font-weight: 600;
+    }
+
+    .folder-icon {
+        width: 1.08rem;
+        height: 1.08rem;
+        flex: 0 0 1.08rem;
+        display: block;
+        object-fit: contain;
+    }
+
+    .divider {
+        border-top: 1px solid var(--border);
+        margin: 0.35rem 0 0;
+    }
+
+    .recent h2 {
+        margin: 0 0 0.5rem;
+        font-size: 0.96rem;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .recent {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .recent-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        gap: 0.35rem;
+        align-content: start;
+    }
+
+    .file-row-wrap {
+        position: relative;
+    }
+
+    .file-item {
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        text-align: left;
+        cursor: pointer;
+        padding: 0.5rem 2.75rem 0.5rem 0.5rem;
+        display: grid;
+        grid-template-columns: 26px 1fr;
+        gap: 0.5rem;
+    }
+
+    .file-item:hover {
+        border-color: #d9dee8;
+        background: #f4f6f9;
+    }
+
+    .file-item.active {
+        border-color: #c8d0dd;
+        background: #ebeff5;
+    }
+
+    .delete-btn {
+        border: 1px solid #f0c9d0;
+        background: #fff4f6;
+        color: #8f2032;
+        border-radius: 999px;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: absolute;
+        right: 0.45rem;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1;
+    }
+
+    .delete-btn:hover {
+        background: #ffe8ed;
+        border-color: #e8a9b4;
+    }
+
+    .delete-btn img {
+        width: 15px;
+        height: 15px;
+        display: block;
+    }
+
+    .file-badge {
+        width: 22px;
+        height: 22px;
+        display: block;
+        object-fit: contain;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.65);
+        box-shadow: inset 0 0 0 1px rgba(30, 40, 60, 0.08);
+    }
+
+    .file-name {
+        font-size: 0.84rem;
+        font-weight: 600;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+        min-height: calc(1.2em * 2);
+        max-height: calc(1.2em * 2);
+    }
+
+    .file-meta {
+        margin-top: 0.15rem;
+        color: var(--muted);
+        font-size: 0.74rem;
+        line-height: 1.2;
+    }
+
+    .empty {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        font-style: italic;
+    }
+
+    @media (max-width: 920px) {
+        .sidebar {
+            border-right: 0;
+            border-bottom: 1px solid var(--border);
+        }
+    }
+
+    .viewer-file {
+        font-size: 0.9rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .modal {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+    }
+
+    .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(8, 22, 43, 0.54);
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-card {
+        position: relative;
+        width: min(980px, 100%);
+        max-height: min(86vh, 100%);
+        border: 1px solid #99bbff;
+        border-radius: 12px;
+        background: #f8fbff;
+        box-shadow: 0 25px 45px rgba(12, 31, 67, 0.34);
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .modal-titlebar {
+        background: #1f66ff;
+        color: #fff;
+        padding: 0.58rem 0.76rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.55rem;
+    }
+
+    .modal-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .modal-btn {
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        border-radius: 7px;
+        padding: 0.24rem 0.5rem;
+        font-size: 0.78rem;
+        cursor: pointer;
+    }
+
+    .modal-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .modal-sheet {
+        border-top: 1px solid #d8e6ff;
+        margin: 0.66rem;
+        border-radius: 8px;
+        background: #fff;
+        padding: 1rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
+    }
+
+    .modal-sheet pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.45;
+    }
+
+    .modal-sheet img {
+        max-width: 100%;
+        max-height: 520px;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto;
+    }
+
+</style>
+
+<div class="app">
+    <aside class="sidebar">
+        <h1>File Manager</h1>
+
+        <div class="search-wrap">
+            <input id="search-files" type="search" placeholder="Search files">
+        </div>
+
+        <nav class="categories">
+            <button id="upload-btn" class="upload-btn-chat" type="button">Upload Files</button>
+            <button id="folder-all" class="folder-btn" type="button" data-folder="all">
+                <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                <span>All Items</span>
+            </button>
+            <button id="folder-chats" class="folder-btn" type="button" data-folder="chats">
+                <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                <span>Chats</span>
+            </button>
+            <button id="folder-documents" class="folder-btn" type="button" data-folder="documents">
+                <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                <span>Documents</span>
+            </button>
+            <button id="folder-images" class="folder-btn" type="button" data-folder="images">
+                <img class="folder-icon" src="/arcane/img/folder.svg" alt="" aria-hidden="true">
+                <span>Images</span>
+            </button>
+        </nav>
+        <div class="divider"></div>
+        <section class="recent">
+            <h2 id="list-title">New Chat</h2>
+            <ul id="recent-list" class="recent-list"></ul>
+        </section>
+        <section class=""content>
+            <input id="file-input" type="file" hidden multiple>
+        </section>
+    </aside>
+</div>
+
+<section id="preview-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-file">
+    <div id="modal-backdrop" class="modal-backdrop"></div>
+    <article class="modal-card">
+        <div class="modal-titlebar">
+            <div id="modal-file" class="viewer-file">Preview</div>
+            <div class="modal-actions">
+                <button id="close-btn" class="modal-btn" type="button">Close</button>
+            </div>
+        </div>
+        <div id="viewer-content" class="modal-sheet"></div>
+    </article>
+</section>
+
+<script type="module">
+    import '/arcane/modules/DBOPFS.js';
+    import '/arcane/modules/AI.js';
+    import ChatEntity from '/arcane/entities/Chat.js';
+    import DocumentEntity from '/arcane/entities/Document.js';
+    import ImageEntity from '/arcane/entities/Image.js';
+
+    const ALLOWED_DOC_EXTENSIONS = ['md'];
+    const PREVIEWABLE_TEXT_EXTENSIONS = new Set(['md', 'markdown']);
+    const PREVIEW_CHAR_LIMIT = 250000;
+    
+    const folderButtons = [...document.querySelectorAll('.folder-btn')];
+    const searchInput = document.querySelector('#search-files');
+    const recentListEl = document.querySelector('#recent-list');
+    const listTitleEl = document.querySelector('#list-title');
+
+    const modalEl = document.querySelector('#preview-modal');
+    const modalBackdropEl = document.querySelector('#modal-backdrop');
+    const viewerFileEl = document.querySelector('#modal-file');
+    const viewerContentEl = document.querySelector('#viewer-content');
+
+    const uploadBtn = document.querySelector('#upload-btn');
+    const fileInput = document.querySelector('#file-input');
+    const closeBtn = document.querySelector('#close-btn');
+
+    const state = {
+        activeFolder: 'all',
+        activeFileName: '',
+        listedFiles: [],
+        previewFile: null,
+        previewObjectURL: '',
+        previewMeta: null,
+        contextFiles: [],
+        chatEntity: null,
+    };
+
+    function getErrorMessage(error) {
+        if (!error) {
+            return 'Unknown error';
+        }
+
+        return error.message || String(error);
+    }
+
+    function escapeHTML(value = '') {
+        return value
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function getExtension(name = '') {
+        const dot = name.lastIndexOf('.');
+        return dot < 0 ? '' : name.slice(dot + 1).toLowerCase();
+    }
+
+    function bytesToLabel(bytes = 0) {
+        if (bytes < 1024) {
+            return `${bytes} B`;
+        }
+
+        if (bytes < 1024 * 1024) {
+            return `${(bytes / 1024).toFixed(1)} KB`;
+        }
+
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function timeLabel(ts = 0) {
+        return ts ? new Date(ts).toLocaleString() : 'Unknown date';
+    }
+
+    function folderLabel(folder = '') {
+        if (folder === 'chats') {
+            return 'Chats';
+        }
+
+        if (folder === 'images') {
+            return 'Images';
+        }
+
+        if (folder === 'documents') {
+            return 'Documents';
+        }
+
+        return 'All';
+    }
+
+    function updateInputAccept() {
+        if (state.activeFolder === 'all') {
+            fileInput.accept = ALLOWED_DOC_EXTENSIONS.join(',');
+            return;
+        }
+
+        if (state.activeFolder === 'images') {
+            fileInput.accept = 'image/*,.png,.jpg,.jpeg,.svg';
+            return;
+        }
+
+        fileInput.accept = ALLOWED_DOC_EXTENSIONS.join(',');
+    }
+
+    function clearPreviewURL() {
+        if (state.previewObjectURL) {
+            URL.revokeObjectURL(state.previewObjectURL);
+            state.previewObjectURL = '';
+        }
+    }
+
+    function showWelcome() {
+        clearPreviewURL();
+        state.previewFile = null;
+        state.previewMeta = null;
+        state.activeFileName = '';
+        modalEl.classList.add('hidden');
+    }
+
+    function showViewer() {
+        modalEl.classList.remove('hidden');
+    }
+
+    async function loadChatConversation(fileName = '') {
+        if (!fileName) {
+            return;
+        }
+
+        const chat = new ChatEntity();
+        chat.fileName = fileName;
+
+        const messages = await chat.load();
+        state.chatEntity = chat;
+
+        return (messages || [])
+            .filter((msg) => msg && (msg.role === 'user' || msg.role === 'assistant'))
+            .map((msg) => ({ role: msg.role, text: String(msg.content ?? '') }))
+            .filter((msg) => msg.text.trim());
+    }
+
+    function isAllowedDocumentFile(file) {
+        return ALLOWED_DOC_EXTENSIONS.includes(getExtension(file.name || ''));
+    }
+
+    function isLikelyTextExtension(ext = '') {
+        return PREVIEWABLE_TEXT_EXTENSIONS.has(ext);
+    }
+
+    async function getChatPreviewHTML(file, fileName = '') {
+        const visibleMessages = await loadChatConversation(fileName);
+
+        if (!visibleMessages?.length) {
+            return '<p style="margin:0;color:#60728e">This chat is empty.</p>';
+        }
+
+        const transcript = visibleMessages
+            .map((msg) => {
+                const role = msg.role === 'user' ? 'User' : 'Assistant';
+                return `${role}:\n${msg.text}`;
+            })
+            .join('\n\n---\n\n');
+
+        const previewText = escapeHTML(transcript);
+
+        return `<pre>${previewText}</pre>`;
+    }
+
+    async function getDocumentPreviewHTML(file, fileName = '') {
+        const ext = getExtension(fileName);
+        const type = (file.type || '').toLowerCase();
+        const hasTextMime = type.startsWith('text/');
+        const isWordExt = ext === 'doc' || ext === 'docx';
+
+        // Best-effort preview for .doc/.docx: many test files are plain text
+        // with a Word extension, so let them pass the text preview path.
+        const shouldReadAsText = hasTextMime || isLikelyTextExtension(ext) || isWordExt;
+        if (!shouldReadAsText) {
+            return '';
+        }
+
+        const text = await file.text();
+
+        // Avoid dumping binary garbage for true Word binaries.
+        if (isWordExt && !hasTextMime && (text.includes('\u0000') || text.startsWith('PK\u0003\u0004'))) {
+            return '<p style="margin:0;color:#60728e">This Word file appears to be binary. Inline preview is not available in browser-only mode.</p>';
+        }
+
+        if (!text) {
+            return '<p style="margin:0;color:#60728e">This file is empty.</p>';
+        }
+
+        const previewText = escapeHTML(text);
+
+        if (ext === 'json') {
+            try {
+                const parsed = JSON.parse(previewText);
+                previewText = JSON.stringify(parsed, null, 2);
+            } catch {}
+        }
+
+        return `<pre>${previewText}</pre>`;
+    }
+
+    function destinationFolderForFile(file) {
+        if (state.activeFolder !== 'all') {
+            return state.activeFolder;
+        }
+
+        return ImageEntity.isImageFile(file) ? 'images' : 'documents';
+    }
+
+    function extractChatTitleFromText(text = '', fallbackName = 'Untitled chat') {
+        const lines = String(text || '').split('\n').map((line) => line.trim()).filter(Boolean);
+
+        for (const line of lines) {
+            try {
+                const parsed = JSON.parse(line);
+                if (parsed?.role !== 'user') {
+                    continue;
+                }
+
+                const content = String(parsed?.content || '').replace(/\s+/g, ' ').trim();
+                if (!content) {
+                    continue;
+                }
+
+                const maxLen = 72;
+                return content.length > maxLen ? `${content.slice(0, maxLen - 1)}...` : content;
+            } catch {
+                // Ignore invalid NDJSON lines and continue scanning.
+            }
+        }
+
+        return fallbackName;
+    }
+
+    async function getFolderFiles(folder = 'documents') {
+        const table = await dbopfs.getTableHandle(folder);
+        const files = [];
+
+        for await (const [name] of table.entries()) {
+            try {
+                const handle = await table.getFileHandle(name, { create: false });
+                const file = await handle.getFile();
+                let chatTitle = '';
+
+                if (folder === 'chats') {
+                    try {
+                        const chatText = await file.text();
+                        chatTitle = extractChatTitleFromText(chatText, name);
+                    } catch {
+                        chatTitle = name;
+                    }
+                }
+
+                files.push({
+                    name,
+                    chatTitle,
+                    size: file.size,
+                    type: file.type || '',
+                    uploadedAt: file.lastModified || 0
+                });
+            } catch (error) {
+                console.warn('Failed to read file info', name, error);
+            }
+        }
+
+        files.sort((a, b) => b.uploadedAt - a.uploadedAt);
+        return files;
+    }
+
+    async function getAllLibraryFiles() {
+        const [chats, documents, images] = await Promise.all([
+            getFolderFiles('chats'),
+            getFolderFiles('documents'),
+            getFolderFiles('images')
+        ]);
+
+        const taggedChats = chats.map((item) => ({ ...item, folder: 'chats' }));
+        const taggedDocuments = documents.map((item) => ({ ...item, folder: 'documents' }));
+        const taggedImages = images.map((item) => ({ ...item, folder: 'images' }));
+        const allFiles = taggedChats.concat(taggedDocuments, taggedImages);
+
+        allFiles.sort((a, b) => b.uploadedAt - a.uploadedAt);
+        return allFiles;
+    }
+
+    function getVisibleFiles() {
+        if (state.activeFolder === 'all') {
+            return state.listedFiles;
+        }
+
+        return state.listedFiles.filter((item) => item.folder === state.activeFolder);
+    }
+
+    function renderRecentFiles() {
+        recentListEl.innerHTML = '';
+
+        listTitleEl.textContent = state.activeFolder === 'all'
+            ? 'All Items'
+            : `All Files In ${folderLabel(state.activeFolder)}`;
+
+        const query = (searchInput.value || '').trim().toLowerCase();
+        const filtered = getVisibleFiles().filter((item) => {
+            const display = (item.chatTitle || item.name || '').toLowerCase();
+            const fileName = (item.name || '').toLowerCase();
+            return display.includes(query) || fileName.includes(query);
+        });
+
+        if (!filtered.length) {
+            const li = document.createElement('li');
+            li.className = 'empty';
+            li.textContent = 'No files match this search.';
+            recentListEl.appendChild(li);
+            return;
+        }
+
+        for (const item of filtered) {
+            const isChat = item.folder === 'chats';
+            const isImage = (item.folder === 'images') || (item.type || '').toLowerCase().startsWith('image/');
+            const badgeSrc = isImage ? '/arcane/img/image.svg' : (isChat ? '/arcane/img/send.svg' : '/arcane/img/doc.svg');
+            const badgeAlt = isImage ? 'Image file' : (isChat ? 'Chat file' : 'Document file');
+            const displayName = isChat ? (item.chatTitle || item.name) : item.name;
+            const rowKey = `${item.folder || state.activeFolder}:${item.name}`;
+            const folderText = item.folder ? ` | ${folderLabel(item.folder)}` : '';
+            const li = document.createElement('li');
+
+            li.innerHTML = `
+                <div class="file-row-wrap">
+                    <button class="file-item ${rowKey === state.activeFileName ? 'active' : ''}" type="button" data-file-name="${escapeHTML(item.name)}" data-file-folder="${escapeHTML(item.folder || state.activeFolder)}">
+                        <img class="file-badge" src="${badgeSrc}" alt="${badgeAlt}" loading="lazy" decoding="async">
+                        <span>
+                            <span class="file-name">${escapeHTML(displayName)}</span>
+                            <span class="file-meta">${bytesToLabel(item.size)} | ${timeLabel(item.uploadedAt)}${folderText}</span>
+                        </span>
+                    </button>
+                    <button class="delete-btn" type="button" title="Delete file" aria-label="Delete ${escapeHTML(item.name)}" data-delete-file-name="${escapeHTML(item.name)}" data-delete-file-folder="${escapeHTML(item.folder || state.activeFolder)}">
+                        <img src="/arcane/img/trash.svg" alt="" aria-hidden="true">
+                    </button>
+                </div>
+            `;
+
+            recentListEl.appendChild(li);
+        }
+    }
+
+    async function refreshRecentFiles() {
+        try {
+            state.listedFiles = await getAllLibraryFiles();
+            renderRecentFiles();
+        } catch (error) {
+            console.error('Failed to refresh OPFS files.', error);
+            state.listedFiles = [];
+            renderRecentFiles();
+        }
+    }
+
+    async function fileExistsInFolder(folder, fileName) {
+        const entity = folder === 'images' ? new ImageEntity(fileName) : new DocumentEntity(fileName);
+        return await entity.loadMeta().then(() => true).catch(() => false);
+    }
+
+    async function saveFileToFolder(file, folder) {
+        const entity = folder === 'images' ? new ImageEntity() : new DocumentEntity();
+        await entity.uploadFile(file);
+    }
+
+    async function uploadSelectedFile(file) {
+        if (!file) {
+            return;
+        }
+
+        const destinationFolder = destinationFolderForFile(file);
+
+        if (destinationFolder === 'images') {
+            if (!ImageEntity.isImageFile(file)) {
+                console.log('Only image files are accepted in Images.');
+                return;
+            }
+
+            if (await fileExistsInFolder('images', file.name)) {
+                console.log(`${file.name} already exists.`);
+                return;
+            }
+
+            await saveFileToFolder(file, 'images');
+            console.log(`${file.name} uploaded to Images successfully.`);
+            return;
+        }
+
+        if (!isAllowedDocumentFile(file)) {
+            console.log('Only .md are accepted in Documents.');
+            return;
+        }
+
+        if (await fileExistsInFolder('documents', file.name)) {
+            console.log(`${file.name} already exists.`);
+            return;
+        }
+
+        await saveFileToFolder(file, 'documents');
+        console.log(`${file.name} uploaded to Documents successfully.`);
+    }
+
+    async function processIncomingFiles(files = [], failMessage = 'Upload failed. Check console for details.') {
+        if (!files.length) {
+            return;
+        }
+
+        try {
+            for (const file of files) {
+                await uploadSelectedFile(file);
+            }
+            await refreshRecentFiles();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function deleteFile(name = '', folder = '') {
+        if (!name || !folder) {
+            return;
+        }
+
+        if (!window.confirm(`Delete ${name} from ${folderLabel(folder)}?`)) {
+            return;
+        }
+
+        try {
+            await dbopfs.delete(folder, name);
+
+            if (state.activeFileName === `${folder}:${name}`) {
+                showWelcome();
+            }
+
+            console.log(`${name} deleted from ${folderLabel(folder)}.`);
+            await refreshRecentFiles();
+        } catch (error) {
+            console.error(error);
+            console.log(`Failed to delete ${name}.`);
+        }
+    }
+
+    function setActiveFolder(folder = '') {
+        state.activeFolder = folder;
+        state.activeFileName = '';
+
+        for (const button of folderButtons) {
+            button.classList.toggle('active', button.dataset.folder === folder);
+        }
+
+        updateInputAccept();
+        console.log(`Viewing ${folderLabel(folder)}.`);
+        showWelcome();
+        refreshRecentFiles();
+    }
+
+    async function openFilePreview(name = '', folder = '') {
+        if (!name) {
+            return;
+        }
+
+        const resolvedFolder = folder || (state.activeFolder === 'all' ? 'documents' : state.activeFolder);
+
+        if (resolvedFolder === 'chats') {
+            try {
+                const table = await dbopfs.getTableHandle(resolvedFolder);
+                const handle = await table.getFileHandle(name, { create: false });
+                const file = await handle.getFile();
+
+                clearPreviewURL();
+
+                state.previewFile = file;
+                state.activeFileName = `${resolvedFolder}:${name}`;
+                state.previewMeta = { name, folder: resolvedFolder };
+
+                viewerFileEl.textContent = name;
+                viewerContentEl.innerHTML = await getChatPreviewHTML(file, name);
+
+                showViewer();
+                renderRecentFiles();
+                console.log(`Previewing chat: ${name}`);
+            } catch (error) {
+                console.error(error);
+                console.log(`Failed to preview chat ${name}.`);
+            }
+
+            return;
+        }
+
+        try {
+            const table = await dbopfs.getTableHandle(resolvedFolder);
+            const handle = await table.getFileHandle(name, { create: false });
+            const file = await handle.getFile();
+
+            clearPreviewURL();
+
+            state.previewFile = file;
+            state.activeFileName = `${resolvedFolder}:${name}`;
+            state.previewMeta = { name, folder: resolvedFolder };
+            viewerFileEl.textContent = name;
+
+            if (resolvedFolder === 'images' || (file.type || '').startsWith('image/')) {
+                state.previewObjectURL = URL.createObjectURL(file);
+                viewerContentEl.innerHTML = `<img src="${state.previewObjectURL}" alt="${escapeHTML(name)}">`;
+            } else {
+                const previewHTML = await getDocumentPreviewHTML(file, name);
+                viewerContentEl.innerHTML = previewHTML || `<h3 style="margin-top:0">Preview unavailable for this file type</h3>`;
+            }
+
+            showViewer();
+            renderRecentFiles();
+        } catch (error) {
+            console.error(error);
+            console.log(`Failed to preview ${name}.`);
+        }
+    }
+
+    function wireEvents() {
+        window.addEventListener('dbopfs-error', (event) => {
+            const error = event.detail?.error;
+            console.log(`OPFS initialization failed: ${getErrorMessage(error)}`);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.log(`Runtime error: ${getErrorMessage(event.reason)}`);
+        });
+
+        for (const button of folderButtons) {
+            button.addEventListener('click', () => {
+                const folder = button.dataset.folder || '';
+                if (folder) {
+                    if (folder === 'all') {
+                        setActiveFolder('all');
+                        return;
+                    }
+
+                    setActiveFolder(folder);
+                }
+            });
+        }
+
+        searchInput.addEventListener('input', renderRecentFiles);
+
+
+        recentListEl.addEventListener('click', async (event) => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (!target) {
+                return;
+            }
+
+            const deleteButton = target.closest('[data-delete-file-name]');
+            if (deleteButton instanceof HTMLElement) {
+                await deleteFile(deleteButton.dataset.deleteFileName || '', deleteButton.dataset.deleteFileFolder || '');
+                return;
+            }
+
+            const fileButton = target.closest('[data-file-name]');
+            if (fileButton instanceof HTMLElement) {
+                await openFilePreview(fileButton.dataset.fileName || '', fileButton.dataset.fileFolder || '');
+            }
+        });
+
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', async () => {
+            const files = fileInput.files ? [...fileInput.files] : [];
+            fileInput.value = '';
+            await processIncomingFiles(files, 'Upload failed. Check console for details.');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            showWelcome();
+            renderRecentFiles();
+        });
+
+        modalBackdropEl.addEventListener('click', () => {
+            showWelcome();
+        });
+    }
+
+    function init() {
+        wireEvents();
+        setActiveFolder('all');
+    }
+
+    init();
+</script>

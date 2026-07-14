@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "terminal",
+  "displayName": "Arcane Terminal",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "strategy": "static",
+  "include": ["img", "index.html", "manifest.json", "modules", "terminal.css"],
+  "exclude": ["README.md", "test"],
+  "shared": ["browser-runtime"]
+}

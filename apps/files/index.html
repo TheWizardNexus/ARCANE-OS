@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#17354a">
+    <title>Arcane Files</title>
+    <link rel="manifest" href="./apps/files/manifest.json">
+    <link rel="icon" href="./apps/files/img/icon.png" type="image/png">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="./apps/files/files.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+</head>
+<body>
+    <html-import class="app-bar" data-product-name="Files" data-brand-mark="F" data-status="Private device storage" data-status-tone="success" href="./arcane/components/app-bar.html?v=2">
+        <html-import slot="trailing" class="theme-switcher" href="./arcane/components/theme-switcher.html?v=2"></html-import>
+    </html-import>
+    <main>
+        <header class="page-heading">
+            <div><p class="eyebrow">Arcane OS</p><h1>Files</h1><p>Keep documents, downloads, and pictures in private browser-backed device storage.</p></div>
+            <button id="refresh" class="arcane-button arcane-button--secondary" type="button">Refresh</button>
+        </header>
+        <section class="file-surface arcane-card" aria-label="File explorer">
+            <div id="fileManagerMount" data-component-href="./arcane/components/file-manager.html?v=19"></div>
+            <p id="unsupported" class="arcane-state arcane-state--empty" hidden>Files requires secure device storage. Open this app through Arcane OS or a secure local development origin.</p>
+        </section>
+        <p id="status" class="arcane-help" role="status" aria-live="polite">Files stay on this device unless you download or share them.</p>
+    </main>
+    <script type="module" src="./apps/files/modules/FilesApp.js?v=1"></script>
+</body>
+</html>

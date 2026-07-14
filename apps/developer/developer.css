@@ -1,0 +1,240 @@
+*{
+    box-sizing:border-box;
+}
+
+html{
+    min-height:100%;
+    scroll-behavior:smooth;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+}
+
+button,
+input{
+    font:inherit;
+}
+
+.developer-shell{
+    display:grid;
+    gap:var(--arcane-space-5);
+    margin:0 auto;
+    max-width:100rem;
+    padding:clamp(1rem,3vw,2.5rem);
+}
+
+.view-heading{
+    align-items:end;
+    display:flex;
+    gap:var(--arcane-space-5);
+    justify-content:space-between;
+}
+
+.view-heading__copy{
+    display:grid;
+    gap:var(--arcane-space-2);
+    max-width:66rem;
+}
+
+.view-heading__copy>p:last-child{
+    color:var(--arcane-muted);
+    line-height:1.6;
+    margin:0;
+}
+
+.eyebrow{
+    color:var(--arcane-muted);
+    font-size:.75rem;
+    font-weight:750;
+    letter-spacing:.14em;
+    margin:0 0 var(--arcane-space-1);
+    text-transform:uppercase;
+}
+
+.developer-grid{
+    align-items:start;
+    display:grid;
+    gap:var(--arcane-space-5);
+    grid-template-columns:minmax(0,1.08fr) minmax(22rem,.92fr);
+}
+
+.developer-controls{
+    display:grid;
+    gap:var(--arcane-space-5);
+    min-width:0;
+}
+
+.pairing-form,
+.setup-card__body{
+    display:grid;
+    gap:var(--arcane-space-4);
+}
+
+.form-message{
+    color:var(--arcane-muted);
+    line-height:1.45;
+    margin:0;
+    min-height:1.45em;
+    overflow-wrap:anywhere;
+}
+
+.form-message[data-status="success"]{
+    color:var(--arcane-success);
+}
+
+.form-message[data-status="error"]{
+    color:var(--arcane-danger);
+}
+
+.form-actions,
+.setup-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:var(--arcane-space-2);
+}
+
+.setup-actions>.arcane-button{
+    flex:1 1 11rem;
+}
+
+.output-section{
+    scroll-margin-top:var(--arcane-space-4);
+}
+
+.assistant-region{
+    min-height:45rem;
+    min-width:0;
+    position:sticky;
+    top:var(--arcane-space-4);
+}
+
+.assistant-panel{
+    display:block;
+    height:min(50rem,calc(100vh - 2rem));
+    min-height:38rem;
+}
+
+.chat-messages{
+    display:grid;
+    gap:var(--arcane-space-4);
+    list-style:none;
+    margin:0;
+    padding:0;
+}
+
+.chat-message{
+    background:var(--arcane-surface-muted);
+    border:1px solid var(--arcane-border);
+    border-radius:var(--arcane-radius-medium);
+    display:grid;
+    gap:var(--arcane-space-2);
+    line-height:1.55;
+    padding:var(--arcane-space-4);
+}
+
+.chat-message[data-role="user"]{
+    border-inline-start:.25rem solid var(--arcane-action);
+}
+
+.chat-message[data-role="assistant"]{
+    background:var(--arcane-surface-raised);
+    border-inline-start:.25rem solid var(--arcane-review);
+}
+
+.chat-message__role{
+    color:var(--arcane-muted);
+    font-size:.75rem;
+    font-weight:750;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.chat-message__content{
+    min-width:0;
+    overflow-wrap:anywhere;
+}
+
+.chat-message__content>:first-child{
+    margin-top:0;
+}
+
+.chat-message__content>:last-child{
+    margin-bottom:0;
+}
+
+.chat-message__content pre{
+    background:var(--arcane-surface);
+    border:1px solid var(--arcane-border);
+    border-radius:var(--arcane-radius-small);
+    max-width:100%;
+    overflow:auto;
+    padding:var(--arcane-space-3);
+    white-space:pre-wrap;
+}
+
+.chat-message__content code{
+    font-family:ui-monospace,"Cascadia Code","SFMono-Regular",Consolas,monospace;
+}
+
+.assistant-footer{
+    color:var(--arcane-muted);
+    display:grid;
+    font-size:.84rem;
+    gap:var(--arcane-space-1);
+    overflow-wrap:anywhere;
+}
+
+.assistant-footer p{
+    margin:0;
+}
+
+.visually-hidden{
+    clip:rect(0 0 0 0);
+    clip-path:inset(50%);
+    height:1px;
+    overflow:hidden;
+    position:absolute;
+    white-space:nowrap;
+    width:1px;
+}
+
+@media(max-width:70rem){
+    .developer-grid{
+        grid-template-columns:1fr;
+    }
+
+    .assistant-region{
+        min-height:38rem;
+        position:static;
+    }
+
+    .assistant-panel{
+        height:min(44rem,80vh);
+    }
+}
+
+@media(max-width:42rem){
+    .view-heading{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .view-heading>.arcane-button,
+    .form-actions>.arcane-button,
+    .setup-actions>.arcane-button{
+        width:100%;
+    }
+
+    .assistant-panel{
+        height:40rem;
+        min-height:32rem;
+    }
+}
+
+@media(prefers-reduced-motion:reduce){
+    html{
+        scroll-behavior:auto;
+    }
+}

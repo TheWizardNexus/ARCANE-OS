@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+		<title>PreCrisis.AI Header Example</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="referrer" content="origin" />
+
+		<base href="/" />
+
+		<link rel="manifest" href="/apps/precrisis/manifest.json" crossorigin="use-credentials" />
+		<link rel="icon" href="/apps/precrisis/img/favicon.png" type="image/png" />
+
+		<!-- Styles -->
+		<link rel="stylesheet" href="/arcane/css/layout.css" />
+
+		<!-- Modules -->
+		<script async type="module" src="/arcane/modules/AI.js"></script>
+
+		<script async type="module" src="/arcane/modules/HTMLImport.js"></script>
+		<script async type="module" src="/arcane/modules/Errors.js"></script>
+	</head>
+
+	<body>
+		<html-import class="header" href="/arcane/components/header.html"></html-import>
+        <html-import class="nav" href="/apps/precrisis/components/nav.html"></html-import>
+
+		<main class="contents">
+			<textarea id="prompt" rows="5" cols="50"></textarea>
+
+			<div class="controls">
+				<button id="ask">Ask AI</button>
+				<button id="speak">Speak Reply (TTS)</button>
+			</div>
+
+			<h2>Response</h2>
+			<!-- preformatted text to display the response -->
+			<pre id="reply"></pre>
+		</main>
+
+		<script type="module">
+			const prompt=document.querySelector('#prompt')
+			const askButton=document.querySelector('#ask')
+			const speakButton=document.querySelector('#speak')
+			const reply=document.querySelector('#reply')
+
+			async function callAI(){
+				const messages=[{ role:'user', content:prompt.value }]
+
+				if(!ai.configured){
+					reply.textContent='Configure an OpenAI API key or select a local Ollama model first.'
+					return
+				}
+
+				try{
+					await ai.fetch(
+						messages,
+						(response)=>{
+							const text=response?.choices?.[0]?.message?.content || ''
+							reply.textContent=text
+						}
+					)
+				}catch{
+					reply.textContent='The configured AI service could not respond.'
+				}
+			}
+
+			function speakReply(){
+				const text=reply.textContent.trim()
+				if(!text){
+					return
+				}
+				ai.streamTTS(text, true)
+			}
+
+			function init(){
+				askButton.addEventListener('click', callAI)
+				speakButton.addEventListener('click', speakReply)
+			}
+
+			if(window.ai?.ready){
+				init()
+			}else{
+				window.addEventListener('ai-ready', init)
+			}
+		</script>
+	</body>
+</html>
+

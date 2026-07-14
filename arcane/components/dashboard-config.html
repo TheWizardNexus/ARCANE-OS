@@ -1,0 +1,341 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<link rel="stylesheet" href="./arcane/css/dashboard-config.css?v=2">
+<style>
+    :host{
+        display:block;
+    }
+</style>
+
+<button id="openConfig" type="button" aria-haspopup="dialog" disabled></button>
+<html-import id="configModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
+
+<script type="module">
+    const host=this;
+    const componentURL=new URL(
+        host.getAttribute('href')||'./arcane/components/dashboard-config.html',
+        document.baseURI
+    );
+    const moduleURL=name=>new URL(`../modules/${name}`,componentURL).href;
+    const {default:waitForComponent}=await import(moduleURL('WaitForComponent.js'));
+    const {
+        effectiveDashboardVisibility,
+        normalizeDashboardDefinitions,
+        normalizeDashboardOptions,
+        normalizeDashboardVisibility
+    }=await import(moduleURL('ComponentContracts.js'));
+    const openButton=host.shadowRoot.querySelector('#openConfig');
+    const configModal=host.shadowRoot.querySelector('#configModal');
+
+    let definitions=[];
+    let visibility={};
+    let content=null;
+    let labels=normalizeDashboardOptions(optionsFromDataset()).labels;
+
+    host.close=closeConfig;
+    host.configure=configure;
+    host.getChartOptions=getChartOptions;
+    host.getEffectiveVisibility=getEffectiveVisibility;
+    host.open=openConfig;
+    host.setDefinitions=setDefinitions;
+    host.setVisibility=setVisibility;
+
+    Object.defineProperties(
+        host,
+        {
+            definitions:{get:getDefinitions,set:setDefinitions},
+            effectiveVisibility:{get:getEffectiveVisibility},
+            options:{get:getOptions,set:configure},
+            visibility:{get:getVisibility,set:setVisibility}
+        }
+    );
+
+    openButton.addEventListener(
+        'click',
+        ()=>openConfig().catch(
+            error=>console.error('Unable to configure dashboard:',error)
+        )
+    );
+    configModal.addEventListener(
+        'modal-closed',
+        ()=>host.dispatchEvent(
+            new CustomEvent(
+                'dashboard-config-closed',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{
+                        effectiveVisibility:getEffectiveVisibility(),
+                        visibility:getVisibility()
+                    }
+                }
+            )
+        )
+    );
+
+    function optionsFromDataset(){
+        const dataset=host.dataset||{};
+        const options={};
+        for(const field of ['description','emptyLabel','heading','triggerLabel']){
+            if(dataset[field]!==undefined){
+                options[field]=dataset[field];
+            }
+        }
+        return options;
+    }
+
+    function configure(input={}){
+        const normalized=normalizeDashboardOptions(
+            input,
+            {definitions,labels,visibility}
+        );
+        definitions=normalized.definitions;
+        visibility=normalized.visibility;
+        labels=normalized.labels;
+        renderTrigger();
+        refreshContent();
+        return getOptions();
+    }
+
+    function setDefinitions(values=[]){
+        definitions=normalizeDashboardDefinitions(values);
+        renderTrigger();
+        refreshContent();
+        return getDefinitions();
+    }
+
+    function setVisibility(values={}){
+        visibility=normalizeDashboardVisibility(values);
+        syncOptions();
+        return getVisibility();
+    }
+
+    function getDefinitions(){
+        return definitions.map(cloneDefinition);
+    }
+
+    function getVisibility(){
+        return {...visibility};
+    }
+
+    function getEffectiveVisibility(){
+        return effectiveDashboardVisibility(definitions,visibility);
+    }
+
+    function getChartOptions(key=''){
+        const definition=definitions.find(candidate=>candidate.key===key);
+        if(!definition){
+            return null;
+        }
+        return {
+            ...definition.chartOptions,
+            labels:{...definition.chartOptions.labels},
+            chartOptions:typeof definition.chartOptions.chartOptions==='object'
+                &&definition.chartOptions.chartOptions!==null
+                ?{...definition.chartOptions.chartOptions}
+                :definition.chartOptions.chartOptions
+        };
+    }
+
+    function isVisible(definition={}){
+        return typeof visibility[definition.key]==='boolean'
+            ?visibility[definition.key]
+            :definition.defaultVisible;
+    }
+
+    async function openConfig(){
+        if(!definitions.length){
+            return false;
+        }
+        const modal=await waitForComponent(
+            configModal,
+            {
+                methods:['populate','open'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+        if(!content){
+            content=createContent();
+            await modal.populate(content,false);
+        }
+        refreshContent();
+        modal.open();
+        host.dispatchEvent(
+            new CustomEvent(
+                'dashboard-config-opened',
+                {
+                    bubbles:true,
+                    composed:true,
+                    detail:{
+                        effectiveVisibility:getEffectiveVisibility(),
+                        visibility:getVisibility()
+                    }
+                }
+            )
+        );
+        return true;
+    }
+
+    async function closeConfig(){
+        const modal=await waitForComponent(
+            configModal,
+            {
+                methods:['close'],
+                property:'ready',
+                event:'modal-ready'
+            }
+        );
+        modal.close();
+        return true;
+    }
+
+    function createContent(){
+        const section=document.createElement('section');
+        const styles=document.createElement('link');
+        const heading=document.createElement('h1');
+        const message=document.createElement('p');
+        const empty=document.createElement('p');
+        const items=document.createElement('section');
+
+        styles.rel='stylesheet';
+        styles.href='./arcane/css/dashboard-config.css?v=2';
+        heading.dataset.dashboardConfigHeading='';
+        message.dataset.dashboardConfigDescription='';
+        empty.className='dashboard-config-empty';
+        empty.dataset.dashboardConfigEmpty='';
+        items.className='chart-options';
+        items.dataset.dashboardConfigOptions='';
+        items.addEventListener('change',changeVisibility);
+        section.append(styles,heading,message,empty,items);
+        return section;
+    }
+
+    function refreshContent(){
+        if(!content){
+            return;
+        }
+        const heading=content.querySelector('[data-dashboard-config-heading]');
+        const message=content.querySelector('[data-dashboard-config-description]');
+        const empty=content.querySelector('[data-dashboard-config-empty]');
+        const items=content.querySelector('[data-dashboard-config-options]');
+        const fragment=document.createDocumentFragment();
+        let group=null;
+
+        heading.innerText=labels.heading;
+        message.innerText=labels.description;
+        empty.innerText=labels.empty;
+        empty.hidden=definitions.length>0;
+
+        for(const definition of definitions){
+            if(definition.group&&definition.group!==group){
+                group=definition.group;
+                const groupHeading=document.createElement('h2');
+                groupHeading.className='chart-option-group';
+                groupHeading.innerText=group;
+                fragment.append(groupHeading);
+            }
+            const label=document.createElement('label');
+            const checkbox=document.createElement('input');
+            const title=document.createElement('h3');
+            const description=document.createElement('p');
+
+            label.className='chart-option';
+            label.classList.toggle('disabled',definition.disabled);
+            checkbox.type='checkbox';
+            checkbox.dataset.chartKey=definition.key;
+            checkbox.checked=isVisible(definition);
+            checkbox.disabled=definition.disabled;
+            title.innerText=definition.title;
+            description.innerText=definition.description;
+            description.hidden=!definition.description;
+            label.append(checkbox,title,description);
+            fragment.append(label);
+        }
+        items.replaceChildren(fragment);
+    }
+
+    function syncOptions(){
+        if(!content){
+            return;
+        }
+        const byKey=new Map(definitions.map(definition=>[definition.key,definition]));
+        content.querySelectorAll('[data-chart-key]').forEach(
+            checkbox=>{
+                const definition=byKey.get(checkbox.dataset.chartKey);
+                checkbox.checked=definition?isVisible(definition):false;
+                checkbox.disabled=!definition||definition.disabled;
+            }
+        );
+    }
+
+    function changeVisibility(event){
+        const checkbox=event.target.closest?.('[data-chart-key]');
+        const definition=definitions.find(
+            candidate=>candidate.key===checkbox?.dataset.chartKey
+        );
+        if(!checkbox||!definition||definition.disabled){
+            return;
+        }
+
+        const previous=isVisible(definition);
+        const next={...visibility,[definition.key]:checkbox.checked};
+        const effective=effectiveDashboardVisibility(definitions,next);
+        const changeEvent=new CustomEvent(
+            'dashboard-config-change',
+            {
+                bubbles:true,
+                cancelable:true,
+                composed:true,
+                detail:{
+                    definition:cloneDefinition(definition),
+                    effectiveVisibility:effective,
+                    key:definition.key,
+                    visibility:{...next},
+                    visible:checkbox.checked
+                }
+            }
+        );
+        if(!host.dispatchEvent(changeEvent)){
+            checkbox.checked=previous;
+            return;
+        }
+        visibility=next;
+        syncOptions();
+    }
+
+    function renderTrigger(){
+        openButton.innerText=labels.trigger;
+        openButton.disabled=definitions.length===0;
+    }
+
+    function cloneDefinition(definition){
+        return {
+            ...definition,
+            chartOptions:{
+                ...definition.chartOptions,
+                labels:{...definition.chartOptions.labels},
+                chartOptions:typeof definition.chartOptions.chartOptions==='object'
+                    &&definition.chartOptions.chartOptions!==null
+                    ?{...definition.chartOptions.chartOptions}
+                    :definition.chartOptions.chartOptions
+            }
+        };
+    }
+
+    function getOptions(){
+        return {
+            definitions:getDefinitions(),
+            labels:{...labels},
+            visibility:getVisibility()
+        };
+    }
+
+    renderTrigger();
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent(
+            'dashboard-config-ready',
+            {bubbles:true,composed:true}
+        )
+    );
+</script>

@@ -1,0 +1,49 @@
+# Vendor only approved first-party modules authored by RIAEvangelist.
+**/node_modules/
+!/node_modules/
+/node_modules/*
+!/node_modules/strong-type/
+!/node_modules/strong-type/**
+.pnpm-store/
+/pnpm-lock.yaml
+dist/
+local/
+tmp/
+apps/boss/business docs/
+apps/boss/documents/
+apps/boss/scripts/build_library.py
+
+*.log
+.agents/
+.codex/
+.env
+.env.*
+!.env.example
+
+# Git LFS installs these local lifecycle hooks into the configured hooks path.
+.githooks/post-checkout
+.githooks/post-commit
+.githooks/post-merge
+
+# Signing keys stay in the Windows certificate store or a hardware provider.
+*.pfx
+*.p12
+*.pem
+*.key
+*.pvk
+*.snk
+
+# Local model weights and generated model artifacts
+*.gguf
+*.ggml
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.h5
+*.weights
+*.model
+pytorch_model*.bin
+model*.bin
+consolidated*.bin

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Arcane directory picker example</title>
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+    <style>
+        body{margin:0;padding:var(--arcane-space-5)}
+        main{display:grid;gap:var(--arcane-space-4);margin-inline:auto;max-width:46rem}
+        .example-body{display:grid;gap:var(--arcane-space-4)}
+        #eventOutput{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <p class="arcane-help">Synthetic shared-component example</p>
+            <h1 class="arcane-view-heading">Directory picker</h1>
+            <p>Choose one local folder through the Arcane native selector. The component never enumerates its contents.</p>
+        </header>
+        <section class="arcane-card" aria-labelledby="exampleTitle">
+            <div class="arcane-card__body example-body">
+                <h2 id="exampleTitle" class="arcane-section-heading">Workspace folder</h2>
+                <html-import id="directoryPicker" href="./arcane/components/directory-picker.html?v=1"></html-import>
+                <pre id="eventOutput" class="arcane-form-note" aria-live="polite">No folder selected.</pre>
+            </div>
+        </section>
+    </main>
+    <script type="module" src="./example/component_directory_picker/example.js"></script>
+</body>
+</html>

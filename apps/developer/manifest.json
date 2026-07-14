@@ -1,0 +1,16 @@
+{
+  "name": "Arcane Developer",
+  "short_name": "Developer",
+  "description": "Choose and set up an Arcane development checkout, review AI and Ollama status, then ask the configured Arcane AI about its code.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "rgb(13, 18, 32)",
+  "theme_color": "rgb(13, 18, 32)",
+  "icons": [
+    {
+      "src": "img/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
