@@ -334,3 +334,19 @@ test('shared component sources use the validated contracts and remain domain-neu
         }
     }
 });
+
+test('shared chart defaults its series line to the theme accent',async()=>{
+    const source=await readFile(
+        new URL('../arcane/components/chart.html',import.meta.url),
+        'utf8'
+    );
+
+    assert.match(
+        source,
+        /getChartColor\(\s*'--chart-line-color',\s*'--accent-color',\s*'rgb\(118,87,213\)'\s*\)/
+    );
+    assert.doesNotMatch(
+        source,
+        /--chart-line-color',\s*'--primary-color'/
+    );
+});

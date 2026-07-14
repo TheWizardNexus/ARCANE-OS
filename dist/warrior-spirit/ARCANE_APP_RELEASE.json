@@ -10,8 +10,8 @@
   },
   "policySha256": "367ea0e86739c198c60602a9ba80f22b84b30cd564b6d5aa10fb8456e8f8edf9",
   "fileCount": 165,
-  "totalBytes": 5644785,
-  "contentSha256": "14e534b9aa309d7070367b47c57df6ae1ff9d525aa2ece8bd7da0c7ea591f6b6",
+  "totalBytes": 5644776,
+  "contentSha256": "71902e291d0154da21b3c3af80ac452a3d60112413e141a55e24f72aaa6cba1e",
   "files": [
     {
       "path": "apps/precrisis/admin.html",
@@ -300,8 +300,8 @@
     },
     {
       "path": "arcane/components/chart.html",
-      "bytes": 20623,
-      "sha256": "418ab098c26bb42b75b6b8c76b70597ffc327c6f7e9a244757e01757adc9cf8f"
+      "bytes": 20614,
+      "sha256": "eddec4f8d7b86fcb603894c4dd2c4089a233a9a98128d00dc9120058f584ce5c"
     },
     {
       "path": "arcane/components/chat.html",
