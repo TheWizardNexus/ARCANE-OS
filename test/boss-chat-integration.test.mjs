@@ -290,7 +290,7 @@ describe('BOSS Libraries chat integration',()=>{
         assert.match(bossNav,/app-bar\.html\?v=3/);
         assert.match(chat,/boss\.css\?v=7/);
         for(const page of bossNavPages){
-            assert.match(page,/components\/nav\.html\?v=10/);
+            assert.match(page,/components\/nav\.html\?v=11/);
         }
         assert.match(admin,/boss\.css\?v=7/);
         assert.match(bossNav,/boss-libraries-logo-horizontal-transparent\.png\?v=2/);
@@ -346,6 +346,21 @@ describe('BOSS Libraries chat integration',()=>{
         assert.equal(transparentWhitePayload,0,'transparent pixels must not retain white RGB data');
         assert.equal(wordmarkKeyResidue,0,'wordmark counters must expose the CSS surface');
         assert.equal((bossNav.match(/aria-label="[^"]+"/g)||[]).length>=5,true);
+    });
+
+    it('opens customer support from the BOSS header',()=>{
+        assert.match(bossNav,/id="supportButton"[^>]*slot="trailing"/);
+        assert.match(bossNav,/aria-label="Customer support"/);
+        assert.match(bossNav,/id="supportModal"[^>]*modal\.html\?v=13/);
+        assert.match(bossNav,/admin@bosslibraries\.com/);
+        assert.match(bossNav,/navigator\.clipboard\.writeText\(supportEmail\)/);
+        assert.match(bossNav,/document\.execCommand\('copy'\)/);
+        assert.match(bossNav,/Email address copied\./);
+        assert.match(bossNav,/href=`mailto:\$\{supportEmail\}`/);
+        assert.match(bossNav,/Email support/);
+        assert.match(bossNav,/role','status'/);
+        assert.match(bossNav,/modal-ready/);
+        assert.doesNotMatch(bossNav,/setTimeout|setInterval/);
     });
 
     it('shows accurate palette previews and a usable local OpenAI key field',()=>{

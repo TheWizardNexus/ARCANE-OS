@@ -72,6 +72,25 @@
     .label{display:inline}
     #AIReq{font:600 .75rem/1.2 Inter,ui-sans-serif,sans-serif;text-align:center}
 
+    .support-button{
+        display:grid;
+        place-items:center;
+        width:2.35rem;
+        height:2.35rem;
+        padding:0;
+        border:1px solid var(--nav-border);
+        border-radius:50%;
+        color:var(--nav-text);
+        background:color-mix(in srgb,var(--nav-text) 8%,transparent);
+        cursor:pointer;
+        font:850 1rem/1 Inter,ui-sans-serif,sans-serif;
+    }
+
+    .support-button:hover{
+        color:var(--nav-active-text);
+        background:var(--nav-active-bg);
+    }
+
     @media(max-width:48rem){
         #appBar::part(nav){min-height:4.4rem}
         #appBar::part(brand-mark){width:7.5rem;height:2.75rem}
@@ -95,4 +114,109 @@
     <a slot="navigation" class="section-link" href="./apps/boss/export.html" aria-label="Export BOSS Libraries data"><span class="icon" aria-hidden="true">EX</span><span class="label">Export</span></a>
     <a slot="navigation" class="section-link" href="./apps/boss/import.html" aria-label="Import BOSS Libraries data"><span class="icon" aria-hidden="true">IM</span><span class="label">Import</span></a>
     <span id="AIReq" slot="status"></span>
+    <button id="supportButton" slot="trailing" class="support-button" type="button" aria-label="Customer support" title="Customer support">?</button>
 </html-import>
+
+<html-import id="supportModal" href="./arcane/components/modal.html?v=13" data-label="BOSS Libraries customer support"></html-import>
+
+<script type="module">
+    const host=this;
+    const supportButton=host.shadowRoot.querySelector('#supportButton');
+    const supportModal=host.shadowRoot.querySelector('#supportModal');
+    const supportEmail='admin@bosslibraries.com';
+
+    supportButton.addEventListener('click',openSupportModal);
+
+    async function waitForSupportModal(){
+        if(supportModal.ready&&typeof supportModal.populate==='function'){
+            return supportModal;
+        }
+
+        await new Promise(resolve=>{
+            function modalReady(){
+                if(!supportModal.ready||typeof supportModal.populate!=='function'){
+                    return;
+                }
+                supportModal.removeEventListener('modal-ready',modalReady);
+                resolve();
+            }
+
+            supportModal.addEventListener('modal-ready',modalReady);
+            modalReady();
+        });
+
+        return supportModal;
+    }
+
+    function createSupportContent(){
+        const content=document.createElement('section');
+        const style=document.createElement('style');
+        const heading=document.createElement('h2');
+        const explanation=document.createElement('p');
+        const emailLabel=document.createElement('label');
+        const emailLabelText=document.createElement('span');
+        const emailInput=document.createElement('input');
+        const actions=document.createElement('div');
+        const copyButton=document.createElement('button');
+        const emailLink=document.createElement('a');
+        const status=document.createElement('p');
+
+        style.textContent=`
+            .boss-support{display:grid;gap:1rem}
+            .boss-support h2,.boss-support p{margin:0}
+            .boss-support-email{display:grid;gap:.4rem;font-weight:750}
+            .boss-support-email input{width:100%;box-sizing:border-box;padding:.72rem .8rem;border:1px solid var(--border-color);border-radius:.55rem;background:var(--background);color:var(--text-color);font:inherit}
+            .boss-support-actions{display:flex;flex-wrap:wrap;gap:.7rem}
+            .boss-support-actions button,.boss-support-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:2.8rem;box-sizing:border-box;padding:.7rem 1rem;border:1px solid var(--border-color);border-radius:.55rem;cursor:pointer;font:inherit;font-weight:750;text-decoration:none}
+            .boss-support-actions .primary{border-color:var(--secondary-color);background:var(--secondary-color);color:var(--boss-navy,var(--text-color))}
+            .boss-support-actions .secondary{background:transparent;color:var(--text-color)}
+            .boss-support-status{min-height:1.4rem;color:var(--success-color);font-weight:700}
+            @media(max-width:30rem){.boss-support-actions>*{flex:1 1 100%}}
+        `;
+        content.className='boss-support';
+        heading.textContent='Customer support';
+        explanation.textContent='Contact BOSS Libraries support by email. Copy the address or open your default mail application.';
+        emailLabel.className='boss-support-email';
+        emailLabelText.textContent='Support email';
+        emailInput.type='email';
+        emailInput.readOnly=true;
+        emailInput.value=supportEmail;
+        actions.className='boss-support-actions';
+        copyButton.type='button';
+        copyButton.className='secondary';
+        copyButton.textContent='Copy email';
+        copyButton.addEventListener('click',copySupportEmail);
+        emailLink.className='primary';
+        emailLink.href=`mailto:${supportEmail}`;
+        emailLink.textContent='Email support';
+        status.className='boss-support-status';
+        status.setAttribute('role','status');
+        status.setAttribute('aria-live','polite');
+        emailLabel.append(emailLabelText,emailInput);
+        actions.append(copyButton,emailLink);
+        content.append(style,heading,explanation,emailLabel,actions,status);
+        return content;
+
+        async function copySupportEmail(){
+            emailInput.focus();
+            emailInput.select();
+            if(document.execCommand('copy')){
+                status.textContent='Email address copied.';
+                return;
+            }
+            try{
+                await navigator.clipboard.writeText(supportEmail);
+                status.textContent='Email address copied.';
+            }catch(error){
+                status.textContent='Copy is unavailable. The email address is selected for manual copying.';
+                console.warn('Unable to copy the BOSS support email.',error);
+            }
+        }
+    }
+
+    async function openSupportModal(){
+        await waitForSupportModal();
+        await supportModal.populate(createSupportContent());
+        await supportModal.open();
+    }
+</script>
