@@ -1,0 +1,282 @@
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+<style>
+    :host{display:block}
+    .task-progress{overflow:hidden}
+    .heading-copy{display:grid;gap:var(--arcane-space-1)}
+    .heading-copy p{color:var(--arcane-muted);margin:0}
+    .overall{display:grid;gap:var(--arcane-space-2);min-width:min(16rem,100%)}
+    .overall-label{font-variant-numeric:tabular-nums;text-align:end}
+    progress{accent-color:var(--arcane-action);width:100%}
+    .tasks{list-style:none;margin:0;padding:0}
+    .task{
+        align-items:center;
+        border-bottom:1px solid var(--arcane-border);
+        display:grid;
+        gap:var(--arcane-space-3);
+        grid-template-columns:auto minmax(0,1fr) auto;
+        padding:var(--arcane-space-3) var(--arcane-space-4);
+    }
+    .task:last-child{border-bottom:0}
+    .task-copy{display:grid;gap:var(--arcane-space-1);min-width:0}
+    .task-name{font-weight:650;overflow-wrap:anywhere}
+    .task-message{color:var(--arcane-muted);font-size:.88rem;overflow-wrap:anywhere}
+    .task-status{text-transform:capitalize}
+    .empty{margin:var(--arcane-space-4)}
+    @media(max-width:34rem){
+        .task{grid-template-columns:auto minmax(0,1fr)}
+        .task-status{grid-column:2}
+        .overall-label{text-align:start}
+    }
+</style>
+
+<section id="panel" class="task-progress arcane-card" aria-labelledby="taskProgressTitle">
+    <header class="arcane-card__header">
+        <div class="heading-copy">
+            <h2 id="taskProgressTitle" class="arcane-section-heading">Progress</h2>
+            <p id="description"></p>
+        </div>
+        <div id="overall" class="overall" hidden>
+            <progress id="overallProgress" max="100" value="0"></progress>
+            <span id="overallLabel" class="overall-label"></span>
+        </div>
+    </header>
+    <p id="empty" class="empty arcane-state arcane-state--empty">No tasks yet.</p>
+    <ol id="tasks" class="tasks" aria-live="polite"></ol>
+</section>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const panel=root.querySelector('#panel');
+    const heading=root.querySelector('#taskProgressTitle');
+    const description=root.querySelector('#description');
+    const overall=root.querySelector('#overall');
+    const overallProgress=root.querySelector('#overallProgress');
+    const overallLabel=root.querySelector('#overallLabel');
+    const empty=root.querySelector('#empty');
+    const list=root.querySelector('#tasks');
+
+    const allowedStatuses=new Set(['pending','running','complete','failed','canceled']);
+    let activeRun=Promise.resolve([]);
+    let options={};
+    let running=false;
+    let tasks=[];
+
+    host.clear=clear;
+    host.configure=configure;
+    host.runTasks=runTasks;
+    host.setTasks=setTasks;
+    host.updateTask=updateTask;
+
+    Object.defineProperties(host,{
+        running:{get:()=>running},
+        snapshot:{get:getSnapshot},
+        tasks:{get:getTasks,set:setTasks}
+    });
+
+    function datasetOptions(){
+        return {
+            description:host.dataset.description||'',
+            emptyLabel:host.dataset.emptyLabel||'No tasks yet.',
+            title:host.dataset.title||'Progress'
+        };
+    }
+
+    function configure(input={}){
+        options={...datasetOptions(),...options,...input};
+        heading.innerText=`${options.title||'Progress'}`;
+        description.innerText=`${options.description||''}`;
+        description.hidden=!description.innerText;
+        empty.innerText=`${options.emptyLabel||'No tasks yet.'}`;
+        return {...options};
+    }
+
+    function setTasks(values=[]){
+        const ids=new Set();
+        tasks=Array.from(values||[]).map((value,index)=>{
+            const task=normalizeTask(value,index);
+            if(ids.has(task.id)){
+                task.id=`${task.id}-${index+1}`;
+            }
+            ids.add(task.id);
+            return task;
+        });
+        render();
+        emitChange();
+        return getTasks();
+    }
+
+    function normalizeTask(value={},index=0){
+        const status=allowedStatuses.has(value.status)?value.status:'pending';
+        return {
+            id:`${value.id??`task-${index+1}`}`,
+            message:`${value.message??''}`,
+            name:`${value.name??value.label??`Task ${index+1}`}`,
+            status
+        };
+    }
+
+    function updateTask(id,update={}){
+        const index=typeof id==='number'?id:tasks.findIndex(task=>task.id===`${id}`);
+        if(index<0||index>=tasks.length){
+            return null;
+        }
+        const current=tasks[index];
+        const status=allowedStatuses.has(update.status)?update.status:current.status;
+        tasks[index]={
+            ...current,
+            ...update,
+            id:current.id,
+            message:`${update.message??current.message}`,
+            name:`${update.name??current.name}`,
+            status
+        };
+        render();
+        emitChange(tasks[index]);
+        return {...tasks[index]};
+    }
+
+    function render(){
+        const fragment=document.createDocumentFragment();
+        for(const task of tasks){
+            const item=document.createElement('li');
+            const light=document.createElement('span');
+            const copy=document.createElement('span');
+            const name=document.createElement('span');
+            const message=document.createElement('span');
+            const status=document.createElement('span');
+
+            item.className='task';
+            item.dataset.taskId=task.id;
+            item.dataset.status=task.status;
+            light.className='arcane-status-light';
+            light.dataset.status=task.status;
+            light.setAttribute('aria-hidden','true');
+            copy.className='task-copy';
+            name.className='task-name';
+            name.innerText=task.name;
+            message.className='task-message';
+            message.innerText=task.message;
+            message.hidden=!task.message;
+            status.className='task-status arcane-badge';
+            status.dataset.status=statusTone(task.status);
+            status.innerText=statusLabel(task.status);
+            copy.append(name,message);
+            item.append(light,copy,status);
+            fragment.append(item);
+        }
+        list.replaceChildren(fragment);
+        empty.hidden=tasks.length>0;
+        list.hidden=!tasks.length;
+        syncOverall();
+    }
+
+    function syncOverall(){
+        const completed=tasks.filter(task=>['complete','failed','canceled'].includes(task.status)).length;
+        const percent=tasks.length?Math.round(completed/tasks.length*100):0;
+        overall.hidden=!tasks.length;
+        overallProgress.value=percent;
+        overallLabel.innerText=tasks.length?`${completed} of ${tasks.length} finished`:'';
+        panel.setAttribute('aria-busy',`${running}`);
+    }
+
+    async function runTasks(title='Progress',jobs=[]){
+        if(running){
+            return activeRun;
+        }
+        const runnable=Array.from(jobs||[]).filter(job=>job&&typeof job.task==='function');
+        if(!runnable.length){
+            setTasks([]);
+            return [];
+        }
+        configure({title});
+        setTasks(runnable.map((job,index)=>({
+            id:job.id??`task-${index+1}`,
+            message:job.message||'',
+            name:job.name||job.label||`Task ${index+1}`,
+            status:'pending'
+        })));
+        running=true;
+        syncOverall();
+        host.dispatchEvent(new CustomEvent('task-progress-started',{
+            bubbles:true,
+            composed:true,
+            detail:getSnapshot()
+        }));
+        activeRun=Promise.allSettled(runnable.map(async(job,index)=>{
+            updateTask(index,{status:'running'});
+            try{
+                const value=await job.task();
+                updateTask(index,{status:'complete',message:job.completeMessage||''});
+                return value;
+            }catch(error){
+                updateTask(index,{status:'failed',message:job.errorMessage||error?.message||'Unable to complete.'});
+                host.dispatchEvent(new CustomEvent('task-progress-error',{
+                    bubbles:true,
+                    composed:true,
+                    detail:{error,id:tasks[index]?.id,index,task:{...tasks[index]}}
+                }));
+                throw error;
+            }
+        }));
+        const results=await activeRun;
+        running=false;
+        syncOverall();
+        host.dispatchEvent(new CustomEvent('task-progress-complete',{
+            bubbles:true,
+            composed:true,
+            detail:{...getSnapshot(),results:results.slice()}
+        }));
+        return results;
+    }
+
+    function statusLabel(status){
+        return {
+            canceled:'Canceled',
+            complete:'Complete',
+            failed:'Failed',
+            pending:'Pending',
+            running:'In progress'
+        }[status]||status;
+    }
+
+    function statusTone(status){
+        return {
+            complete:'success',
+            failed:'error',
+            pending:'warning',
+            running:'warning'
+        }[status]||status;
+    }
+
+    function getTasks(){
+        return tasks.map(task=>({...task}));
+    }
+
+    function getSnapshot(){
+        return {running,tasks:getTasks()};
+    }
+
+    function emitChange(task=null){
+        host.dispatchEvent(new CustomEvent('task-progress-change',{
+            bubbles:true,
+            composed:true,
+            detail:{...getSnapshot(),task:task?{...task}:null}
+        }));
+    }
+
+    function clear(){
+        if(running){
+            return false;
+        }
+        tasks=[];
+        render();
+        emitChange();
+        return true;
+    }
+
+    configure(datasetOptions());
+    render();
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('task-progress-ready',{bubbles:true,composed:true}));
+</script>

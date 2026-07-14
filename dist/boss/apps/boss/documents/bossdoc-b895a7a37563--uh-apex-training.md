@@ -1,0 +1,50 @@
+---
+id: "bossdoc-b895a7a37563"
+title: "UH APEX Training"
+access: "public"
+category: "AI Training"
+topics: ["certification","funding","government contracting","international trade","legal and compliance","mentoring and advising","training"]
+lifecycle_stages: ["Validation","Launch"]
+organizations: ["Small Business Development Center (SBDC)","APEX Accelerator","University of Houston"]
+---
+
+# UH APEX Training
+
+> BOSS Libraries public routing record. Use it to find the right source, link, organization, or person.
+
+## Description
+
+Use for live events, on-demand procurement webinars, and event speaker requests.
+
+## When to surface
+
+Surface when the user's question concerns certification, funding, government contracting during Validation, Launch and this source is relevant to the next document or human handoff.
+
+## Key information
+
+- ## Resource type
+- Procurement training resource.
+- ## Resource summary
+- Use for live events, on-demand procurement webinars, and event speaker requests.
+- ## BOSS routing use
+- Use this when the user's need matches the topic. Ask enough discovery questions to determine readiness before routing to a specialized program.
+- ## Guardrails
+
+## People and links
+
+- Organizations: Small Business Development Center (SBDC), APEX Accelerator, University of Houston
+- Link: <https://www.uhapex.uh.edu/APEX/Training.asp>
+
+## Next handoff
+
+Open the cited source link when available and route follow-up to Small Business Development Center (SBDC) or the named qualified resource.
+
+## Guardrails
+
+- The BOSS Libraries Librarian retrieves and routes information; it is not a mentor or a substitute for a qualified professional.
+- Do not make final legal, tax, accounting, lending, certification, procurement, or compliance decisions for the user.
+- Verify live pages for current eligibility, deadlines, contacts, prices, and program rules before presenting them as current.
+
+## Original document
+
+Use **View original** in the BOSS Library to open or download the approved public source.
