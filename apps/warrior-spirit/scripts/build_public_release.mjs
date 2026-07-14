@@ -59,9 +59,9 @@ export async function verifyArcanePackage({outputRoot}){
             throw new Error(`Invalid packaged PreCrisis white-label dependency: ${relative}`);
         }
     }
-    const frameAdapter=await readFile(inside(outputRoot,'apps','warrior-spirit','modules','PreCrisisFrame.js'),'utf8');
-    if(!frameAdapter.includes("data-precrisis-page")||!frameAdapter.includes("precrisis-frame-ready")){
-        throw new Error('Packaged Warrior Spirit runtime is missing its PreCrisis frame adapter.');
+    const whiteLabelAdapter=await readFile(inside(outputRoot,'apps','warrior-spirit','modules','PreCrisisFrame.js'),'utf8');
+    if(!whiteLabelAdapter.includes('documentElement?.dataset.precrisisPage')||!whiteLabelAdapter.includes('precrisis-page-ready')){
+        throw new Error('Packaged Warrior Spirit runtime is missing its top-level PreCrisis white-label adapter.');
     }
     try{
         await lstat(inside(packagedPrecrisisRoot,'img','deepwiki_ollama_blog.html'));

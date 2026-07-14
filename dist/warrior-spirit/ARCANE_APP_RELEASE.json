@@ -8,10 +8,10 @@
     "entry": "index.html",
     "start": "./apps/warrior-spirit/index.html"
   },
-  "policySha256": "bfabd93145d837e6a1a0c1bfe05ec7f27d508ae8214693ba49c59a6824a33ff1",
-  "fileCount": 164,
-  "totalBytes": 3595604,
-  "contentSha256": "ba31d48abe2e44a46439b2f5deba753908d4fff69e360b421136482420025119",
+  "policySha256": "367ea0e86739c198c60602a9ba80f22b84b30cd564b6d5aa10fb8456e8f8edf9",
+  "fileCount": 165,
+  "totalBytes": 5644780,
+  "contentSha256": "db28fa5b22486696c304d21b93f757e4aaf86893ff7820d042fa9844df508918",
   "files": [
     {
       "path": "apps/precrisis/admin.html",
@@ -205,13 +205,13 @@
     },
     {
       "path": "apps/warrior-spirit/companion.html",
-      "bytes": 1125,
-      "sha256": "edbedf51dd43897523bc9aa42467774d3df728c3e9c7bf186c2d1dbabff050a8"
+      "bytes": 40877,
+      "sha256": "5ec7fe889d8a4405e68e58ccaeff94bd012d158487f87aea831074fbdb8bd828"
     },
     {
       "path": "apps/warrior-spirit/home.html",
-      "bytes": 9371,
-      "sha256": "4c2af547771968a3e6a28257f05fd159d3654920d9542c9c800cc0a73fd7e6ae"
+      "bytes": 9510,
+      "sha256": "b6b3d1ff01948de09cf8cb062dbf062574b497dc5e10e4a2f6c5f0c10e25a59d"
     },
     {
       "path": "apps/warrior-spirit/img/warrior-spirit-logo.png",
@@ -220,8 +220,8 @@
     },
     {
       "path": "apps/warrior-spirit/index.html",
-      "bytes": 1232,
-      "sha256": "faf8dbfe6943b97021f455efb7083633eebfbead8b8848e754dd2cf4851c307b"
+      "bytes": 9510,
+      "sha256": "b6b3d1ff01948de09cf8cb062dbf062574b497dc5e10e4a2f6c5f0c10e25a59d"
     },
     {
       "path": "apps/warrior-spirit/manifest.json",
@@ -230,18 +230,18 @@
     },
     {
       "path": "apps/warrior-spirit/memories.html",
-      "bytes": 1156,
-      "sha256": "2f3ec7f8a5f7111806aa534ea26516c020b8b07e3afec6f517f48d4f3cdc6ab2"
+      "bytes": 3472,
+      "sha256": "2db517e1f11252869cd572571f725ffd67ade1b1e3b26dd02c622fdeb9cdeb33"
     },
     {
       "path": "apps/warrior-spirit/mental-health.html",
-      "bytes": 1143,
-      "sha256": "083a307c5c12dfff48387a1838d2e56045944e05ba5f8335cbb4cfe0485cc507"
+      "bytes": 19246,
+      "sha256": "be415ea28367e80335202840c223f724f0c1d6dc9c60d0cd8edd198cc372d966"
     },
     {
       "path": "apps/warrior-spirit/modules/PreCrisisFrame.js",
-      "bytes": 37603,
-      "sha256": "c734998e8b15b6519768016ce77472c6eb3d802f06ae3fa3c5b5e67343a33496"
+      "bytes": 37409,
+      "sha256": "9085261a3668d377465b2f76e41051b7b774dc4036d0237d1dad57b435ad50d6"
     },
     {
       "path": "apps/warrior-spirit/modules/WarriorSpiritHome.js",
@@ -260,23 +260,23 @@
     },
     {
       "path": "apps/warrior-spirit/precrisis-skin.css",
-      "bytes": 3306,
-      "sha256": "f2e1c796243b2ac44d496079eef3bc06ec7b9955e1e8e7acc94e92b3d46de581"
+      "bytes": 2883,
+      "sha256": "5cd20f6e7c79baf85595cf35ac1c7f4a31a76bf436f23ab7cf0a9ae55683c437"
     },
     {
       "path": "apps/warrior-spirit/profile.html",
-      "bytes": 1121,
-      "sha256": "afcf85d456babdb1b6b976170748b2331ec90c6ef5568ff2104520aa75c68be0"
+      "bytes": 31522,
+      "sha256": "5d3eab9a84d11cfe84ed136361c8ab895cd18c3c4a85cfaf507ef012dea5feef"
     },
     {
       "path": "apps/warrior-spirit/README.md",
-      "bytes": 2188,
-      "sha256": "682db102c24167ec091b15ad253f0e87a10350262dfba90d32190d4d725d7a61"
+      "bytes": 2350,
+      "sha256": "dd7b78fdb0d05df7c88791eb9bd91c077d60cda69c6c77e919295d55a2e3f4c4"
     },
     {
       "path": "apps/warrior-spirit/reflection.html",
-      "bytes": 1122,
-      "sha256": "a65f9f18fc715f244d333675dba29b847c7cd9e59965eef39e1bff3bf774114e"
+      "bytes": 4717,
+      "sha256": "9d40c4629c6610beb0c2c3af4fec37f4cb2125eb8ab1f448c436bc6320c63ae1"
     },
     {
       "path": "apps/warrior-spirit/warrior-spirit.css",
@@ -537,6 +537,11 @@
       "path": "arcane/entities/Weather.js",
       "bytes": 3241,
       "sha256": "b7b7da733d59cf9d2161370ac32d0ddf9d76d7f61a9e951ea913392cc5c5c5a4"
+    },
+    {
+      "path": "arcane/img/arcane-os-everywhere.png",
+      "bytes": 1947047,
+      "sha256": "ea4be2a8ae1dbbe2da9479206e729a1ed5f2add461156752f261c0e1631c54f1"
     },
     {
       "path": "arcane/img/arrow-left.png",

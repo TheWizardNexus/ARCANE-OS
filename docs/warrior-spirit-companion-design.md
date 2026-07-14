@@ -14,8 +14,8 @@
 - `apps/precrisis/dashboard.html` remains the Mental Health Center, including its historic charts and notes.
 - `apps/precrisis/data.html` remains the on-device data and memory browser.
 - `apps/precrisis/admin.html` remains Profile, including the name, OpenAI key, AI personality, voice, contacts, and provider/model preferences.
-- `apps/warrior-spirit/modules/PreCrisisFrame.js` is the app-local adapter. It presents the established pages with Warrior Spirit labels, destinations, logo, and 988 action; exposes the OpenAI key; and hides the color-palette and support-email sections in this edition. Normal PreCrisis pages are unchanged.
-- The small pages under `apps/warrior-spirit/` preserve the requested separate routes while presenting the authoritative PreCrisis surfaces.
+- The functional pages under `apps/warrior-spirit/` are direct top-level copies of the proven PreCrisis page documents. They keep the same shared Arcane and PreCrisis dependencies and do not use iframes.
+- `apps/warrior-spirit/modules/PreCrisisFrame.js` is the app-local presentation adapter. It applies Warrior Spirit labels, destinations, logo, and 988 action to the current page; exposes the OpenAI key; and hides the color-palette and support-email sections in this edition. Normal PreCrisis pages are unchanged.
 
 The public package uses an app-specific adapter to include the authoritative PreCrisis runtime beside Warrior Spirit. This avoids a copied Warrior fork and keeps fixes to the functional product in one source location.
 

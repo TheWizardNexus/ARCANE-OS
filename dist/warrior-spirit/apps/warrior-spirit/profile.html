@@ -1,21 +1,708 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <base href="../../">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="referrer" content="same-origin">
-    <title>Warrior Spirit Profile</title>
-    <link rel="manifest" href="./apps/warrior-spirit/manifest.json">
-    <link rel="icon" href="./apps/warrior-spirit/img/warrior-spirit-logo.png" type="image/png">
-    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
-    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
-    <link rel="stylesheet" href="./apps/warrior-spirit/precrisis-skin.css?v=2">
-    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
-    <script type="module" src="./apps/warrior-spirit/modules/PreCrisisFrame.js?v=10"></script>
-</head>
-<body class="precrisis-frame-page">
-    <iframe class="precrisis-frame" data-precrisis-page="admin.html" title="Warrior Spirit Profile"></iframe>
-    <noscript><p class="precrisis-frame-fallback">JavaScript is required to manage the Warrior Spirit Profile.</p></noscript>
-</body>
+<html lang="en" data-precrisis-page="admin.html">
+
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Warrior Spirit Profile</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="./apps/warrior-spirit/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/warrior-spirit/img/warrior-spirit-logo.png" type="image/png">
+
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+        <style>
+            section{
+                padding:3em;
+            }
+
+            /* section.voices{
+
+            } */
+
+            section.color-table{
+                padding:0;
+            }
+
+            section.model-preference label {
+                display: grid;
+                grid-template-columns: 3em 1fr;
+                padding-top: 2em;
+            }
+
+            section.model-select label {
+                display: grid;
+                padding-top: 2em;
+            }
+
+            section.voices label,
+            section.color-table label{
+                display: grid;
+                grid-template-columns: 3em 6em 1fr;
+                padding-top:2em;
+            }
+
+            section.model-preference,
+            section.model-select {
+                padding-left: 0;
+            }
+
+            section.input-container {
+                margin: 2em 0;
+            }
+
+            section.input-container label {
+                display: block;
+                margin-bottom: .5em;
+                font-weight: bold;
+            }
+
+            textarea {
+                height: 6em;
+                resize: vertical;
+            }
+
+            .color-preview {
+                display: flex;
+                gap: 0.5em; /* Space between color boxes */
+                align-items: center;
+                justify-content: center; /* Center-align within the row */
+                height: 1.5em; /* Match the height of the radio button */
+            }
+
+            .color-box {
+                width: 1.5em; /* Match the width to the height */
+                height: 1.5em; /* Square size for color boxes */
+                border:1px solid var(--border-color);
+                border-radius: 0.25em; /* Slightly rounded corners */
+                box-shadow: 0 0 0.2em rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+            }
+
+            #char-count {
+                margin-top: 5px;
+                font-size: 12px;
+                color:var(--platinum);
+            }
+
+            input[type="radio"],
+            input[type="checkbox"] {
+                width: 1em;
+                height: 1em;
+                margin:.5em 1em .5em 0;
+                padding:0;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                background-color:var(--modal-background);
+                border:2px solid var(--platinum);
+                border-radius: 0;
+                outline: none;
+                cursor: pointer;
+                position: relative;
+            }
+            input[type="radio"]:checked::before,
+            input[type="checkbox"]:checked::before {
+                content: "";
+                width:.5em;
+                height:.5em;
+                background-color:var(--primary-color);
+                position: absolute;
+                top:.125em;
+                left:.125em;
+                border-radius: 0;
+            }
+
+            input[type="checkbox"]:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            audio {
+                display: block;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                width: 100%;
+            }
+
+            audio::-webkit-media-controls-enclosure {
+              max-width: none
+            }
+
+            audio::-webkit-media-controls-panel {
+              background-color: transparent
+            }
+
+            /* audio::-webkit-media-controls-play-button {
+
+            } */
+
+            audio::-webkit-media-controls-mute-button {
+              -webkit-appearance: none;
+            }
+
+
+            audio::-webkit-media-controls-timeline-container,
+            audio::-webkit-media-controls-current-time-display,
+            audio::-webkit-media-controls-time-remaining-display {
+                display:none;
+            }
+
+            label {
+                font-size: 1.2em;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+            }
+
+            textarea, input {
+                width: calc(100% - 2em);
+            }
+
+            .input-animate {
+                animation: greenFlash 0.3s;
+            }
+
+            @keyframes greenFlash {
+                from { background-color: rgba(182, 247, 187, .1); }
+                to { background-color: inherit; }
+            }
+
+            @media (max-width: 48em) {
+                section {
+                    padding: 0;
+                }
+
+                section.voices label, section.color-table label {
+                    display: grid;
+                    grid-template-columns: 1fr 2fr 3fr;
+                    padding-top: 2em;
+                }
+
+                .color-preview {
+                    gap: 0.1em;
+                }
+            }
+        </style>
+
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/entities/User.js"></script>
+
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/DBLS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+        <link rel="stylesheet" href="./apps/warrior-spirit/precrisis-skin.css?v=3" data-warrior-spirit-skin>
+        <script type="module" src="./apps/warrior-spirit/modules/PreCrisisFrame.js?v=11"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+            <section>
+                <h1>Optional Personal Information (or use an ID)</h1>
+                <p>This information is for personal users only, clinical uses should use an ID instead.</p>
+                <input id="username" placeholder="Your Name or ID" />
+                <br>
+                <input id="email" placeholder="optional Email" />
+                <br>
+                <input id="phone" placeholder="optional Phone" />
+            </section>
+            <section class='hidden'>
+                <h1>License Key</h1>
+                <p>
+                    <strong>Do not share your license key!</strong> <em>YOU will be liable for expenses</em> or even damages if you do or it leaks.
+                </p>
+                <br>
+                <input id="license_key" placeholder="License key" value="" />
+                <br>
+            </section>
+            <section>
+                <h1>Support Network Emails</h1>
+                <p>These are Emails to contact in the case of an emergency.</p>
+                <input id="contact_1" type="email" placeholder="Contact 1" />
+                <br>
+                <input id="contact_2" type="email" placeholder="Contact 2" />
+                <br>
+                <input id="contact_3" type="email" placeholder="Contact 3" />
+                <br>
+                <input id="contact_4" type="email" placeholder="Contact 4" />
+                <br>
+                <input id="contact_5" type="email" placeholder="Contact 5" />
+                <br>
+                <input id="contact_6" type="email" placeholder="Contact 6" />
+            </section>
+
+            <section class="input-container">
+                <label for="AI_personality">AI Personality:</label>
+                <textarea id="AI_personality" name="AI_personality" maxlength="1000" placeholder="Describe your AI's personality..."></textarea>
+                <div id="char-count">0/1000</div>
+            </section>
+
+            <section>
+                <h1>Religion</h1>
+                <p>
+                    If you have a religious or spiritual preference or denomination please place it here.
+                </p>
+                <br>
+                <input id="religion" placeholder="Religion" />
+                <br>
+            </section>
+
+            <section class="voices">
+                <h1>AI Voice</h1>
+                <label>
+                    <input type="radio" name="audio" value="alloy">
+                    Alloy
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/alloy.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="ash">
+                    Ash
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/ash.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="coral">
+                    Coral
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/coral.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="echo">
+                    Echo
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/echo.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="fable">
+                    Fable
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/fable.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="nova">
+                    Nova
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/nova.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="onyx">
+                    Onyx
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/onyx.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="sage">
+                    Sage
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/sage.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+                <label>
+                    <input type="radio" name="audio" value="shimmer">
+                    Shimmer
+                    <audio controls>
+                        <source src="https://cdn.openai.com/API/docs/audio/shimmer.wav" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </label>
+            </section>
+
+            <section>
+
+            <!-- Add new color palette table section -->
+            <section class="color-table">
+                <h1>Color Palette</h1>
+                <table>
+                    <tbody>
+                        <!-- Default Theme -->
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="default">
+                                    <span>Default</span>
+                                    <div class="color-preview">
+                                        <div class="color-box" style="background-color: rgb(20, 20, 20);"></div>
+                                        <div class="color-box" style="background-color: rgb(30, 30, 30);"></div>
+                                        <div class="color-box" style="background-color: rgb(235, 235, 235);"></div>
+                                        <div class="color-box" style="background-color: rgb(255, 165, 77);"></div>
+                                        <div class="color-box" style="background-color: rgb(77, 175, 124);"></div>
+                                        <div class="color-box" style="background-color: rgb(255, 198, 128);"></div>
+                                        <div class="color-box" style="background-color: rgb(90, 90, 90);"></div>
+                                    </div>
+                                </label>
+                            </td>
+                        </tr>
+                        <!-- Warm Theme -->
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="warm">
+                                    <span>Warm</span>
+                                    <div class="color-preview">
+                                        <div class="color-box" style="background-color: rgb(30, 20, 20);"></div>
+                                        <div class="color-box" style="background-color: rgb(50, 40, 40);"></div>
+                                        <div class="color-box" style="background-color: rgb(235, 210, 210);"></div>
+                                        <div class="color-box" style="background-color: rgb(255, 135, 60);"></div>
+                                        <div class="color-box" style="background-color: rgb(255, 180, 100);"></div>
+                                        <div class="color-box" style="background-color: rgb(255, 200, 130);"></div>
+                                        <div class="color-box" style="background-color: rgb(100, 60, 50);"></div>
+                                    </div>
+                                </label>
+                            </td>
+                        </tr>
+                        <!-- Curious Theme -->
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="curious">
+                                    <span>Curious</span>
+                                    <div class="color-preview">
+                                        <div class="color-box" style="background-color: rgb(20, 30, 25);"></div>
+                                        <div class="color-box" style="background-color: rgb(40, 50, 45);"></div>
+                                        <div class="color-box" style="background-color: rgb(210, 235, 210);"></div>
+                                        <div class="color-box" style="background-color: rgb(70, 160, 110);"></div>
+                                        <div class="color-box" style="background-color: rgb(100, 195, 150);"></div>
+                                        <div class="color-box" style="background-color: rgb(128, 210, 182);"></div>
+                                        <div class="color-box" style="background-color: rgb(50, 100, 75);"></div>
+                                    </div>
+                                </label>
+                            </td>
+                        </tr>
+                        <!-- Hopeful Theme -->
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="hopeful">
+                                    <span>Hopeful</span>
+                                    <div class="color-preview">
+                                        <div class="color-box" style="background-color: rgb(20, 25, 30);"></div>
+                                        <div class="color-box" style="background-color: rgb(40, 50, 60);"></div>
+                                        <div class="color-box" style="background-color: rgb(210, 220, 235);"></div>
+                                        <div class="color-box" style="background-color: rgb(100, 170, 220);"></div>
+                                        <div class="color-box" style="background-color: rgb(150, 200, 250);"></div>
+                                        <div class="color-box" style="background-color: rgb(160, 220, 255);"></div>
+                                        <div class="color-box" style="background-color: rgb(50, 75, 100);"></div>
+                                    </div>
+                                </label>
+                            </td>
+                        </tr>
+                        <!-- Harmony Theme -->
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="harmony">
+                                    <span>Harmony</span>
+                                    <div class="color-preview">
+                                        <div class="color-box" style="background-color: rgb(25, 25, 20);"></div>
+                                        <div class="color-box" style="background-color: rgb(40, 40, 35);"></div>
+                                        <div class="color-box" style="background-color: rgb(230, 230, 210);"></div>
+                                        <div class="color-box" style="background-color: rgb(255, 135, 60);"></div>
+                                        <div class="color-box" style="background-color: rgb(70, 160, 110);"></div>
+                                        <div class="color-box" style="background-color: rgb(255, 180, 100);"></div>
+                                        <div class="color-box" style="background-color: rgb(90, 90, 75);"></div>
+                                    </div>
+                                </label>
+                            </td>
+                        </tr>
+
+                        <!-- Warrior Spirit Theme -->
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="theme" value="warrior">
+                                    <span>Warrior Spirit</span>
+                                    <div class="color-preview">
+                                        <!-- background -->
+                                        <div class="color-box" style="background-color: rgb(245, 247, 250);"></div>
+                                        <!-- modal-background -->
+                                        <div class="color-box" style="background-color: rgb(239, 242, 246);"></div>
+                                        <!-- text-color -->
+                                        <div class="color-box" style="background-color: rgb(29, 35, 42);"></div>
+                                        <!-- primary-color -->
+                                        <div class="color-box" style="background-color: rgb(255, 122, 26);"></div>
+                                        <!-- secondary-color -->
+                                        <div class="color-box" style="background-color: rgb(255, 209, 102);"></div>
+                                        <!-- accent-color -->
+                                        <div class="color-box" style="background-color: rgb(140, 29, 24);"></div>
+                                        <!-- border-color -->
+                                        <div class="color-box" style="background-color: rgb(199, 205, 214);"></div>
+                                    </div>
+                                </label>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="model-preference">
+                <h1>Model Preferences</h1>
+                <label for="useLocalModel">
+                    <input
+                        type="checkbox"
+                        id="useLocalModel"
+                        name="useLocalModel"
+                    >
+                    Run models locally
+                </label>
+            </section>
+
+            <section class="developer-preference">
+                <h1>Developer Options</h1>
+                <label for="developer">
+                    <input
+                        type="checkbox"
+                        id="developer"
+                        name="developer"
+                    >
+                    Enable developer mode
+                </label>
+            </section>
+
+            <section class="model-select" id="Model_preferences">
+                <h1>Model Preferences</h1>
+                <label for="Preferred_model_provider">
+                    <span>Preferred Language Model Provider</span>
+                    <select id="Preferred_model_provider">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="OLLAMA">OLLAMA</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_stt_provider">
+                    <span>Preferred Transcription Model Provider</span>
+                    <select id="Preferred_stt_provider">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL_SPEACH">LOCAL_SPEACH</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_tts_provider">
+                    <span>Preferred Speech Model Provider</span>
+                    <select id="Preferred_tts_provider">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL_SPEACH">LOCAL_SPEACH</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_model">
+                    <span>Preferred Language Model</span>
+                    <select id="Preferred_model">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="PRECRISIS">PRECRISIS</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_stt_model">
+                    <span>Preferred Transcription Model</span>
+                    <select id="Preferred_stt_model">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL">LOCAL</option>
+                    </select>
+                </label>
+
+                <label for="Preferred_tts_model">
+                    <span>Preferred Speech Model</span>
+                    <select id="Preferred_tts_model">
+                        <option value="OPENAI">OPENAI</option>
+                        <option value="LOCAL">LOCAL</option>
+                    </select>
+                </label>
+            </section>
+
+
+            <script type="module">
+                import UserEntity from './arcane/entities/User.js';
+
+                const user=new UserEntity();
+
+                window.addEventListener(
+                    'user-entity-loaded',
+                    populateUI
+                );
+
+                if (window.user?.ready) {
+                    populateUI();
+                }
+
+                // Update data when input changes
+                document.querySelector('main').addEventListener(
+                    'input',
+                    function(e){
+                        e.target.classList.remove('input-animate');
+                        void e.target.offsetWidth;
+                        e.target.classList.add('input-animate');
+
+                        updateData();
+                    }
+                );
+
+                // Update when user selects to use local models
+                document.getElementById("useLocalModel").addEventListener(
+                    "change",
+                    updateData
+                );
+
+                document.getElementById('AI_personality').addEventListener(
+                    'input',
+                    function () {
+                        var charCount = this.value.length;
+                        document.querySelector('#char-count').innerText = charCount + '/1000';
+                    }
+                );
+
+                async function isOllamaAvailableInRuntime() {
+                    let ollamaAvailable = false;
+
+                    // Check if local models are ready
+                    try {
+                        // Endpoint for local tts/stt server
+                        const response = await fetch(
+                            "http://127.0.0.1:8011/health",
+                            {
+                                method: "GET",
+                                credentials: "omit",
+                            }
+                        );
+
+                        if (!response.ok) {
+                            return ollamaAvailable;
+                        }
+
+                        const data = await response.json();
+
+                        ollamaAvailable = (data.available === true);
+                    }
+                    catch {}
+
+                    return ollamaAvailable;
+                }
+
+                async function updateData() {
+                    const localCheckbox = document.getElementById("useLocalModel");
+                    const isLocalChecked = localCheckbox.checked;
+                    let selectedModels=[];// get some selects from the UI which you populate from the available models from AI
+
+                    // Get list of model proviiders and preferences from UI
+                    const preferredModelElements = document.querySelectorAll("section#Model_preferences select");
+                    selectedModels = Array.from(preferredModelElements, elem => elem.value);
+
+                    /*
+                    selectedModels=(isLocalChecked) ?
+                        [
+                            'OLLAMA',
+                            'LOCAL_SPEACH',
+                            'LOCAL_SPEACH',
+                            'PRECRISIS',
+                            'LOCAL',
+                            'LOCAL'
+                        ]
+                        :
+                        [
+                            'OPENAI',
+                            'OPENAI',
+                            'OPENAI',
+                            'OPENAI',
+                            'OPENAI',
+                            'OPENAI'
+                        ]
+                            */
+
+                    user.explicit={
+                        username: username.value || '',
+                        email: email.value || '',
+                        phone: phone.value || '',
+                        license_key: license_key.value || '',
+                        contact_1: contact_1.value || '',
+                        contact_2: contact_2.value || '',
+                        contact_3: contact_3.value || '',
+                        contact_4: contact_4.value || '',
+                        contact_5: contact_5.value || '',
+                        contact_6: contact_6.value || '',
+                        AI_personality: AI_personality.value || '',
+                        religion: religion.value || '',
+                        AI_voice: document.querySelector('[name="audio"]:checked')?.value || '',
+                        skin: document.querySelector('[name="theme"]:checked')?.value || 'default', // Save selected skin
+                        developer:document.getElementById('developer').checked,
+                        prefersLocal:isLocalChecked,
+                        preferredModels:selectedModels
+                    }
+
+                    // Apply the selected skin live
+                    const selectedSkin = document.querySelector('[name="theme"]:checked')?.value || 'default';
+                    document.body.className = selectedSkin; // Update body class
+                }
+
+                async function populateUI() {
+
+                    username.value = user.username || '';
+                    email.value = user.email || '';
+                    phone.value = user.phone || '';
+                    license_key.value = user.license_key || '';
+                    contact_1.value = user.contact_1 || '';
+                    contact_2.value = user.contact_2 || '';
+                    contact_3.value = user.contact_3 || '';
+                    contact_4.value = user.contact_4 || '';
+                    contact_5.value = user.contact_5 || '';
+                    contact_6.value = user.contact_6 || '';
+                    religion.value = user.religion || '';
+                    AI_personality.value = user.AI_personality || '';
+
+                    // Need preferred models so it gets populated in multiple check boxes
+                    const preferredModelElements = document.querySelectorAll("section#Model_preferences select");
+                    preferredModelElements.forEach((elem, i) => elem.value = user.explicit.preferredModels[i]);
+
+
+                    const defaultVoice = 'alloy';
+                    const desiredVoice = String(user.AI_voice || defaultVoice);
+                    const selectedVoice = document.querySelector(`input[name="audio"][value="${desiredVoice}"]`)
+                        || document.querySelector(`input[name="audio"][value="${defaultVoice}"]`);
+                    if (selectedVoice) {
+                        selectedVoice.checked = true;
+                    }
+
+                    // Set the selected skin
+                    const defaultSkin = 'default';
+                    const skinValue = user.skin || defaultSkin;
+                    const skinCheckbox = document.querySelector(`[name="theme"][value="${skinValue}"]`);
+                    if (skinCheckbox) {
+                        skinCheckbox.checked = true;
+                    }
+                    document.body.className = skinValue; // Apply the skin to body
+
+                    // Developer mode checkbox
+                    document.getElementById('developer').checked = user.developer;
+
+                    // Local model checkbox
+                    const checkbox = document.getElementById("useLocalModel");
+                    checkbox.checked = user.explicit.prefersLocal;
+                }
+
+            </script>
+        </main>
+    </body>
 </html>

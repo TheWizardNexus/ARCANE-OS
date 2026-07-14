@@ -14,15 +14,10 @@ export function warriorProfileRequirements(user={}){
     };
 }
 
-const frame=globalThis.document?.querySelector('iframe[data-precrisis-page]');
+const pageName=globalThis.document?.documentElement?.dataset.precrisisPage;
 
-if(frame){
-    const pageName=frame.dataset.precrisisPage;
+if(pageName){
     const appRoot=new URL('../',import.meta.url);
-    const precrisisRoot=new URL(['..','..','precrisis',''].join('/'),import.meta.url);
-    const target=pageName==='home.html'
-        ?new URL('home.html',appRoot)
-        :new URL(pageName,precrisisRoot);
     const activeNavigationPage=pageName==='home.html'?'soc.html':pageName;
     const titles={
         'admin.html':'Profile',
@@ -58,7 +53,7 @@ if(frame){
     let supportWindowOpened=false;
     const guardedProfileDocuments=new WeakSet();
 
-    frame.ready=false;
+    document.documentElement.ready=false;
 
     function addSkin(document){
         if(document.querySelector('link[data-warrior-spirit-skin]'))return;
@@ -732,11 +727,11 @@ if(frame){
         },true);
     }
 
-    async function enhanceFrame(){
+    async function enhancePage(){
         try{
-            const window=frame.contentWindow;
-            const document=frame.contentDocument;
-            if(!window||!document||new URL(window.location.href).pathname!==target.pathname)return;
+            const window=globalThis.window;
+            const document=globalThis.document;
+            if(!window||!document)return;
             document.documentElement.dataset.whiteLabel='warrior-spirit';
             document.title=`Warrior Spirit Companion \u2014 ${titles[pageName]||'Powered by PreCrisis.ai'}`;
             const icon=document.querySelector('link[rel="icon"]');
@@ -754,15 +749,14 @@ if(frame){
                 prepareSafety(window,document)
             ]);
             await prepareProfileRequirements(window,document);
-            frame.ready=true;
-            frame.dispatchEvent(new CustomEvent('precrisis-frame-ready',{bubbles:true,detail:{pageName}}));
+            document.documentElement.ready=true;
+            document.documentElement.dispatchEvent(new CustomEvent('precrisis-page-ready',{bubbles:true,detail:{pageName}}));
         }catch(error){
-            frame.ready=false;
-            frame.dispatchEvent(new CustomEvent('precrisis-frame-error',{bubbles:true,detail:{error,pageName}}));
-            console.error('Warrior Spirit could not prepare the PreCrisis view.',error);
+            document.documentElement.ready=false;
+            document.documentElement.dispatchEvent(new CustomEvent('precrisis-page-error',{bubbles:true,detail:{error,pageName}}));
+            console.error('Warrior Spirit could not prepare the PreCrisis page.',error);
         }
     }
 
-    frame.addEventListener('load',enhanceFrame);
-    frame.src=target.href;
+    void enhancePage();
 }

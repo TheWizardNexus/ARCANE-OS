@@ -22,7 +22,7 @@ test('HTML imports expose sticky readiness before their ready event',async()=>{
     assert(sticky>=0&&event>sticky);
 });
 
-test('Warrior Spirit routes are thin themed wrappers over the working PreCrisis surfaces',async()=>{
+test('Warrior Spirit routes are top-level branded copies of the working PreCrisis surfaces',async()=>{
     for(const [route,precrisis] of Object.entries(routes)){
         const html=await read(`apps/warrior-spirit/${route}`);
         const theme=html.indexOf('arcane/css/theme.css');
@@ -32,11 +32,14 @@ test('Warrior Spirit routes are thin themed wrappers over the working PreCrisis 
         assert.match(html,/arcane\/modules\/ThemeBootstrap\.js/);
         assert.match(html,/apps\/warrior-spirit\/modules\/PreCrisisFrame\.js/);
         assert.match(html,new RegExp(`data-precrisis-page="${precrisis.replace('.','\\.')}"`));
-        assert.match(html,/class="precrisis-frame"/);
+        assert.doesNotMatch(html,/<iframe\b/i);
     }
-    const homeWrapper=await read('apps/warrior-spirit/index.html');
-    assert.match(homeWrapper,/data-precrisis-page="home\.html"/);
-    assert.match(homeWrapper,/PreCrisisFrame\.js\?v=10/);
+    const [index,home]=await Promise.all([
+        read('apps/warrior-spirit/index.html'),
+        read('apps/warrior-spirit/home.html')
+    ]);
+    assert.equal(index,home);
+    assert.doesNotMatch(index,/<iframe\b/i);
 });
 
 test('the white-label keeps the established chat, journal, profile, and Mental Health Center components',async()=>{
@@ -87,7 +90,6 @@ test('Profile presents the Warrior Spirit AI Licence key while advanced setup st
     assert.match(adapter,/profileSection\.hidden=true/);
     assert.match(profile,/arcane\/css\/theme\.css/);
     assert.match(profile,/ThemeBootstrap\.js/);
-    assert.doesNotMatch(profile,/type="color"|Color Palette/);
 });
 
 test('Companion and Reflection direct incomplete profiles through the shared modal',async()=>{
@@ -157,7 +159,7 @@ test('Warrior branding changes navigation and presentation without replacing Pre
     assert.match(adapter,/warrior-spirit-logo\.png/);
     assert.match(adapter,/html-import-ready/);
     assert.doesNotMatch(adapter,/MutationObserver/);
-    assert.match(adapter,/precrisis-frame-ready/);
+    assert.match(adapter,/precrisis-page-ready/);
     assert.match(skin,/--warrior-white-label-amber:rgb\(/);
     assert.doesNotMatch(skin,/#[0-9a-f]{3,8}\b/i);
     assert.match(home,/A Servant's Heart/);
@@ -181,13 +183,13 @@ test('Warrior home explains current and upcoming Companion AI choices',async()=>
 });
 
 test('Warrior home navigation begins Home, Companion, then Mental Health Center',async()=>{
-    const [adapter,wrapper,home]=await Promise.all([
+    const [adapter,index,home]=await Promise.all([
         read('apps/warrior-spirit/modules/PreCrisisFrame.js'),
         read('apps/warrior-spirit/index.html'),
         read('apps/warrior-spirit/home.html')
     ]);
     assert.match(adapter,/const navigationOrder=\['soc\.html','chat\.html','dashboard\.html','journal\.html','data\.html','admin\.html'\]/);
-    assert.match(wrapper,/data-precrisis-page="home\.html"/);
+    assert.equal(index,home);
     const header=home.indexOf('html-import class="header"');
     const nav=home.indexOf('html-import class="nav"');
     const main=home.indexOf('<main');

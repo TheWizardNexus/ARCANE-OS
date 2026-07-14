@@ -11,7 +11,7 @@ Warrior Spirit Companion is the Warrior Spirit white-label of The Wizard Nexus's
 - `memories.html` — the existing on-device PreCrisis data browser.
 - `profile.html` — the existing PreCrisis profile with the Warrior Spirit AI Licence key visible and its color-palette, model setup, developer, and support-email controls hidden from the Warrior view.
 
-The functional pages load the authoritative `apps/precrisis/` surfaces through the app-local `modules/PreCrisisFrame.js` adapter. `scripts/build_public_release.mjs` includes those sources in the public Warrior package so the white-label does not maintain a separate code fork.
+The functional Warrior routes are direct top-level copies of the proven PreCrisis page documents, with no iframe boundary. They keep using the authoritative shared Arcane and PreCrisis modules, entities, and components. The app-local `modules/PreCrisisFrame.js` adapter applies only Warrior Spirit presentation and policy to the current page. `scripts/build_public_release.mjs` includes the PreCrisis dependencies in the public package.
 
 ## Theme
 

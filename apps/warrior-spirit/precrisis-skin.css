@@ -72,30 +72,6 @@ html[data-white-label="warrior-spirit"] .data-header{
     padding-block-start:1rem;
 }
 
-.precrisis-frame-page{
-    background:var(--background);
-    height:100vh;
-    margin:0;
-    overflow:hidden;
-}
-
-.precrisis-frame{
-    background:var(--background);
-    border:0;
-    display:block;
-    height:100%;
-    width:100%;
-}
-
-.precrisis-frame-fallback{
-    align-items:center;
-    color:var(--text-color);
-    display:flex;
-    height:100%;
-    justify-content:center;
-    padding:2rem;
-}
-
 @media (prefers-reduced-motion:reduce){
     html[data-white-label="warrior-spirit"] *,
     html[data-white-label="warrior-spirit"] *::before,

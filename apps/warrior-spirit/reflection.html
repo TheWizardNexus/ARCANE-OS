@@ -1,21 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <base href="../../">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="referrer" content="same-origin">
-    <title>Warrior Spirit Reflection</title>
-    <link rel="manifest" href="./apps/warrior-spirit/manifest.json">
-    <link rel="icon" href="./apps/warrior-spirit/img/warrior-spirit-logo.png" type="image/png">
-    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
-    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
-    <link rel="stylesheet" href="./apps/warrior-spirit/precrisis-skin.css?v=2">
-    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
-    <script type="module" src="./apps/warrior-spirit/modules/PreCrisisFrame.js?v=10"></script>
-</head>
-<body class="precrisis-frame-page">
-    <iframe class="precrisis-frame" data-precrisis-page="journal.html" title="Warrior Spirit Reflection"></iframe>
-    <noscript><p class="precrisis-frame-fallback">JavaScript is required for Warrior Spirit Reflection.</p></noscript>
-</body>
+<html lang="en" data-precrisis-page="journal.html">
+
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Warrior Spirit Reflection</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="./apps/warrior-spirit/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/warrior-spirit/img/warrior-spirit-logo.png" type="image/png">
+
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/AI.js?v=3"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+        <link rel="stylesheet" href="./apps/warrior-spirit/precrisis-skin.css?v=3" data-warrior-spirit-skin>
+        <script type="module" src="./apps/warrior-spirit/modules/PreCrisisFrame.js?v=11"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+
+        <main class="contents data-chat">
+            <html-import
+                id="journalDataView"
+                class="data-view"
+                data-button="View Journal Entries"
+                data-title="Journal Entries"
+                data-dirs="journal_entries"
+                href="./arcane/components/data-view.html?v=4"
+            ></html-import>
+            <html-import
+                id="journalEditor"
+                class="markdown-editor data-workspace"
+                data-preview-label="Journal Entry Preview"
+                data-body-placeholder="Write your journal entry in Markdown..."
+                data-save-label="Save Journal Entry"
+                href="./arcane/components/markdown-editor.html?v=8"
+            ></html-import>
+        </main>
+        <html-import id="progressModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
+        <html-import id="modal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
+    </body>
+
+    <script type="module">
+        import Journal from './apps/precrisis/entities/Journal.js';
+        import UserEntity from './arcane/entities/User.js';
+        import createPostSaveAssessment from './apps/precrisis/modules/PostSaveAssessmentUI.js';
+
+        const user=new UserEntity();
+        const journalDataView=document.querySelector('#journalDataView');
+        const journalEditor=document.querySelector('#journalEditor');
+        const progressModal=document.querySelector('#progressModal');
+        const modal=document.querySelector('#modal');
+        const assessment=createPostSaveAssessment(progressModal,modal);
+
+        let journalSavePromise=Promise.resolve();
+
+        journalDataView.beforeOpen=()=>journalSavePromise;
+        journalEditor.save=saveJournalEntry;
+        journalEditor.dataset.configured='true';
+
+        async function saveJournalEntry(entry={}){
+            const markdown=entry.markdown||'';
+            const title=entry.title||createTitle(markdown);
+            const journal=new Journal();
+
+            journalSavePromise=journal.save(
+                {
+                    date:new Date().toISOString(),
+                    title:title,
+                    entry:markdown,
+                    user:user.username||''
+                }
+            );
+
+            const saved=await journalSavePromise;
+
+            assessment.run(
+                markdown,
+                {
+                    title:title,
+                    source:'journal entry',
+                    username:user.username||''
+                }
+            ).catch(
+                error=>console.error('Unable to assess journal entry:',error)
+            );
+
+            return saved;
+        }
+
+        function createTitle(markdown=''){
+            const firstLine=markdown.split(/\r?\n/).find(
+                line=>line.trim()
+            )||'Journal Entry';
+
+            return firstLine
+                .replace(/^#+\s*/,'')
+                .replace(/[*_~`]/g,'')
+                .trim()
+                .slice(0,80)||'Journal Entry';
+        }
+    </script>
+
 </html>

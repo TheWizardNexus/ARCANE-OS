@@ -1,22 +1,105 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-precrisis-page="home.html">
 <head>
     <meta charset="utf-8">
     <base href="../../">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="referrer" content="same-origin">
-    <meta name="description" content="Warrior Spirit Companion, powered by The Wizard Nexus's PreCrisis.ai.">
+    <meta name="description" content="Why Warrior Spirit offers a private companion for conversation and reflection.">
+    <meta name="referrer" content="no-referrer">
     <title>Warrior Spirit Companion</title>
     <link rel="manifest" href="./apps/warrior-spirit/manifest.json">
     <link rel="icon" href="./apps/warrior-spirit/img/warrior-spirit-logo.png" type="image/png">
     <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
     <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
-    <link rel="stylesheet" href="./apps/warrior-spirit/precrisis-skin.css?v=2">
+    <link rel="stylesheet" href="./apps/warrior-spirit/precrisis-skin.css?v=2" data-warrior-spirit-skin>
+    <link rel="stylesheet" href="./apps/warrior-spirit/warrior-spirit.css?v=5">
     <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
-    <script type="module" src="./apps/warrior-spirit/modules/PreCrisisFrame.js?v=10"></script>
+    <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+    <script type="module" src="./apps/warrior-spirit/modules/PreCrisisFrame.js?v=11"></script>
 </head>
-<body class="precrisis-frame-page">
-    <iframe class="precrisis-frame" data-precrisis-page="home.html" title="Warrior Spirit Companion home"></iframe>
-    <noscript><p class="precrisis-frame-fallback">JavaScript is required for Warrior Spirit Companion.</p></noscript>
+<body class="warrior-home-page">
+    <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+    <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+
+    <main class="warrior-shell warrior-home-content">
+        <section class="hero" aria-labelledby="heroTitle">
+            <div class="hero-mark" aria-hidden="true"><img src="./apps/warrior-spirit/img/warrior-spirit-logo.png" alt=""></div>
+            <div class="hero-copy">
+                <p class="eyebrow">A Servant's Heart</p>
+                <h1 id="heroTitle">Warrior Spirit Companion</h1>
+                <p class="hero-lead">A private place to talk, reflect, and stay connected to the strength, service, and whole-person wellness at the heart of Warrior Spirit.</p>
+                <p class="powered-by">Powered by <strong>The Wizard Nexus's PreCrisis.ai</strong></p>
+                <div class="hero-actions">
+                    <a class="arcane-button arcane-button--action" href="./apps/warrior-spirit/companion.html">Talk with the Companion</a>
+                    <a class="arcane-button arcane-button--secondary" href="./apps/warrior-spirit/reflection.html">Write a Reflection</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="why-companion arcane-card" aria-labelledby="whyCompanionTitle"><div class="arcane-card__body">
+            <p class="eyebrow">Why Warrior Spirit has a Companion</p>
+            <h2 id="whyCompanionTitle" class="arcane-section-heading">Support should still be within reach between programs, conversations, and hard days.</h2>
+            <div class="why-companion__copy">
+                <p>Warrior Spirit helps veterans, first responders, people in recovery, educators, youth, and their families build connection, resilience, purpose, and practical skills. The Companion carries that spirit into a private space where you can put thoughts into words.</p>
+                <p>It is here to help you reflect and prepare for the next human conversation. It does not replace Warrior Spirit's people, qualified care, crisis services, or the relationships that help communities heal and grow.</p>
+            </div>
+        </section>
+
+        <section class="why-companion arcane-card" aria-labelledby="learningTitle"><div class="arcane-card__body">
+            <p class="eyebrow">How the Companion gets to know you</p>
+            <h2 id="learningTitle" class="arcane-section-heading">You choose what it learns by choosing what you share.</h2>
+            <div class="why-companion__copy">
+                <p>Start with your name and the kind of personality you want in Profile. As you talk, the Companion can save concise memories about useful, lasting context—your goals, preferences, projects, relationships, and the things that matter to you.</p>
+                <p>Reflection is also your space to simply write. When you save one, it stays on this device and a bounded reflection memory helps the Companion understand what has been happening in your life the next time you talk.</p>
+            </div>
+        </section>
+
+        <section class="why-companion arcane-card" aria-labelledby="aiChoiceTitle"><div class="arcane-card__body">
+            <p class="eyebrow">Your Companion, your choice</p>
+            <h2 id="aiChoiceTitle" class="arcane-section-heading">Choose the support that feels right for you.</h2>
+            <div class="why-companion__copy">
+                <p>The Warrior Spirit Companion can use Cloud AI today, and it is built to support local PreCrisis AI and the dedicated Warrior Spirit AI. Whichever option supports you, the Companion remains the same familiar, private place to talk and reflect.</p>
+                <p>Warrior Spirit AI is a local AI designed to run right on your own computer. It is currently being finalized and will be available soon. Until then, add your Warrior Spirit AI Licence key in Profile to use Cloud AI with the Companion.</p>
+            </div>
+            <div><a class="arcane-button arcane-button--action" href="./apps/warrior-spirit/profile.html">Set up your Profile</a></div>
+        </div></section>
+
+        <aside class="urgent-support arcane-card" aria-labelledby="urgentTitle">
+            <div>
+                <p class="eyebrow">Immediate human support</p>
+                <h2 id="urgentTitle" class="arcane-section-heading">You do not have to face a crisis alone.</h2>
+                <p>This Companion is not an emergency service and does not monitor messages. In the United States, call or text <strong>988</strong>. Veterans and service members can call 988 and press 1, or text <strong>838255</strong>. If someone is in immediate danger, call <strong>911</strong>.</p>
+            </div>
+            <div class="urgent-actions"><button class="arcane-button arcane-button--action" type="button" data-external-url="https://988lifeline.org/">Open 988 Lifeline</button></div>
+        </aside>
+
+        <section class="quick-grid" aria-label="Companion spaces">
+            <a class="feature-link arcane-card" href="./apps/warrior-spirit/companion.html"><span class="feature-number">01</span><strong>Companion</strong><span>Talk through what is happening, one question at a time.</span></a>
+            <a class="feature-link arcane-card" href="./apps/warrior-spirit/mental-health.html"><span class="feature-number">02</span><strong>Mental Health Center</strong><span>Review private Companion check-ins, progress charts, and notes.</span></a>
+            <a class="feature-link arcane-card" href="./apps/warrior-spirit/reflection.html"><span class="feature-number">03</span><strong>Reflection</strong><span>Write and save private reflections on this device.</span></a>
+            <a class="feature-link arcane-card" href="./apps/warrior-spirit/memories.html"><span class="feature-number">04</span><strong>Memories &amp; Data</strong><span>Explore Companion conversations, reflections, memories, reports, and notes.</span></a>
+            <a class="feature-link arcane-card" href="./apps/warrior-spirit/profile.html"><span class="feature-number">05</span><strong>Profile</strong><span>Set your name, AI personality, Warrior Spirit AI Licence key, and voice.</span></a>
+        </section>
+
+        <section class="section-block" aria-labelledby="programsTitle">
+            <header class="section-heading"><div><p class="eyebrow">Five paths, one mission</p><h2 id="programsTitle">Meet you where you are</h2><p>Warrior Spirit supports veterans, educators, young people, people in recovery, and first responders through practical, human-centered programs.</p></div><button class="arcane-button arcane-button--secondary" type="button" data-external-url="https://warriorspirittexas.org/">Visit Warrior Spirit</button></header>
+            <div id="programGrid" class="program-grid" role="list" aria-live="polite"></div>
+        </section>
+
+        <section class="privacy-note arcane-card" aria-labelledby="privacyTitle"><div class="arcane-card__body">
+            <p class="eyebrow">Stored only here</p>
+            <h2 id="privacyTitle" class="arcane-section-heading">Your records stay on this device.</h2>
+            <ul>
+                <li>Companion conversations, reflections, memories, profile information, reports, scores, and notes are saved through PreCrisis DBOPFS storage on this device.</li>
+                <li>They are not synchronized to Warrior Spirit or The Wizard Nexus. Clearing Arcane application data can permanently remove them.</li>
+                <li>Companion and reflection content is sent to the configured AI provider when AI features run.</li>
+                <li>Your Warrior Spirit AI Licence key is stored locally with the on-device PreCrisis profile and is not synchronized by this app.</li>
+            </ul>
+        </div></section>
+        <footer class="app-footer"><span>Warrior Spirit Companion</span><span>Powered by The Wizard Nexus's PreCrisis.ai</span></footer>
+        <p id="pageStatus" class="page-status" role="status" aria-live="polite"></p>
+    </main>
+    <script type="module" src="./apps/warrior-spirit/modules/WarriorSpiritHome.js?v=3"></script>
 </body>
 </html>
