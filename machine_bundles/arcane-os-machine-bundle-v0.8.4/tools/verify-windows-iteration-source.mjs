@@ -4,9 +4,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const [script, packageManifest] = await Promise.all([
+const repositoryRoot = path.resolve(root, '..', '..');
+const [script, packageManifest, buildLauncher, gitAttributes] = await Promise.all([
   fs.readFile(path.join(root, 'tools', 'build-windows-iteration.ps1'), 'utf8'),
   fs.readFile(path.join(root, 'package.json'), 'utf8').then(JSON.parse),
+  fs.readFile(path.join(root, 'build-windows.bat'), 'utf8'),
+  fs.readFile(path.join(repositoryRoot, '.gitattributes'), 'utf8'),
 ]);
 
 for (const contract of [
@@ -45,5 +48,16 @@ assert.match(packageManifest.scripts['check:windows'], /build:distribution:windo
   'The Windows check gate must continue to build every target application through the full release path.');
 assert.equal(packageManifest.scripts.prepush, 'npm run check && npm run check:windows',
   'The complete pre-push gate must remain unchanged.');
+
+assert.equal(
+  buildLauncher.match(/if not "%errorlevel%"=="0" goto :failed/g)?.length,
+  2,
+  'The Windows launcher must stop after every nonzero npm exit code, including negative Windows status codes.',
+);
+assert.match(
+  gitAttributes,
+  /^machine_bundles\/[*]\/arcane-bundle[.]json text eol=lf$/m,
+  'Canonical manifests for every machine bundle version must remain LF-only on Windows checkouts.',
+);
 
 console.log('Fast Windows iteration build remains isolated from full release and target-app publication.');

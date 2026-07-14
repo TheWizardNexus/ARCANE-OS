@@ -30,3 +30,9 @@ Use the required process one proven step at a time:
 > **Reproduce -> Preserve -> Inspect -> Isolate -> Manually fix -> Manually verify -> Fix the code -> Rebuild -> Retest from a clean state**
 
 Never stack speculative fixes or change multiple independent variables in one debugging step. If the request is diagnosis-only, stop before changing the code. Report the verified expectation, observed result, cause, evidence, fix (if authorized), and clean-state retest in the final handoff.
+
+## Mandatory build and release SOP
+
+Before changing dependency locks, build launchers, packaging, signing, generated manifests, machine bundles, or release automation, read and follow [`docs/build-release.md`](docs/build-release.md) in full.
+
+Build and release work must keep dependency sources public and reproducible, preserve canonical file bytes across operating systems, stop on every nonzero tool exit, keep unsigned local verification separate from signed production publication, and finish with a clean-state build through the affected platform gate.

@@ -12,9 +12,9 @@ where node.exe >nul 2>nul || (
   exit /b 2
 )
 call npm ci
-if errorlevel 1 goto :failed
+if not "%errorlevel%"=="0" goto :failed
 call npm run build:win
-if errorlevel 1 goto :failed
+if not "%errorlevel%"=="0" goto :failed
 echo.
 echo Build complete.
 echo Start the provisioner with start-provisioner.bat

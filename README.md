@@ -232,6 +232,8 @@ npm run release:check
 
 Verification must match the affected boundary. A successful unit test does not replace contract, browser, packaging, native, privilege, recovery, or clean-state verification when those surfaces changed.
 
+Dependency-lock, machine-bundle, signing, packaging, and release changes must also follow the mandatory [build and release SOP](./docs/build-release.md). The SOP requires approved public dependency sources, canonical cross-platform bytes, fail-closed launchers, separated signing modes, and clean-state platform verification.
+
 ## Package ARCANE applications for browser contexts
 
 ARCANE applications are not websites or generic web apps. When hosted by ARCANE OS, they can use explicitly granted native ARCANE capabilities. When distributed for a standard browser, the public-app packager creates an isolated, sandboxed browser-context application under `dist/<app>` from explicit application and shared-payload manifests. Running in a browser does not grant native ARCANE capabilities.

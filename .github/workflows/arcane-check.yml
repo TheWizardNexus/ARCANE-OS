@@ -20,6 +20,8 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             machine_bundles/arcane-os-machine-bundle-v0.8.4/package-lock.json
+      - name: Verify public package-lock registries
+        run: node tools/verify-package-lock-registries.mjs
       - run: npm ci
       - run: npm ci --prefix machine_bundles/arcane-os-machine-bundle-v0.8.4
       - name: Run portable mandatory checks
