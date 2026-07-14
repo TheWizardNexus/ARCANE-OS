@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "precrisis",
+  "displayName": "PreCrisis AI",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "strategy": "static",
+  "include": [
+    "admin.html",
+    "chat.html",
+    "components",
+    "dashboard-clinical.html",
+    "dashboard-leadership.html",
+    "dashboard.html",
+    "data.html",
+    "entities",
+    "export.html",
+    "img/1024.png",
+    "img/192.png",
+    "img/256.png",
+    "img/512.png",
+    "img/favicon.png",
+    "img/icon-16.ico",
+    "import-many.html",
+    "import.html",
+    "index.html",
+    "journal.html",
+    "manifest.json",
+    "modules",
+    "prev.html",
+    "service-worker.js",
+    "soc.html"
+  ],
+  "exclude": [
+    "img/deepwiki_ollama_blog.html"
+  ],
+  "shared": [
+    "browser-runtime"
+  ]
+}

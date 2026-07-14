@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>PreCrisis.AI Data</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin" />
+        <link rel="manifest" href="./apps/precrisis/manifest.json" crossorigin="use-credentials" />
+        <link rel="icon" href="./apps/precrisis/img/favicon.png" type="image/png">
+
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <style>
+            main.contents{
+                display:grid;
+                gap:1em;
+                grid-template-rows:auto minmax(0,1fr);
+                overflow:hidden;
+            }
+
+            .data-header{
+                align-items:flex-start;
+                display:flex;
+                gap:1em;
+                justify-content:space-between;
+            }
+
+            .file-manager{
+                height:100%;
+                min-height:0;
+            }
+
+            @media (max-width:48em){
+                .data-header{
+                    align-items:stretch;
+                    flex-direction:column;
+                }
+
+                .data-maintenance{
+                    align-self:flex-start;
+                }
+            }
+        </style>
+
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/DBOPFS.js"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/precrisis/components/nav.html?v=5"></html-import>
+
+        <main class="contents">
+            <section class="data-header">
+                <div>
+                    <h1>Data</h1>
+                    <p>Explore the files stored by PreCrisis on this device.</p>
+                </div>
+                <html-import
+                    id="dataMaintenance"
+                    class="data-maintenance"
+                    href="./arcane/components/data-maintenance.html?v=3"
+                ></html-import>
+            </section>
+            <html-import
+                id="fileManager"
+                class="file-manager"
+                data-layout="grid"
+                href="./arcane/components/file-manager.html?v=18"
+            ></html-import>
+        </main>
+    </body>
+
+    <script type="module">
+        const fileManager=document.querySelector('#fileManager');
+        const dataMaintenance=document.querySelector('#dataMaintenance');
+
+        dataMaintenance.addEventListener(
+            'data-maintenance-complete',
+            ()=>fileManager.loadAll?.().catch(
+                error=>console.error('Unable to refresh files:',error)
+            )
+        );
+    </script>
+
+</html>
