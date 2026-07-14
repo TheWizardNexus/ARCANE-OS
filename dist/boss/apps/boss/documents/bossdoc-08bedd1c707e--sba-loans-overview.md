@@ -1,0 +1,53 @@
+---
+id: "bossdoc-08bedd1c707e"
+title: "SBA Loans Overview"
+access: "public"
+category: "AI Training"
+topics: ["artificial intelligence","branding","business planning","certification","disaster readiness","ecosystem navigation","formation","funding","government contracting","legal and compliance","market research","mentoring and advising"]
+lifecycle_stages: ["Ideation","Validation","Formation","Launch","Operations","Growth","Recovery"]
+organizations: ["SCORE","U.S. Small Business Administration (SBA)","Small Business Development Center (SBDC)","Veterans Business Outreach Center (VBOC)","SCORE Houston"]
+---
+
+# SBA Loans Overview
+
+> BOSS Libraries public routing record. Use it to find the right source, link, organization, or person.
+
+## Description
+
+Last verified for BOSS pack: 2026-06-24 BOSS operating alignment: Discover -> Diagnose -> Classify -> Route -> Recommend Next Action.
+
+## When to surface
+
+The user asks about SBA loans or needs debt financing education.
+
+## Key information
+
+- Last verified for BOSS pack: 2026-06-24
+- BOSS operating alignment:
+- Discover -> Diagnose -> Classify -> Route -> Recommend Next Action.
+- SBA is strongest for official education, startup guides, funding program education, government program information, certifications, federal contracting, disaster recovery, and specialized entrepreneur-group resources.
+- Do not treat this file as legal, tax, lending, certification, procurement, or compliance advice. Route regulated decisions to the official agency page and/or a qualified professional.
+- ## Resource summary
+- SBA-guaranteed loans education hub for 7(a), 504, Microloan, Lender Match, payments, and COVID relief borrower resources.
+
+## People and links
+
+- Organizations: SCORE, U.S. Small Business Administration (SBA), Small Business Development Center (SBDC), Veterans Business Outreach Center (VBOC), SCORE Houston
+- Link: <https://www.sba.gov/funding-programs/loans>
+- Link: <https://www.sba.gov/funding-programs>
+- Link: <https://www.sba.gov/funding-programs/loans/lender-match>
+- Link: <https://www.sba.gov/district/houston/doing-business-houston-district>
+
+## Next handoff
+
+Open the source URL, review the official SBA guidance, and then use the BOSS routing summary to decide whether the client needs education, local counseling, funding readiness support, or another referral.
+
+## Guardrails
+
+- The BOSS Libraries Librarian retrieves and routes information; it is not a mentor or a substitute for a qualified professional.
+- Do not make final legal, tax, accounting, lending, certification, procurement, or compliance decisions for the user.
+- Verify live pages for current eligibility, deadlines, contacts, prices, and program rules before presenting them as current.
+
+## Original document
+
+Use **View original** in the BOSS Library to open or download the approved public source.

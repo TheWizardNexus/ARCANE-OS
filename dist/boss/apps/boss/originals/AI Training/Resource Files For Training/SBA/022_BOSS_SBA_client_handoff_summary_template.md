@@ -1,0 +1,225 @@
+Source URL: https://www.sba.gov/
+
+# SBA BOSS Resource Pack Manifest
+
+Created for BOSS Library ingestion on 2026-06-24.
+
+## Purpose
+This pack converts SBA.gov user-facing business resources into semantically named markdown files that the BOSS AI Librarian can ingest. Each file begins with `Source URL: ...` as the first line so the model can surface the original link to the user.
+
+## Coverage summary
+- SBA Business Guide: planning, launching, managing, growth, special entrepreneur groups.
+- SBA Funding Programs: loans, Lender Match, 7(a), 504, Microloans, investment capital, disaster assistance, surety bonds, grants, STEP.
+- SBA Federal Contracting: contracting guide, requirements, size standards, assistance programs, WOSB, veteran contracting, 8(a), HUBZone, Mentor-Protégé, joint ventures, counseling, data.
+- SBA Learning Platform and events.
+- SBA Local Assistance: Resource Partners, SBDC, SCORE, WBC, VBOC, export/trade assistance, federal contracting assistance, innovation clusters, veteran business development officers.
+- Houston / ZIP 77084 local overlay: Houston District Office, Doing Business in Houston District, local business requirements, lenders, and SBA-listed local ecosystem resources.
+- BOSS process files: SBA startup process, SCORE mentoring process via SBA, SBDC/WBC/VBOC process, funding readiness, loan selection, grants guardrail, contracting readiness, disaster recovery, export assistance, special eligibility, and handoff templates.
+
+## File count
+Total markdown files in pack: 191
+Ingestion/resource files excluding this manifest: 190
+
+## Directory map
+- `00_INDEX_AND_PROCESS/` — 27 files
+- `01_HOUSTON_77084_LOCAL/` — 7 files
+- `02_SBA_BUSINESS_GUIDE/` — 45 files
+- `03_SBA_FUNDING_PROGRAMS/` — 22 files
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/` — 25 files
+- `05_SBA_LEARNING_AND_EVENTS/` — 5 files
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/` — 14 files
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/` — 28 files
+- `08_SBA_PRIORITIES_INITIATIVES/` — 12 files
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/` — 5 files
+
+## Files
+- `00_INDEX_AND_PROCESS/000_SBA_BOSS_resource_index_and_routing_map.md` — Source URL: https://www.sba.gov/
+- `00_INDEX_AND_PROCESS/000_SBA_URL_catalog_for_BOSS_routing.md` — Source URL: https://www.sba.gov/
+- `00_INDEX_AND_PROCESS/001_SBA_Houston_77084_quick_routing_summary.md` — Source URL: https://www.sba.gov/district/houston
+- `00_INDEX_AND_PROCESS/002_SBA_business_guide_process_10_steps_start_business.md` — Source URL: https://www.sba.gov/business-guide/10-steps-start-your-business
+- `00_INDEX_AND_PROCESS/003_SBA_resource_partner_process_SBDC_SCORE_WBC_VBOC.md` — Source URL: https://www.sba.gov/local-assistance
+- `00_INDEX_AND_PROCESS/004_SBA_SCORE_business_mentoring_process.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/score-business-mentoring
+- `00_INDEX_AND_PROCESS/005_SBA_SBDC_advising_process.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/small-business-development-centers-sbdc
+- `00_INDEX_AND_PROCESS/006_SBA_WBC_training_counseling_process.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/womens-business-centers
+- `00_INDEX_AND_PROCESS/007_SBA_VBOC_veteran_military_spouse_process.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/veterans-business-outreach-centers-vboc
+- `00_INDEX_AND_PROCESS/008_SBA_funding_readiness_and_lender_match_process.md` — Source URL: https://www.sba.gov/funding-programs/loans/lender-match
+- `00_INDEX_AND_PROCESS/009_SBA_loan_program_selection_process_7a_504_microloan.md` — Source URL: https://www.sba.gov/funding-programs/loans
+- `00_INDEX_AND_PROCESS/010_SBA_grants_expectation_and_fraud_guardrail_process.md` — Source URL: https://www.sba.gov/funding-programs/grants
+- `00_INDEX_AND_PROCESS/011_SBA_government_contracting_readiness_sequence_process.md` — Source URL: https://www.sba.gov/federal-contracting
+- `00_INDEX_AND_PROCESS/012_SBA_contracting_certification_process.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs
+- `00_INDEX_AND_PROCESS/013_SBA_MySBA_Certifications_and_SAM_gov_workflow_note.md` — Source URL: https://certifications.sba.gov/
+- `00_INDEX_AND_PROCESS/014_SBA_disaster_recovery_process.md` — Source URL: https://www.sba.gov/funding-programs/disaster-assistance
+- `00_INDEX_AND_PROCESS/015_SBA_export_trade_assistance_process.md` — Source URL: https://www.sba.gov/local-assistance/export-trade-assistance
+- `00_INDEX_AND_PROCESS/016_SBA_Houston_business_requirements_process.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `00_INDEX_AND_PROCESS/017_SBA_Houston_lending_and_lenders_process.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `00_INDEX_AND_PROCESS/018_SBA_events_and_learning_platform_process.md` — Source URL: https://www.sba.gov/sba-learning-platform
+- `00_INDEX_AND_PROCESS/019_BOSS_SBA_stage_to_resource_crosswalk.md` — Source URL: https://www.sba.gov/business-guide
+- `00_INDEX_AND_PROCESS/020_BOSS_SBA_special_eligibility_routing_logic.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business
+- `00_INDEX_AND_PROCESS/021_BOSS_SBA_intake_questions_for_resource_routing.md` — Source URL: https://www.sba.gov/local-assistance
+- `00_INDEX_AND_PROCESS/022_BOSS_SBA_client_handoff_summary_template.md` — Source URL: https://www.sba.gov/local-assistance
+- `00_INDEX_AND_PROCESS/023_BOSS_SBA_resource_partner_handoff_template.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners
+- `00_INDEX_AND_PROCESS/024_BOSS_SBA_government_contracting_early_stage_guardrail.md` — Source URL: https://www.sba.gov/federal-contracting
+- `00_INDEX_AND_PROCESS/025_BOSS_SBA_Houston_77084_intake_and_referral_script.md` — Source URL: https://www.sba.gov/district/houston
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_business_name_registration_Texas_SOS_county_clerk.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_lender_match_local_lenders.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_lending_activity_reports.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_licenses_zoning_local_offices.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_local_assistance_find_counselors_77084.md` — Source URL: https://www.sba.gov/local-assistance
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_office_location_contact_hours.md` — Source URL: https://www.sba.gov/district/houston
+- `01_HOUSTON_77084_LOCAL/SBA_Houston_taxes_labor_OSHA_local_contacts.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_10_Steps_to_Start_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/10-steps-start-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_AI_for_Small_Business.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/ai-small-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Apply_for_Licenses_and_Permits.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/apply-licenses-permits
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Become_a_Federal_Contractor.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/become-federal-contractor
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Break_Even_Point.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business/calculate-your-startup-costs/break-even-point
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Business_Guide_Overview.md` — Source URL: https://www.sba.gov/business-guide
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Buy_Assets_and_Equipment.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/buy-assets-equipment
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Buy_an_Existing_Business_or_Franchise.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business/buy-existing-business-or-franchise
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Calculate_Startup_Costs.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business/calculate-your-startup-costs
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Choose_Your_Business_Name.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/choose-your-business-name
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Choose_a_Business_Structure.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/choose-business-structure
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Close_or_Sell_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/close-or-sell-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Establish_Business_Credit.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business/establish-business-credit
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Expand_to_New_Locations.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/expand-new-locations
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Export_Products.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/export-products
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Franchise_Directory.md` — Source URL: https://www.sba.gov/document/support-sba-franchise-directory
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Fund_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business/fund-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Get_Business_Insurance.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/get-business-insurance
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Get_Federal_and_State_Tax_ID_Numbers.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/get-federal-state-tax-id-numbers
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Get_More_Funding.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/get-more-funding
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Grow_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Hire_Employees_with_Disabilities.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/hire-employees-disabilities
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Hire_and_Manage_Employees.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/hire-manage-employees
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Launch_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Manage_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Manage_Your_Finances.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/manage-your-finances
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Market_Research_and_Competitive_Analysis.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business/market-research-competitive-analysis
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Marketing_and_Sales.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/marketing-sales
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Merge_and_Acquire_Businesses.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/merge-acquire-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Military_Spouse_Businesses.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/military-spouse-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Minority_Owned_Businesses.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/minority-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Native_American_Owned_Businesses.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/native-american-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Open_a_Business_Bank_Account.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/open-business-bank-account
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Pay_Taxes.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/pay-taxes
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Pick_Your_Business_Location.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/pick-your-business-location
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Plan_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Prepare_for_Emergencies.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/prepare-emergencies
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Recover_from_Disasters.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/recover-disasters
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Register_Your_Business.md` — Source URL: https://www.sba.gov/business-guide/launch-your-business/register-your-business
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Rural_Businesses.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/rural-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Stay_Legally_Compliant.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/stay-legally-compliant
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Strengthen_Your_Cybersecurity.md` — Source URL: https://www.sba.gov/business-guide/manage-your-business/strengthen-your-cybersecurity
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Veteran_Owned_Businesses.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/veteran-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Women_Owned_Businesses.md` — Source URL: https://www.sba.gov/business-guide/grow-your-business/women-owned-businesses
+- `02_SBA_BUSINESS_GUIDE/SBA_Business_Guide_Write_Your_Business_Plan.md` — Source URL: https://www.sba.gov/business-guide/plan-your-business/write-your-business-plan
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_504_Loans.md` — Source URL: https://www.sba.gov/funding-programs/loans/504-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_7_a_Loans.md` — Source URL: https://www.sba.gov/funding-programs/loans/7a-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_COVID_19_Relief_Options.md` — Source URL: https://www.sba.gov/funding-programs/loans/covid-19-relief-options
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Disaster_Assistance.md` — Source URL: https://www.sba.gov/funding-programs/disaster-assistance
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Economic_Injury_Disaster_Loans.md` — Source URL: https://www.sba.gov/funding-programs/disaster-assistance/economic-injury-disaster-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Funding_Programs_Overview.md` — Source URL: https://www.sba.gov/funding-programs
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Grants_Overview.md` — Source URL: https://www.sba.gov/funding-programs/grants
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Grants_for_Community_Organizations.md` — Source URL: https://www.sba.gov/funding-programs/grants/grants-community-organizations
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Investment_Capital.md` — Source URL: https://www.sba.gov/funding-programs/investment-capital
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Lender_Match.md` — Source URL: https://www.sba.gov/funding-programs/loans/lender-match
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Loans_Overview.md` — Source URL: https://www.sba.gov/funding-programs/loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Make_a_Payment.md` — Source URL: https://www.sba.gov/funding-programs/loans/make-payment-sba
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Manufacturing_Grants.md` — Source URL: https://www.sba.gov/funding-programs/grants/manufacturing-grants
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Microloans.md` — Source URL: https://www.sba.gov/funding-programs/loans/microloans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Military_Reservist_Loan.md` — Source URL: https://www.sba.gov/funding-programs/disaster-assistance/military-reservist-loan
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Mitigation_Assistance.md` — Source URL: https://www.sba.gov/funding-programs/disaster-assistance/mitigation-assistance
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Options_to_Bypass_Permitting_Delays.md` — Source URL: https://www.sba.gov/funding-programs/disaster-assistance/options-bypass-permitting-delays
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Physical_Damage_Loans.md` — Source URL: https://www.sba.gov/funding-programs/disaster-assistance/physical-damage-loans
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_SBIC_Directory.md` — Source URL: https://www.sba.gov/funding-programs/investment-capital/sbic-directory
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_State_Trade_Expansion_Program_STEP.md` — Source URL: https://www.sba.gov/funding-programs/grants/state-trade-expansion-program-step
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Surety_Bond_Agency_Directory.md` — Source URL: https://www.sba.gov/funding-programs/surety-bonds/surety-bond-agency-directory
+- `03_SBA_FUNDING_PROGRAMS/SBA_Funding_Surety_Bonds.md` — Source URL: https://www.sba.gov/funding-programs/surety-bonds
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_8a_Business_Development_Program.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs/8a-business-development-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Assess_Your_Business_for_Contracting.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide/assess-your-business
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Basic_Requirements_for_Contracting.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide/basic-requirements
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Commercial_Market_Representatives.md` — Source URL: https://www.sba.gov/federal-contracting/counseling-help/commercial-market-representatives
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Area_Directors.md` — Source URL: https://www.sba.gov/federal-contracting/counseling-help/contracting-area-directors
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Assistance_Programs.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Counseling_and_Help.md` — Source URL: https://www.sba.gov/federal-contracting/counseling-help
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Data.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-data
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Contracting_Guide.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Federal_Contracting_Overview.md` — Source URL: https://www.sba.gov/federal-contracting
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Governing_Rules_and_Responsibilities.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide/governing-rules-responsibilities
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_HUBZone_Program.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_How_to_Win_Contracts.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide/how-win-contracts
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Joint_Ventures.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs/joint-ventures
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Mentor_Protege_Program.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs/sba-mentor-protege-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Natural_Resource_Sales_Assistance.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs/natural-resource-sales-assistance-program
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Prime_and_Subcontracting.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide/prime-subcontracting
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Procurement_Center_Representative_Directory.md` — Source URL: https://www.sba.gov/federal-contracting/counseling-help/procurement-center-representative-directory
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Procurement_Data_Hub.md` — Source URL: https://datahub.certify.sba.gov/
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_SUBNet_Subcontracting_Network.md` — Source URL: https://subnet.sba.gov/
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Size_Standards.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide/size-standards
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Small_Business_Procurement_Scorecard.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-data/small-business-procurement-scorecard
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Types_of_Contracts.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-guide/types-contracts
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_Veteran_Contracting_Assistance_Programs.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs/veteran-contracting-assistance-programs
+- `04_SBA_CONTRACTING_AND_CERTIFICATIONS/SBA_Contracting_WOSB_Federal_Contract_Program.md` — Source URL: https://www.sba.gov/federal-contracting/contracting-assistance-programs/women-owned-small-business-federal-contract-program
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Boots_to_Business.md` — Source URL: https://www.sba.gov/sba-learning-platform/boots-business
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Empower_to_Grow.md` — Source URL: https://www.sba.gov/sba-learning-platform/empower-grow
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Learning_Platform_Overview.md` — Source URL: https://www.sba.gov/sba-learning-platform
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Learning_Portal.md` — Source URL: https://learning.sba.gov/
+- `05_SBA_LEARNING_AND_EVENTS/SBA_Learning_Upcoming_Events.md` — Source URL: https://www.sba.gov/events
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Doing_Business_in_Houston_District.md` — Source URL: https://www.sba.gov/district/houston/doing-business-houston-district
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Export_Finance_Managers.md` — Source URL: https://www.sba.gov/local-assistance/export-trade-assistance/finance-managers
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Export_and_Trade_Assistance.md` — Source URL: https://www.sba.gov/local-assistance/export-trade-assistance
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Federal_Contracting_Assistance.md` — Source URL: https://www.sba.gov/local-assistance/federal-contracting-assistance
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Houston_District.md` — Source URL: https://www.sba.gov/district/houston
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Local_Assistance_Overview.md` — Source URL: https://www.sba.gov/local-assistance
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Regional_Innovation_Clusters.md` — Source URL: https://www.sba.gov/local-assistance/regional-innovation-clusters
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Resource_Partners.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_SCORE_Business_Mentoring.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/score-business-mentoring
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Small_Business_Development_Centers_SBDC.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/small-business-development-centers-sbdc
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_U_S_Export_Assistance_Centers.md` — Source URL: https://www.sba.gov/local-assistance/export-trade-assistance/us-export-assistance-centers
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Veterans_Business_Development_Officers.md` — Source URL: https://www.sba.gov/local-assistance/veterans-business-development-officers
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Veterans_Business_Outreach_Centers_VBOC.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/veterans-business-outreach-centers-vboc
+- `06_SBA_LOCAL_ASSISTANCE_PARTNERS/SBA_Local_Assistance_Womens_Business_Centers.md` — Source URL: https://www.sba.gov/local-assistance/resource-partners/womens-business-centers
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Asian_Chamber_of_Commerce.md` — Source URL: https://asianchamber-hou.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_BakerRipley.md` — Source URL: https://www.bakerripley.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Brazoria_Hispanic_Chamber_of_Commerce.md` — Source URL: https://bchispanicchamber.net/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Camara_De_Empresarios_Latinos_De_Houston.md` — Source URL: https://empresarioslatinos.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_City_of_Houston_Office_of_Business_Opportunity.md` — Source URL: https://www.houstontx.gov/obo/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Combined_Arms.md` — Source URL: https://www.combinedarms.us/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Fort_Bend_County_Chamber_of_Commerce.md` — Source URL: https://www.fortbendchamber.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Fort_Bend_County_Economic_Opportunity_and_Development.md` — Source URL: https://www.fortbendcountytx.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Greater_Houston_LGBT_Chamber_of_Commerce.md` — Source URL: https://www.houstonlgbtchamber.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Greater_Houston_Partnership.md` — Source URL: https://www.houston.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Harris_County_Department_of_Economic_Equity_and_Opportunity.md` — Source URL: https://deeo.harriscountytx.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Harris_County_Department_of_Education.md` — Source URL: https://www.hcde-texas.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Area_Urban_League.md` — Source URL: https://www.haul.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Community_College.md` — Source URL: https://www.hccs.edu/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Hispanic_Chamber.md` — Source URL: https://www.houstonhispanicchamber.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Houston_Veterans_Chamber_of_Commerce.md` — Source URL: https://www.houveteranschamber.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Impact_Hub_Houston.md` — Source URL: https://houston.impacthub.net/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Indo_American_Chamber_of_Commerce_of_Greater_Houston.md` — Source URL: https://www.iaccgh.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Ion_District.md` — Source URL: https://iondistrict.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Jewish_Federation_of_Greater_Houston.md` — Source URL: https://www.houstonjewish.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_MBDA_Business_Center_Houston.md` — Source URL: https://www.mbda.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Port_Houston.md` — Source URL: https://porthouston.com/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_Chambers_of_Commerce.md` — Source URL: https://www.lone-star.net/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_Comptroller_Office.md` — Source URL: https://comptroller.texas.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_State_Law_Library.md` — Source URL: https://www.sll.texas.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Texas_Workforce_Commission.md` — Source URL: https://www.twc.texas.gov/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_The_Woodlands_Chamber_of_Commerce.md` — Source URL: https://www.woodlandschamber.org/
+- `07_HOUSTON_EXTERNAL_ECOSYSTEM_FROM_SBA/Houston_External_SBA_Listed_Vision_Galveston.md` — Source URL: https://www.visiongalveston.com/
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Child_Care_Business_Development_Support.md` — Source URL: https://www.sba.gov/priorities/small-business-resource-hubs/child-care-business-development-support
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Community_Builders_Network.md` — Source URL: https://www.sba.gov/priorities/sba-initiatives/community-builders-network
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Cutting_Red_Tape_for_Small_Manufacturers.md` — Source URL: https://www.sba.gov/priorities/american-manufacturers/cutting-red-tape-small-manufacturers
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Increasing_Access_to_Capital_for_Manufacturers.md` — Source URL: https://www.sba.gov/priorities/american-manufacturers/increasing-access-capital
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Interagency_Capital_Resources_for_Small_Businesses.md` — Source URL: https://www.sba.gov/priorities/small-business-resource-hubs/interagency-capital-resources-small-businesses
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Make_Onshoring_Great_Again_Portal.md` — Source URL: https://www.sba.gov/priorities/american-manufacturers/make-onshoring-great-again
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Manufacturing_Success_Stories.md` — Source URL: https://www.sba.gov/priorities/american-manufacturers/manufacturing-success-stories
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Priorities_Overview.md` — Source URL: https://www.sba.gov/priorities
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Putting_American_Manufacturers_First.md` — Source URL: https://www.sba.gov/priorities/american-manufacturers
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Small_Business_Resource_Hubs.md` — Source URL: https://www.sba.gov/priorities/small-business-resource-hubs
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Small_Businesses_Against_Trafficking_in_Persons_SBATiP.md` — Source URL: https://www.sba.gov/priorities/sba-initiatives/small-businesses-against-trafficking-persons-sbatip
+- `08_SBA_PRIORITIES_INITIATIVES/SBA_Priority_Taking_Manufacturing_Business_Global.md` — Source URL: https://www.sba.gov/priorities/american-manufacturers/taking-manufacturing-business-global
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Contact_SBA.md` — Source URL: https://www.sba.gov/about-sba/contact-sba
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_District_Offices.md` — Source URL: https://www.sba.gov/about-sba/sba-locations/district-offices
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Forms_and_Documents.md` — Source URL: https://www.sba.gov/document
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Fraud_and_Identity_Theft.md` — Source URL: https://www.sba.gov/about-sba/oversight-advocacy/office-inspector-general/office-inspector-general-hotline
+- `09_SBA_OFFICIAL_UTILITY_AND_LOCATORS/SBA_Official_Utility_Locations.md` — Source URL: https://www.sba.gov/about-sba/sba-locations

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Arcane Terminal combines native shell sessions with Arcane OS commands, discoverable settings, themes, search, and keyboard controls.">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#0b1714">
+    <title>Arcane Terminal</title>
+    <link rel="manifest" href="./apps/terminal/manifest.json">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="./apps/terminal/terminal.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+    <header class="app-header">
+        <a class="identity" href="./apps/terminal/index.html" aria-label="Arcane Terminal home">
+            <span class="sigil" aria-hidden="true">A</span>
+            <span><strong>Arcane Terminal</strong><small>Native shell + Arcane command layer</small></span>
+        </a>
+        <div class="header-status"><span id="platformLabel">Detecting platform</span><kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>F</kbd></div>
+    </header>
+    <main class="app-shell">
+        <section class="terminal-stage" aria-label="Terminal">
+            <html-import id="terminalWorkspace" href="./arcane/components/terminal-workspace.html?v=1"></html-import>
+        </section>
+        <aside class="settings-panel" id="settingsPanel" aria-label="Terminal settings" hidden>
+            <div class="settings-heading"><div><span class="eyebrow">Personalize</span><h1>Terminal settings</h1></div><button id="closeSettings" class="arcane-close-button" type="button" aria-label="Close settings">×</button></div>
+            <html-import id="preferencesForm" href="./arcane/components/preferences-form.html?v=1"></html-import>
+            <section class="shortcut-card">
+                <h2>Keyboard map</h2>
+                <dl><div><dt><kbd>↑</kbd> / <kbd>↓</kbd></dt><dd>Command history</dd></div><div><dt><kbd>Tab</kbd></dt><dd>Complete command</dd></div><div><dt><kbd>Ctrl</kbd> + <kbd>C</kbd></dt><dd>Copy selection or interrupt</dd></div><div><dt><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></dt><dd>Find output</dd></div></dl>
+            </section>
+        </aside>
+    </main>
+    <script type="module" src="./apps/terminal/modules/TerminalApp.js?v=1"></script>
+</body>
+</html>

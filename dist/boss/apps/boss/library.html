@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <base href="../../">
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin">
+        <meta name="description" content="Search the BOSS Libraries collection for trusted business documents, official links, and the right next resource.">
+        <meta name="theme-color" content="#022241">
+        <title>BOSS Libraries | Document Library</title>
+        <link rel="manifest" href="./apps/boss/manifest.json" crossorigin="use-credentials">
+        <link rel="icon" href="./apps/boss/img/boss-libraries-logo-stacked.png" type="image/png">
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./apps/boss/boss.css?v=7">
+
+        <style>
+            .library-main {
+                grid-column:1 / -1;
+                min-width:0;
+                padding:clamp(.8rem,2.3vw,1.8rem);
+                background:var(--background);
+            }
+
+            .library-shell {
+                width:min(100%,86rem);
+                margin:0 auto;
+            }
+
+            .library-hero,
+            .library-filters,
+            .library-results {
+                box-sizing:border-box;
+                border:1px solid var(--border-color);
+                border-radius:1rem;
+                background:var(--modal-background);
+                box-shadow:0 .6rem 1.8rem var(--shadow-color);
+            }
+
+            .library-hero {
+                overflow:hidden;
+                position:relative;
+                padding:clamp(1.15rem,3vw,2.25rem);
+                background:
+                    linear-gradient(115deg,color-mix(in srgb,var(--boss-navy) 94%,transparent),color-mix(in srgb,var(--boss-blue) 90%,transparent)),
+                    var(--boss-navy);
+                color:var(--boss-cream);
+            }
+
+            .library-hero::after {
+                width:12rem;
+                height:12rem;
+                position:absolute;
+                right:-4rem;
+                bottom:-7rem;
+                border:.85rem solid color-mix(in srgb,var(--boss-gold) 46%,transparent);
+                border-radius:50%;
+                content:"";
+                pointer-events:none;
+            }
+
+            .eyebrow {
+                margin:0 0 .45rem;
+                color:var(--boss-gold);
+                font-size:.77rem;
+                font-weight:800;
+                letter-spacing:.13em;
+                text-transform:uppercase;
+            }
+
+            .library-hero h1 {
+                max-width:48rem;
+                margin:0;
+                color:#fffaf0;
+                font-size:clamp(1.8rem,4vw,3rem);
+            }
+
+            .hero-copy {
+                max-width:53rem;
+                margin:.7rem 0 0;
+                color:var(--boss-cream);
+                font-size:clamp(.98rem,1.6vw,1.12rem);
+                line-height:1.6;
+            }
+
+            .library-counts {
+                display:grid;
+                grid-template-columns:repeat(4,minmax(0,1fr));
+                gap:.65rem;
+                margin:1rem 0 0;
+            }
+
+            .count-card {
+                min-width:0;
+                margin:0;
+                padding:.85rem 1rem;
+                border:1px solid color-mix(in srgb,var(--boss-cream) 32%,transparent);
+                border-radius:.75rem;
+                background:color-mix(in srgb,var(--boss-navy) 64%,transparent);
+            }
+
+            .count-card dt {
+                color:var(--boss-cream);
+                font-size:.73rem;
+                font-weight:750;
+                letter-spacing:.05em;
+                text-transform:uppercase;
+            }
+
+            .count-card dd {
+                margin:.16rem 0 0;
+                color:#fff;
+                font-family:var(--boss-display-font);
+                font-size:clamp(1.35rem,3vw,1.9rem);
+                font-weight:700;
+            }
+
+            .library-filters {
+                margin-top:1rem;
+                padding:clamp(.9rem,2vw,1.25rem);
+            }
+
+            .filter-fieldset {
+                min-width:0;
+                margin:0;
+                padding:0;
+                border:0;
+            }
+
+            .filter-grid {
+                display:grid;
+                grid-template-columns:minmax(15rem,2fr) repeat(3,minmax(9rem,1fr)) auto;
+                gap:.75rem;
+                align-items:end;
+            }
+
+            .filter-control {
+                min-width:0;
+            }
+
+            .filter-control label,
+            .filter-label {
+                display:block;
+                margin:0 0 .35rem;
+                color:var(--text-color);
+                font-size:.79rem;
+                font-weight:750;
+            }
+
+            .filter-control input,
+            .filter-control select {
+                width:100%;
+                height:2.85rem;
+                margin:0;
+                padding:.62rem .72rem;
+            }
+
+            .filter-control select {
+                padding-right:1.8rem;
+                background-image:linear-gradient(45deg,transparent 50%,var(--platinum) 50%),linear-gradient(135deg,var(--platinum) 50%,transparent 50%);
+                background-position:calc(100% - .95rem) 1.18rem,calc(100% - .65rem) 1.18rem;
+                background-repeat:no-repeat;
+                background-size:.3rem .3rem,.3rem .3rem;
+            }
+
+            .reset-button {
+                min-height:2.85rem;
+                margin:0;
+                white-space:nowrap;
+            }
+
+            .restricted-control {
+                display:flex;
+                gap:.58rem;
+                align-items:flex-start;
+                margin-top:.85rem;
+                padding:.72rem .8rem;
+                border:1px solid color-mix(in srgb,var(--boss-red) 38%,var(--border-color));
+                border-radius:.7rem;
+                background:color-mix(in srgb,var(--boss-red) 7%,var(--modal-background));
+            }
+
+            .librarian-assist {
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:1rem;
+                margin-top:.85rem;
+                padding:.78rem .85rem;
+                border:1px solid color-mix(in srgb,var(--boss-gold) 58%,var(--border-color));
+                border-radius:.72rem;
+                background:color-mix(in srgb,var(--boss-gold) 9%,var(--modal-background));
+            }
+
+            .librarian-assist-copy {
+                min-width:0;
+                color:var(--text-color);
+                font-size:.86rem;
+                line-height:1.45;
+            }
+
+            .librarian-assist-copy strong,
+            .librarian-assist-copy span {
+                display:block;
+            }
+
+            .librarian-assist-copy strong {
+                color:var(--text-color);
+            }
+
+            .librarian-assist-copy span {
+                margin-top:.12rem;
+                color:var(--platinum);
+            }
+
+            .librarian-assist-link,
+            .original-open-link {
+                box-sizing:border-box;
+                min-height:2.65rem;
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                padding:.65rem .85rem;
+                border:1px solid color-mix(in srgb,var(--boss-gold) 70%,var(--border-color));
+                border-radius:.58rem;
+                background:var(--boss-gold);
+                color:var(--boss-navy);
+                font-size:.84rem;
+                font-weight:800;
+                line-height:1.2;
+                text-decoration:none;
+                transition:background-color 180ms,border-color 180ms,box-shadow 180ms,transform 120ms;
+            }
+
+            .librarian-assist-link {
+                flex:0 0 auto;
+            }
+
+            .librarian-assist-link:hover,
+            .original-open-link:hover {
+                background:#F5D58E;
+                border-color:#F5D58E;
+                color:var(--boss-navy);
+                box-shadow:0 .2rem .55rem var(--shadow-color);
+                transform:translateY(-1px);
+            }
+
+            .librarian-assist-link:active,
+            .original-open-link:active {
+                transform:translateY(0);
+            }
+
+            .restricted-control input {
+                width:1.08rem;
+                height:1.08rem;
+                flex:0 0 auto;
+                margin:.13rem 0 0;
+                accent-color:var(--boss-red);
+            }
+
+            .restricted-control label {
+                margin:0;
+                color:var(--text-color);
+                font-size:.86rem;
+                line-height:1.42;
+            }
+
+            .restricted-control strong {
+                color:var(--text-color);
+            }
+
+            .load-notice {
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:.8rem;
+                margin:1rem 0 0;
+                padding:.78rem .9rem;
+                border:1px solid var(--border-color);
+                border-radius:.72rem;
+                background:var(--modal-background);
+                color:var(--text-color);
+            }
+
+            .load-notice[data-state="error"] {
+                border-color:color-mix(in srgb,var(--danger-color) 62%,var(--border-color));
+            }
+
+            .load-notice button {
+                flex:0 0 auto;
+                margin:0;
+            }
+
+            .library-results {
+                margin-top:1rem;
+                padding:clamp(.9rem,2vw,1.35rem);
+            }
+
+            .results-heading {
+                display:flex;
+                justify-content:space-between;
+                gap:1rem;
+                align-items:baseline;
+                margin-bottom:.9rem;
+            }
+
+            .results-heading h2,
+            .results-heading p {
+                margin:0;
+            }
+
+            .results-heading p {
+                color:var(--platinum);
+                font-size:.88rem;
+                text-align:right;
+            }
+
+            .result-grid {
+                display:grid;
+                grid-template-columns:repeat(3,minmax(0,1fr));
+                gap:.85rem;
+            }
+
+            .document-card {
+                min-width:0;
+                display:flex;
+                flex-direction:column;
+                gap:.72rem;
+                padding:1rem;
+                border:1px solid var(--border-color);
+                border-radius:.8rem;
+                background:color-mix(in srgb,var(--modal-background) 94%,var(--background));
+                box-shadow:0 .16rem .55rem color-mix(in srgb,var(--shadow-color) 62%,transparent);
+            }
+
+            .card-heading {
+                display:flex;
+                justify-content:space-between;
+                gap:.7rem;
+                align-items:flex-start;
+            }
+
+            .card-heading h3 {
+                min-width:0;
+                margin:0;
+                color:var(--text-color);
+                font-size:1.08rem;
+                overflow-wrap:anywhere;
+            }
+
+            .access-badge {
+                flex:0 0 auto;
+                padding:.24rem .46rem;
+                border:1px solid currentColor;
+                border-radius:999px;
+                font-size:.66rem;
+                font-weight:800;
+                letter-spacing:.055em;
+                line-height:1;
+                text-transform:uppercase;
+            }
+
+            .access-public {
+                color:var(--success-color);
+                background:color-mix(in srgb,var(--success-color) 9%,transparent);
+            }
+
+            .access-internal {
+                color:var(--accent-color);
+                background:color-mix(in srgb,var(--accent-color) 9%,transparent);
+            }
+
+            .access-restricted {
+                color:var(--danger-color);
+                background:color-mix(in srgb,var(--danger-color) 9%,transparent);
+            }
+
+            .document-summary {
+                margin:0;
+                color:var(--text-color);
+                font-size:.9rem;
+                line-height:1.5;
+            }
+
+            .record-meta {
+                display:grid;
+                grid-template-columns:auto minmax(0,1fr);
+                gap:.28rem .5rem;
+                margin:0;
+                font-size:.78rem;
+            }
+
+            .record-meta dt {
+                color:var(--platinum);
+                font-weight:750;
+            }
+
+            .record-meta dd {
+                min-width:0;
+                margin:0;
+                color:var(--text-color);
+                overflow-wrap:anywhere;
+            }
+
+            .record-meta code {
+                display:inline;
+                padding:0;
+                background:transparent;
+                color:inherit;
+                font-size:.94em;
+                white-space:normal;
+            }
+
+            .tag-list {
+                display:flex;
+                flex-wrap:wrap;
+                gap:.34rem;
+                margin:0;
+                padding:0;
+                list-style:none;
+            }
+
+            .tag-list li {
+                padding:.22rem .43rem;
+                border-radius:.38rem;
+                background:var(--background);
+                color:var(--platinum);
+                font-size:.7rem;
+                line-height:1.2;
+            }
+
+            .card-actions {
+                display:flex;
+                flex-wrap:wrap;
+                gap:.45rem;
+                align-items:center;
+                margin-top:auto;
+                padding-top:.15rem;
+            }
+
+            .card-actions button,
+            .card-actions a {
+                box-sizing:border-box;
+                min-height:2.25rem;
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                margin:0;
+                padding:.48rem .68rem;
+                border:1px solid var(--border-color);
+                border-radius:.48rem;
+                font-size:.78rem;
+                font-weight:750;
+                line-height:1.15;
+                text-decoration:none;
+            }
+
+            .card-actions a {
+                background:var(--modal-background);
+                color:var(--accent-color);
+            }
+
+            .empty-state {
+                padding:clamp(1.5rem,5vw,3.2rem) 1rem;
+                border:1px dashed var(--border-color);
+                border-radius:.8rem;
+                text-align:center;
+            }
+
+            .empty-state h3,
+            .empty-state p {
+                margin:.3rem auto;
+            }
+
+            .empty-state p {
+                max-width:37rem;
+                color:var(--platinum);
+            }
+
+            .empty-state .librarian-assist-link {
+                margin-top:.8rem;
+            }
+
+            .pagination {
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                gap:.8rem;
+                margin-top:1rem;
+            }
+
+            .pagination button {
+                margin:0;
+            }
+
+            .pagination-status {
+                min-width:7rem;
+                color:var(--text-color);
+                font-size:.86rem;
+                text-align:center;
+            }
+
+            .markdown-dialog {
+                width:min(90vw,60rem);
+                max-height:86vh;
+                box-sizing:border-box;
+                padding:0;
+                border:1px solid var(--border-color);
+                border-radius:1rem;
+                background:var(--modal-background);
+                color:var(--text-color);
+                box-shadow:0 1.3rem 4rem rgba(0,0,0,.35);
+            }
+
+            .markdown-dialog::backdrop {
+                background:rgba(2,20,37,.72);
+            }
+
+            .preview-header {
+                display:flex;
+                justify-content:space-between;
+                gap:1rem;
+                align-items:flex-start;
+                padding:1rem 1.1rem;
+                border-bottom:1px solid var(--border-color);
+            }
+
+            .preview-header h2,
+            .preview-header p {
+                margin:0;
+            }
+
+            .preview-header p {
+                margin-top:.28rem;
+                color:var(--platinum);
+                font-size:.78rem;
+                overflow-wrap:anywhere;
+            }
+
+            .preview-close {
+                min-width:2.4rem;
+                min-height:2.4rem;
+                margin:0;
+                padding:.35rem;
+                line-height:1;
+            }
+
+            .preview-body {
+                padding:1rem 1.1rem 1.15rem;
+                overflow:auto;
+            }
+
+            .preview-note {
+                margin:0 0 .7rem;
+                color:var(--platinum);
+                font-size:.8rem;
+            }
+
+            .preview-body pre {
+                max-height:58vh;
+                margin:0;
+                padding:1rem;
+                font-size:.82rem;
+                line-height:1.55;
+            }
+
+            .original-preview {
+                display:grid;
+                gap:.75rem;
+            }
+
+            .original-open-link {
+                width:max-content;
+                justify-self:end;
+            }
+
+            .original-frame {
+                width:100%;
+                height:min(64vh,48rem);
+                box-sizing:border-box;
+                border:1px solid var(--border-color);
+                border-radius:.6rem;
+                background:var(--background);
+            }
+
+            .original-image,
+            .original-video {
+                max-width:100%;
+                max-height:64vh;
+                justify-self:center;
+                border:1px solid var(--border-color);
+                border-radius:.6rem;
+                background:var(--background);
+            }
+
+            .original-fallback {
+                padding:1rem;
+                border:1px dashed var(--border-color);
+                border-radius:.65rem;
+                background:var(--background);
+                color:var(--text-color);
+            }
+
+            .original-fallback p {
+                margin:0;
+            }
+
+            .visually-hidden {
+                width:1px;
+                height:1px;
+                position:absolute;
+                overflow:hidden;
+                clip:rect(0 0 0 0);
+                clip-path:inset(50%);
+                white-space:nowrap;
+            }
+
+            [hidden] {
+                display:none !important;
+            }
+
+            @media (max-width:70em) {
+                .filter-grid {
+                    grid-template-columns:repeat(2,minmax(0,1fr));
+                }
+
+                .search-control {
+                    grid-column:1 / -1;
+                }
+
+                .reset-button {
+                    width:100%;
+                }
+
+                .result-grid {
+                    grid-template-columns:repeat(2,minmax(0,1fr));
+                }
+            }
+
+            @media (max-width:46em) {
+                .library-counts {
+                    grid-template-columns:repeat(2,minmax(0,1fr));
+                }
+
+                .librarian-assist {
+                    align-items:flex-start;
+                    flex-direction:column;
+                }
+
+                .librarian-assist-link {
+                    width:100%;
+                }
+
+                .result-grid {
+                    grid-template-columns:1fr;
+                }
+            }
+
+            @media (max-width:34em) {
+                .filter-grid {
+                    grid-template-columns:1fr;
+                }
+
+                .search-control {
+                    grid-column:auto;
+                }
+
+                .results-heading {
+                    display:block;
+                }
+
+                .results-heading p {
+                    margin-top:.35rem;
+                    text-align:left;
+                }
+
+                .pagination {
+                    justify-content:space-between;
+                    gap:.35rem;
+                }
+
+                .pagination button {
+                    padding:.5rem .65rem;
+                }
+
+                .preview-header,
+                .preview-body {
+                    padding:.8rem;
+                }
+            }
+        </style>
+
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+    </head>
+
+    <body>
+        <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=10"></html-import>
+
+        <main class="library-main">
+            <div class="library-shell">
+                <section class="library-hero" aria-labelledby="libraryTitle">
+                    <p class="eyebrow">Business Operator Solutions &amp; Services</p>
+                    <h1 id="libraryTitle">Find the right document, link, or resource</h1>
+                    <p class="hero-copy">Search the BOSS Libraries collection, narrow it by source and topic, and preview normalized Markdown without leaving the app.</p>
+
+                    <dl class="library-counts" aria-label="Library record counts">
+                        <div class="count-card">
+                            <dt>Total records</dt>
+                            <dd id="totalCount">&mdash;</dd>
+                        </div>
+                        <div class="count-card">
+                            <dt>Public</dt>
+                            <dd id="publicCount">&mdash;</dd>
+                        </div>
+                        <div class="count-card">
+                            <dt>Internal</dt>
+                            <dd id="internalCount">&mdash;</dd>
+                        </div>
+                        <div class="count-card">
+                            <dt>Restricted</dt>
+                            <dd id="restrictedCount">&mdash;</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="library-filters" aria-labelledby="filterTitle">
+                    <h2 id="filterTitle" class="visually-hidden">Filter library documents</h2>
+                    <fieldset id="filterFieldset" class="filter-fieldset" disabled>
+                        <legend class="visually-hidden">Document search and filters</legend>
+                        <div class="filter-grid">
+                            <div class="filter-control search-control">
+                                <label for="searchInput">Search documents</label>
+                                <input id="searchInput" type="search" autocomplete="off" placeholder="Search titles, summaries, tags, and sources">
+                            </div>
+                            <div class="filter-control">
+                                <label for="organizationFilter">Organization</label>
+                                <select id="organizationFilter">
+                                    <option value="">All organizations</option>
+                                </select>
+                            </div>
+                            <div class="filter-control">
+                                <label for="categoryFilter">Category</label>
+                                <select id="categoryFilter">
+                                    <option value="">All categories</option>
+                                </select>
+                            </div>
+                            <div class="filter-control">
+                                <label for="accessFilter">Access</label>
+                                <select id="accessFilter">
+                                    <option value="">All available</option>
+                                    <option value="public">Public</option>
+                                    <option value="internal">Internal</option>
+                                    <option id="restrictedOption" value="restricted" disabled>Restricted</option>
+                                </select>
+                            </div>
+                            <button id="resetFilters" class="reset-button" type="button">Clear filters</button>
+                        </div>
+
+                        <div class="librarian-assist">
+                            <div class="librarian-assist-copy">
+                                <strong>Not sure what terms to use?</strong>
+                                <span>Describe what you are trying to accomplish. We will carry your current search to the Librarian for you to review before sending.</span>
+                            </div>
+                            <a id="askLibrarian" class="librarian-assist-link" href="./apps/boss/chat.html">Ask the BOSS Librarian</a>
+                        </div>
+
+                        <div class="restricted-control">
+                            <input id="includeRestricted" type="checkbox">
+                            <label for="includeRestricted"><strong>Include restricted records.</strong> Turn this on only when you are authorized to view their document details and links.</label>
+                        </div>
+                    </fieldset>
+                </section>
+
+                <div id="loadNotice" class="load-notice" role="status" aria-live="polite" data-state="loading">
+                    <span id="loadStatus">Loading the BOSS Libraries document index&hellip;</span>
+                    <button id="retryLoad" type="button" hidden>Try again</button>
+                </div>
+
+                <section class="library-results" aria-labelledby="resultsTitle">
+                    <div class="results-heading">
+                        <h2 id="resultsTitle" tabindex="-1">Documents</h2>
+                        <p id="resultSummary">Waiting for the document index.</p>
+                    </div>
+
+                    <div id="resultGrid" class="result-grid" aria-live="polite" aria-busy="true"></div>
+
+                    <div id="emptyState" class="empty-state" hidden>
+                        <div class="empty-state-message" role="status" aria-live="polite">
+                            <h3 id="emptyTitle">No documents found</h3>
+                            <p id="emptyCopy">Try a broader search or clear one of the filters.</p>
+                        </div>
+                        <a id="askLibrarianEmpty" class="librarian-assist-link" href="./apps/boss/chat.html" hidden>Ask the BOSS Librarian about this search</a>
+                    </div>
+
+                    <nav id="pagination" class="pagination" aria-label="Document result pages" hidden>
+                        <button id="previousPage" type="button">Previous</button>
+                        <span id="paginationStatus" class="pagination-status" aria-live="polite"></span>
+                        <button id="nextPage" type="button">Next</button>
+                    </nav>
+                </section>
+            </div>
+        </main>
+
+        <dialog id="previewDialog" class="markdown-dialog" aria-labelledby="previewTitle">
+            <div class="preview-header">
+                <div>
+                    <h2 id="previewTitle">Markdown preview</h2>
+                    <p id="previewMeta"></p>
+                </div>
+                <button id="closePreview" class="preview-close" type="button" aria-label="Close document preview">Close</button>
+            </div>
+            <div class="preview-body">
+                <p id="previewStatus" class="preview-note" role="status" aria-live="polite">Loading plain-text Markdown preview&hellip;</p>
+                <pre id="markdownPreview" tabindex="0" hidden></pre>
+                <div id="originalPreview" class="original-preview" hidden></div>
+            </div>
+        </dialog>
+
+        <script type="module">
+            import {
+                isMarkdownRecord,
+                loadBossLibraryManifest
+            } from './apps/boss/boss-library.js?v=3';
+
+            const MANIFEST_URL=new URL(
+                './apps/boss/documents/document-manifest.json',
+                document.baseURI
+            ).href;
+            const PAGE_SIZE=24;
+            const MAX_PREVIEW_CHARACTERS=80000;
+            const RESTRICTED_ACCESS=new Set(['restricted','private','confidential']);
+
+            const elements={
+                accessFilter:document.querySelector('#accessFilter'),
+                askLibrarian:document.querySelector('#askLibrarian'),
+                askLibrarianEmpty:document.querySelector('#askLibrarianEmpty'),
+                categoryFilter:document.querySelector('#categoryFilter'),
+                closePreview:document.querySelector('#closePreview'),
+                emptyCopy:document.querySelector('#emptyCopy'),
+                emptyState:document.querySelector('#emptyState'),
+                emptyTitle:document.querySelector('#emptyTitle'),
+                filterFieldset:document.querySelector('#filterFieldset'),
+                includeRestricted:document.querySelector('#includeRestricted'),
+                internalCount:document.querySelector('#internalCount'),
+                loadNotice:document.querySelector('#loadNotice'),
+                loadStatus:document.querySelector('#loadStatus'),
+                markdownPreview:document.querySelector('#markdownPreview'),
+                nextPage:document.querySelector('#nextPage'),
+                originalPreview:document.querySelector('#originalPreview'),
+                organizationFilter:document.querySelector('#organizationFilter'),
+                pagination:document.querySelector('#pagination'),
+                paginationStatus:document.querySelector('#paginationStatus'),
+                previousPage:document.querySelector('#previousPage'),
+                previewDialog:document.querySelector('#previewDialog'),
+                previewMeta:document.querySelector('#previewMeta'),
+                previewStatus:document.querySelector('#previewStatus'),
+                previewTitle:document.querySelector('#previewTitle'),
+                publicCount:document.querySelector('#publicCount'),
+                resetFilters:document.querySelector('#resetFilters'),
+                restrictedCount:document.querySelector('#restrictedCount'),
+                restrictedOption:document.querySelector('#restrictedOption'),
+                resultGrid:document.querySelector('#resultGrid'),
+                resultSummary:document.querySelector('#resultSummary'),
+                resultsTitle:document.querySelector('#resultsTitle'),
+                retryLoad:document.querySelector('#retryLoad'),
+                searchInput:document.querySelector('#searchInput'),
+                totalCount:document.querySelector('#totalCount')
+            };
+
+            let records=[];
+            let filteredRecords=[];
+            let currentPage=1;
+            let filterFrame=0;
+            let previewRequest=0;
+            let previewTrigger=null;
+
+            function stringList(value){
+                return Array.isArray(value)
+                    ?value.map(item=>String(item||'').trim()).filter(Boolean)
+                    :[];
+            }
+
+            function accessGroup(value='public'){
+                const normalized=String(value||'public').trim().toLowerCase();
+
+                if(RESTRICTED_ACCESS.has(normalized)){
+                    return 'restricted';
+                }
+
+                if(normalized==='public'||normalized==='open'||normalized==='external'){
+                    return 'public';
+                }
+
+                return 'internal';
+            }
+
+            function accessLabel(value){
+                const group=accessGroup(value);
+                return group.charAt(0).toUpperCase()+group.slice(1);
+            }
+
+            function truncate(value='',limit=260){
+                const text=String(value||'').trim();
+
+                if(text.length<=limit){
+                    return text;
+                }
+
+                return `${text.slice(0,limit-1).trimEnd()}\u2026`;
+            }
+
+            function createElement(tagName,{className='',text=''}={}){
+                const element=document.createElement(tagName);
+
+                if(className){
+                    element.className=className;
+                }
+
+                if(text){
+                    element.textContent=text;
+                }
+
+                return element;
+            }
+
+            function safeUrl(value,{local=false}={}){
+                if(!value){
+                    return '';
+                }
+
+                try{
+                    const url=new URL(value,document.baseURI);
+                    const webProtocol=url.protocol==='http:'||url.protocol==='https:';
+                    const localFile=url.protocol==='file:'&&window.location.protocol==='file:';
+
+                    if(!webProtocol&&!localFile){
+                        return '';
+                    }
+
+                    if(local&&webProtocol&&url.origin!==window.location.origin){
+                        return '';
+                    }
+
+                    return url.href;
+                }catch{
+                    return '';
+                }
+            }
+
+            function localMarkdownUrl(record){
+                const path=String(record.path||'').trim();
+
+                if(!path||/^[a-z][a-z0-9+.-]*:/i.test(path)||!isMarkdownRecord(record)){
+                    return '';
+                }
+
+                return safeUrl(record.documentUrl,{local:true});
+            }
+
+            function localOriginalUrl(record){
+                if(!String(record.sourcePath||'').trim()){
+                    return '';
+                }
+
+                return safeUrl(record.originalUrl,{local:true});
+            }
+
+            function originalFileName(record){
+                return String(record.sourcePath||'Original document')
+                    .replaceAll('\\','/')
+                    .split('/')
+                    .filter(Boolean)
+                    .pop()||'Original document';
+            }
+
+            function originalExtension(record){
+                const declared=String(record.sourceExtension||'').trim().toLowerCase();
+
+                if(declared){
+                    return declared.startsWith('.')?declared:`.${declared}`;
+                }
+
+                return originalFileName(record).match(/\.[^.]+$/)?.[0]?.toLowerCase()||'';
+            }
+
+            function originalPreviewKind(record){
+                const extension=originalExtension(record);
+                const mime=String(record.sourceMime||'').trim().toLowerCase();
+
+                if(mime==='application/pdf'||extension==='.pdf'){
+                    return 'pdf';
+                }
+
+                if(mime.startsWith('image/')||['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(extension)){
+                    return 'image';
+                }
+
+                if(mime.startsWith('video/')||['.mp4','.webm','.ogg'].includes(extension)){
+                    return 'video';
+                }
+
+                if(mime.startsWith('text/')||['.md','.markdown','.txt','.csv'].includes(extension)){
+                    return 'text';
+                }
+
+                return 'download';
+            }
+
+            function formatBytes(value=0){
+                const bytes=Number(value)||0;
+
+                if(bytes<1024){
+                    return `${bytes.toLocaleString()} bytes`;
+                }
+
+                const units=['KB','MB','GB'];
+                let size=bytes/1024;
+                let unit=units[0];
+
+                for(let i=1;i<units.length&&size>=1024;i++){
+                    size/=1024;
+                    unit=units[i];
+                }
+
+                return `${size.toLocaleString(undefined,{maximumFractionDigits:1})} ${unit}`;
+            }
+
+            function createOriginalLink(record,url,kind){
+                const controlled=accessGroup(record.access)==='restricted';
+                const action=kind==='download'?'Download':'Open';
+                const label=`${action}${controlled?' controlled':''} original`;
+                const link=createElement('a',{
+                    className:'original-open-link',
+                    text:label
+                });
+
+                link.href=url;
+                link.setAttribute('aria-label',`${label}: ${originalFileName(record)}`);
+
+                if(kind==='download'){
+                    link.download=originalFileName(record);
+                }else{
+                    link.target='_blank';
+                    link.rel='noopener noreferrer';
+                }
+
+                return link;
+            }
+
+            function addSelectOptions(select,values){
+                while(select.options.length>1){
+                    select.remove(1);
+                }
+
+                for(const value of values){
+                    const option=document.createElement('option');
+                    option.value=value;
+                    option.textContent=value;
+                    select.append(option);
+                }
+            }
+
+            function uniqueValues(key){
+                return [...new Set(records.flatMap(record=>stringList(record[key])))]
+                    .sort((left,right)=>left.localeCompare(right,undefined,{sensitivity:'base'}));
+            }
+
+            function updateCounts(){
+                const counts={public:0,internal:0,restricted:0};
+
+                for(const record of records){
+                    counts[accessGroup(record.access)]++;
+                }
+
+                elements.totalCount.textContent=records.length.toLocaleString();
+                elements.publicCount.textContent=counts.public.toLocaleString();
+                elements.internalCount.textContent=counts.internal.toLocaleString();
+                elements.restrictedCount.textContent=counts.restricted.toLocaleString();
+            }
+
+            function searchableText(record){
+                return [
+                    record.title,
+                    record.summary,
+                    record.searchText,
+                    record.sourcePath,
+                    record.path,
+                    record.name,
+                    ...stringList(record.tags),
+                    ...stringList(record.organizations),
+                    ...stringList(record.categories),
+                    ...stringList(record.stages),
+                    ...stringList(record.locations),
+                    ...stringList(record.resourceTypes)
+                ].join(' ').toLocaleLowerCase();
+            }
+
+            function matchesSelectedValue(values,selected){
+                return !selected||stringList(values).includes(selected);
+            }
+
+            function updateLibrarianLinks(){
+                const chatUrl=new URL('./apps/boss/chat.html',document.baseURI);
+                const query=elements.searchInput.value.trim().slice(0,500);
+
+                if(query){
+                    chatUrl.searchParams.set('q',query);
+                }
+
+                elements.askLibrarian.href=chatUrl.href;
+                elements.askLibrarianEmpty.href=chatUrl.href;
+            }
+
+            function applyFilters(){
+                updateLibrarianLinks();
+                const queryTerms=elements.searchInput.value
+                    .trim()
+                    .toLocaleLowerCase()
+                    .split(/\s+/)
+                    .filter(Boolean);
+                const selectedOrganization=elements.organizationFilter.value;
+                const selectedCategory=elements.categoryFilter.value;
+                const selectedAccess=elements.accessFilter.value;
+                const includeRestricted=elements.includeRestricted.checked;
+
+                filteredRecords=records.filter(record=>{
+                    const group=accessGroup(record.access);
+
+                    if(group==='restricted'&&!includeRestricted){
+                        return false;
+                    }
+
+                    if(selectedAccess&&group!==selectedAccess){
+                        return false;
+                    }
+
+                    if(!matchesSelectedValue(record.organizations,selectedOrganization)
+                        ||!matchesSelectedValue(record.categories,selectedCategory)){
+                        return false;
+                    }
+
+                    if(queryTerms.length){
+                        const haystack=searchableText(record);
+                        return queryTerms.every(term=>haystack.includes(term));
+                    }
+
+                    return true;
+                }).sort(
+                    (left,right)=>String(left.title||left.name).localeCompare(
+                        String(right.title||right.name),
+                        undefined,
+                        {sensitivity:'base'}
+                    )
+                );
+
+                const pageCount=Math.max(1,Math.ceil(filteredRecords.length/PAGE_SIZE));
+                currentPage=Math.min(currentPage,pageCount);
+                renderResults();
+            }
+
+            function scheduleFilters(){
+                updateLibrarianLinks();
+                window.cancelAnimationFrame(filterFrame);
+                filterFrame=window.requestAnimationFrame(()=>{
+                    currentPage=1;
+                    applyFilters();
+                });
+            }
+
+            function addMeta(metaList,label,value,{code=false}={}){
+                const text=String(value||'').trim();
+
+                if(!text){
+                    return;
+                }
+
+                metaList.append(createElement('dt',{text:label}));
+                const description=createElement('dd');
+
+                if(code){
+                    description.append(createElement('code',{text}));
+                }else{
+                    description.textContent=text;
+                }
+
+                metaList.append(description);
+            }
+
+            function createLink(label,href){
+                const link=createElement('a',{text:label});
+                link.href=href;
+                link.target='_blank';
+                link.rel='noopener noreferrer';
+                return link;
+            }
+
+            function createDocumentCard(record){
+                const article=createElement('article',{className:'document-card'});
+                const headingRow=createElement('div',{className:'card-heading'});
+                const title=createElement('h3',{text:record.title||record.name||'Untitled document'});
+                const group=accessGroup(record.access);
+                const badge=createElement('span',{
+                    className:`access-badge access-${group}`,
+                    text:`Access: ${accessLabel(record.access)}`
+                });
+                headingRow.append(title,badge);
+                article.append(headingRow);
+
+                article.append(
+                    createElement('p',{
+                        className:'document-summary',
+                        text:truncate(record.summary||'No summary is available for this record.')
+                    })
+                );
+
+                const meta=createElement('dl',{className:'record-meta'});
+                addMeta(meta,'Organization',stringList(record.organizations).join(', '));
+                addMeta(meta,'Category',stringList(record.categories).join(', '));
+                addMeta(
+                    meta,
+                    'Source path',
+                    record.sourcePath||record.raw?.source_path||record.path||record.name||'Not provided',
+                    {code:true}
+                );
+                if(record.sourcePath){
+                    const sourceDetails=[
+                        originalExtension(record).replace(/^\./,'').toUpperCase(),
+                        record.sourceBytes?formatBytes(record.sourceBytes):''
+                    ].filter(Boolean).join(' · ');
+                    addMeta(meta,'Original file',sourceDetails||originalFileName(record));
+                }
+                article.append(meta);
+
+                const tags=stringList(record.tags);
+
+                if(tags.length){
+                    const list=createElement('ul',{className:'tag-list'});
+                    list.setAttribute('aria-label','Document tags');
+
+                    for(const tag of tags.slice(0,6)){
+                        list.append(createElement('li',{text:tag}));
+                    }
+
+                    if(tags.length>6){
+                        list.append(createElement('li',{text:`+${tags.length-6} more`}));
+                    }
+
+                    article.append(list);
+                }
+
+                const actions=createElement('div',{className:'card-actions'});
+                const markdownUrl=localMarkdownUrl(record);
+                const originalUrl=localOriginalUrl(record);
+                const officialUrl=safeUrl(record.sourceUrl);
+
+                if(markdownUrl){
+                    const previewButton=createElement('button',{text:'Preview Markdown'});
+                    previewButton.type='button';
+                    previewButton.addEventListener('click',()=>openPreview(record,previewButton,markdownUrl));
+                    actions.append(previewButton,createLink('Open Markdown',markdownUrl));
+                }
+
+                if(originalUrl){
+                    const kind=originalPreviewKind(record);
+                    const originalButton=createElement('button',{
+                        text:kind==='download'?'Get original':'View original'
+                    });
+                    originalButton.type='button';
+                    originalButton.addEventListener(
+                        'click',
+                        ()=>openOriginal(record,originalButton,originalUrl)
+                    );
+                    actions.append(originalButton);
+                }
+
+                if(officialUrl){
+                    actions.append(createLink('Official source',officialUrl));
+                }
+
+                if(actions.childElementCount){
+                    article.append(actions);
+                }
+
+                return article;
+            }
+
+            function renderResults(){
+                const total=filteredRecords.length;
+                const pageCount=Math.max(1,Math.ceil(total/PAGE_SIZE));
+                const start=(currentPage-1)*PAGE_SIZE;
+                const end=Math.min(start+PAGE_SIZE,total);
+                const pageRecords=filteredRecords.slice(start,end);
+                const hiddenRestricted=records.filter(record=>accessGroup(record.access)==='restricted').length;
+                const fragment=document.createDocumentFragment();
+
+                for(const record of pageRecords){
+                    fragment.append(createDocumentCard(record));
+                }
+
+                elements.resultGrid.replaceChildren(fragment);
+                elements.resultGrid.setAttribute('aria-busy','false');
+
+                if(total){
+                    const range=`Showing ${(start+1).toLocaleString()}\u2013${end.toLocaleString()} of ${total.toLocaleString()} matching documents.`;
+                    const restrictedNote=!elements.includeRestricted.checked&&hiddenRestricted
+                        ?` ${hiddenRestricted.toLocaleString()} restricted records hidden.`
+                        :'';
+                    elements.resultSummary.textContent=range+restrictedNote;
+                    elements.emptyState.hidden=true;
+                }else{
+                    elements.resultSummary.textContent='No matching documents.';
+                    elements.emptyTitle.textContent=records.length
+                        ?'No documents match these filters'
+                        :'No documents are indexed yet';
+                    elements.emptyCopy.textContent=records.length
+                        ?'Try a broader search or clear a filter. The BOSS Librarian can match what you are trying to accomplish to documents, links, or people.'
+                        :'Add the generated document manifest and normalized Markdown files, then reload the library.';
+                    elements.emptyState.hidden=false;
+                }
+
+                elements.askLibrarianEmpty.hidden=!records.length;
+
+                elements.pagination.hidden=pageCount<=1;
+                elements.paginationStatus.textContent=`Page ${currentPage.toLocaleString()} of ${pageCount.toLocaleString()}`;
+                elements.previousPage.disabled=currentPage<=1;
+                elements.nextPage.disabled=currentPage>=pageCount;
+            }
+
+            function showLoadNotice(message,state='ready'){
+                elements.loadStatus.textContent=message;
+                elements.loadNotice.dataset.state=state;
+                elements.loadNotice.hidden=!message;
+                elements.retryLoad.hidden=state!=='error';
+            }
+
+            async function loadLibrary(){
+                elements.filterFieldset.disabled=true;
+                elements.resultGrid.setAttribute('aria-busy','true');
+                elements.resultGrid.replaceChildren();
+                elements.emptyState.hidden=true;
+                elements.askLibrarianEmpty.hidden=true;
+                elements.resultSummary.textContent='Loading the document index.';
+                showLoadNotice('Loading the BOSS Libraries document index\u2026','loading');
+
+                const loaded=await loadBossLibraryManifest({manifestUrl:MANIFEST_URL});
+
+                if(!loaded.ok){
+                    records=[];
+                    filteredRecords=[];
+                    elements.totalCount.textContent='\u2014';
+                    elements.publicCount.textContent='\u2014';
+                    elements.internalCount.textContent='\u2014';
+                    elements.restrictedCount.textContent='\u2014';
+                    elements.resultGrid.setAttribute('aria-busy','false');
+                    elements.resultSummary.textContent='The document index is unavailable.';
+                    elements.emptyState.hidden=false;
+                    elements.askLibrarianEmpty.hidden=true;
+                    elements.emptyTitle.textContent='The library could not be loaded';
+                    elements.emptyCopy.textContent='Confirm the document manifest is available, then try again.';
+                    showLoadNotice(
+                        `Unable to open the BOSS Libraries document index. ${loaded.error?.message||''}`.trim(),
+                        'error'
+                    );
+                    return;
+                }
+
+                records=loaded.manifest.documents;
+                currentPage=1;
+                addSelectOptions(elements.organizationFilter,uniqueValues('organizations'));
+                addSelectOptions(elements.categoryFilter,uniqueValues('categories'));
+                updateCounts();
+                elements.filterFieldset.disabled=false;
+                showLoadNotice('', 'ready');
+                applyFilters();
+            }
+
+            async function openPreview(record,trigger,markdownUrl){
+                const request=++previewRequest;
+                previewTrigger=trigger;
+                elements.previewTitle.textContent=record.title||record.name||'Markdown preview';
+                elements.previewMeta.textContent=`Access: ${accessLabel(record.access)} \u2022 ${record.sourcePath||record.raw?.source_path||record.path||record.name}`;
+                elements.previewStatus.textContent='Loading a plain-text Markdown preview\u2026';
+                elements.markdownPreview.textContent='';
+                elements.markdownPreview.hidden=true;
+                elements.originalPreview.replaceChildren();
+                elements.originalPreview.hidden=true;
+
+                if(!elements.previewDialog.open){
+                    if(typeof elements.previewDialog.showModal==='function'){
+                        elements.previewDialog.showModal();
+                    }else{
+                        elements.previewDialog.setAttribute('open','');
+                    }
+                }
+
+                try{
+                    const response=await fetch(markdownUrl,{
+                        cache:'no-cache',
+                        headers:{Accept:'text/markdown,text/plain;q=0.9'}
+                    });
+
+                    if(!response.ok){
+                        throw new Error(`Markdown request failed (${response.status}).`);
+                    }
+
+                    const markdown=await response.text();
+
+                    if(request!==previewRequest){
+                        return;
+                    }
+
+                    const truncated=markdown.length>MAX_PREVIEW_CHARACTERS;
+                    elements.markdownPreview.textContent=truncated
+                        ?`${markdown.slice(0,MAX_PREVIEW_CHARACTERS)}\n\n[Preview shortened. Open the Markdown file to read the complete document.]`
+                        :markdown;
+                    elements.markdownPreview.hidden=false;
+                    elements.previewStatus.textContent=truncated
+                        ?'Plain-text preview shown in part for performance.'
+                        :'Plain-text Markdown preview. Formatting is intentionally not rendered.';
+                }catch(error){
+                    if(request!==previewRequest){
+                        return;
+                    }
+
+                    elements.previewStatus.textContent=`Preview unavailable. ${error.message}`;
+                }
+            }
+
+            async function openOriginal(record,trigger,originalUrl){
+                const request=++previewRequest;
+                const kind=originalPreviewKind(record);
+                const fileName=originalFileName(record);
+                const extension=originalExtension(record).replace(/^\./,'').toUpperCase();
+                const size=record.sourceBytes?formatBytes(record.sourceBytes):'';
+                const controlled=accessGroup(record.access)==='restricted';
+                const details=[
+                    `Access: ${accessLabel(record.access)}`,
+                    extension||'Original format',
+                    size,
+                    record.sourcePath
+                ].filter(Boolean).join(' \u2022 ');
+
+                previewTrigger=trigger;
+                elements.previewTitle.textContent=`Original: ${record.title||fileName}`;
+                elements.previewMeta.textContent=details;
+                elements.previewStatus.textContent=controlled
+                    ?'Controlled original. Continue only if you are authorized to view this file.'
+                    :'Original source document. It is loaded only after this explicit request.';
+                elements.markdownPreview.textContent='';
+                elements.markdownPreview.hidden=true;
+                elements.originalPreview.replaceChildren(
+                    createOriginalLink(record,originalUrl,kind)
+                );
+                elements.originalPreview.hidden=false;
+
+                if(!elements.previewDialog.open){
+                    if(typeof elements.previewDialog.showModal==='function'){
+                        elements.previewDialog.showModal();
+                    }else{
+                        elements.previewDialog.setAttribute('open','');
+                    }
+                }
+
+                if(kind==='pdf'){
+                    const frame=createElement('iframe',{className:'original-frame'});
+                    frame.src=originalUrl;
+                    frame.title=`Original PDF: ${fileName}`;
+                    elements.originalPreview.append(frame);
+                    return;
+                }
+
+                if(kind==='image'){
+                    const image=createElement('img',{className:'original-image'});
+                    image.src=originalUrl;
+                    image.alt=`Original document: ${record.title||fileName}`;
+                    image.loading='lazy';
+                    elements.originalPreview.append(image);
+                    return;
+                }
+
+                if(kind==='video'){
+                    const video=createElement('video',{className:'original-video'});
+                    video.src=originalUrl;
+                    video.controls=true;
+                    video.preload='metadata';
+                    elements.originalPreview.append(video);
+                    return;
+                }
+
+                if(kind==='download'){
+                    const fallback=createElement('div',{className:'original-fallback'});
+                    fallback.append(
+                        createElement('p',{
+                            text:'This original format is not safely previewed in the browser. Use the download link to open it with its native application.'
+                        })
+                    );
+                    elements.originalPreview.append(fallback);
+                    return;
+                }
+
+                const textPreview=createElement('pre');
+                textPreview.tabIndex=0;
+                textPreview.textContent='Loading original text\u2026';
+                elements.originalPreview.append(textPreview);
+
+                try{
+                    const response=await fetch(originalUrl,{
+                        cache:'no-cache',
+                        headers:{Accept:'text/plain,text/markdown,text/csv;q=0.9'}
+                    });
+
+                    if(!response.ok){
+                        throw new Error(`Original request failed (${response.status}).`);
+                    }
+
+                    const text=await response.text();
+
+                    if(request!==previewRequest){
+                        return;
+                    }
+
+                    const truncated=text.length>MAX_PREVIEW_CHARACTERS;
+                    textPreview.textContent=truncated
+                        ?`${text.slice(0,MAX_PREVIEW_CHARACTERS)}\n\n[Preview shortened. Open the original to read the complete file.]`
+                        :text;
+                    elements.previewStatus.textContent=truncated
+                        ?'Original plain-text preview shown in part for performance.'
+                        :'Original plain-text source preview.';
+                }catch(error){
+                    if(request!==previewRequest){
+                        return;
+                    }
+
+                    textPreview.textContent='';
+                    elements.previewStatus.textContent=`Original preview unavailable. ${error.message}`;
+                }
+            }
+
+            function closePreview(){
+                previewRequest++;
+                elements.originalPreview.querySelectorAll('video').forEach(
+                    video=>video.pause()
+                );
+                elements.originalPreview.replaceChildren();
+
+                if(typeof elements.previewDialog.close==='function'){
+                    elements.previewDialog.close();
+                }else{
+                    elements.previewDialog.removeAttribute('open');
+                }
+            }
+
+            elements.searchInput.addEventListener('input',scheduleFilters);
+            elements.organizationFilter.addEventListener('change',scheduleFilters);
+            elements.categoryFilter.addEventListener('change',scheduleFilters);
+            elements.accessFilter.addEventListener('change',scheduleFilters);
+            elements.includeRestricted.addEventListener('change',()=>{
+                elements.restrictedOption.disabled=!elements.includeRestricted.checked;
+                elements.accessFilter.options[0].textContent=elements.includeRestricted.checked
+                    ?'All access levels'
+                    :'All available';
+
+                if(!elements.includeRestricted.checked&&elements.accessFilter.value==='restricted'){
+                    elements.accessFilter.value='';
+                }
+
+                scheduleFilters();
+            });
+            elements.resetFilters.addEventListener('click',()=>{
+                elements.searchInput.value='';
+                elements.organizationFilter.value='';
+                elements.categoryFilter.value='';
+                elements.accessFilter.value='';
+                elements.includeRestricted.checked=false;
+                elements.restrictedOption.disabled=true;
+                elements.accessFilter.options[0].textContent='All available';
+                currentPage=1;
+                applyFilters();
+                elements.searchInput.focus();
+            });
+            elements.previousPage.addEventListener('click',()=>{
+                currentPage=Math.max(1,currentPage-1);
+                renderResults();
+                elements.resultsTitle.focus({preventScroll:true});
+                elements.resultsTitle.scrollIntoView({block:'start'});
+            });
+            elements.nextPage.addEventListener('click',()=>{
+                const pageCount=Math.max(1,Math.ceil(filteredRecords.length/PAGE_SIZE));
+                currentPage=Math.min(pageCount,currentPage+1);
+                renderResults();
+                elements.resultsTitle.focus({preventScroll:true});
+                elements.resultsTitle.scrollIntoView({block:'start'});
+            });
+            elements.retryLoad.addEventListener('click',loadLibrary);
+            elements.closePreview.addEventListener('click',closePreview);
+            elements.previewDialog.addEventListener('close',()=>{
+                previewTrigger?.focus();
+                previewTrigger=null;
+            });
+
+            updateLibrarianLinks();
+            loadLibrary();
+        </script>
+    </body>
+</html>

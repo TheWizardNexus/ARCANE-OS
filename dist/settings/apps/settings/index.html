@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#172238">
+    <title>Arcane Settings</title>
+    <link rel="manifest" href="./apps/settings/manifest.json">
+    <link rel="icon" href="./apps/settings/img/icon.png" type="image/png">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="./apps/settings/settings.css?v=1">
+    <link rel="stylesheet" href="./apps/settings/ai-settings.css?v=1">
+    <link rel="stylesheet" href="./apps/settings/provider-settings.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+</head>
+<body>
+    <html-import id="appBar" class="app-bar" data-product-name="Settings" data-brand-mark="S" href="./arcane/components/app-bar.html?v=2">
+        <html-import slot="trailing" class="theme-switcher" href="./arcane/components/theme-switcher.html?v=2"></html-import>
+    </html-import>
+    <main>
+        <header class="page-heading">
+            <div><p class="eyebrow">Arcane OS</p><h1>Settings</h1><p>Personalize Arcane, choose its AI brain, and manage the local Ollama service.</p></div>
+            <span id="connectionState" class="arcane-badge">Checking device</span>
+        </header>
+        <div class="settings-layout">
+            <html-import id="preferencesForm" href="./arcane/components/preferences-form.html?v=1"></html-import>
+            <aside class="arcane-card" aria-labelledby="deviceTitle">
+                <header class="arcane-card__header"><h2 id="deviceTitle" class="arcane-section-heading">Device</h2></header>
+                <div class="arcane-card__body"><dl id="deviceFacts" class="facts"><div><dt>Status</dt><dd>Loading…</dd></div></dl></div>
+            </aside>
+            <html-import id="themeEditor" class="theme-editor" href="./arcane/components/theme-editor.html?v=1"></html-import>
+            <section class="arcane-card ai-manager" aria-labelledby="aiTitle">
+                <header class="arcane-card__header ai-manager__heading">
+                    <div><p class="eyebrow">Local AI</p><h2 id="aiTitle" class="arcane-section-heading">Arcane brain</h2><p class="arcane-help">Choose the model Arcane loads at boot, install Ollama models, or create a personalized Arcane model from any Ollama base.</p></div>
+                    <button id="refreshModels" class="arcane-button arcane-button--tertiary" type="button">Refresh</button>
+                </header>
+                <div class="arcane-card__body ai-manager__body">
+                    <form id="providerForm" class="provider-form">
+                        <label class="arcane-field"><span>Arcane brain provider</span><select name="provider"><option value="ollama">Ollama â€” private and local</option><option value="openai">OpenAI â€” cloud API</option></select></label>
+                        <div id="openAIControls" class="openai-controls" hidden>
+                            <label class="arcane-field"><span>OpenAI model</span><input name="openAIModel" list="openAIModels" placeholder="Choose or enter a model ID" autocomplete="off"><datalist id="openAIModels"></datalist></label>
+                            <label class="arcane-field"><span>OpenAI API token</span><input name="token" type="password" placeholder="Leave blank to keep the saved token" autocomplete="new-password"></label>
+                            <p id="openAITokenState" class="arcane-help">No token saved.</p>
+                            <div class="model-row__actions"><button id="loadOpenAIModels" class="arcane-button arcane-button--tertiary" type="button">Load available models</button><button id="removeOpenAIToken" class="arcane-button arcane-button--danger" type="button">Remove saved token</button></div>
+                        </div>
+                        <button class="arcane-button" type="submit">Save brain provider</button>
+                    </form>
+                    <div id="ollamaRuntimeControls" class="ollama-runtime-controls">
+                        <label class="arcane-field"><span>Default local model</span><select id="defaultModel" aria-describedby="aiStatus"></select></label>
+                        <html-import id="aiRuntimeForm" href="./arcane/components/preferences-form.html?v=1"></html-import>
+                    </div>
+                    <div class="ai-actions">
+                        <form id="pullModelForm" class="ai-action">
+                            <h3>Install a model</h3>
+                            <p class="arcane-help">Use an Ollama model name such as <code>qwen3:8b</code>.</p>
+                            <label class="arcane-field"><span>Ollama model</span><input name="model" required placeholder="qwen3:8b" autocomplete="off"></label>
+                            <button class="arcane-button" type="submit">Pull model</button>
+                        </form>
+                        <form id="createBrainForm" class="ai-action">
+                            <h3>Create an Arcane brain</h3>
+                            <p class="arcane-help">Arcane applies its system model file to the base you choose.</p>
+                            <label class="arcane-field"><span>Brain name</span><input name="name" required placeholder="Research" autocomplete="off"></label>
+                            <label class="arcane-field"><span>Base Ollama model</span><input name="baseModel" required placeholder="qwen3:20b" autocomplete="off"></label>
+                            <label class="arcane-field"><span>Context length (0 = automatic)</span><input name="contextLength" type="number" min="0" max="262144" step="1024" value="0"></label>
+                            <label class="check-row"><input name="makeDefault" type="checkbox" checked> Make this the default boot model</label>
+                            <button class="arcane-button" type="submit">Create brain</button>
+                        </form>
+                    </div>
+                    <div><h3>Available models</h3><div id="modelList" class="model-list" aria-live="polite"><p class="arcane-help">Loading modelsâ€¦</p></div></div>
+                    <div class="operation-status"><progress id="aiProgress" max="100" value="0" hidden></progress><p id="aiStatus" class="arcane-help" role="status" aria-live="polite"></p></div>
+                    <details class="advanced-settings">
+                        <summary>Advanced Ollama service settings</summary>
+                        <p class="arcane-help">These global settings restart ArcaneOllama and may require administrator approval.</p>
+                        <html-import id="aiServiceForm" href="./arcane/components/preferences-form.html?v=1"></html-import>
+                    </details>
+                </div>
+            </section>
+        </div>
+    </main>
+    <script type="module" src="./apps/settings/modules/SettingsApp.js?v=1"></script>
+    <script type="module" src="./apps/settings/modules/AISettingsApp.js?v=1"></script>
+</body>
+</html>

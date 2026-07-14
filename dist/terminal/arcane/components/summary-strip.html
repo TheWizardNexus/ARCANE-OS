@@ -1,0 +1,177 @@
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+<style>
+    :host{display:block}
+    .summary-strip{list-style:none;margin:0;padding:0}
+    .summary-strip{
+        display:grid;
+        gap:1px;
+        grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));
+        overflow:hidden;
+    }
+    .summary-item{
+        background:var(--arcane-surface-raised);
+        border:0;
+        border-radius:0;
+        box-sizing:border-box;
+        color:inherit;
+        display:grid;
+        font:inherit;
+        gap:var(--arcane-space-1);
+        min-height:6.25rem;
+        min-width:0;
+        padding:var(--arcane-space-4);
+        text-align:start;
+        width:100%;
+    }
+    button.summary-item{cursor:pointer}
+    button.summary-item:hover{background:var(--arcane-surface-muted)}
+    button.summary-item:focus-visible{outline:3px solid var(--arcane-focus);outline-offset:-3px}
+    .summary-value{font-size:clamp(1.35rem,4vw,2rem);font-weight:750;line-height:1.1;overflow-wrap:anywhere}
+    .summary-label{font-weight:650;overflow-wrap:anywhere}
+    .summary-detail{color:var(--arcane-muted);font-size:.85rem;overflow-wrap:anywhere}
+    .summary-status{justify-self:start;margin-top:var(--arcane-space-1)}
+    .empty{grid-column:1/-1;margin:0}
+</style>
+
+<section id="region" aria-label="Summary" part="region">
+    <ul id="items" class="summary-strip arcane-card" part="strip"></ul>
+</section>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const region=root.querySelector('#region');
+    const list=root.querySelector('#items');
+    let items=[];
+    let options={};
+
+    host.clear=clear;
+    host.configure=configure;
+    host.setItems=setItems;
+    host.updateItem=updateItem;
+
+    Object.defineProperties(host,{
+        items:{get:getItems,set:setItems},
+        options:{get:()=>({...options}),set:configure}
+    });
+
+    list.addEventListener('click',selectItem);
+
+    function datasetOptions(){
+        return {
+            ariaLabel:host.dataset.ariaLabel||'Summary',
+            emptyLabel:host.dataset.emptyLabel||'No summary available.'
+        };
+    }
+
+    function configure(input={}){
+        options={...datasetOptions(),...options,...input};
+        region.setAttribute('aria-label',`${options.ariaLabel||'Summary'}`);
+        render();
+        return {...options};
+    }
+
+    function setItems(values=[]){
+        items=Array.from(values||[]).map((value,index)=>normalizeItem(value,index));
+        render();
+        host.dispatchEvent(new CustomEvent('summary-strip-change',{
+            bubbles:true,
+            composed:true,
+            detail:{items:getItems()}
+        }));
+        return getItems();
+    }
+
+    function updateItem(id,update={}){
+        const index=typeof id==='number'?id:items.findIndex(item=>item.id===`${id}`);
+        if(index<0||index>=items.length){
+            return null;
+        }
+        items[index]=normalizeItem({...items[index],...update,id:items[index].id},index);
+        render();
+        return {...items[index]};
+    }
+
+    function normalizeItem(value={},index=0){
+        return {
+            action:Boolean(value.action||value.actionable),
+            detail:`${value.detail??''}`,
+            disabled:Boolean(value.disabled),
+            id:`${value.id??`summary-${index+1}`}`,
+            label:`${value.label??''}`,
+            status:`${value.status??''}`,
+            value:`${value.value??''}`
+        };
+    }
+
+    function render(){
+        const fragment=document.createDocumentFragment();
+        if(!items.length){
+            const empty=document.createElement('li');
+            empty.className='empty arcane-state arcane-state--empty';
+            empty.innerText=`${options.emptyLabel||'No summary available.'}`;
+            fragment.append(empty);
+        }
+        for(const item of items){
+            const row=document.createElement('li');
+            const content=document.createElement(item.action?'button':'div');
+            const value=document.createElement('span');
+            const label=document.createElement('span');
+            const detail=document.createElement('span');
+
+            content.className='summary-item';
+            content.setAttribute('part','item');
+            content.dataset.summaryId=item.id;
+            if(item.action){
+                content.type='button';
+                content.disabled=item.disabled;
+            }
+            value.className='summary-value';
+            value.setAttribute('part','value');
+            value.innerText=item.value;
+            label.className='summary-label';
+            label.setAttribute('part','label');
+            label.innerText=item.label;
+            detail.className='summary-detail';
+            detail.setAttribute('part','detail');
+            detail.innerText=item.detail;
+            detail.hidden=!item.detail;
+            content.append(value,label,detail);
+            if(item.status){
+                const status=document.createElement('span');
+                status.className='summary-status arcane-badge';
+                status.dataset.status=item.status;
+                status.innerText=item.status;
+                content.append(status);
+            }
+            row.append(content);
+            fragment.append(row);
+        }
+        list.replaceChildren(fragment);
+    }
+
+    function selectItem(event){
+        const target=event.target.closest('button[data-summary-id]');
+        const item=items.find(candidate=>candidate.id===target?.dataset.summaryId);
+        if(!target||!item||item.disabled){
+            return;
+        }
+        host.dispatchEvent(new CustomEvent('summary-strip-select',{
+            bubbles:true,
+            composed:true,
+            detail:{id:item.id,item:{...item}}
+        }));
+    }
+
+    function getItems(){
+        return items.map(item=>({...item}));
+    }
+
+    function clear(){
+        return setItems([]);
+    }
+
+    configure(datasetOptions());
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('summary-strip-ready',{bubbles:true,composed:true}));
+</script>

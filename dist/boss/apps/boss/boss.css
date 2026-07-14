@@ -1,0 +1,432 @@
+/* BOSS Libraries master-brand layer. Every selectable appearance is derived
+   from the approved BOSS palette so shared Arcane defaults never introduce
+   unrelated colors into this app. */
+:root {
+    --boss-navy:#022241;
+    --boss-red:#981D0F;
+    --boss-gold:#E7AA3B;
+    --boss-blue:#015182;
+    --boss-green:#2F5426;
+    --boss-charcoal:#2B363E;
+    --boss-cream:#F7E5C6;
+    --boss-ivory:#FFFCF5;
+    --boss-display-font:Georgia,"Times New Roman",serif;
+    --boss-body-font:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --boss-icon-navy-filter:brightness(0) saturate(100%) invert(10%) sepia(15%) saturate(7252%) hue-rotate(187deg) brightness(94%) contrast(99%);
+    --boss-icon-red-filter:brightness(0) saturate(100%) invert(17%) sepia(52%) saturate(4780%) hue-rotate(355deg) brightness(77%) contrast(94%);
+    --boss-icon-green-filter:brightness(0) saturate(100%) invert(27%) sepia(17%) saturate(1406%) hue-rotate(63deg) brightness(95%) contrast(91%);
+    --boss-icon-blue-filter:brightness(0) saturate(100%) invert(20%) sepia(45%) saturate(3352%) hue-rotate(183deg) brightness(92%) contrast(99%);
+    --boss-icon-gold-filter:brightness(0) saturate(100%) invert(79%) sepia(85%) saturate(3888%) hue-rotate(333deg) brightness(99%) contrast(82%);
+}
+
+/* Classic Library */
+body,
+body.default,
+.boss-palette-default {
+    color-scheme:light;
+    --background:#F4E8CF;
+    --modal-background:var(--boss-ivory);
+    --text-color:var(--boss-navy);
+    --primary-color:var(--boss-navy);
+    --secondary-color:var(--boss-gold);
+    --accent-color:var(--boss-blue);
+    --border-color:#8D7445;
+    --platinum:#414D56;
+    --button-text-color:var(--boss-cream);
+    --button-hover-text-color:var(--boss-navy);
+    --focus-color:var(--boss-blue);
+    --success-color:var(--boss-green);
+    --danger-color:var(--boss-red);
+    --shadow-color:rgba(2,34,65,.18);
+    --file-icon-filter:var(--boss-icon-navy-filter);
+    font-family:var(--boss-body-font);
+}
+
+/* Heritage: warm paper, BOSS red, and gold. */
+body.warm,
+.boss-palette-warm {
+    color-scheme:light;
+    --background:#F7E2D3;
+    --modal-background:#FFFAF2;
+    --text-color:#3C211C;
+    --primary-color:var(--boss-red);
+    --secondary-color:var(--boss-gold);
+    --accent-color:#7D1B10;
+    --border-color:#9B6850;
+    --platinum:#584139;
+    --button-text-color:var(--boss-ivory);
+    --button-hover-text-color:var(--boss-navy);
+    --focus-color:var(--boss-red);
+    --success-color:var(--boss-green);
+    --danger-color:var(--boss-red);
+    --shadow-color:rgba(91,39,20,.2);
+    --file-icon-filter:var(--boss-icon-red-filter);
+}
+
+/* Growth: the approved green anchored by BOSS gold and blue. */
+body.curious,
+.boss-palette-curious {
+    color-scheme:light;
+    --background:#E6EEDF;
+    --modal-background:#FBFCF4;
+    --text-color:#17331E;
+    --primary-color:var(--boss-green);
+    --secondary-color:var(--boss-gold);
+    --accent-color:var(--boss-blue);
+    --border-color:#758B68;
+    --platinum:#40513F;
+    --button-text-color:var(--boss-ivory);
+    --button-hover-text-color:var(--boss-navy);
+    --focus-color:var(--boss-blue);
+    --success-color:var(--boss-green);
+    --danger-color:var(--boss-red);
+    --shadow-color:rgba(47,84,38,.19);
+    --file-icon-filter:var(--boss-icon-green-filter);
+}
+
+/* Knowledge: the approved blue with warm gold actions. */
+body.hopeful,
+.boss-palette-hopeful {
+    color-scheme:light;
+    --background:#E4EEF4;
+    --modal-background:#FAFCFD;
+    --text-color:var(--boss-navy);
+    --primary-color:var(--boss-blue);
+    --secondary-color:var(--boss-gold);
+    --accent-color:var(--boss-blue);
+    --border-color:#718FA3;
+    --platinum:#3A4F5D;
+    --button-text-color:var(--boss-ivory);
+    --button-hover-text-color:var(--boss-navy);
+    --focus-color:var(--boss-blue);
+    --success-color:var(--boss-green);
+    --danger-color:var(--boss-red);
+    --shadow-color:rgba(1,81,130,.18);
+    --file-icon-filter:var(--boss-icon-blue-filter);
+}
+
+/* Balance: library neutrals with green, gold, and red accents. */
+body.harmony,
+.boss-palette-harmony {
+    color-scheme:light;
+    --background:#EEF0DE;
+    --modal-background:var(--boss-ivory);
+    --text-color:#22301E;
+    --primary-color:var(--boss-green);
+    --secondary-color:var(--boss-gold);
+    --accent-color:var(--boss-blue);
+    --border-color:#7F8C68;
+    --platinum:#48513F;
+    --button-text-color:var(--boss-ivory);
+    --button-hover-text-color:var(--boss-navy);
+    --focus-color:var(--boss-blue);
+    --success-color:var(--boss-green);
+    --danger-color:var(--boss-red);
+    --shadow-color:rgba(43,54,62,.18);
+    --file-icon-filter:var(--boss-icon-green-filter);
+}
+
+/* Bold: high-contrast BOSS red, gold, and blue. */
+body.warrior,
+.boss-palette-warrior {
+    color-scheme:light;
+    --background:#E7EAEC;
+    --modal-background:#F9FAF7;
+    --text-color:var(--boss-charcoal);
+    --primary-color:var(--boss-red);
+    --secondary-color:var(--boss-gold);
+    --accent-color:var(--boss-blue);
+    --border-color:#79838A;
+    --platinum:#424C52;
+    --button-text-color:var(--boss-ivory);
+    --button-hover-text-color:var(--boss-navy);
+    --focus-color:var(--boss-red);
+    --success-color:var(--boss-green);
+    --danger-color:var(--boss-red);
+    --shadow-color:rgba(91,24,16,.2);
+    --file-icon-filter:var(--boss-icon-red-filter);
+}
+
+/* Navigation roles are inherited by the imported shadow-DOM component. The
+   bar follows each light palette while keeping the gold active state clear. */
+body {
+    --boss-nav-start:var(--primary-color);
+    --boss-nav-end:var(--accent-color);
+    --boss-nav-text:var(--boss-ivory);
+    --boss-nav-border:var(--secondary-color);
+    --boss-nav-active-bg:var(--secondary-color);
+    --boss-nav-active-border:var(--focus-color);
+    --boss-nav-active-text:var(--boss-navy);
+    --boss-nav-focus:var(--focus-color);
+    --boss-nav-shadow:var(--shadow-color);
+}
+
+@media (prefers-color-scheme:dark) {
+    body:not([class]),
+    body.default,
+    .boss-palette-default {
+        color-scheme:dark;
+        --background:#07182A;
+        --modal-background:#10283E;
+        --text-color:#FFF8EA;
+        --primary-color:var(--boss-gold);
+        --secondary-color:var(--boss-gold);
+        --accent-color:#84C5E8;
+        --border-color:#71879A;
+        --platinum:#C5CBD0;
+        --button-text-color:var(--boss-navy);
+        --button-hover-text-color:var(--boss-navy);
+        --focus-color:#84C5E8;
+        --success-color:#80B875;
+        --danger-color:#E37A6F;
+        --shadow-color:rgba(0,0,0,.42);
+        --file-icon-filter:var(--boss-icon-gold-filter);
+    }
+
+    body.warm,
+    .boss-palette-warm {
+        color-scheme:dark;
+        --background:#21120F;
+        --modal-background:#321C17;
+        --text-color:#FFF1DE;
+        --primary-color:var(--boss-gold);
+        --secondary-color:var(--boss-gold);
+        --accent-color:#F08A72;
+        --border-color:#8C6658;
+        --platinum:#D1B7AA;
+        --button-text-color:#2A130D;
+        --button-hover-text-color:var(--boss-navy);
+        --focus-color:var(--boss-gold);
+        --success-color:#80B875;
+        --danger-color:#E37A6F;
+        --shadow-color:rgba(0,0,0,.45);
+        --file-icon-filter:var(--boss-icon-gold-filter);
+    }
+
+    body.curious,
+    .boss-palette-curious {
+        color-scheme:dark;
+        --background:#0C1D14;
+        --modal-background:#173024;
+        --text-color:#EEF5E7;
+        --primary-color:#8BB778;
+        --secondary-color:var(--boss-gold);
+        --accent-color:#9BCF83;
+        --border-color:#66806A;
+        --platinum:#C0CCBC;
+        --button-text-color:#102117;
+        --button-hover-text-color:var(--boss-navy);
+        --focus-color:#9BCF83;
+        --success-color:#80B875;
+        --danger-color:#E37A6F;
+        --shadow-color:rgba(0,0,0,.43);
+        --file-icon-filter:var(--boss-icon-gold-filter);
+    }
+
+    body.hopeful,
+    .boss-palette-hopeful {
+        color-scheme:dark;
+        --background:#071925;
+        --modal-background:#102D40;
+        --text-color:#EEF7FA;
+        --primary-color:#84C5E8;
+        --secondary-color:var(--boss-gold);
+        --accent-color:#84C5E8;
+        --border-color:#647F91;
+        --platinum:#C1CDD4;
+        --button-text-color:var(--boss-navy);
+        --button-hover-text-color:var(--boss-navy);
+        --focus-color:#84C5E8;
+        --success-color:#80B875;
+        --danger-color:#E37A6F;
+        --shadow-color:rgba(0,0,0,.44);
+        --file-icon-filter:var(--boss-icon-gold-filter);
+    }
+
+    body.harmony,
+    .boss-palette-harmony {
+        color-scheme:dark;
+        --background:#151B12;
+        --modal-background:#24301F;
+        --text-color:#F6F1DF;
+        --primary-color:#9ABA87;
+        --secondary-color:var(--boss-gold);
+        --accent-color:#A9D49A;
+        --border-color:#708063;
+        --platinum:#C6C7AE;
+        --button-text-color:#172015;
+        --button-hover-text-color:var(--boss-navy);
+        --focus-color:#A9D49A;
+        --success-color:#80B875;
+        --danger-color:#E37A6F;
+        --shadow-color:rgba(0,0,0,.43);
+        --file-icon-filter:var(--boss-icon-gold-filter);
+    }
+
+    body.warrior,
+    .boss-palette-warrior {
+        color-scheme:dark;
+        --background:#10171D;
+        --modal-background:#1C2830;
+        --text-color:#F4F0E6;
+        --primary-color:var(--boss-gold);
+        --secondary-color:var(--boss-gold);
+        --accent-color:#F08073;
+        --border-color:#71808A;
+        --platinum:#C5C8C9;
+        --button-text-color:#25100D;
+        --button-hover-text-color:var(--boss-navy);
+        --focus-color:var(--boss-gold);
+        --success-color:#80B875;
+        --danger-color:#E37A6F;
+        --shadow-color:rgba(0,0,0,.46);
+        --file-icon-filter:var(--boss-icon-gold-filter);
+    }
+
+    /* Dark navigation uses the current theme's panel and page surfaces. */
+    body {
+        --boss-nav-start:var(--modal-background);
+        --boss-nav-end:var(--background);
+        --boss-nav-text:var(--text-color);
+    }
+}
+
+/*----------------------\
+|   COMPONENT MODIFIERS |
+\----------------------*/
+.header::part(crisis-call-988) {
+    display:none;
+}
+
+.nav {
+    grid-row:2;
+    grid-column:1 / -1;
+    position:relative;
+    z-index:2;
+}
+
+.nav::part(nav) {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.file-manager {
+    grid-row:3 / -1;
+    grid-column:1 / 2;
+}
+
+/*------------------\
+|   GLOBAL BRANDING |
+\------------------*/
+body {
+    grid-template-rows:auto auto 1fr;
+    grid-template-columns:19em minmax(0,3fr);
+}
+
+main {
+    grid-row:3 / -1;
+    border-top:1px solid var(--border-color);
+    border-top-color:color-mix(in srgb,var(--border-color) 75%,transparent);
+}
+
+main h1,
+main h2,
+main h3 {
+    font-family:var(--boss-display-font);
+    font-weight:700;
+    line-height:1.14;
+    letter-spacing:.015em;
+}
+
+main h1 {
+    color:var(--primary-color);
+}
+
+main > section,
+main > #dropZone {
+    border:1px solid var(--border-color);
+    border-radius:1rem;
+    background:var(--modal-background);
+    box-shadow:0 .6rem 1.8rem var(--shadow-color);
+}
+
+main > section {
+    box-sizing:border-box;
+    max-width:72rem;
+    margin:0 auto 1.25rem;
+}
+
+main > #dropZone {
+    max-width:52rem;
+    margin:clamp(1rem,5vw,4rem) auto;
+}
+
+button {
+    font-weight:700;
+    letter-spacing:.015em;
+}
+
+button:hover,
+::selection {
+    color:var(--button-hover-text-color,var(--text-color));
+}
+
+@media (max-width:48em) {
+    body {
+        grid-template-columns:10em minmax(0,1fr);
+    }
+
+    main > section {
+        margin-bottom:.9rem;
+    }
+}
+
+@media (max-width:36em) {
+    body {
+        grid-template-columns:minmax(0,1fr);
+    }
+
+    /* The document shelf is useful on larger screens, but it leaves too little
+       room for the librarian controls on a phone. The dedicated Library page
+       remains available from the navigation. */
+    .file-manager {
+        display:none;
+    }
+
+    main {
+        grid-column:1 / -1;
+        padding:.7rem;
+    }
+
+    main.contents {
+        display:grid;
+        grid-template-rows:minmax(0,1fr) auto;
+        overflow:hidden;
+    }
+
+    main.contents .chat {
+        height:auto;
+        min-height:0;
+    }
+
+    #uploadStatus {
+        position:static !important;
+        box-sizing:border-box;
+        right:auto !important;
+        bottom:auto !important;
+        max-width:none !important;
+        margin:.4rem 0 0 !important;
+    }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior:auto !important;
+        transition-duration:.01ms !important;
+        animation-duration:.01ms !important;
+        animation-iteration-count:1 !important;
+    }
+}

@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+<style>
+    :host{display:block;min-width:0}.intro{display:grid;gap:var(--arcane-space-1)}.intro p{margin:0}.editor{display:grid;gap:var(--arcane-space-4)}.identity{display:grid;gap:var(--arcane-space-4);grid-template-columns:2fr 1fr}.colors{display:grid;gap:var(--arcane-space-3);grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}.color-field{align-items:center;display:grid;gap:.65rem;grid-template-columns:2.5rem minmax(0,1fr)}.color-field input{height:2.5rem;padding:.15rem;width:2.5rem}.color-field label{font-weight:650}.status{margin-right:auto;min-height:1.4em}.preview{border:1px solid var(--border-color);border-radius:var(--arcane-radius-medium);display:flex;gap:.6rem;padding:.8rem;background:var(--background);color:var(--text-color)}.preview span{border-radius:.4rem;padding:.5rem .7rem;background:var(--secondary-color)}.preview strong{border-radius:.4rem;padding:.5rem .7rem;background:var(--primary-color);color:var(--button-text-color)}@media(max-width:36rem){.identity{grid-template-columns:1fr}}
+</style>
+<form class="arcane-card editor">
+    <header class="arcane-card__header intro"><h2 class="arcane-section-heading">Create your own skin</h2><p class="arcane-help">Choose a small set of safe design tokens. Compatible Arcane apps use the same saved skin.</p></header>
+    <div class="arcane-card__body editor">
+        <div class="identity">
+            <div class="arcane-field"><label for="themeName">Skin name</label><input id="themeName" name="name" maxlength="40" required></div>
+            <div class="arcane-field"><label for="themeScheme">Starting contrast</label><select id="themeScheme" name="scheme"><option value="light">Light</option><option value="dark">Dark</option></select></div>
+        </div>
+        <div id="colors" class="colors"></div>
+        <div class="preview" aria-label="Skin preview"><span>Surface</span><strong>Primary action</strong></div>
+    </div>
+    <footer class="arcane-card__footer"><p id="status" class="status arcane-help" role="status" aria-live="polite"></p><button id="reset" class="arcane-button arcane-button--tertiary" type="button">Remove custom skin</button><button class="arcane-button" type="submit">Save and use skin</button></footer>
+</form>
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const form=root.querySelector('form');
+    const colors=root.querySelector('#colors');
+    const status=root.querySelector('#status');
+    const {default:Theme,themeColorToHex,themeTokens}=await import('../entities/Theme.js');
+
+    host.configure=configure;host.getTheme=getTheme;host.setTheme=setTheme;host.setBusy=setBusy;host.setStatus=setStatus;
+    colors.replaceChildren(...themeTokens.map(token=>{
+        const field=document.createElement('div'),input=document.createElement('input'),label=document.createElement('label');
+        field.className='color-field';input.type='color';input.id=`theme-${token.key}`;input.name=token.key;input.value=themeColorToHex(token.defaultValue);label.htmlFor=input.id;label.textContent=token.label;field.append(input,label);return field;
+    }));
+    form.addEventListener('input',()=>emit('theme-preview',{theme:getTheme()}));
+    form.addEventListener('submit',event=>{event.preventDefault();emit('theme-save',{theme:getTheme()});});
+    root.querySelector('#reset').addEventListener('click',()=>emit('theme-reset'));
+
+    function emit(name,detail={}){host.dispatchEvent(new CustomEvent(name,{bubbles:true,composed:true,detail}));}
+    function getTheme(){return new Theme({name:form.elements.name.value,scheme:form.elements.scheme.value,tokens:Object.fromEntries(themeTokens.map(token=>[token.key,form.elements[token.key].value]))});}
+    function setTheme(input={}){const theme=Theme.fromJSON(input);form.elements.name.value=theme.name;form.elements.scheme.value=theme.scheme;for(const token of themeTokens) form.elements[token.key].value=themeColorToHex(theme.tokens[token.key]);return theme;}
+    function configure(options={}){return setTheme(options.theme||{name:'My Arcane skin'});}
+    function setBusy(value=true){for(const control of form.elements) control.disabled=Boolean(value);form.setAttribute('aria-busy',String(Boolean(value)));}
+    function setStatus(value=''){status.textContent=String(value||'');return status.textContent;}
+    configure();host.ready=true;emit('theme-editor-ready');
+</script>

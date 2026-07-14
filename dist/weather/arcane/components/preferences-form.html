@@ -1,0 +1,135 @@
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+<style>
+    :host{display:block;min-width:0}
+    form{display:grid;gap:var(--arcane-space-4)}
+    .heading{display:grid;gap:var(--arcane-space-1)}
+    .heading p{margin:0}
+    .fields{display:grid;gap:var(--arcane-space-3)}
+    .preference{align-items:center;display:grid;gap:var(--arcane-space-3);grid-template-columns:minmax(0,1fr) minmax(10rem,16rem)}
+    .copy{display:grid;gap:var(--arcane-space-1)}
+    .copy label{font-weight:700}
+    .copy p{margin:0}
+    .control input[type="checkbox"]{height:1.25rem;width:1.25rem}
+    .control :where(input:not([type="checkbox"]),select){width:100%}
+    .status{min-height:1.4em;margin:0}
+    @media(max-width:36rem){.preference{grid-template-columns:1fr}}
+</style>
+
+<form class="arcane-card">
+    <header class="arcane-card__header heading">
+        <h2 id="title" class="arcane-section-heading">Preferences</h2>
+        <p id="description" class="arcane-help"></p>
+    </header>
+    <div class="arcane-card__body fields" id="fields"></div>
+    <footer class="arcane-card__footer">
+        <p class="status arcane-help" id="status" role="status" aria-live="polite"></p>
+        <button class="arcane-button arcane-button--tertiary" id="reset" type="button">Restore defaults</button>
+        <button class="arcane-button" id="save" type="submit">Save changes</button>
+    </footer>
+</form>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const form=root.querySelector('form');
+    const fields=root.querySelector('#fields');
+    const title=root.querySelector('#title');
+    const description=root.querySelector('#description');
+    const status=root.querySelector('#status');
+    const reset=root.querySelector('#reset');
+    const save=root.querySelector('#save');
+    let schema=[];
+
+    host.configure=configure;
+    host.getValues=getValues;
+    host.setValues=setValues;
+    host.setBusy=setBusy;
+    host.setStatus=setStatus;
+
+    form.addEventListener('submit',event=>{
+        event.preventDefault();
+        host.dispatchEvent(new CustomEvent('preferences-submit',{bubbles:true,composed:true,detail:{values:getValues()}}));
+    });
+    form.addEventListener('input',event=>{
+        const field=schema.find(item=>item.key===event.target.name);
+        if(!field) return;
+        host.dispatchEvent(new CustomEvent('preferences-change',{bubbles:true,composed:true,detail:{key:field.key,value:readControl(event.target,field),values:getValues()}}));
+    });
+    reset.addEventListener('click',()=>host.dispatchEvent(new CustomEvent('preferences-reset',{bubbles:true,composed:true})));
+
+    function configure(options={}){
+        schema=Array.from(options.schema||[]).map(item=>typeof item.toJSON==='function'?item.toJSON():{...item});
+        title.innerText=String(options.title||'Preferences');
+        description.innerText=String(options.description||'');
+        description.hidden=!description.innerText;
+        renderFields();
+        setValues(options.values||{});
+        return host;
+    }
+
+    function renderFields(){
+        const fragment=document.createDocumentFragment();
+        for(const item of schema){
+            const row=document.createElement('div');
+            const copy=document.createElement('div');
+            const label=document.createElement('label');
+            const help=document.createElement('p');
+            const controlWrap=document.createElement('div');
+            const control=createControl(item);
+            const id=`preference-${item.key.replace(/[^A-Za-z0-9_-]/g,'-')}`;
+            row.className='preference';copy.className='copy';help.className='arcane-help';controlWrap.className='control arcane-field';
+            label.htmlFor=id;label.innerText=String(item.label||item.key);help.innerText=String(item.description||'');help.hidden=!help.innerText;
+            control.id=id;control.name=item.key;
+            copy.append(label,help);controlWrap.append(control);row.append(copy,controlWrap);fragment.append(row);
+        }
+        fields.replaceChildren(fragment);
+    }
+
+    function createControl(item){
+        if(item.type==='select'){
+            const select=document.createElement('select');
+            for(const option of item.options||[]){
+                const element=document.createElement('option');element.value=String(option.value);element.innerText=String(option.label);select.append(element);
+            }
+            return select;
+        }
+        const input=document.createElement('input');
+        input.type=item.type==='boolean'?'checkbox':item.type==='number'?'number':'text';
+        if(item.minimum!==undefined) input.min=String(item.minimum);
+        if(item.maximum!==undefined) input.max=String(item.maximum);
+        if(item.step!==undefined) input.step=String(item.step);
+        return input;
+    }
+
+    function readControl(control,item){
+        if(item.type==='boolean') return control.checked;
+        if(item.type==='number') return control.valueAsNumber;
+        return control.value;
+    }
+
+    function getValues(){
+        return Object.fromEntries(schema.map(item=>{
+            const control=form.elements.namedItem(item.key);
+            return [item.key,readControl(control,item)];
+        }));
+    }
+
+    function setValues(values={}){
+        for(const item of schema){
+            const control=form.elements.namedItem(item.key);
+            const value=Object.prototype.hasOwnProperty.call(values,item.key)?values[item.key]:item.defaultValue;
+            if(item.type==='boolean') control.checked=Boolean(value); else control.value=String(value??'');
+        }
+        return getValues();
+    }
+
+    function setBusy(value=true){
+        const busy=Boolean(value);form.setAttribute('aria-busy',String(busy));
+        for(const control of form.elements) control.disabled=busy;
+        return busy;
+    }
+    function setStatus(message=''){status.innerText=String(message||'');return status.innerText;}
+
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('preferences-form-ready',{bubbles:true,composed:true}));
+</script>

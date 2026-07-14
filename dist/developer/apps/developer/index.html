@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Pair an Arcane development checkout, set up its development tools, and ask the configured Arcane AI about the codebase.">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="rgb(13, 18, 32)">
+    <title>Arcane Developer</title>
+    <link rel="manifest" href="./apps/developer/manifest.json">
+    <link rel="icon" href="./apps/developer/img/icon.png" type="image/png">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="./apps/developer/developer.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+    <html-import
+        id="appBar"
+        class="app-bar"
+        data-product-name="Developer"
+        data-brand-mark="&lt;/&gt;"
+        data-status="No checkout paired"
+        data-status-tone="warning"
+        href="./arcane/components/app-bar.html?v=2">
+        <html-import
+            slot="trailing"
+            class="theme-switcher"
+            href="./arcane/components/theme-switcher.html?v=2">
+        </html-import>
+    </html-import>
+
+    <main class="developer-shell">
+        <header class="view-heading">
+            <div class="view-heading__copy">
+                <p class="eyebrow">Development status and pairing</p>
+                <h1 class="arcane-view-heading">Build with Arcane, from one paired checkout.</h1>
+                <p>Inspect the local environment, set up the checkout's development tools, or ask your profile-configured AI about the repository. Arcane never scans for checkouts or executes AI suggestions.</p>
+            </div>
+            <button id="refreshEnvironment" class="arcane-button arcane-button--secondary" type="button" disabled>Refresh status</button>
+        </header>
+
+        <html-import
+            id="environmentSummary"
+            data-aria-label="Developer environment status"
+            data-empty-label="Pair a checkout to inspect its development status."
+            href="./arcane/components/summary-strip.html?v=2">
+        </html-import>
+
+        <div class="developer-grid">
+            <div class="developer-controls">
+                <section class="arcane-card" aria-labelledby="pairingTitle">
+                    <header class="arcane-card__header">
+                        <div>
+                            <p class="eyebrow">1. Pair</p>
+                            <h2 id="pairingTitle" class="arcane-section-heading">Choose one local checkout</h2>
+                        </div>
+                        <span id="pairingBadge" class="arcane-badge" data-status="warning">Not paired</span>
+                    </header>
+                    <form id="pairForm" class="arcane-card__body pairing-form">
+                        <html-import
+                            id="workspaceRoot"
+                            data-label="Repository folder"
+                            data-button-label="Choose folder"
+                            data-placeholder="No repository folder selected"
+                            data-title="Choose an Arcane OS repository folder"
+                            data-help="Choose the local Arcane OS checkout you want to pair. Arcane validates that folder against the supported company baseline and does not scan other folders."
+                            href="./arcane/components/directory-picker.html?v=1">
+                        </html-import>
+                        <p id="pairingMessage" class="form-message" role="status" aria-live="polite"></p>
+                        <div class="form-actions">
+                            <button id="pairCheckout" class="arcane-button arcane-button--action" type="submit">Pair checkout</button>
+                            <button id="unpairCheckout" class="arcane-button arcane-button--tertiary" type="button" disabled>Forget checkout</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="arcane-card" aria-labelledby="setupTitle">
+                    <header class="arcane-card__header">
+                        <div>
+                            <p class="eyebrow">2. Set up</p>
+                            <h2 id="setupTitle" class="arcane-section-heading">Set up development tools</h2>
+                        </div>
+                    </header>
+                    <div class="arcane-card__body setup-card__body">
+                        <p class="arcane-form-note">Choose any item marked as needing setup. Arcane runs only the one you choose and shows its live progress and output below.</p>
+                        <div class="setup-actions" aria-label="Developer setup actions">
+                            <button class="arcane-button arcane-button--secondary" type="button" data-setup-task="node-runtime" disabled>
+                                Install Node.js 22+
+                            </button>
+                            <button class="arcane-button arcane-button--secondary" type="button" data-setup-task="root-dependencies" disabled>
+                                Install root dependencies
+                            </button>
+                            <button class="arcane-button arcane-button--secondary" type="button" data-setup-task="machine-dependencies" disabled>
+                                Install machine dependencies
+                            </button>
+                            <button class="arcane-button arcane-button--secondary" type="button" data-setup-task="git-hooks" disabled>
+                                Install Git hooks
+                            </button>
+                            <button class="arcane-button arcane-button--secondary" type="button" data-setup-task="windows-signing" disabled>
+                                Set up Windows signing
+                            </button>
+                        </div>
+                        <html-import
+                            id="setupProgress"
+                            data-title="Development setup"
+                            data-description="Arcane runs one setup action at a time."
+                            data-empty-label="Choose a setup action above."
+                            href="./arcane/components/task-progress.html?v=1">
+                        </html-import>
+                    </div>
+                </section>
+
+                <section id="outputSection" class="output-section" aria-label="Developer setup output">
+                    <html-import
+                        id="setupOutput"
+                        data-title="Setup output"
+                        data-aria-label="Developer setup output"
+                        data-empty-label="Setup output will appear here."
+                        href="./arcane/components/output-panel.html?v=1">
+                    </html-import>
+                </section>
+            </div>
+
+            <section class="assistant-region" aria-labelledby="assistantRegionTitle">
+                <h2 id="assistantRegionTitle" class="visually-hidden">Codebase assistant</h2>
+                <html-import
+                    id="developerAssistant"
+                    class="assistant-panel"
+                    data-layout="docked"
+                    data-open
+                    data-title="Ask Arcane Developer"
+                    data-subtitle="Uses your profile AI and bounded context from the paired checkout"
+                    href="./arcane/components/assistant-panel.html?v=3">
+                    <ol id="chatMessages" class="chat-messages" slot="messages" aria-label="Developer assistant messages"></ol>
+                    <div class="assistant-footer" slot="footer">
+                        <p id="assistantContext">Pair a checkout before asking about its code.</p>
+                        <p id="assistantPrivacy">Selected bounded, secret-pattern-redacted repository excerpts are sent to the provider configured in Arcane Settings. Use Ollama for local-only context.</p>
+                    </div>
+                </html-import>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="./apps/developer/modules/DeveloperApp.js?v=1"></script>
+</body>
+</html>
