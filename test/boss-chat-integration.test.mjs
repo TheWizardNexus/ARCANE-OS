@@ -290,7 +290,7 @@ describe('BOSS Libraries chat integration',()=>{
         assert.match(bossNav,/app-bar\.html\?v=3/);
         assert.match(chat,/boss\.css\?v=7/);
         for(const page of bossNavPages){
-            assert.match(page,/components\/nav\.html\?v=11/);
+            assert.match(page,/components\/nav\.html\?v=12/);
         }
         assert.match(admin,/boss\.css\?v=7/);
         assert.match(bossNav,/boss-libraries-logo-horizontal-transparent\.png\?v=2/);
@@ -376,12 +376,24 @@ describe('BOSS Libraries chat integration',()=>{
     });
 
     it('hydrates a Library search as an editable Librarian draft without auto-sending it',()=>{
-        assert.match(chat,/searchParams\.get\('q'\)/);
+        assert.match(chat,/chatParameters\.get\('q'\)/);
         assert.match(chat,/libraryHandoffQuery[\s\S]*?\.trim\(\)\.slice\(0,500\)/);
         assert.match(chat,/chatInput\.value=libraryHandoffQuery/);
         assert.match(chat,/chatInput\.dispatchEvent\(new Event\('keyup',\{bubbles:true\}\)\)/);
         assert.match(chat,/chatInput\.focus\(\{preventScroll:true\}\)/);
         assert.match(chat,/if\(libraryHandoffQuery\)\{\s*return;\s*\}\s*sendMessage\(message\)/);
         assert.doesNotMatch(chat,/innerHTML=libraryHandoffQuery/);
+    });
+
+    it('offers editable one-question-at-a-time pitch practice without creating a second AI surface',()=>{
+        assert.match(bossNav,/href="\.\/apps\/boss\/chat\.html\?mode=pitch"/);
+        assert.match(bossNav,/aria-label="Practice a business pitch with the BOSS Librarian"/);
+        assert.match(chat,/chatParameters\.get\('mode'\)==='pitch'/);
+        assert.match(chat,/Ask for my audience, desired outcome, and target length one focused question at a time/);
+        assert.match(chat,/Be a rehearsal evaluator, not a mentor or professional adviser/);
+        assert.match(chat,/Search the BOSS Library before recommending any resource/);
+        assert.match(chat,/Pitch-practice instructions to review with the BOSS Librarian/);
+        assert.match(chat,/pitchPracticeMode\?pitchPracticePrompt/);
+        assert.doesNotMatch(chat,/pitchPracticePrompt[\s\S]*?sendMessage\(pitchPracticePrompt\)/);
     });
 });

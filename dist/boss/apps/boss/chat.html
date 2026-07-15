@@ -57,7 +57,7 @@
 
     <body>
         <html-import class="header" href="./arcane/components/header.html?v=3"></html-import>
-        <html-import class="nav" href="./apps/boss/components/nav.html?v=11"></html-import>
+        <html-import class="nav" href="./apps/boss/components/nav.html?v=12"></html-import>
         <html-import class="file-manager" data-dirs="documents,memories,images" data-hidden-prefixes=".boss-library-" href="./arcane/components/file-manager.html?v=18"></html-import>
 
         <main class="contents">
@@ -90,8 +90,11 @@
 
         const chat=document.querySelector('#chat');
         const modal=document.querySelector('#modal');
+        const chatParameters=new URL(window.location.href).searchParams;
+        const pitchPracticeMode=chatParameters.get('mode')==='pitch';
+        const pitchPracticePrompt='I want to practice a business pitch. Ask for my audience, desired outcome, and target length one focused question at a time. Then ask me to deliver the pitch. After each attempt, give concise evidence-based feedback on clarity, customer problem, solution, differentiation, proof, the ask, and timing. Be a rehearsal evaluator, not a mentor or professional adviser. Do not invent facts. Search the BOSS Library before recommending any resource.';
         const libraryHandoffQuery=String(
-            new URL(window.location.href).searchParams.get('q')||''
+            chatParameters.get('q')||(pitchPracticeMode?pitchPracticePrompt:'')
         ).trim().slice(0,500);
         let libraryHandoffHydrated=false;
 
@@ -569,10 +572,14 @@
 
             libraryHandoffHydrated=true;
             chatInput.value=libraryHandoffQuery;
-            chatInput.placeholder='Review your Library search, add any helpful detail, then send it';
+            chatInput.placeholder=pitchPracticeMode
+                ?'Review the pitch-practice instructions, add any detail, then send'
+                :'Review your Library search, add any helpful detail, then send it';
             chatInput.setAttribute(
                 'aria-label',
-                'Library search to review with the BOSS Librarian'
+                pitchPracticeMode
+                    ?'Pitch-practice instructions to review with the BOSS Librarian'
+                    :'Library search to review with the BOSS Librarian'
             );
             chatInput.dispatchEvent(new Event('keyup',{bubbles:true}));
             window.requestAnimationFrame(()=>{
@@ -970,10 +977,14 @@ Please change to a smaller model or use cloud models (if applicable).`;
             if(chatInput){
                 if(libraryHandoffQuery){
                     hydrateLibraryHandoff();
-                    chatInput.placeholder='Review your Library search, add any helpful detail, then send it';
+                    chatInput.placeholder=pitchPracticeMode
+                        ?'Review the pitch-practice instructions, add any detail, then send'
+                        :'Review your Library search, add any helpful detail, then send it';
                     chatInput.setAttribute(
                         'aria-label',
-                        'Library search to review with the BOSS Librarian'
+                        pitchPracticeMode
+                            ?'Pitch-practice instructions to review with the BOSS Librarian'
+                            :'Library search to review with the BOSS Librarian'
                     );
                 }else{
                     chatInput.placeholder='What document, link, resource, or person do you need?';
