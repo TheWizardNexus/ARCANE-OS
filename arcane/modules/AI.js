@@ -110,12 +110,12 @@ class AI {
         }
 
         this.setAI(
-            llmService,
-            sttService,
-            ttsService,
-            model,
-            modelTTS,
-            modelSTT
+            llmService || 'OPENAI',
+            sttService || 'OPENAI',
+            ttsService || 'OPENAI',
+            model || 'OPENAI',
+            modelTTS || 'OPENAI',
+            modelSTT || 'OPENAI'
         );
     }
 
