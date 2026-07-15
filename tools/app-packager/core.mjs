@@ -14,11 +14,31 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {setTimeout as delay} from 'node:timers/promises';
 
 export const ROOT_CONFIG_NAME='arcane-packager.json';
 export const APP_CONFIG_NAME='arcane-package.json';
 export const RELEASE_MANIFEST_NAME='ARCANE_APP_RELEASE.json';
 export const PACKAGER_VERSION='arcane-app-packager-v1';
+
+const RENAME_RETRY_CODES=new Set(['EACCES','EBUSY','EPERM']);
+const RENAME_RETRY_LIMIT=20;
+const RENAME_RETRY_DELAY_MS=250;
+
+async function renamePackageDirectory(source,destination){
+    for(let attempt=0;;attempt++){
+        try{
+            await rename(source,destination);
+            return;
+        }catch(error){
+            if(!RENAME_RETRY_CODES.has(error?.code)||attempt>=RENAME_RETRY_LIMIT){
+                throw error;
+            }
+
+            await delay(RENAME_RETRY_DELAY_MS);
+        }
+    }
+}
 
 const APP_ID_PATTERN=/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const SAFE_SHARED_ID_PATTERN=/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -799,10 +819,21 @@ async function materializeBasePackage(context,outputRoot,files){
 
 async function sha256(filePath){
     const hash=createHash('sha256');
-    const {createReadStream}=await import('node:fs');
+    const handle=await open(filePath,'r');
+    const buffer=Buffer.allocUnsafe(1024*1024);
 
-    for await(const chunk of createReadStream(filePath)){
-        hash.update(chunk);
+    try{
+        while(true){
+            const {bytesRead}=await handle.read(buffer,0,buffer.length,null);
+
+            if(bytesRead===0){
+                break;
+            }
+
+            hash.update(buffer.subarray(0,bytesRead));
+        }
+    }finally{
+        await handle.close();
     }
 
     return hash.digest('hex');
@@ -1334,7 +1365,7 @@ async function packageAppUnlocked({
 
         try{
             await lstat(context.outputRoot);
-            await rename(context.outputRoot,backup);
+            await renamePackageDirectory(context.outputRoot,backup);
             movedExisting=true;
         }catch(error){
             if(error?.code!=='ENOENT'){
@@ -1342,7 +1373,7 @@ async function packageAppUnlocked({
             }
         }
 
-        await rename(staging,context.outputRoot);
+        await renamePackageDirectory(staging,context.outputRoot);
         promoted=true;
 
         if(version!==currentVersion){
@@ -1363,7 +1394,7 @@ async function packageAppUnlocked({
 
         if(promoted){
             try{
-                await rename(context.outputRoot,failedOutput);
+                await renamePackageDirectory(context.outputRoot,failedOutput);
                 targetVacated=true;
             }catch(moveError){
                 targetVacated=false;
@@ -1373,7 +1404,7 @@ async function packageAppUnlocked({
 
         if(movedExisting&&targetVacated){
             try{
-                await rename(backup,context.outputRoot);
+                await renamePackageDirectory(backup,context.outputRoot);
                 rollbackRestored=true;
             }catch(restoreError){
                 rollbackErrors.push(`could not restore the previous package from ${backup}: ${restoreError.message}`);
