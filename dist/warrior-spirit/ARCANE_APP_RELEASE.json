@@ -8,10 +8,10 @@
     "entry": "index.html",
     "start": "./apps/warrior-spirit/index.html"
   },
-  "policySha256": "367ea0e86739c198c60602a9ba80f22b84b30cd564b6d5aa10fb8456e8f8edf9",
-  "fileCount": 165,
-  "totalBytes": 5644776,
-  "contentSha256": "71902e291d0154da21b3c3af80ac452a3d60112413e141a55e24f72aaa6cba1e",
+  "policySha256": "0a55abcc658a63a15c0574259d68921015e486d3f72c0819ec9843a4846ae2c3",
+  "fileCount": 166,
+  "totalBytes": 5677548,
+  "contentSha256": "cf818bbf0cfe453ac7acd39cc918acb16aef58f8e450f2e8b969f0edaf0270f5",
   "files": [
     {
       "path": "apps/precrisis/admin.html",
@@ -205,13 +205,13 @@
     },
     {
       "path": "apps/warrior-spirit/companion.html",
-      "bytes": 40877,
-      "sha256": "5ec7fe889d8a4405e68e58ccaeff94bd012d158487f87aea831074fbdb8bd828"
+      "bytes": 41890,
+      "sha256": "3f2d392ac3cf58013c8496936c3f32063702be7586057a82bbbb5683da87302e"
     },
     {
       "path": "apps/warrior-spirit/home.html",
-      "bytes": 9510,
-      "sha256": "b6b3d1ff01948de09cf8cb062dbf062574b497dc5e10e4a2f6c5f0c10e25a59d"
+      "bytes": 9514,
+      "sha256": "2206203d8d234cba95288eb6d19d56d7f8e629fcd72613d2d6ced360213ba46d"
     },
     {
       "path": "apps/warrior-spirit/img/warrior-spirit-logo.png",
@@ -220,8 +220,8 @@
     },
     {
       "path": "apps/warrior-spirit/index.html",
-      "bytes": 9510,
-      "sha256": "b6b3d1ff01948de09cf8cb062dbf062574b497dc5e10e4a2f6c5f0c10e25a59d"
+      "bytes": 9514,
+      "sha256": "2206203d8d234cba95288eb6d19d56d7f8e629fcd72613d2d6ced360213ba46d"
     },
     {
       "path": "apps/warrior-spirit/manifest.json",
@@ -230,18 +230,18 @@
     },
     {
       "path": "apps/warrior-spirit/memories.html",
-      "bytes": 3472,
-      "sha256": "2db517e1f11252869cd572571f725ffd67ade1b1e3b26dd02c622fdeb9cdeb33"
+      "bytes": 3566,
+      "sha256": "8bb857e0e1769e6a2eac04cc07487ff32fc1dd369f21012233dff5dc1c453cde"
     },
     {
       "path": "apps/warrior-spirit/mental-health.html",
-      "bytes": 19246,
-      "sha256": "be415ea28367e80335202840c223f724f0c1d6dc9c60d0cd8edd198cc372d966"
+      "bytes": 19814,
+      "sha256": "7c4954ec1b77ed1201ddab39dfc042d6b379d6665c4418f6565b957870bb433c"
     },
     {
       "path": "apps/warrior-spirit/modules/PreCrisisFrame.js",
-      "bytes": 37414,
-      "sha256": "080ecc7d09ed4c2bec3c69ce2b92c220d70606200b6e2ad6706c77239bc4d68f"
+      "bytes": 37437,
+      "sha256": "af29b8f909c78fc68c097f29b985492ea67c7963fddc5782c24dd36f870e79a1"
     },
     {
       "path": "apps/warrior-spirit/modules/WarriorSpiritHome.js",
@@ -260,23 +260,23 @@
     },
     {
       "path": "apps/warrior-spirit/precrisis-skin.css",
-      "bytes": 2883,
-      "sha256": "5cd20f6e7c79baf85595cf35ac1c7f4a31a76bf436f23ab7cf0a9ae55683c437"
+      "bytes": 2884,
+      "sha256": "aed0f480f2562bbb7132349bed873bf1b296f8d9bb1a3cda730f4b6c1e9e5876"
     },
     {
       "path": "apps/warrior-spirit/profile.html",
-      "bytes": 31522,
-      "sha256": "5d3eab9a84d11cfe84ed136361c8ab895cd18c3c4a85cfaf507ef012dea5feef"
+      "bytes": 32230,
+      "sha256": "5aaae655f4175b8cde0a9dfb2fab4f8716ed2e2b0efb6051478478a8d30d5d44"
     },
     {
       "path": "apps/warrior-spirit/README.md",
-      "bytes": 2350,
-      "sha256": "dd7b78fdb0d05df7c88791eb9bd91c077d60cda69c6c77e919295d55a2e3f4c4"
+      "bytes": 2351,
+      "sha256": "3c2a70cee00a1d000275c61214290f7a6a72d69e47d34e7070be2df845612285"
     },
     {
       "path": "apps/warrior-spirit/reflection.html",
-      "bytes": 4717,
-      "sha256": "9d40c4629c6610beb0c2c3af4fec37f4cb2125eb8ab1f448c436bc6320c63ae1"
+      "bytes": 4831,
+      "sha256": "b1c615d0a75fc5942494c1db100b5b67160f5473a34ef87b9677ae20d9221d0c"
     },
     {
       "path": "apps/warrior-spirit/warrior-spirit.css",
@@ -300,8 +300,8 @@
     },
     {
       "path": "arcane/components/chart.html",
-      "bytes": 20614,
-      "sha256": "eddec4f8d7b86fcb603894c4dd2c4089a233a9a98128d00dc9120058f584ce5c"
+      "bytes": 20621,
+      "sha256": "b85694285e79feae8080f08cb4998faf5b548651bfa2863b3869c773e8b399a7"
     },
     {
       "path": "arcane/components/chat.html",
@@ -514,6 +514,11 @@
       "sha256": "1bd6b4a35a02568263449a8ccfc2bac636681c53421ca05acebdabf07afe5556"
     },
     {
+      "path": "arcane/entities/IntentEnvelope.js",
+      "bytes": 30597,
+      "sha256": "321f2ff4b09671679bb36c71903748e89b11e4ece1834d4a9df9d1450ff08473"
+    },
+    {
       "path": "arcane/entities/Preference.js",
       "bytes": 3659,
       "sha256": "306d0627de621111d12267a8f4ae5df57ba93072ddbc768d45e402f672ed3b46"
@@ -590,8 +595,8 @@
     },
     {
       "path": "arcane/modules/AI.js",
-      "bytes": 21483,
-      "sha256": "c46517d4e7750dcb41f8d771f503e616fec30524d9c40515c13a900fd696b898"
+      "bytes": 21121,
+      "sha256": "6b455aefd337f25a054182da25377cd40bc380277b88e0647ee6532bc94a2f82"
     },
     {
       "path": "arcane/modules/AnsiText.js",
