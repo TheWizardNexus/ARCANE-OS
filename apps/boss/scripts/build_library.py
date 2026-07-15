@@ -63,6 +63,7 @@ MAX_DESCRIPTION = 620
 MAX_KEY_ITEM = 260
 MAX_LINKS = 12
 MAX_CONTACTS = 8
+MAX_XML_BYTES = 10 * 1024 * 1024
 
 LINK_POLICY = json.loads(LINK_POLICY_PATH.read_text(encoding="utf-8"))
 LINK_REPLACEMENTS = LINK_POLICY["replace"]
@@ -78,6 +79,7 @@ SUPPORTED_EXTENSIONS = {
     ".xlsx",
     ".csv",
     ".txt",
+    ".xml",
     ".jpg",
     ".jpeg",
     ".png",
@@ -564,6 +566,61 @@ def extract_markdown_or_text(path: Path) -> Extraction:
     extraction.segments = unique(text.splitlines())
     extraction.links = extract_links(text)
     extraction.contacts = extract_contacts(text)
+    return extraction
+
+
+def extract_xml(path: Path) -> Extraction:
+    extraction = Extraction(method="bounded XML text and attribute extraction")
+    try:
+        raw = path.read_bytes()
+        if len(raw) > MAX_XML_BYTES:
+            extraction.status = "failed"
+            extraction.coverage = "XML exceeded the safe parser limit"
+            extraction.limitations.append(f"XML files larger than {MAX_XML_BYTES:,} bytes are not parsed")
+            return extraction
+        declarations = raw.upper()
+        if b"<!DOCTYPE" in declarations or b"<!ENTITY" in declarations:
+            extraction.status = "failed"
+            extraction.coverage = "XML declarations were rejected before parsing"
+            extraction.limitations.append("DOCTYPE and ENTITY declarations are not supported")
+            return extraction
+
+        root = ET.fromstring(raw)
+        segments: list[str] = []
+        attribute_segments: list[str] = []
+        for element in root.iter():
+            tag = local_name(element.tag)
+            direct_text = clean_text(" ".join(
+                part
+                for part in [element.text, *(child.tail for child in element)]
+                if part
+            ))
+            if direct_text:
+                segments.append(f"{tag}: {direct_text}" if tag else direct_text)
+                if tag in {"title", "name", "heading", "h1"}:
+                    extraction.title_candidates.append((direct_text, "xml_title_element"))
+            for attribute, value in element.attrib.items():
+                clean_value = clean_text(value)
+                if clean_value:
+                    attribute_segments.append(f"{tag} @{local_name(attribute)}: {clean_value}")
+
+        extraction.segments = unique([*segments, *attribute_segments])
+        extraction.text = clean_text("\n".join(extraction.segments))[:MAX_EXTRACTED_TEXT]
+        extraction.links = extract_links(extraction.text)
+        extraction.contacts = extract_contacts(extraction.text)
+        extraction.details = {"elements": sum(1 for _ in root.iter())}
+        extraction.coverage = f"{extraction.details['elements']} XML elements; {len(extraction.text):,} characters retained"
+        if extraction.text:
+            extraction.status = "complete"
+            if not extraction.title_candidates:
+                extraction.title_candidates.append((extraction.segments[0], "first_xml_content"))
+        else:
+            extraction.status = "metadata-only"
+            extraction.limitations.append("No machine-readable XML text or attributes were found")
+    except Exception as error:
+        extraction.status = "failed"
+        extraction.coverage = "XML could not be parsed"
+        extraction.limitations.append(f"XML extraction failed: {type(error).__name__}")
     return extraction
 
 
@@ -1365,6 +1422,8 @@ def extract_source(path: Path, relative_path: str) -> Extraction:
     extension = path.suffix.casefold()
     if extension in {".md", ".txt"}:
         extraction = extract_markdown_or_text(path)
+    elif extension == ".xml":
+        extraction = extract_xml(path)
     elif extension == ".pdf":
         extraction = extract_pdf(path)
     elif extension == ".docx":
