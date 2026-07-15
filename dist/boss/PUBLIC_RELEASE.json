@@ -6,7 +6,7 @@
     {
       "path": "apps/boss/admin.html",
       "bytes": 30725,
-      "sha256": "9a88385ea2521d9da518ef3eaa247784338f80d433970a69d7a748d72528ff47"
+      "sha256": "dfd3a96fec39273b570e7cce54f747b2c78af452828b3114775edac7df816aae"
     },
     {
       "path": "apps/boss/boss-library.js",
@@ -20,8 +20,8 @@
     },
     {
       "path": "apps/boss/chat.html",
-      "bytes": 41150,
-      "sha256": "83b13bfc1d5f32c60ec17f918e9983b481990ef2a59ce3c0fb6a9f769a1f758f"
+      "bytes": 42291,
+      "sha256": "114898efb94b7fe351e4012e33eefa378e84a3351451dfb9e4a0fcb2fa46abf5"
     },
     {
       "path": "apps/boss/components/import-terminal.html",
@@ -30,8 +30,8 @@
     },
     {
       "path": "apps/boss/components/nav.html",
-      "bytes": 9960,
-      "sha256": "09940d1b473bb017cb14df95582b70cb42618b91c19edace3f0ebbb08e98f51f"
+      "bytes": 10199,
+      "sha256": "b002a193f25508d0d80ec4a63959f203f664c68b4e57a8866e7d51e7795f830f"
     },
     {
       "path": "apps/boss/documents/000-boss-library-catalog.md",
@@ -2551,7 +2551,7 @@
     {
       "path": "apps/boss/export.html",
       "bytes": 3840,
-      "sha256": "2e267f6f05df6eb2da3cad1a4691aadd251d873fe9dce6b02085da90a7b2afe3"
+      "sha256": "cafd6100fe3a1aed6e1a92b78218154623717810e1c4b0a9549a180d84bbbc68"
     },
     {
       "path": "apps/boss/img/boss-libraries-logo-horizontal-transparent.png",
@@ -2576,17 +2576,17 @@
     {
       "path": "apps/boss/import.html",
       "bytes": 8141,
-      "sha256": "bf9abf9b98d845dd68df607298b9189c9eed6a1d7faabec4e3183572af0b1f9a"
+      "sha256": "691b68d51d2c123760202156b4c61c8e197b05044bb81a46c7a06c3c5c0b151e"
     },
     {
       "path": "apps/boss/library-setup.html",
       "bytes": 23799,
-      "sha256": "741a34f58faf93045b575c3a29408540d6675f803c6b66138081a087da9a4a76"
+      "sha256": "15b53f27bcb9dace97592240692d300575bdd54136082077a9f8d752a4a98e9e"
     },
     {
       "path": "apps/boss/library.html",
       "bytes": 63852,
-      "sha256": "ad88f32f56ce7fd9c4d05b423e843f16ca7fc6051068748a73e067de41449e8d"
+      "sha256": "c881b09664db54b87675a67c8ef7033474c5024bc85ba6c56bace1e09253640c"
     },
     {
       "path": "apps/boss/manifest.json",

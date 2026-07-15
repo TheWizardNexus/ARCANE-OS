@@ -9,7 +9,7 @@ describe('BOSS Libraries document page',()=>{
     it('uses the shared Arcane shell and BOSS Libraries navigation',()=>{
         assert.match(page,/<base href="\.\.\/\.\.\/">/);
         assert.match(page,/href="\.\/arcane\/components\/header\.html\?v=3"/);
-        assert.match(page,/href="\.\/apps\/boss\/components\/nav\.html\?v=11"/);
+        assert.match(page,/href="\.\/apps\/boss\/components\/nav\.html\?v=12"/);
         assert.match(page,/BOSS Libraries \| Document Library/);
     });
 
