@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<business-resource>
+    <title>Veteran Business Mentoring</title>
+    <summary>SCORE mentors help entrepreneurs validate plans and prepare for launch.</summary>
+    <contact email="mentor@example.org">Request confidential mentoring</contact>
+    <source href="https://www.score.org/find-mentor">Find a mentor</source>
+</business-resource>
