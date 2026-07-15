@@ -5,6 +5,7 @@ import {
     copyFile,
     lstat,
     mkdir,
+    open,
     readFile,
     readdir,
     realpath,
@@ -230,12 +231,21 @@ async function readJson(filePath){
 
 async function sha256(filePath){
     const hash=createHash('sha256');
-    const handle=await import('node:fs').then(({createReadStream})=>
-        createReadStream(filePath)
-    );
+    const handle=await open(filePath,'r');
+    const buffer=Buffer.allocUnsafe(1024*1024);
 
-    for await(const chunk of handle){
-        hash.update(chunk);
+    try{
+        while(true){
+            const {bytesRead}=await handle.read(buffer,0,buffer.length,null);
+
+            if(bytesRead===0){
+                break;
+            }
+
+            hash.update(buffer.subarray(0,bytesRead));
+        }
+    }finally{
+        await handle.close();
     }
 
     return hash.digest('hex');
