@@ -55,6 +55,7 @@ class AI {
         LOCAL_SPEACH: 'kokoro'
     }
 
+    // Note: if we expand cloud providers, simply add their expected JSON metadata here
     get #serviceHeaders(){
         return {
             OPENAI: {
@@ -67,15 +68,24 @@ class AI {
         };
     }
 
-    // A separate header config is required for speech-to-text services due to OpenAI
+    get #ttsHeaders(){
+        return {
+            OPENAI: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.license}`
+            },
+            LOCAL_SPEACH: {
+                'Content-Type': 'application/json',
+            }
+        };
+    }
+
     get #sttHeaders(){
         return {
             OPENAI: {
                 'Authorization': `Bearer ${this.license}`,
             },
-            OLLAMA: {
-                'Authorization': `Bearer ${this.license}`,
-            }
+            LOCAL_SPEACH: {}
         };
     }
 
@@ -178,28 +188,6 @@ class AI {
     audioMessageChunks='';
     sourceNodes=[];
     isSpeaking=false;
-    
-    get headers(){
-        return {
-            'Content-Type': 'application/json'
-        };
-    }
-
-    // TODO: Make robust enough to handle various provider header requirements
-    get exHeaders() {
-        // 'OLLAMA' is enum (NOTE!!)
-        if (this.llmService === 'OLLAMA') {
-            return {
-                'Content-Type': 'application/json',
-            };
-        } else {
-            return {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.license}`
-            };
-        }
-    }
-
 
     // Set models to be used by the AI. 
     // Note: Only those that are defined are set.
@@ -576,7 +564,7 @@ class AI {
                 {
                     method: 'POST',
                     credentials: credentials,
-                    headers: this.#serviceHeaders[this.ttsService],
+                    headers: this.#ttsHeaders[this.ttsService],
                     body: body
                 }
             );
@@ -616,9 +604,6 @@ class AI {
         formData.append('file', audioFile);
         formData.append('model', this.modelSTT);
         formData.append('response_format', 'text');
-
-        const headers=Object.assign({},this.headers);
-        delete headers['Content-Type']
 
         const response = await fetch(
             this.urlSTT, 
