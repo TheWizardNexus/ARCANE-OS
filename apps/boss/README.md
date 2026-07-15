@@ -47,3 +47,43 @@ npm run app:check -- boss
 The BOSS verifier also rejects any public file larger than `95,000,000` bytes. This leaves deployment headroom below GitHub's 100 MB single-file limit; oversized source presentations should have embedded media compressed before the public lock is refreshed.
 
 DBOPFS remains the boundary for user-provided documents. Users can upload or restore their own business material, and the librarian can use uploaded Internal or Restricted material only when the user explicitly requests it in that local browser context. Those uploads are never added to the static release.
+
+## Server deployment runbook
+
+The server deployment unit is the verified `dist/boss/` directory. Never deploy the repository, `apps/boss/`, `business docs/`, or generated working directories. The web server must treat `dist/boss/` as an immutable static document root; it does not need a server-side application process or access to the local Ollama service.
+
+### Build and verify
+
+From a clean checkout of the intended revision:
+
+```powershell
+npm ci
+npm run build:boss-public
+npm run check:boss-public
+```
+
+Record the source revision and preserve `dist/boss/PUBLIC_RELEASE.json` and `dist/boss/ARCANE_APP_RELEASE.json` with the release. A failed build or verification stops the deployment. Do not refresh `public-release-lock.json` during deployment merely to make a changed corpus pass; corpus changes require separate review.
+
+### Stage
+
+1. Copy the complete verified `dist/boss/` tree to a new versioned server directory. Do not merge it into the currently served directory.
+2. Configure the static host to serve that versioned directory as the site root over HTTPS.
+3. Do not add server-side access to DBOPFS, user uploads, local model data, credentials, or repository-only files. Browser-local uploads remain browser-local.
+4. Preserve normal MIME types for HTML, JavaScript modules, JSON, Markdown, images, PDFs, and video. Do not rewrite application routes to arbitrary HTML; existing files must remain addressable at their packaged paths.
+
+### Acceptance before promotion
+
+Verify the staged URL in a clean browser profile:
+
+1. `/` loads the packaged BOSS entry point without a directory listing.
+2. `/apps/boss/chat.html`, `/apps/boss/library.html`, and `/apps/boss/admin.html` load without missing packaged assets.
+3. `PUBLIC_RELEASE.json` is present and matches the staged release.
+4. The Library can search the bundled public catalog and open a representative public original.
+5. The Librarian reaches the expected local-model unavailable or available state without requiring a server-side Ollama endpoint.
+6. Browser developer tools show no failed same-origin package requests on the three application pages.
+
+### Promote and roll back
+
+Promote by changing the host's document-root pointer from the previous versioned directory to the accepted staged directory in one operation, then repeat the acceptance checks on the production URL. Keep the immediately previous verified directory until the new release has passed production smoke testing.
+
+Rollback is the inverse pointer change to that previous verified directory. Do not rebuild, edit files in place, or restore from the repository during an incident. After rollback, repeat the production smoke checks and record the failed release identifier, observed failure, rollback time, and follow-up owner.
