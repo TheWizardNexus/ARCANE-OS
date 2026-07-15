@@ -100,6 +100,34 @@ afterEach(() => {
 });
 
 describe('AI provider configuration and failures', () => {
+    it('initializes OpenAI defaults when a legacy profile has no model preferences', async () => {
+        globalThis.window.user={ preferredModels:[],ready:true };
+
+        await loadAI();
+        const ai=globalThis.window.ai;
+        ai.license='test-key';
+
+        assert.equal(ai.llmService,'OPENAI');
+        assert.equal(ai.sttService,'OPENAI');
+        assert.equal(ai.ttsService,'OPENAI');
+        assert.equal(ai.model,'gpt-4o');
+        assert.equal(ai.modelSTT,'whisper-1');
+        assert.equal(ai.modelTTS,'gpt-4o-mini-tts');
+        assert.equal(ai.configured,true);
+    });
+
+    it('initializes OpenAI defaults when a legacy profile saved blank model preferences', async () => {
+        globalThis.window.user={ preferredModels:['','','','','',''],ready:true };
+
+        await loadAI();
+        const ai=globalThis.window.ai;
+        ai.license='test-key';
+
+        assert.equal(ai.llmService,'OPENAI');
+        assert.equal(ai.model,'gpt-4o');
+        assert.equal(ai.configured,true);
+    });
+
     it('rejects an unconfigured OpenAI request before calling fetch', async () => {
         let fetchCalls=0;
         globalThis.fetch=async () => {
