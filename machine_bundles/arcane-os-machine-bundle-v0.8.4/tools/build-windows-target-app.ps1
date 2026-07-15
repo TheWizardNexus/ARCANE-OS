@@ -475,6 +475,7 @@ using System.Reflection;
   $targetInfo = Join-Path $sdkRoot 'ArcaneTarget.cs'
   $assemblyInfo = Join-Path $sdkRoot 'ArcaneTargetAssemblyInfo.cs'
   $allowMicrophoneLiteral = if ($allowMicrophone) { 'true' } else { 'false' }
+  $allowExternalOpenLiteral = if (@($descriptor.capabilities) -contains 'external.open') { 'true' } else { 'false' }
   $allowedNavigationSource = ($allowedNavigationPaths | ForEach-Object { '      "' + (Escape-CSharp ([string]$_)) + '"' }) -join ",`r`n"
   $targetSource = @"
 namespace ArcaneOS {
@@ -483,6 +484,7 @@ namespace ArcaneOS {
     internal const string ProductName = "$(Escape-CSharp $displayName)";
     internal const string AppId = "Arcane.OS.App.$(Escape-CSharp $AppId)";
     internal const bool AllowMicrophone = $allowMicrophoneLiteral;
+    internal const bool AllowExternalOpen = $allowExternalOpenLiteral;
     internal static readonly string[] AllowedNavigationPaths = new string[] {
 $allowedNavigationSource
     };

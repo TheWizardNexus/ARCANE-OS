@@ -269,6 +269,9 @@
       list: function () { return invoke('apps.list'); },
       launch: function (id) { return invoke('apps.launch', { id: id }); },
     }),
+    external: Object.freeze({
+      open: function (uri) { return invoke('external.open', { uri: String(uri || '') }); },
+    }),
     terminal: Object.freeze({
       start: function (options) {
         const source = options && typeof options === 'object' ? options : {};

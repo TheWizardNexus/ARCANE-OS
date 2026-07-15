@@ -53,6 +53,7 @@ Parameter objects shown as optional may be omitted. Actual availability is also 
 | `Arcane.app.current()` | None | `Promise<app record>` | Gets the current application's identity and context. |
 | `Arcane.applications.list()` | None | `Promise<app[]>` | Lists applications visible to the current host/app. |
 | `Arcane.applications.launch(id)` | Application ID | `Promise<launch result>` | Launches a registered application. |
+| `Arcane.external.open(uri)` | Absolute URI; currently `mailto:` only | `Promise<{opened, uri}>` | Hands a validated URI to the operating system's registered default application. Requires `external.open`. |
 | `Arcane.terminal.start(options?)` | `{shell="auto", cwd="", columns=120, rows=32}` | `Promise<session>` | Starts a native terminal session. |
 | `Arcane.terminal.list()` | None | `Promise<session[]>` | Lists terminal sessions owned by the app. |
 | `Arcane.terminal.write(sessionId, data)` | Session ID; input text | `Promise<result>` | Writes data to a session. |

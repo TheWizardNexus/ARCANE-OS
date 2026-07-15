@@ -37,17 +37,20 @@ namespace ArcaneOS
         internal const string ProductName = ArcaneTarget.ProductName;
         internal const string AppId = ArcaneTarget.AppId;
         internal const bool AllowMicrophone = ArcaneTarget.AllowMicrophone;
+        internal const bool AllowExternalOpen = ArcaneTarget.AllowExternalOpen;
         internal static readonly string[] AllowedNavigationPaths = ArcaneTarget.AllowedNavigationPaths;
 #elif ARCANE_SHELL
         internal const string AppMode = "shell";
         internal const string ProductName = "Arcane OS";
         internal const string AppId = "Arcane.OS.Shell";
         internal const bool AllowMicrophone = true;
+        internal const bool AllowExternalOpen = true;
 #else
         internal const string AppMode = "provisioner";
         internal const string ProductName = "Arcane OS Provisioner";
         internal const string AppId = "Arcane.OS.Provisioner";
         internal const bool AllowMicrophone = false;
+        internal const bool AllowExternalOpen = false;
 #endif
         internal static readonly Color StartupBackgroundColor =
             AppMode == "shell" || AppMode == "provisioner" ? Color.FromArgb(3, 5, 10) : SystemColors.Window;
@@ -3132,9 +3135,15 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
                 webView.CoreWebView2.AddHostObjectToScript("arcaneBridge", new ArcaneBridge(core));
                 webView.CoreWebView2.NavigationStarting += delegate(object sender, CoreWebView2NavigationStartingEventArgs eventArgs)
                 {
-                    if (!IsAllowedAppUri(eventArgs.Uri)) eventArgs.Cancel = true;
+                    if (IsAllowedAppUri(eventArgs.Uri)) return;
+                    eventArgs.Cancel = true;
+                    TryOpenExternalUri(eventArgs.Uri);
                 };
-                webView.CoreWebView2.NewWindowRequested += delegate(object sender, CoreWebView2NewWindowRequestedEventArgs eventArgs) { eventArgs.Handled = true; };
+                webView.CoreWebView2.NewWindowRequested += delegate(object sender, CoreWebView2NewWindowRequestedEventArgs eventArgs)
+                {
+                    eventArgs.Handled = true;
+                    TryOpenExternalUri(eventArgs.Uri);
+                };
                 webView.CoreWebView2.PermissionRequested += delegate(object sender, CoreWebView2PermissionRequestedEventArgs eventArgs)
                 {
                     bool allowMicrophone = Program.AllowMicrophone
@@ -3234,6 +3243,20 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
 #else
             return String.Equals(uri.AbsolutePath, "/app/" + Program.AppMode + "/index.html", StringComparison.Ordinal);
 #endif
+        }
+
+        private static void TryOpenExternalUri(string value)
+        {
+            Uri uri;
+            if (!Program.AllowExternalOpen || !Uri.TryCreate(value, UriKind.Absolute, out uri)
+                || !String.Equals(uri.Scheme, "mailto", StringComparison.OrdinalIgnoreCase)) return;
+            try
+            {
+                ProcessStartInfo start = new ProcessStartInfo(uri.AbsoluteUri);
+                start.UseShellExecute = true;
+                Process.Start(start);
+            }
+            catch { }
         }
 
         private static bool IsTrustedAppOrigin(string value)

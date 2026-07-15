@@ -864,6 +864,15 @@ Categories=System;Settings;
 
   async function applyAppearance() { return appearanceStatus(); }
 
+  function openExternalUri(uri) {
+    if (ctx.simulate) return { opened: true, uri };
+    const opener = systemCommand('xdg-open');
+    if (!opener) throw ctx.arcaneError('EXTERNAL_OPEN_UNSUPPORTED','Arcane cannot find an operating-system URI handler.','Install xdg-utils and try again.',501);
+    const child = ctx.spawn(opener, [uri], { detached: true, stdio: 'ignore' });
+    child.unref();
+    return { opened: true, uri };
+  }
+
   async function selectDirectory() {
     throw ctx.arcaneError(
       'FILESYSTEM_DIRECTORY_SELECTION_UNSUPPORTED',
@@ -898,6 +907,7 @@ Categories=System;Settings;
     permissionStatus,
     appearanceStatus,
     applyAppearance,
+    openExternalUri,
     selectDirectory,
     isElevated,
     hideHostWindow,

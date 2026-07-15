@@ -3888,6 +3888,7 @@ const METHOD_POLICIES = Object.freeze({
   'development.context': Object.freeze({ capability:'development.read',appIds:['developer'] }),
   'development.setup': Object.freeze({ capability:'development.manage',appIds:['developer'],exclusiveMutation:true }),
   'development.node.install': Object.freeze({ capability:'development.manage',appIds:['developer'],privileged:true,exclusiveMutation:true }),
+  'external.open': Object.freeze({ capability:'external.open' }),
   'filesystem.directory.select': Object.freeze({ capability:'filesystem.directory.select' }),
   'apps.list': Object.freeze({ capability:'applications.read', appIds:['shell','terminal'] }),
   'apps.launch': Object.freeze({ capability:'applications.launch', appIds:['shell','terminal'] }),
@@ -4334,6 +4335,30 @@ async function selectFilesystemDirectory(parameters) {
   return Object.freeze({ cancelled:false,path:canonical });
 }
 
+function externalUriRequest(parameters) {
+  const allowed=new Set(['uri']);
+  const keys=parameters&&typeof parameters==='object'&&!Array.isArray(parameters)?Object.keys(parameters):[];
+  if(keys.some((key)=>!allowed.has(key))||typeof parameters.uri!=='string'){
+    throw arcaneError('EXTERNAL_OPEN_INVALID','The external URI request is invalid.','Use a mailto URI.',400);
+  }
+  const value=parameters.uri.trim();
+  if(!value||value.length>4096||/[\u0000-\u001f\u007f]/.test(value)){
+    throw arcaneError('EXTERNAL_OPEN_INVALID','The external URI request is invalid.','Use a valid mailto URI.',400);
+  }
+  let uri;
+  try{uri=new URL(value);}catch(_){throw arcaneError('EXTERNAL_OPEN_INVALID','The external URI is invalid.','Use a valid mailto URI.',400);}
+  if(uri.protocol!=='mailto:')throw arcaneError('EXTERNAL_SCHEME_NOT_ALLOWED','That external URI scheme is not allowed.','Use a mailto URI.',403);
+  return uri.href;
+}
+
+async function openExternalUri(parameters) {
+  const uri=externalUriRequest(parameters);
+  if(typeof native.openExternalUri!=='function')throw arcaneError('EXTERNAL_OPEN_UNSUPPORTED','Arcane cannot open operating-system links on this host.','Use an Arcane host with native URI handling.',501);
+  const result=await native.openExternalUri(uri);
+  if(!result||result.opened!==true||result.uri!==uri)throw arcaneError('EXTERNAL_OPEN_FAILED','The operating system did not accept the link.','Verify a default mail application is configured and try again.',500);
+  return Object.freeze({ opened:true,uri });
+}
+
 function machineStatus() {
   const installation = installationState();
   const releaseSecurity=activeReleaseSecurityEvidence();
@@ -4607,6 +4632,7 @@ async function dispatchMethod(request, options) {
     case 'user.current': return currentIdentity();
     case 'system.metrics': return systemMetrics();
     case 'network.status': return networkStatus();
+    case 'external.open': return openExternalUri(parameters);
     case 'filesystem.directory.select': return selectFilesystemDirectory(parameters);
     case 'storage.list': return listAppStorage();
     case 'storage.get': return getAppStorage(parameters.key);

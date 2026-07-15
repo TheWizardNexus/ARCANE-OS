@@ -36,3 +36,15 @@ Never stack speculative fixes or change multiple independent variables in one de
 Before changing dependency locks, build launchers, packaging, signing, generated manifests, machine bundles, or release automation, read and follow [`docs/build-release.md`](docs/build-release.md) in full.
 
 Build and release work must keep dependency sources public and reproducible, preserve canonical file bytes across operating systems, stop on every nonzero tool exit, keep unsigned local verification separate from signed production publication, and finish with a clean-state build through the affected platform gate.
+
+## Mandatory release-candidate acceptance SOP
+
+Before labeling, approving, publishing, or piloting any ARCANE build as a release candidate, read and follow [`docs/rc-acceptance.md`](docs/rc-acceptance.md) and [`docs/rc-success-criteria.md`](docs/rc-success-criteria.md) in full and update [`docs/rc-requirements-traceability.md`](docs/rc-requirements-traceability.md) against the exact candidate. A release candidate requires traceable requirements, production signing, automated gates, security/privacy review, accessibility verification, clean-machine Microsoft NT acceptance, operational readiness, rollback evidence, measurable success criteria, and an accountable go/no-go decision.
+
+## Mandatory security and privacy review SOP
+
+Before release-candidate review or materially changing identity, authorization, capabilities, privilege, IPC, rendering, packages, updates, recovery, storage, memory, models, providers, networking, diagnostics, audit, or sensitive data movement, read and follow [`docs/security-privacy-review.md`](docs/security-privacy-review.md) in full and update [`docs/threat-model.md`](docs/threat-model.md) for affected assets, actors, trust boundaries, data classes, abuse cases, controls, evidence, and residual risks.
+
+## Mandatory accessibility verification SOP
+
+Before release-candidate review or creating or materially changing a user interface, interaction, confirmation, notification, provisioning step, maintenance path, error, or recovery experience, read and follow [`docs/accessibility-verification.md`](docs/accessibility-verification.md) and [`docs/accessibility-baseline.md`](docs/accessibility-baseline.md) in full. Verification must include the actual supported host, keyboard and assistive-technology behavior, supported themes and contrast modes, errors and recovery, and the complete affected user journey.

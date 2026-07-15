@@ -129,6 +129,13 @@ The longer-range product direction prefers JavaScript and Node.js for orchestrat
 | [Debugging SOP](./docs/debugging.md) | Mandatory no-assumptions debugging and clean-state verification process. |
 | [Build and release SOP](./docs/build-release.md) | Public dependency, canonical-file, signing-mode, build, packaging, and clean-state release requirements. |
 | [Developer reference maintenance SOP](./docs/developer-reference-sop.md) | Requires every system command and application-facing Arcane API change to update its authoritative reference table. |
+| [Release candidate acceptance SOP](./docs/rc-acceptance.md) | Evidence gates, production-signed Microsoft NT acceptance, operational readiness, and accountable go/no-go decisions. |
+| [Security and privacy review SOP](./docs/security-privacy-review.md) | Trust-boundary, threat, privacy, adversarial-testing, finding, and risk-disposition process. |
+| [Accessibility verification SOP](./docs/accessibility-verification.md) | Repeatable component, application, assistive-technology, and complete-journey accessibility evidence. |
+| [RC requirements traceability matrix](./docs/rc-requirements-traceability.md) | Living ledger connecting ARCANE requirements to current implementation, evidence, gaps, owners, tickets, and RC disposition. |
+| [RC and pilot success criteria](./docs/rc-success-criteria.md) | Measurable RC eligibility, controlled-pilot entry/exit, severity, evidence, stop, and rollback thresholds. |
+| [Current-system threat model](./docs/threat-model.md) | Protected assets, actors, trust boundaries, privacy inventory, abuse cases, current controls, residual risks, and required evidence. |
+| [Microsoft NT RC accessibility baseline](./docs/accessibility-baseline.md) | Declared conformance target, environment and assistive-technology matrix, critical journeys, evidence ledger, and release gates. |
 | [Code style standard](./docs/code-style.md) | Repository source formatting, naming, structure, and review rules. |
 | [Application packaging contract](./docs/app-packaging.md) | Browser-context application package manifests, versioning, isolation, and verification. |
 

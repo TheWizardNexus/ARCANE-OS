@@ -17,6 +17,7 @@ export const SAFE_APP_CAPABILITIES = Object.freeze([
   'development.manage',
   'development.read',
   'diagnostics.read',
+  'external.open',
   'filesystem.directory.select',
   'identity.read',
   'installation.read',

@@ -242,7 +242,7 @@ $response|ConvertTo-Json -Compress`;
   const SAFE_APP_CAPABILITIES = new Set([
     'ai.inference', 'ai.models.manage', 'ai.models.read', 'ai.settings.manage',
     'appearance.read', 'appearance.write',
-    'applications.launch', 'applications.read', 'development.manage', 'development.read', 'diagnostics.read', 'filesystem.directory.select', 'identity.read', 'installation.read', 'media.display', 'media.microphone',
+    'applications.launch', 'applications.read', 'development.manage', 'development.read', 'diagnostics.read', 'external.open', 'filesystem.directory.select', 'identity.read', 'installation.read', 'media.display', 'media.microphone',
     'network.status.read', 'preferences.read', 'preferences.write', 'requirements.read', 'storage.read', 'storage.write',
     'system.metrics.read', 'system.read', 'terminal.execute', 'web.embed',
   ]);
@@ -3843,6 +3843,17 @@ $restoredShell=if($previousPresent){$previous}else{$null}
     return child;
   }
 
+  function openExternalUri(uri) {
+    if (ctx.simulate) return { opened: true, uri };
+    const child = ctx.spawn(ctx.path.join(systemRoot, 'explorer.exe'), [uri], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    child.unref();
+    return { opened: true, uri };
+  }
+
   function quoteWindowsArgument(value) {
     const text = String(value);
     if (text === '') return '""';
@@ -3955,6 +3966,7 @@ try {
     permissionStatus,
     appearanceStatus,
     applyAppearance,
+    openExternalUri,
     selectDirectory,
     isElevated,
     hideHostWindow,

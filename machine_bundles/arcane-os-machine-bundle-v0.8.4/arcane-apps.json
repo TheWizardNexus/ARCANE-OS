@@ -293,6 +293,7 @@
       "source": "apps/mail",
       "entry": "index.html",
       "capabilities": [
+        "external.open",
         "network.status.read",
         "preferences.read",
         "preferences.write",
