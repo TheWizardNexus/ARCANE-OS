@@ -314,6 +314,30 @@
         "modules"
       ]
     },
+    "scamurai": {
+      "displayName": "Scamurai",
+      "description": "A privacy-conscious scam warning dashboard with explainable checks and trusted-contact handoff.",
+      "icon": "img/icon.png",
+      "order": 65,
+      "type": "app",
+      "source": "apps/scamurai",
+      "entry": "index.html",
+      "capabilities": [
+        "appearance.read",
+        "external.open"
+      ],
+      "security": {
+        "connectOrigins": [],
+        "mediaOrigins": []
+      },
+      "include": [
+        "img/icon.png",
+        "index.html",
+        "manifest.json",
+        "modules",
+        "scamurai.css"
+      ]
+    },
     "messages": {
       "displayName": "Arcane Messages",
       "description": "A unified, channel-labeled inbox for SMS, RCS, WhatsApp, and compatible messaging services.",
