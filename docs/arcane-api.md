@@ -113,6 +113,16 @@ The canonical semantic definitions for the currently shared Core/Android methods
 | `Arcane.appearance.current()` | None | `Promise<appearance>` | Gets current native appearance state. |
 | `Arcane.appearance.apply(appearance)` | Appearance contract | `Promise<appearance/result>` | Applies allowed native appearance values. |
 
+Native storage and preferences resolve below
+`<state-root>/Arcane OS/apps/<application-id>/` as `storage.json` and
+`preferences.json`. The host-bound canonical app ID selects the folder; callers
+cannot provide a different identity. Browser OPFS follows
+`apps/<application-id>/...`, DBLS fallback keys use
+`arcane.apps.<application-id>:`, and native browser profiles are also app-owned.
+Unowned legacy global data is preserved but not guessed into an app. See
+[Application data isolation](application-data-isolation.md) for the complete
+layout and same-origin browser limitation.
+
 ## Session, provisioning, diagnostics, and development
 
 | Method | Parameters | Return | Description |

@@ -5451,6 +5451,13 @@ const APPLICATION_CATALOG_MAX_RECORDS = 64;
 const RESERVED_APPLICATION_IDS = new Set(['provisioner','shell']);
 const WINDOWS_RESERVED_APPLICATION_IDS = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 
+if (appMode.length > APPLICATION_ID_MAX_LENGTH
+  || !APPLICATION_ID_PATTERN.test(appMode)
+  || WINDOWS_RESERVED_APPLICATION_IDS.test(appMode)) {
+  console.error('Arcane Core rejected an invalid application identity before resolving app-owned data.');
+  process.exit(4);
+}
+
 function stamp() { return new Date().toISOString(); }
 function log(message, details) {
   details === undefined
@@ -6140,7 +6147,7 @@ function preferencesFile() {
   const base = platform === 'win32'
     ? process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local')
     : process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state');
-  return path.join(base, 'Arcane OS', 'preferences.json');
+  return path.join(base, 'Arcane OS', 'apps', appMode, 'preferences.json');
 }
 function readPreferences() {
   if (simulate) return { ...simulatedPreferences };

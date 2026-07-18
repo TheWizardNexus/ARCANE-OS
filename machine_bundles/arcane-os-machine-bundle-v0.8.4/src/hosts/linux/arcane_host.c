@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <stdio.h>
+#include <errno.h>
 
 #ifndef ARCANE_APP
 #define ARCANE_APP "provisioner"
@@ -25,12 +26,29 @@ typedef struct {
   GMutex write_mutex;
   gchar *bundle_root;
   gchar *app_uri;
+  gchar *web_data_dir;
+  gchar *web_cache_dir;
   gboolean web_ready;
   GQueue *pending_messages;
   gchar **host_argv;
 } ArcaneHost;
 
 #define ARCANE_MAX_BRIDGE_REQUEST_BYTES (1024 * 1024)
+
+static gboolean is_canonical_app_id(const gchar *value) {
+  if (!value) return FALSE;
+  gsize length = strlen(value);
+  if (length < 1 || length > 64 || !g_ascii_islower(value[0])) return FALSE;
+  gboolean previous_hyphen = FALSE;
+  for (gsize index = 0; index < length; ++index) {
+    gchar character = value[index];
+    gboolean is_hyphen = character == '-';
+    if (!g_ascii_islower(character) && !g_ascii_isdigit(character) && !is_hyphen) return FALSE;
+    if (is_hyphen && (previous_hyphen || index == 0 || index == length - 1)) return FALSE;
+    previous_hyphen = is_hyphen;
+  }
+  return TRUE;
+}
 
 typedef struct {
   ArcaneHost *host;
@@ -375,6 +393,21 @@ static void activate(GtkApplication *application, gpointer user_data) {
     gtk_window_present(GTK_WINDOW(dialog));
     return;
   }
+  if (!is_canonical_app_id(ARCANE_APP)) {
+    GtkWidget *dialog = gtk_message_dialog_new(host->window, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+      "Arcane rejected an invalid application identity before opening browser data.");
+    gtk_window_present(GTK_WINDOW(dialog));
+    return;
+  }
+  host->web_data_dir = g_build_filename(g_get_user_data_dir(), "arcane-os", "apps", ARCANE_APP, "webkit", NULL);
+  host->web_cache_dir = g_build_filename(g_get_user_cache_dir(), "arcane-os", "apps", ARCANE_APP, "webkit", NULL);
+  if (g_mkdir_with_parents(host->web_data_dir, 0700) != 0
+      || g_mkdir_with_parents(host->web_cache_dir, 0700) != 0) {
+    GtkWidget *dialog = gtk_message_dialog_new(host->window, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+      "Arcane could not create the isolated browser-data folder: %s", g_strerror(errno));
+    gtk_window_present(GTK_WINDOW(dialog));
+    return;
+  }
   if (!start_core(host, &error)) {
     GtkWidget *dialog = gtk_message_dialog_new(host->window, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
       "Arcane Core could not start: %s", error ? error->message : "unknown error");
@@ -388,7 +421,13 @@ static void activate(GtkApplication *application, gpointer user_data) {
   if (!webkit_user_content_manager_register_script_message_handler_with_reply(manager, "arcane", NULL)) {
     g_warning("Arcane could not register the WebKitGTK native bridge.");
   }
-  host->web_view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW, "user-content-manager", manager, NULL));
+  WebKitNetworkSession *network_session = webkit_network_session_new(host->web_data_dir, host->web_cache_dir);
+  host->web_view = WEBKIT_WEB_VIEW(g_object_new(
+    WEBKIT_TYPE_WEB_VIEW,
+    "network-session", network_session,
+    "user-content-manager", manager,
+    NULL));
+  g_object_unref(network_session);
   g_object_unref(manager);
   WebKitSettings *settings = webkit_web_view_get_settings(host->web_view);
   webkit_settings_set_enable_developer_extras(settings, g_getenv("ARCANE_DEVTOOLS") != NULL);
@@ -427,6 +466,8 @@ static void shutdown_host(GApplication *application, gpointer user_data) {
   if (host->core) g_object_unref(host->core);
   if (host->bundle_root) g_free(host->bundle_root);
   if (host->app_uri) g_free(host->app_uri);
+  if (host->web_data_dir) g_free(host->web_data_dir);
+  if (host->web_cache_dir) g_free(host->web_cache_dir);
   if (host->pending_messages) g_queue_free_full(host->pending_messages, g_free);
   g_mutex_clear(&host->write_mutex);
 }

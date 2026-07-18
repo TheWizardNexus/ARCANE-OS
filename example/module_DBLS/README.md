@@ -13,7 +13,13 @@ small configuration values
 temporary or legacy persistence
 compatibility with older versions of the system
 
-Unlike DBOPFS, which uses the **Origin Private File System**, DBLS stores data directly in **LocalStorage key/value pairs**.
+Unlike DBOPFS, which uses the **Origin Private File System**, DBLS stores data in app-qualified **LocalStorage key/value pairs**. A page must declare its stable app identity before importing DBLS:
+
+```html
+<meta name="arcane-app-id" content="my-app">
+```
+
+Physical keys use `arcane.apps.<application-id>:`. Public DBLS methods expose only the logical keys belonging to the current app.
 
 Because LocalStorage is synchronous and widely supported, DBLS is useful for:
 
@@ -34,7 +40,8 @@ This instance is also attached to `window.dbls`, but in browser environments it 
 
 # Data Structure
 
-LocalStorage stores simple key/value pairs.
+LocalStorage stores simple key/value pairs. For app `my-app`, logical key
+`username` is stored as `arcane.apps.my-app:username`.
 
 DBLS automatically handles JSON serialization when necessary.
 
@@ -117,6 +124,8 @@ window.addEventListener(
 | ------- | ------- | -------------------------------------- |
 | ready   | boolean | Indicates whether DBLS has initialized |
 | storage | Storage | Reference to `window.localStorage`     |
+| applicationId | string | Canonical owner of the exposed keys |
+| storagePrefix | string | Physical `arcane.apps.<id>:` prefix |
 | dbls    | DBLS    | Global singleton instance              |
 
 ---
@@ -130,11 +139,11 @@ window.addEventListener(
 | get               | `(key)`       | Retrieves and automatically parses stored value |
 | getMany           | `(keys)`      | Retrieves multiple keys                         |
 | filterKeyIncludes | `(substring)` | Returns keys containing substring               |
-| getAll            | `()`          | Returns all LocalStorage values                 |
+| getAll            | `()`          | Returns all values owned by the current app     |
 | delete            | `(key)`       | Removes a key from storage                      |
 | deleteMany        | `(keys)`      | Removes multiple keys                           |
-| clear             | `()`          | Clears all LocalStorage values                  |
-| getAllKeys        | `()`          | Returns all keys                                |
+| clear             | `()`          | Clears only the current app's values            |
+| getAllKeys        | `()`          | Returns only the current app's logical keys     |
 | hasKey            | `(key)`       | Checks if key exists                            |
 | count             | `()`          | Returns number of stored keys                   |
 
@@ -246,3 +255,7 @@ User Settings → DBLS
 Application Data → DBOPFS
 Legacy Migration → DBLS → DBOPFS
 ```
+
+Unprefixed legacy values are preserved but are not guessed into an app. Browser
+prefixing prevents accidental collisions and clear-all operations; it is not a
+security boundary against another hostile script running on the same origin.

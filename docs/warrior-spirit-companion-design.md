@@ -9,7 +9,7 @@
 
 ## Source and runtime boundary
 
-- `apps/precrisis/chat.html` remains the Companion implementation and continues using `arcane/components/chat.html`, `arcane/entities/Chat.js`, the existing assessment tools, and existing DBOPFS chat/memory records.
+- `apps/precrisis/chat.html` remains the source for the Companion implementation and continues using `arcane/components/chat.html`, `arcane/entities/Chat.js`, the existing assessment tools, and the established DBOPFS chat/memory schemas.
 - `apps/precrisis/journal.html` remains the Reflection implementation and continues using `arcane/components/markdown-editor.html`, `apps/precrisis/entities/Journal.js`, and the existing post-save assessment workflow.
 - `apps/precrisis/dashboard.html` remains the Mental Health Center, including its historic charts and notes.
 - `apps/precrisis/data.html` remains the on-device data and memory browser.
@@ -21,7 +21,7 @@ The public package uses an app-specific adapter to include the authoritative Pre
 
 ## Data and provider behavior
 
-The white-label deliberately uses the same DBOPFS records as PreCrisis:
+The white-label deliberately reuses the PreCrisis DBOPFS table names and record schemas:
 
 - `users`
 - `chats`
@@ -31,7 +31,9 @@ The white-label deliberately uses the same DBOPFS records as PreCrisis:
 - `reports`
 - `scores`
 
-Those records are stored on this device and are not synchronized by the application. Clearing Arcane application data can remove them. The OpenAI key is stored in the local PreCrisis profile, matching the existing product. Conversation and journal content is transmitted to the configured AI provider when AI chat or post-save assessment work runs; “stored on this device” does not mean provider requests remain on-device.
+Every Warrior page declares `<meta name="arcane-app-id" content="warrior-spirit">`. DBOPFS therefore stores these records under the Warrior Spirit application-data folder, separate from the `precrisis` folder even though both apps use compatible tables and entities. Warrior backup, restore, clear, and normal reads operate only on Warrior-owned records; they do not include PreCrisis records.
+
+Warrior records are stored on this device and are not synchronized by the application. Clearing Warrior Spirit application data can remove them. The OpenAI key is stored in the local Warrior Spirit profile using the inherited profile schema. Conversation and journal content is transmitted to the configured AI provider when AI chat or post-save assessment work runs; “stored on this device” does not mean provider requests remain on-device.
 
 ## Theme and brand
 
@@ -45,7 +47,7 @@ PreCrisis crisis controls and assessment behavior remain intact. In the Warrior 
 
 ## Verification contract
 
-- Source tests confirm the five PreCrisis surfaces, shared components, Profile fields, Mental Health Center, prompt/personality wiring, DBOPFS tables, 988 website behavior, theme order, and package policy.
+- Source tests confirm the five PreCrisis-derived surfaces, shared components, Profile fields, Mental Health Center, prompt/personality wiring, DBOPFS schemas, explicit Warrior app identity, isolated-data wording, 988 website behavior, theme order, and package policy.
 - Public packaging must include both the Warrior shell and the authoritative PreCrisis runtime while excluding the large research HTML file.
 - Native packaging must resolve the same local dependencies.
 - Browser verification covers route loading; the exact Warrior Spirit Companion header; Home, Companion, and Mental Health Center navigation order; system light/dark behavior; a visible OpenAI key; hidden Profile palette and support-email sections; and the existing functional components.

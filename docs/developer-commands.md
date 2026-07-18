@@ -17,6 +17,7 @@ This is the authoritative table of supported system-level commands used to set u
 | `npm run prepare` | npm lifecycle alias that installs the repository Git hooks. | Configured pre-push hook. | Runs automatically after supported dependency installs; manual use is rarely needed. |
 | `npm run verify:package-locks` | Rejects dependency URLs outside approved public npm registries. | Pass/fail registry report. | Before and after lockfile changes. |
 | `npm test` | Runs the root JavaScript contract suite. | Node test report. | Routine focused verification. |
+| `npm run test:app-data-isolation` | Runs canonical app-identity, DBOPFS/DBLS/worker/cache, native Core files, Windows/Linux profile paths, and Android profile source tests. | Node test and host-source reports. | Persistent-storage, renderer-profile, or app-identity changes. |
 | `npm run test:redress` | Runs the Redress application suite. | Node test report. | Redress changes. |
 | `npm run test:machine` | Runs the portable machine-bundle check. | Core, bridge, security, packaging, and portable-app checks. | Machine/runtime changes. |
 | `npm run check` | Runs lockfile, root, Redress, public-app, and machine checks. | Complete platform-neutral repository gate. | Before handoff. |

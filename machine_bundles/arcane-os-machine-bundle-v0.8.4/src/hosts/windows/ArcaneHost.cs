@@ -3017,6 +3017,157 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
         }
     }
 
+    internal static class ApplicationDataLayout
+    {
+        private const int MaximumApplicationIdLength = 64;
+        private static readonly Regex ApplicationIdPattern = new Regex("^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", RegexOptions.CultureInvariant);
+        private static readonly Regex ReservedApplicationIdPattern = new Regex("^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:[.].*)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        internal static string PrepareWebView2Profile(string applicationId)
+        {
+            string localApplicationData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (String.IsNullOrWhiteSpace(localApplicationData))
+            {
+                throw new InvalidOperationException("Arcane could not resolve the current user's local application-data directory.");
+            }
+            return PrepareWebView2Profile(localApplicationData, applicationId);
+        }
+
+        internal static string PrepareWebView2Profile(string localApplicationData, string applicationId)
+        {
+            ValidateApplicationId(applicationId);
+            if (String.IsNullOrWhiteSpace(localApplicationData)) throw new ArgumentException("A local application-data directory is required.", "localApplicationData");
+
+            string localRoot = NormalizeDirectoryPath(localApplicationData);
+            string arcaneRoot = ResolveChildDirectory(localRoot, "Arcane OS");
+            string applicationsRoot = ResolveChildDirectory(arcaneRoot, "apps");
+            string applicationRoot = ResolveChildDirectory(applicationsRoot, applicationId);
+            string targetProfile = ResolveChildDirectory(applicationRoot, "webview2");
+            string legacyProfilesRoot = ResolveChildDirectory(arcaneRoot, "WebView2");
+            string legacyProfile = ResolveChildDirectory(legacyProfilesRoot, applicationId);
+
+            EnsureRegularDirectory(arcaneRoot, "Arcane application-data root");
+            EnsureRegularDirectory(applicationsRoot, "Arcane applications data root");
+            EnsureRegularDirectory(applicationRoot, "Arcane application data root");
+
+            bool targetExists = InspectRegularDirectory(targetProfile, "Arcane application WebView2 profile");
+            bool legacyRootExists = InspectRegularDirectory(legacyProfilesRoot, "legacy Arcane WebView2 profiles root");
+            bool legacyExists = legacyRootExists && InspectRegularDirectory(legacyProfile, "legacy Arcane application WebView2 profile");
+
+            if (targetExists && legacyExists)
+            {
+                throw new InvalidDataException(
+                    "Arcane found both the app-scoped WebView2 profile and its legacy profile for '" + applicationId
+                    + "'. Arcane will not merge or choose between two profile directories. Move one profile aside after preserving it, then reopen the application.");
+            }
+
+            if (!targetExists && legacyExists)
+            {
+                if (InspectRegularDirectory(targetProfile, "Arcane application WebView2 profile"))
+                {
+                    throw new InvalidDataException("Arcane refused to merge a legacy WebView2 profile into an app-scoped profile that appeared during migration.");
+                }
+                InspectRequiredRegularDirectory(legacyProfilesRoot, "legacy Arcane WebView2 profiles root");
+                InspectRequiredRegularDirectory(legacyProfile, "legacy Arcane application WebView2 profile");
+                Directory.Move(legacyProfile, targetProfile);
+                if (InspectRegularDirectory(legacyProfile, "legacy Arcane application WebView2 profile"))
+                {
+                    throw new IOException("Arcane could not complete the legacy WebView2 profile move because the source directory still exists.");
+                }
+                InspectRequiredRegularDirectory(targetProfile, "Arcane application WebView2 profile");
+                targetExists = true;
+            }
+
+            if (!targetExists) EnsureRegularDirectory(targetProfile, "Arcane application WebView2 profile");
+
+            InspectRequiredRegularDirectory(arcaneRoot, "Arcane application-data root");
+            InspectRequiredRegularDirectory(applicationsRoot, "Arcane applications data root");
+            InspectRequiredRegularDirectory(applicationRoot, "Arcane application data root");
+            InspectRequiredRegularDirectory(targetProfile, "Arcane application WebView2 profile");
+            if (InspectRegularDirectory(legacyProfile, "legacy Arcane application WebView2 profile"))
+            {
+                throw new InvalidDataException("Arcane refused to continue while both legacy and app-scoped WebView2 profiles exist.");
+            }
+            return targetProfile;
+        }
+
+        private static void ValidateApplicationId(string applicationId)
+        {
+            if (String.IsNullOrWhiteSpace(applicationId)
+                || applicationId.Length > MaximumApplicationIdLength
+                || !ApplicationIdPattern.IsMatch(applicationId)
+                || ReservedApplicationIdPattern.IsMatch(applicationId))
+            {
+                throw new ArgumentException("Arcane requires a canonical application identifier before resolving app data.", "applicationId");
+            }
+        }
+
+        private static string NormalizeDirectoryPath(string path)
+        {
+            string fullPath = Path.GetFullPath(path);
+            string volumeRoot = Path.GetPathRoot(fullPath);
+            string trimmedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string trimmedVolumeRoot = (volumeRoot ?? "").TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (String.Equals(trimmedPath, trimmedVolumeRoot, StringComparison.OrdinalIgnoreCase)) return volumeRoot;
+            return trimmedPath;
+        }
+
+        private static string ResolveChildDirectory(string parent, string childName)
+        {
+            string normalizedParent = NormalizeDirectoryPath(parent);
+            string child = NormalizeDirectoryPath(Path.Combine(normalizedParent, childName));
+            string prefix = normalizedParent.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                || normalizedParent.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? normalizedParent
+                : normalizedParent + Path.DirectorySeparatorChar;
+            if (!child.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Arcane rejected an application-data path outside its expected parent directory.");
+            }
+            return child;
+        }
+
+        private static void EnsureRegularDirectory(string path, string description)
+        {
+            if (!InspectRegularDirectory(path, description)) Directory.CreateDirectory(path);
+            InspectRequiredRegularDirectory(path, description);
+        }
+
+        private static void InspectRequiredRegularDirectory(string path, string description)
+        {
+            if (!InspectRegularDirectory(path, description))
+            {
+                throw new DirectoryNotFoundException("Arcane could not resolve the " + description + " at '" + path + "'.");
+            }
+        }
+
+        private static bool InspectRegularDirectory(string path, string description)
+        {
+            FileAttributes attributes;
+            try
+            {
+                attributes = File.GetAttributes(path);
+            }
+            catch (FileNotFoundException)
+            {
+                return false;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return false;
+            }
+            if ((attributes & FileAttributes.Directory) == 0)
+            {
+                throw new InvalidDataException("Arcane expected the " + description + " to be a directory: '" + path + "'.");
+            }
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new InvalidDataException("Arcane refused a reparse point at the " + description + ": '" + path + "'.");
+            }
+            return true;
+        }
+    }
+
     internal sealed class ArcaneForm : Form
     {
         private readonly string[] launchArgs;
@@ -3118,8 +3269,7 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
 
                 if (startupBackdrop != null) startupBackdrop.BeginStage("webview", "Checking the installed WebView2 Runtime…");
                 await EnsureWebViewRuntimeAsync();
-                string userData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Arcane OS", "WebView2", Program.AppMode);
-                Directory.CreateDirectory(userData);
+                string userData = ApplicationDataLayout.PrepareWebView2Profile(Program.AppMode);
                 CoreWebView2Environment environment = await CoreWebView2Environment.CreateAsync(null, userData);
                 CoreWebView2ControllerOptions controllerOptions = environment.CreateCoreWebView2ControllerOptions();
                 controllerOptions.DefaultBackgroundColor = Program.StartupBackgroundColor;

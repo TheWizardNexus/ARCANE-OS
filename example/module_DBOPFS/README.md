@@ -6,7 +6,13 @@
 
 The **DBOPFS module** provides a lightweight database abstraction built on top of the browser's **Origin Private File System (OPFS)**.
 
-DBOPFS stores application data directly in the browser's private filesystem using a simple and predictable structure.
+DBOPFS stores application data directly in the browser's private filesystem using a simple and predictable app-owned structure. The page must declare its stable package ID before importing the module:
+
+```html
+<meta name="arcane-app-id" content="my-app">
+```
+
+In a native host, the host-bound application ID is authoritative and must match the declaration.
 
 Database concepts map directly to the filesystem:
 
@@ -34,12 +40,18 @@ Other modules can safely begin using the database once the initialization event 
 
 ## **Data Structure**
 
-Tables are stored as directories and records are stored as files.
+Tables are stored as directories and records are stored as files below
+`OPFS root/apps/<application-id>/`. The tree below therefore sits inside the
+current app's directory, not directly at the origin root.
+
+The folder prevents accidental cross-app enumeration and deletion. A native
+per-app browser profile or a distinct origin remains the security boundary
+against hostile same-origin code.
 
 Example structure:
 
 ```
-OPFS Root
+OPFS root/apps/my-app
 │
 ├── users/
 │   ├── alex
@@ -126,9 +138,9 @@ const user=await dbopfs.get(
 
 ### Events
 
-| Event Name   | Details              | Description                                                                   |
-| ------------ | -------------------- | ----------------------------------------------------------------------------- |
-| dbopfs-ready | `{ dbopfs: DBOPFS }` | Fired when DBOPFS has finished initializing and the database is ready for use |
+| Event Name   | Details | Description |
+| ------------ | ------- | ----------- |
+| dbopfs-ready | `{ dbopfs, applicationId, storagePath }` | Fired after DBOPFS opens `apps/<applicationId>` and creates its default tables |
 
 Example:
 
@@ -150,6 +162,8 @@ window.addEventListener(
 | ------------- | ------- | ----------------------------------------------------------- |
 | ready         | boolean | Indicates whether the database initialization has completed |
 | tables        | Object  | In-memory cache of loaded tables and records                |
+| applicationId | string  | Canonical owner of this database                             |
+| storagePath   | string  | App-relative path such as `apps/my-app`                     |
 | window.dbopfs | DBOPFS  | Global singleton database instance                          |
 
 ---
@@ -167,21 +181,21 @@ window.addEventListener(
 | delete                | `(tableName,fileName)`       | Deletes a record from a table                                                 |
 | deleteMany            | `(tableName,fileNames=[])`   | Deletes multiple records from a table                                         |
 | deleteTable           | `(tableName)`                | Deletes an entire table directory                                             |
-| clearAllStorage       | none                         | Clears the entire OPFS storage for the origin                                 |
+| clearAllStorage       | none                         | Clears and recreates only the current application's OPFS tables                |
 | clear                 | `(tableName)`                | Deletes all records within a table                                            |
 | getAllKeys            | `(tableName)`                | Returns all file keys in a table                                              |
 | filterKeyIncludes     | `(tableName,substring)`      | Returns records whose keys contain a substring                                |
 | hasKey                | `(tableName,key)`            | Checks whether a key exists within a table                                    |
 | count                 | `(tableName)`                | Returns the number of records in a table                                      |
-| downloadCompressedPNG | `(name)`                     | Downloads the entire database as a compressed PNG backup                      |
-| restoreFromPNG        | `(file)`                     | Restores a database backup from a PNG file created by `downloadCompressedPNG` |
+| downloadCompressedPNG | `(name)`                     | Downloads the current application's database as a compressed PNG backup       |
+| restoreFromPNG        | `(file)`                     | Restores a backup into the current application's directory                    |
 
 
 ---
 
 # Database Backup
 
-DBOPFS can export the entire database as a **compressed PNG backup image**.
+DBOPFS can export the current application's database as a **compressed PNG backup image**.
 
 The database is streamed as JSON, compressed, and encoded into PNG pixels.
 

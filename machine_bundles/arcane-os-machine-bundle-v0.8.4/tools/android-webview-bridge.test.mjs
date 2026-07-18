@@ -688,13 +688,16 @@ test('Android host controller binds one exact main-frame entry and safe asset pa
 
 test('Android controller hardens WebView before enabling JavaScript and loading entries', async function testAndroidControllerOrdering() {
     const source = await bundleSource('src/hosts/android/ArcaneWebViewHostController.kt');
+    const sessionSource = await bundleSource('src/hosts/android/ArcaneAndroidHostSession.kt');
+    const profileSupport = source.indexOf('WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)');
+    const profileAssignment = source.indexOf('WebViewCompat.setProfile(webView, hostSession.webViewProfileName)');
     const harden = source.indexOf('hardenSettings(webView.settings)');
-    const hardenServiceWorkers = source.indexOf('hardenServiceWorkers()');
+    const hardenServiceWorkers = source.indexOf('hardenServiceWorkers(webView)');
     const bridge = source.indexOf('ArcaneWebViewBridge.install(');
     const client = source.indexOf('webView.webViewClient = Client()');
     const enableJavaScript = source.indexOf('webView.settings.javaScriptEnabled = true');
 
-    assert(harden >= 0 && hardenServiceWorkers > harden && bridge > hardenServiceWorkers && client > bridge && enableJavaScript > client, 'Android controller must harden WebView and service-worker settings and install the bridge/client before enabling JavaScript.');
+    assert(profileSupport >= 0 && profileAssignment > profileSupport && harden > profileAssignment && hardenServiceWorkers > harden && bridge > hardenServiceWorkers && client > bridge && enableJavaScript > client, 'Android controller must bind the app profile, harden WebView and service-worker settings, and install the bridge/client before enabling JavaScript.');
     for (const token of [
         'settings.allowFileAccess = false',
         'settings.allowContentAccess = false',
@@ -706,8 +709,13 @@ test('Android controller hardens WebView before enabling JavaScript and loading 
     ]) {
         assert(source.includes(token), `Android controller is missing ${token}`);
     }
-    assert.match(source, /ServiceWorkerController\.getInstance\(\)\.serviceWorkerWebSettings/);
-    assert.match(source, /private fun hardenServiceWorkers\(\)[\s\S]*settings\.allowFileAccess = false[\s\S]*settings\.allowContentAccess = false[\s\S]*settings\.blockNetworkLoads = true/);
+    assert.match(sessionSource, /webViewProfileName: String = "arcane-app-\$\{applicationDescriptor\.id\}"/);
+    assert.match(source, /if \(!WebViewFeature\.isFeatureSupported\(WebViewFeature\.MULTI_PROFILE\)\) \{[\s\S]*"WEBVIEW_MULTI_PROFILE_UNSUPPORTED"/);
+    assert.match(source, /WebViewCompat\.getProfile\(webView\)\.name != hostSession\.webViewProfileName/);
+    assert.match(source, /"WEBVIEW_PROFILE_ASSIGNMENT_FAILED"/);
+    assert.match(source, /WebViewCompat\.getProfile\(webView\)\.serviceWorkerController\.serviceWorkerWebSettings/);
+    assert.match(source, /private fun hardenServiceWorkers\(webView: WebView\)[\s\S]*settings\.allowFileAccess = false[\s\S]*settings\.allowContentAccess = false[\s\S]*settings\.blockNetworkLoads = true/);
+    assert.doesNotMatch(source, /ServiceWorkerController\.getInstance\(\)/);
     assert.doesNotMatch(source, /require\s*\([^\r\n]*\)\s*\{/);
 });
 
@@ -745,7 +753,7 @@ test('Android controller teardown removes bridge authority and permanently close
         assert(source.includes(`failures.add("${failure}")`), `Android teardown must report ${failure}.`);
     }
     const listenerRemoval = source.indexOf('WebViewCompat.removeWebMessageListener');
-    const destroy = source.indexOf('webView.destroy()');
+    const destroy = source.indexOf('webView.destroy()', listenerRemoval);
     assert(
         listenerRemoval >= 0 && destroy > listenerRemoval,
         'Android teardown must attempt bridge-authority removal before destroying the WebView.'

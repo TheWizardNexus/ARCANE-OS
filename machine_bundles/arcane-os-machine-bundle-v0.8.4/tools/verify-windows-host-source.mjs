@@ -95,7 +95,7 @@ if (releaseVerification < 0 || firstBootRun <= releaseVerification || applicatio
 }
 const backdropShow = source.indexOf('if (AppMode == "shell") startupBackdrop = StartupBackdrop.ShowNow();');
 const backdropStart = source.indexOf('internal sealed class StartupBackdrop');
-const backdropEnd = source.indexOf('internal sealed class ArcaneForm', backdropStart);
+const backdropEnd = source.indexOf('internal static class ApplicationDataLayout', backdropStart);
 const backdropSource = source.slice(backdropStart, backdropEnd);
 if (backdropShow < 0 || backdropShow > releaseVerification || backdropStart < 0
     || !backdropSource.includes('BackColor = Program.StartupBackgroundColor;')
@@ -278,6 +278,52 @@ if (!source.includes('Regex.IsMatch(value, @"^Local\\\\Arcane[.]OS[.]Shell[.]Wat
   throw new Error('The external shell watchdog must accept only its randomized, local synchronization event names.');
 }
 const formStart = source.indexOf('public ArcaneForm(');
+const applicationDataLayoutStart = source.indexOf('internal static class ApplicationDataLayout');
+const applicationDataLayoutEnd = source.indexOf('internal sealed class ArcaneForm', applicationDataLayoutStart);
+if (applicationDataLayoutStart < 0 || applicationDataLayoutEnd <= applicationDataLayoutStart) {
+  throw new Error('The Windows host must own a reusable application-data layout boundary.');
+}
+const applicationDataLayout = source.slice(applicationDataLayoutStart, applicationDataLayoutEnd);
+for (const profileIsolationContract of [
+  'private const int MaximumApplicationIdLength = 64;',
+  'private static readonly Regex ApplicationIdPattern',
+  'private static readonly Regex ReservedApplicationIdPattern',
+  'internal static string PrepareWebView2Profile(string applicationId)',
+  'string applicationsRoot = ResolveChildDirectory(arcaneRoot, "apps");',
+  'string applicationRoot = ResolveChildDirectory(applicationsRoot, applicationId);',
+  'string targetProfile = ResolveChildDirectory(applicationRoot, "webview2");',
+  'string legacyProfilesRoot = ResolveChildDirectory(arcaneRoot, "WebView2");',
+  'if (targetExists && legacyExists)',
+  'Arcane will not merge or choose between two profile directories.',
+  'if (!targetExists && legacyExists)',
+  'Directory.Move(legacyProfile, targetProfile);',
+  'InspectRequiredRegularDirectory(targetProfile, "Arcane application WebView2 profile");',
+  'FileAttributes.ReparsePoint',
+  'child.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)',
+]) {
+  if (!applicationDataLayout.includes(profileIsolationContract)) {
+    throw new Error(`Windows app-scoped WebView2 profile contract is missing: ${profileIsolationContract}`);
+  }
+}
+if (applicationDataLayout.includes('Directory.Delete(')) {
+  throw new Error('Windows WebView2 profile migration must preserve legacy data and never delete a profile directory.');
+}
+const profileCollisionCheck = applicationDataLayout.indexOf('if (targetExists && legacyExists)');
+const profileTargetRecheck = applicationDataLayout.indexOf('if (InspectRegularDirectory(targetProfile, "Arcane application WebView2 profile"))', profileCollisionCheck);
+const legacyProfileMove = applicationDataLayout.indexOf('Directory.Move(legacyProfile, targetProfile);');
+const migratedProfileCheck = applicationDataLayout.indexOf('InspectRequiredRegularDirectory(targetProfile, "Arcane application WebView2 profile");', legacyProfileMove);
+if (profileCollisionCheck < 0 || profileTargetRecheck <= profileCollisionCheck
+    || legacyProfileMove <= profileTargetRecheck || migratedProfileCheck <= legacyProfileMove) {
+  throw new Error('Windows WebView2 profile migration must reject collisions, recheck the destination, move once, and verify the result in that order.');
+}
+if (source.includes('"Arcane OS", "WebView2", Program.AppMode')) {
+  throw new Error('The Windows host must not place an active WebView2 profile in the legacy cross-app layout.');
+}
+const profilePreparation = source.indexOf('ApplicationDataLayout.PrepareWebView2Profile(Program.AppMode);', formStart);
+const webViewEnvironmentCreation = source.indexOf('CoreWebView2Environment.CreateAsync(null, userData);', formStart);
+if (profilePreparation < formStart || webViewEnvironmentCreation <= profilePreparation) {
+  throw new Error('The Windows host must prepare the app-scoped WebView2 profile before creating its WebView2 environment.');
+}
 const formBackground = source.indexOf('BackColor = Program.StartupBackgroundColor;', formStart);
 const viewBackground = source.indexOf('BackColor = Program.StartupBackgroundColor,', formBackground + 1);
 const controlsAdd = source.indexOf('Controls.Add(webView);', formStart);

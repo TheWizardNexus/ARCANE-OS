@@ -111,18 +111,6 @@
     this.shadowRoot.querySelector('#refresh').addEventListener(
         'click',
         (e)=>{
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (!key?.includes('/')) {
-                    continue;
-                }
-                localStorage.removeItem(key);
-                //just removed one, so the current index will be replaved with the next key
-                //don't increment
-                i--;
-                console.warn(`Removed component cache ${key}`);
-            }
-            
             window.location.reload(true);
         }
     );

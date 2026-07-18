@@ -30,6 +30,7 @@ test('Warrior Spirit routes are top-level branded copies of the working PreCrisi
         const skin=html.indexOf('apps/warrior-spirit/precrisis-skin.css');
         assert(theme>=0&&primitives>theme&&skin>primitives,`${route} theme order`);
         assert.match(html,/arcane\/modules\/ThemeBootstrap\.js/);
+        assert.match(html,/<meta name="arcane-app-id" content="warrior-spirit">/);
         assert.match(html,/apps\/warrior-spirit\/modules\/PreCrisisFrame\.js/);
         assert.match(html,new RegExp(`data-precrisis-page="${precrisis.replace('.','\\.')}"`));
         assert.doesNotMatch(html,/<iframe\b/i);
@@ -39,6 +40,7 @@ test('Warrior Spirit routes are top-level branded copies of the working PreCrisi
         read('apps/warrior-spirit/home.html')
     ]);
     assert.equal(index,home);
+    assert.match(index,/<meta name="arcane-app-id" content="warrior-spirit">/);
     assert.doesNotMatch(index,/<iframe\b/i);
 });
 
@@ -197,7 +199,7 @@ test('Warrior home navigation begins Home, Companion, then Mental Health Center'
     assert.doesNotMatch(home,/Stream of Consciousness|Clinician|Leadership|Import Many/);
 });
 
-test('the existing PreCrisis DBOPFS records and profile remain the white-label data model',async()=>{
+test('PreCrisis DBOPFS schemas are reused while Warrior Spirit owns isolated app data',async()=>{
     const [chat,journal,user,home]=await Promise.all([
         read('arcane/entities/Chat.js'),
         read('apps/precrisis/entities/Journal.js'),
@@ -208,8 +210,9 @@ test('the existing PreCrisis DBOPFS records and profile remain the white-label d
     assert.match(chat,/dbopfs\.set\(\s*'memories'/);
     assert.match(journal,/dbopfs\.set\(\s*'journal_entries'/);
     assert.match(user,/dbopfs/);
-    assert.match(home,/saved through PreCrisis DBOPFS storage on this device/i);
-    assert.match(home,/Warrior Spirit AI Licence key is stored locally with the on-device PreCrisis profile/i);
+    assert.match(home,/saved in the Warrior Spirit application-data folder on this device/i);
+    assert.match(home,/isolated from PreCrisis and other Arcane apps/i);
+    assert.match(home,/Warrior Spirit AI Licence key is stored locally with your on-device Warrior Spirit profile/i);
 });
 
 test('saved Companion conversations render as dated private transcripts instead of raw JSON',async()=>{

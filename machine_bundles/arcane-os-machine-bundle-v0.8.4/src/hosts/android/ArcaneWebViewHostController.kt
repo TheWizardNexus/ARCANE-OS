@@ -5,7 +5,6 @@ import android.os.Looper
 import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import android.webkit.ServiceWorkerController
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.annotation.UiThread
@@ -54,11 +53,29 @@ internal class ArcaneWebViewHostController(
         }
         val currentLooper = Looper.myLooper()
             ?: return InstallResult(false, false, null, "INSTALL_THREAD_UNAVAILABLE")
-        hardenSettings(webView.settings)
-        hardenServiceWorkers()
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+            webView.destroy()
+            return InstallResult(false, false, null, "WEBVIEW_MULTI_PROFILE_UNSUPPORTED")
+        }
         installedWebView = webView
         installedLooper = currentLooper
         lifecycle = Lifecycle.CLOSING
+        try {
+            WebViewCompat.setProfile(webView, hostSession.webViewProfileName)
+            if (WebViewCompat.getProfile(webView).name != hostSession.webViewProfileName) {
+                throw IllegalStateException("Android WebView profile assignment did not persist.")
+            }
+        } catch (_: Exception) {
+            val closeResult = close(webView)
+            return InstallResult(false, closeResult.retryable, closeResult, "WEBVIEW_PROFILE_ASSIGNMENT_FAILED")
+        }
+        try {
+            hardenSettings(webView.settings)
+            hardenServiceWorkers(webView)
+        } catch (_: Exception) {
+            val closeResult = close(webView)
+            return InstallResult(false, closeResult.retryable, closeResult, "WEBVIEW_PROFILE_SETUP_FAILED")
+        }
         val bridgeInstalled = try {
             ArcaneWebViewBridge.install(
                 webView,
@@ -185,8 +202,8 @@ internal class ArcaneWebViewHostController(
         lifecycle = Lifecycle.NEW
     }
 
-    private fun hardenServiceWorkers() {
-        val settings = ServiceWorkerController.getInstance().serviceWorkerWebSettings
+    private fun hardenServiceWorkers(webView: WebView) {
+        val settings = WebViewCompat.getProfile(webView).serviceWorkerController.serviceWorkerWebSettings
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         settings.blockNetworkLoads = true

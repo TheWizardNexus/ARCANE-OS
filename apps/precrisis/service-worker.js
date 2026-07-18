@@ -1,4 +1,6 @@
-const CACHE_NAME = 'PreCrisis-cache-v41';
+const CACHE_PREFIX = 'arcane-precrisis-cache-';
+const LEGACY_CACHE_PREFIX = 'PreCrisis-cache-';
+const CACHE_NAME = `${CACHE_PREFIX}v43`;
 const urlsToCache = [
     './',
     './index.html',
@@ -50,6 +52,7 @@ const urlsToCache = [
     '../../arcane/modules/DataMaintenance.js',
     '../../arcane/modules/DataMaintenance.js?v=2',
     '../../arcane/modules/DataMaintenance.js?v=3',
+    '../../arcane/modules/AppDataScope.js',
     '../../arcane/modules/DBOPFS.js',
     '../../arcane/modules/DBOPFSWorker.js',
     '../../arcane/modules/DBLS.js',
@@ -182,12 +185,13 @@ self.addEventListener('install', event => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', event => {
-    const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    if (!cacheWhitelist.includes(cacheName)) {
+                    const belongsToPreCrisis = cacheName.startsWith(CACHE_PREFIX)
+                        || cacheName.startsWith(LEGACY_CACHE_PREFIX);
+                    if (belongsToPreCrisis && cacheName !== CACHE_NAME) {
                         return caches.delete(cacheName);
                     }
                 })
@@ -201,7 +205,9 @@ self.addEventListener('fetch', event => {
     try{
         event.respondWith(
             fetch(event.request).catch(() => {
-                return caches.match(event.request);
+                return caches.open(CACHE_NAME).then(
+                    cache => cache.match(event.request)
+                );
             })
         );
     }catch{

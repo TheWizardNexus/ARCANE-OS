@@ -14,6 +14,7 @@ internal class ArcaneAndroidHostSession private constructor(
     private val packageVersion = currentPackageVersion(applicationContext)
     private val applicationDescriptor = validatedApplication(packageVersion)
     private val grants = GeneratedAndroidApplicationRegistry.shellGrants().toSet()
+    internal val webViewProfileName: String = "arcane-app-${applicationDescriptor.id}"
     private val userIdentity = ArcaneWebViewBridge.UserIdentity(
         identityKind = "local-session",
         username = null,

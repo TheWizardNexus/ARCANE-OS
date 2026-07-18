@@ -204,11 +204,11 @@ Verify every legal authority, quotation, effective date, court rule, filing requ
 
 ### Native and portable storage
 
-This version uses DBOPFS explicitly. Its nested case tree is a Redress logical structure over browser-private storage.
+This version uses DBOPFS explicitly below `apps/redress`. Its nested case tree is a Redress logical structure over browser-private storage and is not visible to other apps through normal DBOPFS operations.
 
 The following shared Arcane capabilities are planned but are not complete here:
 
-- a hierarchical shared DBOPFS API for all apps;
+- a hierarchical shared DBOPFS mechanism that preserves each app's data root;
 - a native filesystem provider;
 - a portable native-first, DBOPFS-fallback provider;
 - verified OPFS-to-native and native-to-OPFS migration;
