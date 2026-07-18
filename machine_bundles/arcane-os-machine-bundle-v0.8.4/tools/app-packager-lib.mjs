@@ -4,6 +4,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { verifyPackagedAppLinks } from './app-package-links.mjs';
 import { replaceTemplateTokenExactlyOnce } from './exact-template-replacement.mjs';
+import { readMethodPolicies, renderCoreMethodPolicies } from './method-policies.mjs';
 
 export const SAFE_APP_CAPABILITIES = Object.freeze([
   'ai.inference',
@@ -694,12 +695,15 @@ async function securePackagedHtml(stagingRoot, app, bundledAppIds = []) {
 }
 
 async function compileTargetCore(bundleRoot, bundleManifest) {
-  const [template, windowsNative, linuxNative] = await Promise.all([
+  const [template, windowsNative, linuxNative, platformAdapters, methodPolicies] = await Promise.all([
     fs.readFile(path.join(bundleRoot, 'src/core/arcane-core.template.cjs'), 'utf8'),
     fs.readFile(path.join(bundleRoot, 'src/native/windows.cjs'), 'utf8'),
     fs.readFile(path.join(bundleRoot, 'src/native/linux.cjs'), 'utf8'),
+    fs.readFile(path.join(bundleRoot, 'src/native/platform-adapters.cjs'), 'utf8'),
+    readMethodPolicies(bundleRoot),
   ]);
-  let core = replaceTemplateTokenExactlyOnce(template, '__ARCANE_NATIVE_ADAPTERS__', `${windowsNative}\n\n${linuxNative}`);
+  let core = replaceTemplateTokenExactlyOnce(template, '__ARCANE_NATIVE_ADAPTERS__', `${windowsNative}\n\n${linuxNative}\n\n${platformAdapters}`);
+  core = replaceTemplateTokenExactlyOnce(core, '__ARCANE_METHOD_POLICIES__', renderCoreMethodPolicies(methodPolicies));
   core = replaceTemplateTokenExactlyOnce(core, '__VERSION_JSON__', JSON.stringify(bundleManifest.version));
   core = replaceTemplateTokenExactlyOnce(core, '__BUNDLE_MANIFEST_JSON__', JSON.stringify(bundleManifest));
   new vm.Script(core, { filename: 'arcane-app-core.generated.cjs' });

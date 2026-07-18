@@ -865,7 +865,7 @@ Categories=System;Settings;
   async function applyAppearance() { return appearanceStatus(); }
 
   function openExternalUri(uri) {
-    if (ctx.simulate) return { opened: true, uri };
+    if (ctx.simulate) throw ctx.arcaneError('EXTERNAL_OPEN_SIMULATED','Arcane simulation cannot hand a link to the operating system.','Test external link handling from a real Arcane host.',501);
     const opener = systemCommand('xdg-open');
     if (!opener) throw ctx.arcaneError('EXTERNAL_OPEN_UNSUPPORTED','Arcane cannot find an operating-system URI handler.','Install xdg-utils and try again.',501);
     const child = ctx.spawn(opener, [uri], { detached: true, stdio: 'ignore' });
@@ -873,12 +873,60 @@ Categories=System;Settings;
     return { opened: true, uri };
   }
 
-  async function selectDirectory() {
+  async function selectDirectory(input) {
+    const options = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+    const title = typeof options.title === 'string' && options.title.trim()
+      ? options.title.trim()
+      : 'Choose a folder';
+    const initialPath = typeof options.initialPath === 'string' && options.initialPath
+      ? options.initialPath
+      : ctx.os.homedir();
+    if (ctx.simulate) {
+      return initialPath ? { cancelled: false, path: initialPath } : { cancelled: true, path: null };
+    }
+    const desktop = String(process.env.XDG_CURRENT_DESKTOP || process.env.DESKTOP_SESSION || '').toLowerCase();
+    const zenity = {
+      command: 'zenity',
+      arguments: ['--file-selection', '--directory', `--title=${title}`, `--filename=${initialPath}/`],
+    };
+    const kdialog = {
+      command: 'kdialog',
+      arguments: ['--title', title, '--getexistingdirectory', initialPath],
+    };
+    const candidates = desktop.includes('kde') ? [kdialog, zenity] : [zenity, kdialog];
+    let picker = null;
+    for (const candidate of candidates) {
+      const executable = systemCommand(candidate.command);
+      if (executable) {
+        picker = { executable, arguments: candidate.arguments };
+        break;
+      }
+    }
+    if (!picker) {
+      throw ctx.arcaneError(
+        'FILESYSTEM_DIRECTORY_SELECTION_UNSUPPORTED',
+        'Arcane cannot find a supported Linux folder picker.',
+        'Install Zenity or KDialog through the Linux distribution, then try again.',
+        501
+      );
+    }
+    const result = ctx.spawnSync(picker.executable, picker.arguments, { encoding: 'utf8', windowsHide: true });
+    const selected = String(result && result.stdout || '').replace(/[\r\n]+$/, '');
+    if (result && result.status === 0 && selected) {
+      return { cancelled: false, path: selected };
+    }
+    if (result && result.status === 1 && !selected) {
+      return { cancelled: true, path: null };
+    }
     throw ctx.arcaneError(
-      'FILESYSTEM_DIRECTORY_SELECTION_UNSUPPORTED',
-      'Arcane folder selection is not available on this Linux host.',
-      'Enter a verified absolute directory path, or use an Arcane host with native folder selection.',
-      501
+      'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
+      'The Linux folder picker did not return a valid selection.',
+      'Close the picker, reopen it, and choose an existing local directory.',
+      500,
+      {
+        picker: ctx.path.basename(picker.executable),
+        status: result && Number.isInteger(result.status) ? result.status : null,
+      }
     );
   }
 

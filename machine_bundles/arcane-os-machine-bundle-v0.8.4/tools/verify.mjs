@@ -3,11 +3,13 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { replaceTemplateTokenExactlyOnce } from './exact-template-replacement.mjs';
+import { readMethodContracts, renderAndroidMethodContracts, renderCoreMethodContracts } from './method-contracts.mjs';
+import { readMethodPolicies, renderAndroidApplicationRegistry, renderAndroidCapabilityRegistry, renderCoreMethodPolicies } from './method-policies.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const required = [
   'runtime/arcane-core.cjs','dist/app/shared/arcane-api.js','dist/app/shared/Arcane-20B.Modelfile','dist/app/shared/Arcane-120B.Modelfile','dist/app/provisioner/index.html','dist/app/shell/index.html',
-  'src/hosts/windows/ArcaneHost.cs','src/hosts/windows/ArcaneHost.manifest','src/hosts/linux/arcane_host.c','src/native/windows.cjs','src/native/linux.cjs',
+  'src/api/method-contracts.json','src/api/method-policies.json','src/api/shared-method-contract-fixtures.json','src/hosts/windows/ArcaneHost.cs','src/hosts/windows/ArcaneHost.manifest','src/hosts/linux/arcane_host.c','src/hosts/android/AndroidBridgeProtocol.kt','src/hosts/android/ArcaneAndroidHostSession.kt','src/hosts/android/ArcaneAndroidSystemAdapter.kt','src/hosts/android/ArcaneWebViewBridge.kt','src/hosts/android/ArcaneWebViewHostController.kt','src/hosts/android/GeneratedAndroidApplicationRegistry.kt','src/hosts/android/GeneratedAndroidCapabilityRegistry.kt','src/hosts/android/GeneratedAndroidMethodContracts.kt','src/native/windows.cjs','src/native/linux.cjs','src/native/platform-adapters.cjs',
   'package-lock.json','VALIDATION.md'
 ];
 for (const relative of required) await fs.access(path.join(root, relative));
@@ -24,13 +26,25 @@ for (const modelFile of ['Arcane-20B.Modelfile','Arcane-120B.Modelfile']) {
   if (!sourceModel.equals(builtModel)) throw new Error(`The packaged Arcane model definition has drifted from arcane/models/${modelFile}. Run npm run build.`);
 }
 const bundleManifest = JSON.parse(await fs.readFile(path.join(root, 'arcane-bundle.json'), 'utf8'));
+const appRegistry = JSON.parse(await fs.readFile(path.join(root, 'arcane-apps.json'), 'utf8'));
+const methodPolicies = await readMethodPolicies(root);
+const methodContracts = await readMethodContracts(root, methodPolicies);
 let expectedCore = await fs.readFile(path.join(root, 'src/core/arcane-core.template.cjs'), 'utf8');
 const windowsNative = await fs.readFile(path.join(root, 'src/native/windows.cjs'), 'utf8');
 const linuxNative = await fs.readFile(path.join(root, 'src/native/linux.cjs'), 'utf8');
-expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__ARCANE_NATIVE_ADAPTERS__', `${windowsNative}\n\n${linuxNative}`);
+const platformAdapters = await fs.readFile(path.join(root, 'src/native/platform-adapters.cjs'), 'utf8');
+expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__ARCANE_NATIVE_ADAPTERS__', `${windowsNative}\n\n${linuxNative}\n\n${platformAdapters}`);
+expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__ARCANE_METHOD_POLICIES__', renderCoreMethodPolicies(methodPolicies));
+expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__ARCANE_METHOD_CONTRACTS__', renderCoreMethodContracts(methodContracts, methodPolicies));
 expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__VERSION_JSON__', JSON.stringify(bundleManifest.version));
 expectedCore = replaceTemplateTokenExactlyOnce(expectedCore, '__BUNDLE_MANIFEST_JSON__', JSON.stringify(bundleManifest));
 if (coreText !== expectedCore) throw new Error('Generated Arcane Core has drifted from its template, native adapters, or bundle manifest. Run npm run build.');
+const generatedAndroidRegistry = await fs.readFile(path.join(root, 'src/hosts/android/GeneratedAndroidCapabilityRegistry.kt'), 'utf8');
+if (generatedAndroidRegistry !== renderAndroidCapabilityRegistry(methodPolicies)) throw new Error('Generated Android capability registry has drifted from src/api/method-policies.json.');
+const generatedAndroidApplications = await fs.readFile(path.join(root, 'src/hosts/android/GeneratedAndroidApplicationRegistry.kt'), 'utf8');
+if (generatedAndroidApplications !== renderAndroidApplicationRegistry(bundleManifest, methodPolicies)) throw new Error('Generated Android application registry has drifted from arcane-bundle.json or src/api/method-policies.json.');
+const generatedAndroidContracts = await fs.readFile(path.join(root, 'src/hosts/android/GeneratedAndroidMethodContracts.kt'), 'utf8');
+if (generatedAndroidContracts !== renderAndroidMethodContracts(methodContracts, methodPolicies)) throw new Error('Generated Android semantic contract registry has drifted from src/api/method-contracts.json.');
 if (!coreText.includes('Content-Length: ${body.length}\\r\\n\\r\\n')) throw new Error('Framed RPC encoder is missing.');
 if (!coreText.includes('arcane-privileged-')) throw new Error('Privileged pipe/socket broker is missing.');
 
@@ -67,8 +81,16 @@ if (policyStart < 0 || policyEnd < 0 || dispatchStart < 0 || dispatchEnd < 0) th
 const frontendMethods = methodLiterals(apiText, /\binvoke\('([^']+)'/g, 'Frontend API', true);
 const policyMethods = methodLiterals(coreText.slice(policyStart, policyEnd), /^\s*'([^']+)'\s*:/gm, 'Core policy');
 const dispatchMethods = methodLiterals(coreText.slice(dispatchStart, dispatchEnd), /\bcase '([^']+)':/g, 'Core dispatch');
-if (JSON.stringify(frontendMethods) !== JSON.stringify(policyMethods) || JSON.stringify(frontendMethods) !== JSON.stringify(dispatchMethods)) {
-  throw new Error('Arcane frontend, capability policy, and Core dispatch method sets have drifted.');
+const registryMethods = Object.keys(methodPolicies).sort();
+if (JSON.stringify(frontendMethods) !== JSON.stringify(policyMethods) || JSON.stringify(frontendMethods) !== JSON.stringify(dispatchMethods) || JSON.stringify(frontendMethods) !== JSON.stringify(registryMethods)) {
+  throw new Error('Arcane frontend, canonical capability registry, generated Core policy, and dispatch method sets have drifted.');
+}
+const descriptors = [...Object.entries(bundleManifest.apps || {}), ...Object.entries(appRegistry.apps || {})];
+const knownAppIds = new Set(descriptors.map(([id]) => id));
+const knownCapabilities = new Set(descriptors.flatMap(([, descriptor]) => descriptor.capabilities || []));
+for (const [method, policy] of Object.entries(methodPolicies)) {
+  if (policy.capability && !knownCapabilities.has(policy.capability)) throw new Error(`Method policy ${method} references unknown capability ${policy.capability}.`);
+  for (const appId of policy.appIds || []) if (!knownAppIds.has(appId)) throw new Error(`Method policy ${method} references unknown application ${appId}.`);
 }
 
 for (const launcher of ['start-provisioner.bat','start-provisioner-debug.bat','start-shell.bat']) {

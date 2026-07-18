@@ -1,0 +1,187 @@
+{
+  "app.current": {
+    "version": "1.0.0",
+    "effect": "observe",
+    "risk": "low",
+    "audit": "none",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "bound-application-session"
+    ],
+    "cancellation": "not-applicable",
+    "reversibility": "not-applicable",
+    "idempotency": "repeatable-read",
+    "dataMovement": "host-to-application",
+    "input": {
+      "kind": "empty-object-v1",
+      "exact": true
+    },
+    "output": {
+      "kind": "application-descriptor-v1",
+      "exact": true,
+      "maxApplicationIdLength": 64,
+      "maxDisplayNameLength": 256,
+      "maxApplicationEntryLength": 512,
+      "maxApplicationVersionLength": 64
+    }
+  },
+  "external.open": {
+    "version": "1.0.0",
+    "effect": "external-handoff",
+    "risk": "moderate",
+    "audit": "none",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "capability-grant",
+      "uri-scheme-allowlist"
+    ],
+    "cancellation": "pre-dispatch-only",
+    "reversibility": "not-reversible",
+    "idempotency": "non-idempotent",
+    "dataMovement": "operating-system-handoff",
+    "input": {
+      "kind": "external-open-v1",
+      "exact": true,
+      "maxUriLength": 4096,
+      "scheme": "mailto"
+    },
+    "output": {
+      "kind": "external-open-result-v1",
+      "exact": true,
+      "maxUriLength": 4096,
+      "scheme": "mailto"
+    }
+  },
+  "network.status": {
+    "version": "1.0.0",
+    "effect": "observe",
+    "risk": "low",
+    "audit": "none",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "capability-grant"
+    ],
+    "cancellation": "not-applicable",
+    "reversibility": "not-applicable",
+    "idempotency": "repeatable-read",
+    "dataMovement": "host-to-application",
+    "input": {
+      "kind": "empty-object-v1",
+      "exact": true
+    },
+    "output": {
+      "kind": "network-status-v1",
+      "exact": true,
+      "onlineMeaning": "non-loopback-interface-present",
+      "maxInterfaceCount": 64
+    }
+  },
+  "platform.status": {
+    "version": "1.0.0",
+    "effect": "observe",
+    "risk": "low",
+    "audit": "none",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "capability-grant"
+    ],
+    "cancellation": "not-applicable",
+    "reversibility": "not-applicable",
+    "idempotency": "repeatable-read",
+    "dataMovement": "host-to-application",
+    "input": {
+      "kind": "empty-object-v1",
+      "exact": true
+    },
+    "output": {
+      "kind": "platform-status-v1",
+      "exact": true,
+      "maxStatusStringLength": 256,
+      "maxListItems": 256,
+      "maxProbeItems": 64,
+      "maxApplicationIdLength": 64,
+      "maxApplicationEntryLength": 512,
+      "maxApplicationVersionLength": 64,
+      "maxRendererExecutableLength": 4096
+    }
+  },
+  "system.ping": {
+    "version": "1.0.0",
+    "effect": "observe",
+    "risk": "low",
+    "audit": "none",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "bound-application-session"
+    ],
+    "cancellation": "not-applicable",
+    "reversibility": "not-applicable",
+    "idempotency": "repeatable-read",
+    "dataMovement": "host-to-application",
+    "input": {
+      "kind": "empty-object-v1",
+      "exact": true
+    },
+    "output": {
+      "kind": "system-ping-result-v1",
+      "exact": true
+    }
+  },
+  "user.current": {
+    "version": "1.0.0",
+    "effect": "observe",
+    "risk": "moderate",
+    "audit": "none",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "capability-grant",
+      "privacy-minimized-identity"
+    ],
+    "cancellation": "not-applicable",
+    "reversibility": "not-applicable",
+    "idempotency": "repeatable-read",
+    "dataMovement": "host-to-application",
+    "input": {
+      "kind": "empty-object-v1",
+      "exact": true
+    },
+    "output": {
+      "kind": "user-identity-v1",
+      "exact": true,
+      "maxUsernameLength": 128,
+      "maxAccountNameLength": 256,
+      "maxDisplayNameLength": 256
+    }
+  },
+  "version.current": {
+    "version": "1.0.0",
+    "effect": "observe",
+    "risk": "low",
+    "audit": "none",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "bound-application-session"
+    ],
+    "cancellation": "not-applicable",
+    "reversibility": "not-applicable",
+    "idempotency": "repeatable-read",
+    "dataMovement": "host-to-application",
+    "input": {
+      "kind": "empty-object-v1",
+      "exact": true
+    },
+    "output": {
+      "kind": "version-string-v1",
+      "exact": true,
+      "maxLength": 64,
+      "meaning": "active-arcane-host-release-version"
+    }
+  }
+}

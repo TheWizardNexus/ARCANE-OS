@@ -30,7 +30,30 @@ const appMode = argValue('--app=') || process.env.ARCANE_APP || 'provisioner';
 const simulate = !process.pkg && (args.has('--simulate') || process.env.ARCANE_SIMULATE_PROVISIONING === '1');
 const simulateStandard = args.has('--simulate-standard') || process.env.ARCANE_SIMULATE_STANDARD === '1';
 const hostPlatform = process.platform;
-const simulatedPlatform = simulate && !process.pkg ? argValue('--simulate-platform=') || process.env.ARCANE_SIMULATE_PLATFORM || '' : '';
+const simulationPlatformArguments = !process.pkg
+  ? argv.filter((item) => item.startsWith('--simulate-platform='))
+    .map((item) => item.slice('--simulate-platform='.length))
+  : [];
+const simulationPlatformEnvironment = !process.pkg ? String(process.env.ARCANE_SIMULATE_PLATFORM || '') : '';
+if (!process.pkg && !simulate && (simulationPlatformArguments.length || simulationPlatformEnvironment)) {
+  console.error('Arcane Core accepts a simulated platform only when simulation is enabled.');
+  process.exit(4);
+}
+if (simulationPlatformArguments.length > 1) {
+  console.error('Arcane Core accepts exactly one simulated platform argument.');
+  process.exit(4);
+}
+const simulationPlatformArgument = simulationPlatformArguments[0] || '';
+if (simulationPlatformArgument && simulationPlatformEnvironment
+  && simulationPlatformArgument !== simulationPlatformEnvironment) {
+  console.error('Arcane Core rejected conflicting simulated platform settings.');
+  process.exit(4);
+}
+const simulatedPlatform = simulate ? simulationPlatformArgument || simulationPlatformEnvironment : '';
+if (simulatedPlatform && !listSupportedCorePlatforms().includes(simulatedPlatform)) {
+  console.error(`Arcane Core does not yet support ${simulatedPlatform}.`);
+  process.exit(4);
+}
 const simulatedUserFailure = simulate ? argValue('--simulate-user-failure=') || '' : '';
 const simulatedExistingUsers = simulate && !process.pkg
   ? argv.filter((item) => item.startsWith('--simulate-existing-user='))
@@ -59,7 +82,7 @@ const simulatedExclusiveMutationDelayMs = simulate && !process.pkg
   ? Math.min(5000, Math.max(0, Number(argValue('--simulate-exclusive-mutation-delay-ms=') || 0) || 0))
   : 0;
 const sessionCommandSelfTest = simulate && !process.pkg ? argValue('--self-test-session-command=') || '' : '';
-const platform = ['win32', 'linux'].includes(simulatedPlatform) ? simulatedPlatform : hostPlatform;
+const platform = simulatedPlatform || hostPlatform;
 const productionPackaged = Boolean(process.pkg);
 const noBrowser = true;
 const hideConsole = true;
@@ -221,11 +244,7 @@ if (platform === 'linux' && simulatedExistingUsers.length) {
   nativeContext.simulatedAccounts = new Set(simulatedExistingUsers);
   nativeContext.simulatedShellAssignments = new Map();
 }
-const native = platform === 'win32'
-  ? createWindowsNativeAdapter(nativeContext)
-  : platform === 'linux'
-    ? createLinuxNativeAdapter(nativeContext)
-    : null;
+const native = createCoreNativeAdapter(platform, nativeContext);
 if (!native) {
   console.error(`Arcane Core does not yet support ${platform}.`);
   process.exit(4);
@@ -534,6 +553,17 @@ function cleanVersion(value) {
 function psQuote(value) { return "'" + String(value).replace(/'/g, "''") + "'"; }
 function commandExists(command) { return native.commandExists(command); }
 function currentIdentity() { return native.currentIdentity(); }
+
+function publicCurrentIdentity() {
+  const identity=currentIdentity();
+  return {
+    identityKind:'host-account',
+    username:String(identity.username || ''),
+    accountName:String(identity.accountName || identity.username || ''),
+    displayName:String(identity.displayName || identity.username || ''),
+    source:String(identity.source || ''),
+  };
+}
 function osInfo() { return native.osInfo(simulatedPlatform); }
 function protectedProvisioningUsernames() { return native.protectedUsernames(elevationProtectedUsername); }
 function protectedProvisioningUsername() { return protectedProvisioningUsernames()[0] || currentIdentity().username; }
@@ -3064,7 +3094,7 @@ async function provisionUsers(usernames, action) {
   const results = [];
   const changed = [];
   const assignedShell = native.shellCommand();
-  const assignedSecurityMode = native.id === 'windows' && simulate ? 'publisher-verified' : installedReleaseSecurityMode();
+  const assignedSecurityMode = simulate ? 'simulation' : installedReleaseSecurityMode();
   if (native.id === 'windows' && !simulate) {
     const unsignedCommand = assignedShell.endsWith(' --allow-unsigned-local-release');
     if (!['publisher-verified','unsigned-local-test'].includes(assignedSecurityMode)
@@ -3832,84 +3862,171 @@ function acquireExclusiveMutation(method, requestId) {
   };
 }
 
-const METHOD_POLICIES = Object.freeze({
-  'system.ping': Object.freeze({}),
-  'version.current': Object.freeze({}),
-  'app.current': Object.freeze({}),
-  'capabilities.list': Object.freeze({}),
-  'ai.chat': Object.freeze({ capability:'ai.inference' }),
-  'ai.profile.current': Object.freeze({ capability:'ai.inference' }),
-  'ai.models': Object.freeze({ capability:'ai.models.read' }),
-  'ai.provider.settings.get': Object.freeze({ capability:'ai.settings.manage',appIds:['settings'] }),
-  'ai.provider.settings.set': Object.freeze({ capability:'ai.settings.manage',appIds:['settings'] }),
-  'ai.provider.models': Object.freeze({ capability:'ai.settings.manage',appIds:['settings'] }),
-  'ollama.version': Object.freeze({ capability:'ai.models.read' }),
-  'ollama.models': Object.freeze({ capability:'ai.models.read' }),
-  'ollama.running': Object.freeze({ capability:'ai.models.read' }),
-  'ollama.show': Object.freeze({ capability:'ai.models.read' }),
-  'ollama.generate': Object.freeze({ capability:'ai.inference' }),
-  'ollama.chat': Object.freeze({ capability:'ai.inference' }),
-  'ollama.embed': Object.freeze({ capability:'ai.inference' }),
-  'ollama.pull': Object.freeze({ capability:'ai.models.manage' }),
-  'ollama.push': Object.freeze({ capability:'ai.models.manage' }),
-  'ollama.create': Object.freeze({ capability:'ai.models.manage' }),
-  'ollama.copy': Object.freeze({ capability:'ai.models.manage' }),
-  'ollama.delete': Object.freeze({ capability:'ai.models.manage' }),
-  'ollama.selection.get': Object.freeze({ capability:'ai.models.read', appIds:['shell','settings'] }),
-  'ollama.selection.set': Object.freeze({ capability:'ai.models.manage', appIds:['shell','settings'] }),
-  'ollama.settings.get': Object.freeze({ capability:'ai.settings.manage', appIds:['settings'] }),
-  'ollama.settings.set': Object.freeze({ capability:'ai.settings.manage', appIds:['settings'] }),
-  'ollama.brain.create': Object.freeze({ capability:'ai.models.manage', appIds:['settings'] }),
-  'ollama.service.settings.get': Object.freeze({ capability:'ai.settings.manage', appIds:['settings'] }),
-  'ollama.service.settings.set': Object.freeze({ capability:'ai.settings.manage', appIds:['settings'], privileged:true, exclusiveMutation:true }),
-  'platform.status': Object.freeze({ capability:'system.read' }),
-  'permissions.status': Object.freeze({ capability:'system.read' }),
-  'machine.status': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'] }),
-  'user.current': Object.freeze({ capability:'identity.read' }),
-  'system.metrics': Object.freeze({ capability:'system.metrics.read' }),
-  'network.status': Object.freeze({ capability:'network.status.read' }),
-  'storage.list': Object.freeze({ capability:'storage.read' }),
-  'storage.get': Object.freeze({ capability:'storage.read' }),
-  'storage.set': Object.freeze({ capability:'storage.write' }),
-  'storage.delete': Object.freeze({ capability:'storage.write' }),
-  'preferences.list': Object.freeze({ capability:'preferences.read' }),
-  'preferences.get': Object.freeze({ capability:'preferences.read' }),
-  'preferences.set': Object.freeze({ capability:'preferences.write' }),
-  'preferences.delete': Object.freeze({ capability:'preferences.write' }),
-  'appearance.current': Object.freeze({ capability:'appearance.read' }),
-  'appearance.apply': Object.freeze({ capability:'appearance.write' }),
-  'installation.status': Object.freeze({ capability:'installation.read' }),
-  'requirements.list': Object.freeze({ capability:'requirements.read' }),
-  'users.validate': Object.freeze({ capability:'users.manage', appTypes:['provisioner'] }),
-  'users.list': Object.freeze({ capability:'users.manage', appTypes:['provisioner'] }),
-  'diagnostics.recent': Object.freeze({ capability:'diagnostics.read' }),
-  'diagnostics.get': Object.freeze({ capability:'diagnostics.read' }),
-  'development.inspect': Object.freeze({ capability:'development.read',appIds:['developer'] }),
-  'development.context': Object.freeze({ capability:'development.read',appIds:['developer'] }),
-  'development.setup': Object.freeze({ capability:'development.manage',appIds:['developer'],exclusiveMutation:true }),
-  'development.node.install': Object.freeze({ capability:'development.manage',appIds:['developer'],privileged:true,exclusiveMutation:true }),
-  'external.open': Object.freeze({ capability:'external.open' }),
-  'filesystem.directory.select': Object.freeze({ capability:'filesystem.directory.select' }),
-  'apps.list': Object.freeze({ capability:'applications.read', appIds:['shell','terminal'] }),
-  'apps.launch': Object.freeze({ capability:'applications.launch', appIds:['shell','terminal'] }),
-  'terminal.start': Object.freeze({ capability:'terminal.execute', appIds:['terminal'] }),
-  'terminal.list': Object.freeze({ capability:'terminal.execute', appIds:['terminal'] }),
-  'terminal.write': Object.freeze({ capability:'terminal.execute', appIds:['terminal'] }),
-  'terminal.resize': Object.freeze({ capability:'terminal.execute', appIds:['terminal'] }),
-  'terminal.signal': Object.freeze({ capability:'terminal.execute', appIds:['terminal'] }),
-  'terminal.close': Object.freeze({ capability:'terminal.execute', appIds:['terminal'] }),
-  'provisioning.plan': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'] }),
-  'system.lock': Object.freeze({ capability:'session.control', appTypes:['shell'], exclusiveMutation:true }),
-  'session.logout': Object.freeze({ capability:'session.control', appTypes:['shell'], exclusiveMutation:true }),
-  'requirements.ensure': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
-  'installation.ensure': Object.freeze({ capability:'provisioning.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
-  'users.add': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
-  'users.activate': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
-  'users.resetPassword': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], exclusiveMutation:true }),
-  'users.applyPassword': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
-  'users.verifyShell': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true }),
-  'users.restoreShell': Object.freeze({ capability:'users.manage', appTypes:['provisioner'], privileged:true, exclusiveMutation:true }),
-});
+const METHOD_POLICIES = __ARCANE_METHOD_POLICIES__;
+const METHOD_CONTRACTS = __ARCANE_METHOD_CONTRACTS__;
+
+function contractFailure(code, message, status) {
+  throw arcaneError(code,message,'Repair or reinstall Arcane OS and retry the operation.',status);
+}
+
+function isExactDataRecord(value, requiredKeys, optionalKeys) {
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.getPrototypeOf(value)!==Object.prototype)return false;
+  const descriptors=Object.getOwnPropertyDescriptors(value);
+  if(Object.values(descriptors).some(function hasAccessor(descriptor){return !Object.hasOwn(descriptor,'value');}))return false;
+  const keys=Object.keys(descriptors).sort();
+  const required=[...requiredKeys].sort();
+  const allowed=new Set([...requiredKeys,...optionalKeys]);
+  return required.every(function hasRequiredKey(key){return Object.hasOwn(descriptors,key);})
+    &&keys.every(function hasAllowedKey(key){return allowed.has(key);});
+}
+
+function isBoundedContractString(value, maximumLength, nullable) {
+  if(nullable&&value===null)return true;
+  return typeof value==='string'&&value.length>0&&value.length<=maximumLength&&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value);
+}
+
+function isBoundedJsonValue(value, depth, maximumStringLength) {
+  if(depth>4)return false;
+  if(value===null||typeof value==='boolean')return true;
+  if(typeof value==='number')return Number.isFinite(value);
+  if(typeof value==='string')return value.length<=maximumStringLength&&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value);
+  if(Array.isArray(value))return value.length<=64&&value.every(function validArrayEntry(entry){return isBoundedJsonValue(entry,depth+1,maximumStringLength);});
+  if(!isExactDataRecord(value,[],Object.keys(value)))return false;
+  const keys=Object.keys(value);
+  return keys.length<=32&&keys.every(function validRecordKey(key){
+    return isBoundedContractString(key,64,false)&&isBoundedJsonValue(value[key],depth+1,maximumStringLength);
+  });
+}
+
+function canonicalContractMailto(value, shape) {
+  if(typeof value!=='string'||value.length===0||value.length>shape.maxUriLength||value!==value.trim()||!/^mailto:[!-~]+$/i.test(value))return null;
+  if(value.includes('\\')||value.includes('#')||/%(?![0-9a-f]{2})/i.test(value)||/%(?:0[0-9a-f]|1[0-9a-f]|7f|8[0-9a-f]|9[0-9a-f])/i.test(value))return null;
+  return `${shape.scheme}:${value.slice(value.indexOf(':')+1)}`;
+}
+
+function validateContractMailto(value, shape) {
+  return canonicalContractMailto(value,shape)!==null;
+}
+
+function validateEmptyObjectV1(parameters) {
+  return isExactDataRecord(parameters,[],[]) ? parameters : null;
+}
+
+function validateExternalOpenV1(parameters, shape) {
+  return isExactDataRecord(parameters,['uri'],[])&&validateContractMailto(parameters.uri,shape) ? parameters : null;
+}
+
+function validateExternalOpenResultV1(result, shape) {
+  return isExactDataRecord(result,['opened','uri'],[])&&result.opened===true&&validateContractMailto(result.uri,shape) ? result : null;
+}
+
+function validateNetworkStatusV1(result, shape) {
+  return isExactDataRecord(result,['interfaceCount','online'],[])
+    &&typeof result.online==='boolean'
+    &&Number.isSafeInteger(result.interfaceCount)
+    &&result.interfaceCount>=0
+    &&result.interfaceCount<=shape.maxInterfaceCount
+    &&result.online===(result.interfaceCount>0) ? result : null;
+}
+
+function validateSystemPingResultV1(result) {
+  return isExactDataRecord(result,['ok'],[])&&result.ok===true ? result : null;
+}
+
+function validateVersionStringV1(result, shape) {
+  return isBoundedContractString(result,shape.maxLength,false)&&result===VERSION ? result : null;
+}
+
+function validateUserIdentityV1(result, shape) {
+  if(!isExactDataRecord(result,['accountName','displayName','identityKind','source','username'],[]))return null;
+  if(!['host-account','local-session'].includes(result.identityKind)||!['windows','linux','android'].includes(result.source))return null;
+  if(!isBoundedContractString(result.displayName,shape.maxDisplayNameLength,false))return null;
+  if(result.identityKind==='host-account'){
+    if(!['windows','linux'].includes(result.source))return null;
+    if(!isBoundedContractString(result.username,shape.maxUsernameLength,false)||!isBoundedContractString(result.accountName,shape.maxAccountNameLength,false))return null;
+  }else if(result.source!=='android'||result.username!==null||result.accountName!==null)return null;
+  return result;
+}
+
+function validateApplicationDescriptorV1(app, shape) {
+  if(!isExactDataRecord(app,['displayName','entry','id','publisherTrustSource','revocationStatus','securityMode','type','version'],[]))return null;
+  if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(app.id)||!isBoundedContractString(app.id,shape.maxApplicationIdLength,false)||!isBoundedContractString(app.displayName,shape.maxDisplayNameLength,false)||!['app','shell','provisioner'].includes(app.type)||!isBoundedContractString(app.entry,shape.maxApplicationEntryLength,true)||!isBoundedContractString(app.version,shape.maxApplicationVersionLength,false))return null;
+  if(app.entry!==null&&(app.entry.startsWith('/')||app.entry.includes('\\')||app.entry.split('/').some(function invalidEntrySegment(segment){return !segment||segment==='.'||segment==='..';})))return null;
+  if(!['publisher-verified','unsigned-local-test','unverified'].includes(app.securityMode)||!isBoundedContractString(app.publisherTrustSource,256,true)||!isBoundedContractString(app.revocationStatus,256,true))return null;
+  if(app.securityMode==='publisher-verified'&&(!['administrator-policy','administrator-policy-rotation','installed-continuity','uac-approved-tofu','fresh-unpinned'].includes(app.publisherTrustSource)||!['online-good','cache-good','attested-degraded'].includes(app.revocationStatus)))return null;
+  if(app.securityMode!=='publisher-verified'&&(app.publisherTrustSource!==null||app.revocationStatus!==null))return null;
+  return app.version===VERSION ? app : null;
+}
+
+function validateContractStringList(value, maximumItems, maximumStringLength) {
+  if(!Array.isArray(value)||value.length>maximumItems)return false;
+  if(value.some(function invalidListEntry(entry){return !isBoundedContractString(entry,maximumStringLength,false);}))return false;
+  if(new Set(value).size!==value.length)return false;
+  return [...value].sort().every(function sortedListEntry(entry,index){return entry===value[index];});
+}
+
+function validatePlatformStatusV1(result, shape) {
+  const topKeys=['adapter','application','architecture','capabilities','desktop','displayName','execution','permissions','platform','protocol','rawPlatform','release','renderer','sessionType','simulated','version'];
+  if(!isExactDataRecord(result,topKeys,[]))return null;
+  const strings=['adapter','application','architecture','displayName','release','version'];
+  if(strings.some(function invalidTopString(field){return !isBoundedContractString(result[field],shape.maxStatusStringLength,false);}))return null;
+  if(!['windows','linux'].includes(result.platform)||!['win32','linux'].includes(result.rawPlatform)||result.protocol!==PROTOCOL||typeof result.simulated!=='boolean')return null;
+  if(!isBoundedContractString(result.desktop,shape.maxStatusStringLength,true)||!isBoundedContractString(result.sessionType,shape.maxStatusStringLength,true))return null;
+  const execution=result.execution;
+  if(!isExactDataRecord(execution,['evidenceClass','effectivePlatform','hostPlatform','simulation'],[]))return null;
+  if(!['win32','linux'].includes(execution.hostPlatform)||!['win32','linux'].includes(execution.effectivePlatform)||typeof execution.simulation!=='boolean')return null;
+  const effectivePlatformName=execution.effectivePlatform==='win32'?'windows':'linux';
+  if(result.platform!==effectivePlatformName||result.rawPlatform!==execution.effectivePlatform||execution.hostPlatform!==hostPlatform)return null;
+  if(result.simulated!==execution.simulation||execution.evidenceClass!==(execution.simulation?'simulation':'real-host'))return null;
+  const permissions=result.permissions;
+  if(!isExactDataRecord(permissions,['canElevate','detectedBy','elevated','level','mechanism','probes'],[]))return null;
+  if(typeof permissions.elevated!=='boolean'||typeof permissions.canElevate!=='boolean'||!isBoundedContractString(permissions.level,shape.maxStatusStringLength,false)||!isBoundedContractString(permissions.detectedBy,shape.maxStatusStringLength,false)||!isBoundedContractString(permissions.mechanism,shape.maxStatusStringLength,true))return null;
+  if(!Array.isArray(permissions.probes)||permissions.probes.length>shape.maxProbeItems||permissions.probes.some(function invalidProbe(probe){return !isBoundedJsonValue(probe,0,shape.maxStatusStringLength);}))return null;
+  const capabilities=result.capabilities;
+  if(!isExactDataRecord(capabilities,['app','grants','methods'],[]))return null;
+  const app=capabilities.app;
+  if(!isExactDataRecord(app,['displayName','entry','id','publisherTrustSource','revocationStatus','securityMode','type','version'],[]))return null;
+  if(!isBoundedContractString(app.id,shape.maxApplicationIdLength,false)||!isBoundedContractString(app.displayName,shape.maxStatusStringLength,false)||!['app','shell','provisioner'].includes(app.type)||!isBoundedContractString(app.entry,shape.maxApplicationEntryLength,true)||!isBoundedContractString(app.version,shape.maxApplicationVersionLength,false))return null;
+  if(!['publisher-verified','unsigned-local-test','unverified'].includes(app.securityMode)||!isBoundedContractString(app.publisherTrustSource,shape.maxStatusStringLength,true)||!isBoundedContractString(app.revocationStatus,shape.maxStatusStringLength,true))return null;
+  if(app.securityMode==='publisher-verified'&&(!['administrator-policy','administrator-policy-rotation','installed-continuity','uac-approved-tofu','fresh-unpinned'].includes(app.publisherTrustSource)||!['online-good','cache-good','attested-degraded'].includes(app.revocationStatus)))return null;
+  if(app.securityMode!=='publisher-verified'&&(app.publisherTrustSource!==null||app.revocationStatus!==null))return null;
+  if(result.application!==app.id||result.version!==VERSION||app.version!==VERSION||!validateContractStringList(capabilities.grants,shape.maxListItems,shape.maxStatusStringLength)||!validateContractStringList(capabilities.methods,shape.maxListItems,shape.maxStatusStringLength))return null;
+  if(capabilities.methods.some(function methodWithoutPolicy(method){return !METHOD_POLICIES[method];}))return null;
+  if(capabilities.methods.some(function methodWithoutGrant(method){const capability=METHOD_POLICIES[method].capability;return capability&&!capabilities.grants.includes(capability);}))return null;
+  const renderer=result.renderer;
+  if(!isExactDataRecord(renderer,['available','id','version'],['adapter','executable']))return null;
+  if(typeof renderer.available!=='boolean'||!isBoundedContractString(renderer.id,shape.maxStatusStringLength,false)||!isBoundedContractString(renderer.version,shape.maxStatusStringLength,true))return null;
+  if(Object.hasOwn(renderer,'adapter')&&!isBoundedContractString(renderer.adapter,shape.maxStatusStringLength,false))return null;
+  if(Object.hasOwn(renderer,'executable')&&!isBoundedContractString(renderer.executable,shape.maxRendererExecutableLength,true))return null;
+  return result;
+}
+
+function validateMethodContractInput(method, parameters) {
+  const contract=METHOD_CONTRACTS[method];
+  if(!contract)return parameters;
+  let validated=null;
+  if(contract.input.kind==='empty-object-v1')validated=validateEmptyObjectV1(parameters);
+  else if(contract.input.kind==='external-open-v1')validated=validateExternalOpenV1(parameters,contract.input);
+  else contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected an unknown method input contract.',500);
+  if(!validated)contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected a request that did not match the method contract.',400);
+  return validated;
+}
+
+function validateMethodContractOutput(method, result) {
+  const contract=METHOD_CONTRACTS[method];
+  if(!contract)return result;
+  let validated=null;
+  if(contract.output.kind==='external-open-result-v1')validated=validateExternalOpenResultV1(result,contract.output);
+  else if(contract.output.kind==='application-descriptor-v1')validated=validateApplicationDescriptorV1(result,contract.output);
+  else if(contract.output.kind==='network-status-v1')validated=validateNetworkStatusV1(result,contract.output);
+  else if(contract.output.kind==='platform-status-v1')validated=validatePlatformStatusV1(result,contract.output);
+  else if(contract.output.kind==='system-ping-result-v1')validated=validateSystemPingResultV1(result);
+  else if(contract.output.kind==='user-identity-v1')validated=validateUserIdentityV1(result,contract.output);
+  else if(contract.output.kind==='version-string-v1')validated=validateVersionStringV1(result,contract.output);
+  else contractFailure('METHOD_CONTRACT_OUTPUT_INVALID','Arcane rejected an unknown method output contract.',500);
+  if(!validated)contractFailure('METHOD_CONTRACT_OUTPUT_INVALID','Arcane rejected a host result that did not match the method contract.',500);
+  return validated;
+}
 
 function publicAppDescriptor() {
   const security=activeReleaseSecurityEvidence();
@@ -4207,6 +4324,15 @@ function publicOperatingSystemInfo() {
   return operatingSystem;
 }
 
+function platformExecutionContext() {
+  return Object.freeze({
+    hostPlatform,
+    effectivePlatform: platform,
+    simulation: simulate,
+    evidenceClass: simulate ? 'simulation' : 'real-host',
+  });
+}
+
 function platformStatus() {
   const permissions = permissionStatus(false);
   const renderer = rendererStatus();
@@ -4218,6 +4344,7 @@ function platformStatus() {
     renderer,
     permissions,
     capabilities: capabilityStatus(),
+    execution: platformExecutionContext(),
   };
 }
 
@@ -4238,6 +4365,7 @@ function networkStatus() {
   const activeNames=Object.entries(interfaces)
     .filter(([,addresses])=>Array.isArray(addresses)&&addresses.some((address)=>address&&!address.internal))
     .map(([name])=>name);
+  if(activeNames.length>64)throw arcaneError('NETWORK_STATUS_UNAVAILABLE','The operating system returned too many network interfaces.','Review the host network configuration and try again.',500);
   return { online:activeNames.length>0,interfaceCount:activeNames.length };
 }
 
@@ -4321,7 +4449,7 @@ async function selectFilesystemDirectory(parameters) {
     }
     return Object.freeze({ cancelled:true,path:null });
   }
-  const selected=typeof result.path==='string'?result.path.trim():'';
+  const selected=typeof result.path==='string'?result.path:'';
   if(!selected||selected.length>FILESYSTEM_DIRECTORY_PATH_LIMIT||/[\u0000-\u001f\u007f]/.test(selected)||!path.isAbsolute(selected)){
     throw arcaneError('FILESYSTEM_DIRECTORY_SELECTION_FAILED','The operating system returned an invalid folder path.','Choose an existing local directory.',500);
   }
@@ -4341,14 +4469,16 @@ function externalUriRequest(parameters) {
   if(keys.some((key)=>!allowed.has(key))||typeof parameters.uri!=='string'){
     throw arcaneError('EXTERNAL_OPEN_INVALID','The external URI request is invalid.','Use a mailto URI.',400);
   }
-  const value=parameters.uri.trim();
-  if(!value||value.length>4096||/[\u0000-\u001f\u007f]/.test(value)){
+  const value=parameters.uri;
+  if(!value||value!==value.trim()||value.length>4096||/[\u0000-\u001f\u007f]/.test(value)){
     throw arcaneError('EXTERNAL_OPEN_INVALID','The external URI request is invalid.','Use a valid mailto URI.',400);
   }
-  let uri;
-  try{uri=new URL(value);}catch(_){throw arcaneError('EXTERNAL_OPEN_INVALID','The external URI is invalid.','Use a valid mailto URI.',400);}
-  if(uri.protocol!=='mailto:')throw arcaneError('EXTERNAL_SCHEME_NOT_ALLOWED','That external URI scheme is not allowed.','Use a mailto URI.',403);
-  return uri.href;
+  const uri=canonicalContractMailto(value,METHOD_CONTRACTS['external.open'].input);
+  if(!uri){
+    if(!/^mailto:/i.test(value))throw arcaneError('EXTERNAL_SCHEME_NOT_ALLOWED','That external URI scheme is not allowed.','Use a mailto URI.',403);
+    throw arcaneError('EXTERNAL_OPEN_INVALID','The external URI is invalid.','Use a valid mailto URI.',400);
+  }
+  return uri;
 }
 
 async function openExternalUri(parameters) {
@@ -4382,6 +4512,7 @@ function machineStatus() {
     installedSecurityMode: installation.present ? installedReleaseSecurityMode() : 'not-installed',
     paths: PATHS,
     simulation: simulate,
+    execution: platformExecutionContext(),
     bundleRoot: bundleRoot(),
   };
 }
@@ -4585,7 +4716,7 @@ async function dispatchMethod(request, options) {
   const requestId = request.id;
 
   switch (method) {
-    case 'system.ping': return { ok: true, pid: process.pid, version: VERSION, app: appMode, elevated: isElevated(), worker: privilegedWorker };
+    case 'system.ping': return { ok: true };
     case 'version.current': return VERSION;
     case 'app.current': return publicAppDescriptor();
     case 'capabilities.list': return capabilityStatus();
@@ -4629,7 +4760,7 @@ async function dispatchMethod(request, options) {
     case 'platform.status': return platformStatus();
     case 'permissions.status': return permissionStatus(true);
     case 'machine.status': return machineStatus();
-    case 'user.current': return currentIdentity();
+    case 'user.current': return publicCurrentIdentity();
     case 'system.metrics': return systemMetrics();
     case 'network.status': return networkStatus();
     case 'external.open': return openExternalUri(parameters);
@@ -4747,6 +4878,7 @@ async function handleRequest(request, options) {
   let releaseExclusiveMutation = null;
   try {
     const policy=assertMethodAllowed(String(request.method || ''));
+    validateMethodContractInput(String(request.method || ''),request.parameters);
     if (policy.exclusiveMutation) {
       releaseExclusiveMutation = acquireExclusiveMutation(request.method, request.id);
       if (simulatedExclusiveMutationDelayMs) await delay(simulatedExclusiveMutationDelayMs);
@@ -4759,7 +4891,8 @@ async function handleRequest(request, options) {
       return;
     }
     const result = await dispatchMethod(request, options || {});
-    await emitFrame({ protocol: PROTOCOL, type: 'response', id: request.id, ok: true, result, time: stamp() });
+    const validatedResult=validateMethodContractOutput(String(request.method || ''),result);
+    await emitFrame({ protocol: PROTOCOL, type: 'response', id: request.id, ok: true, result:validatedResult, time: stamp() });
   } catch (error) {
     const failure = normalizeResponseError(request.method, request.id, error);
     await emitFrame({ protocol: PROTOCOL, type: 'response', id: request.id, ok: false, error: failure, time: stamp() });

@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { renderCoreMethodPolicies, validateMethodPolicies } from './method-policies.mjs';
+import { renderCoreMethodContracts, validateMethodContracts } from './method-contracts.mjs';
 
 const toolsRoot=path.dirname(fileURLToPath(import.meta.url));
 const bundleRoot=path.dirname(toolsRoot);
@@ -11,7 +13,12 @@ const apiPath=path.join(bundleRoot,'src','frontend','shared','arcane-api.js');
 const catalogPath=path.join(bundleRoot,'arcane-apps.json');
 const packagerPath=path.join(bundleRoot,'tools','app-packager-lib.mjs');
 const windowsNativePath=path.join(bundleRoot,'src','native','windows.cjs');
-const core=fs.readFileSync(corePath,'utf8');
+const coreTemplate=fs.readFileSync(corePath,'utf8');
+const methodPolicies=validateMethodPolicies(JSON.parse(fs.readFileSync(path.join(bundleRoot,'src','api','method-policies.json'),'utf8')));
+const methodContracts=validateMethodContracts(JSON.parse(fs.readFileSync(path.join(bundleRoot,'src','api','method-contracts.json'),'utf8')),methodPolicies);
+const core=coreTemplate
+  .replace('__ARCANE_METHOD_POLICIES__',renderCoreMethodPolicies(methodPolicies))
+  .replace('__ARCANE_METHOD_CONTRACTS__',renderCoreMethodContracts(methodContracts,methodPolicies));
 const api=fs.readFileSync(apiPath,'utf8');
 const catalog=JSON.parse(fs.readFileSync(catalogPath,'utf8'));
 const packager=fs.readFileSync(packagerPath,'utf8');
@@ -27,7 +34,7 @@ new vm.Script(api,{ filename:'arcane-api.js' });
 
 assert.match(core,/function managedAIProfile\(\)/);
 assert.match(core,/Object\.freeze\(\{ provider,model,configured,local:provider==='ollama' \}\)/);
-assert.match(core,/'ai\.profile\.current': Object\.freeze\(\{ capability:'ai\.inference' \}\)/);
+assert.deepEqual(methodPolicies['ai.profile.current'],{ capability:'ai.inference' });
 assert.match(core,/case 'ai\.profile\.current': return managedAIProfile\(\)/);
 assert.match(core,/AI_PROVIDER_CHANGED/);
 assert.match(core,/expectedProvider&&expectedProvider!==provider/);
@@ -39,11 +46,12 @@ for(const [method,capability] of [
   ['development.context','development.read'],
   ['development.setup','development.manage'],
 ]){
-  assert.match(core,new RegExp(`'${method.replace('.','\\.')}': Object\\.freeze\\(\\{ capability:'${capability.replace('.','\\.')}',appIds:\\['developer'\\]`));
+  assert.equal(methodPolicies[method].capability,capability);
+  assert.deepEqual(methodPolicies[method].appIds,['developer']);
   assert.match(core,new RegExp(`case '${method.replace('.','\\.')}'`));
 }
-assert.match(core,/'development\.setup': Object\.freeze\(\{ capability:'development\.manage',appIds:\['developer'\],exclusiveMutation:true \}\)/);
-assert.match(core,/'development\.node\.install': Object\.freeze\(\{ capability:'development\.manage',appIds:\['developer'\],privileged:true,exclusiveMutation:true \}\)/);
+assert.deepEqual(methodPolicies['development.setup'],{ capability:'development.manage',appIds:['developer'],exclusiveMutation:true });
+assert.deepEqual(methodPolicies['development.node.install'],{ capability:'development.manage',appIds:['developer'],privileged:true,exclusiveMutation:true });
 assert.match(core,/withAction\('development\.setup',requestId/);
 assert.match(core,/withAction\('development\.node\.install',requestId/);
 assert.match(core,/const DEVELOPMENT_SETUP_TASK_IDS=Object\.freeze\(\[\s*'root-dependencies','machine-dependencies','git-hooks','windows-signing'/);

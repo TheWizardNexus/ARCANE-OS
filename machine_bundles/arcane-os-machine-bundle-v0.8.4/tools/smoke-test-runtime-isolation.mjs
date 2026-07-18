@@ -11,7 +11,8 @@ const devBootstrap = 'window.__ARCANE_DEV_HTTP__=true;';
 const windowsHost = await fs.readFile(path.join(root, 'src/hosts/windows/ArcaneHost.cs'), 'utf8');
 for (const token of [
   'CoreWebView2HostResourceAccessKind.DenyCors',
-  'if (!IsAllowedAppUri(eventArgs.Uri)) eventArgs.Cancel = true;',
+  'if (IsAllowedAppUri(eventArgs.Uri)) return;',
+  'eventArgs.Cancel = true;',
   'String.Equals(uri.Scheme, Uri.UriSchemeHttps',
   'foreach (string allowedPath in Program.AllowedNavigationPaths)',
   'String.Equals(uri.AbsolutePath, allowedPath, StringComparison.Ordinal)',
@@ -41,6 +42,13 @@ for (const token of [
   'webkit_permission_request_deny(request)',
   'webkit_settings_set_allow_file_access_from_file_urls(settings, FALSE)',
   'webkit_settings_set_allow_universal_access_from_file_urls(settings, FALSE)',
+  '#define ARCANE_MAX_BRIDGE_REQUEST_BYTES (1024 * 1024)',
+  'if (!jsc_value_is_string(value))',
+  'jsc_value_to_string_as_bytes(value)',
+  'request_length > ARCANE_MAX_BRIDGE_REQUEST_BYTES',
+  "memchr(request, '\\0', request_length) != NULL",
+  'NATIVE_BRIDGE_INVALID_REQUEST',
+  'NATIVE_BRIDGE_MESSAGE_TOO_LARGE',
 ]) assert.ok(linuxHost.includes(token), `Linux runtime isolation is missing: ${token}`);
 
 function hashSource(source) {

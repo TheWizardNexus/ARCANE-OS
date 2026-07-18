@@ -1,0 +1,27 @@
+{
+  "externalOpen": [
+    { "name": "simple", "uri": "mailto:test@example.com", "accepted": true },
+    { "name": "uppercase-scheme", "uri": "MAILTO:test@example.com?subject=Arcane", "accepted": true },
+    { "name": "leading-space", "uri": " mailto:test@example.com", "accepted": false },
+    { "name": "raw-space", "uri": "mailto:test@example.com?subject=Arcane OS", "accepted": false },
+    { "name": "http", "uri": "https://example.com", "accepted": false },
+    { "name": "fragment", "uri": "mailto:test@example.com#fragment", "accepted": false },
+    { "name": "backslash", "uri": "mailto:test@example.com\\payload", "accepted": false },
+    { "name": "malformed-percent", "uri": "mailto:test@example.com?subject=%GG", "accepted": false },
+    { "name": "encoded-crlf", "uri": "mailto:test@example.com%0D%0ABcc:other@example.com", "accepted": false },
+    { "name": "unicode", "uri": "mailto:tést@example.com", "accepted": false }
+  ],
+  "emptyObject": [
+    { "name": "empty", "parameters": {}, "accepted": true },
+    { "name": "extra", "parameters": { "unexpected": true }, "accepted": false },
+    { "name": "null", "parameters": null, "accepted": false },
+    { "name": "array", "parameters": [], "accepted": false }
+  ],
+  "networkStatus": [
+    { "name": "offline", "result": { "online": false, "interfaceCount": 0 }, "accepted": true },
+    { "name": "online", "result": { "online": true, "interfaceCount": 1 }, "accepted": true },
+    { "name": "contradiction", "result": { "online": true, "interfaceCount": 0 }, "accepted": false },
+    { "name": "negative", "result": { "online": false, "interfaceCount": -1 }, "accepted": false },
+    { "name": "over-limit", "result": { "online": true, "interfaceCount": 65 }, "accepted": false }
+  ]
+}

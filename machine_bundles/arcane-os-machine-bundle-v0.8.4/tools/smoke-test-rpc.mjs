@@ -12,7 +12,13 @@ let buffer = Buffer.alloc(0);
 let expected = null;
 const pending = new Map();
 const events = [];
-child.stderr.on('data', chunk => process.stderr.write(chunk));
+let stderr = '';
+let frameCount = 0;
+let eventCount = 0;
+child.stderr.on('data', function captureStderr(chunk) {
+  stderr = `${stderr}${chunk.toString()}`.slice(-8192);
+  process.stderr.write(chunk);
+});
 child.stdout.on('data', chunk => {
   buffer = Buffer.concat([buffer, chunk]);
   while (true) {
@@ -26,12 +32,27 @@ child.stdout.on('data', chunk => {
     }
     if (buffer.length < expected) return;
     const message = JSON.parse(buffer.subarray(0, expected).toString('utf8'));
+    frameCount += 1;
     buffer = buffer.subarray(expected); expected = null;
-    if (message.type === 'event') events.push(message);
+    if (message.type === 'event') {
+      eventCount += 1;
+      events.push(message);
+      if (events.length > 256) events.shift();
+    }
     else if (message.type === 'response') {
       const callback = pending.get(message.id); if (callback) { pending.delete(message.id); message.ok ? callback.resolve(message.result) : callback.reject(Object.assign(new Error(message.error.message), message.error)); }
     }
   }
+});
+function rejectPending(error) {
+  for (const callback of pending.values()) callback.reject(error);
+  pending.clear();
+}
+child.once('error', function handleChildError(error) {
+  rejectPending(error);
+});
+child.once('exit', function handleChildExit(code, signal) {
+  rejectPending(new Error(`Arcane Core exited before completing requests (code=${code}, signal=${signal}).\n${stderr}`));
 });
 function frame(message) {
   const body = Buffer.from(JSON.stringify(message));
@@ -39,15 +60,25 @@ function frame(message) {
 }
 function call(method, parameters={}) {
   const id = crypto.randomUUID();
-  child.stdin.write(frame({ protocol:'arcane/1', type:'request', id, method, parameters }));
   return new Promise((resolve,reject) => {
-    const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, 20000);
+    const startedAt = Date.now();
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`Timeout: ${method} id=${id} elapsedMs=${Date.now() - startedAt} exitCode=${child.exitCode} signalCode=${child.signalCode} frames=${frameCount} events=${eventCount}\n${stderr}`));
+    }, 20000);
     pending.set(id, { resolve:value=>{clearTimeout(timer);resolve(value);}, reject:error=>{clearTimeout(timer);reject(error);} });
+    child.stdin.write(frame({ protocol:'arcane/1', type:'request', id, method, parameters }), function handleWrite(error) {
+      if (!error) return;
+      const callback = pending.get(id);
+      if (!callback) return;
+      pending.delete(id);
+      callback.reject(error);
+    });
   });
 }
 try {
   const ping = await call('system.ping');
-  if (!ping.ok || ping.version !== manifest.version) throw new Error('Ping failed');
+  if (!ping.ok || Object.keys(ping).length !== 1) throw new Error('Ping failed');
   const currentVersion = await call('version.current');
   if (currentVersion !== manifest.version) throw new Error('Version API failed');
   const network = await call('network.status');

@@ -120,6 +120,34 @@
     }
   }
 
+  class AndroidWebViewTransport {
+    constructor() {
+      this.bridge = global.arcaneAndroid;
+      this.bridge.onmessage = function onAndroidNativeMessage(message) {
+        receive(message && typeof message === 'object' && 'data' in message ? message.data : message);
+      };
+    }
+
+    async send(request) {
+      try {
+        await this.bridge.postMessage(JSON.stringify(request));
+      } catch (error) {
+        throw new ArcaneError(
+          {
+            code: 'ARCANE_ANDROID_BRIDGE_CALL_FAILED',
+            message: 'Arcane could not communicate with its Android host.',
+            resolution: 'Close Arcane, reopen the launcher, and try again.',
+            technicalMessage: error && error.message || String(error),
+            causeName: error && error.name || null,
+            method: request && request.method || null,
+            transport: 'android-webview',
+            stack: error && error.stack || null,
+          }
+        );
+      }
+    }
+  }
+
   class DevelopmentHttpTransport {
     constructor() {
       if (typeof EventSource === 'function') {
@@ -142,6 +170,9 @@
   function chooseTransport() {
     if (global.chrome && global.chrome.webview && global.chrome.webview.hostObjects) return new WebView2Transport();
     if (global.webkit && global.webkit.messageHandlers && global.webkit.messageHandlers.arcane) return new WebKitGtkTransport();
+    if (global.arcaneAndroid && typeof global.arcaneAndroid.postMessage === 'function') {
+      return new AndroidWebViewTransport();
+    }
     if (global.__ARCANE_DEV_HTTP__) return new DevelopmentHttpTransport();
     throw new ArcaneError({
       code: 'ARCANE_TRANSPORT_UNAVAILABLE',

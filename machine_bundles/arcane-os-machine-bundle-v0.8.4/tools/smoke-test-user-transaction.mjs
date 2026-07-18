@@ -24,8 +24,12 @@ function startCore(phase, options={}) {
   const child = spawn(process.execPath, coreArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
   let buffer = Buffer.alloc(0);
   let expected = null;
+  let stderr = '';
   const pending = new Map();
-  child.stderr.on('data', (chunk) => process.stderr.write(chunk));
+  child.stderr.on('data', function captureStderr(chunk) {
+    stderr = `${stderr}${chunk.toString()}`.slice(-8192);
+    process.stderr.write(chunk);
+  });
   child.stdout.on('data', (chunk) => {
     buffer = Buffer.concat([buffer, chunk]);
     while (true) {
@@ -49,13 +53,25 @@ function startCore(phase, options={}) {
     }
   });
 
+  function rejectPending(error) {
+    for (const callback of pending.values()) callback.reject(error);
+    pending.clear();
+  }
+
+  child.once('error', function handleChildError(error) {
+    rejectPending(error);
+  });
+  child.once('exit', function handleChildExit(code, signal) {
+    rejectPending(new Error(`Arcane Core exited before completing requests (code=${code}, signal=${signal}).\n${stderr}`));
+  });
+
   function call(method, parameters = {}) {
     const id = crypto.randomUUID();
     const body = Buffer.from(JSON.stringify({ protocol: 'arcane/1', type: 'request', id, method, parameters }));
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         pending.delete(id);
-        reject(new Error(`Timeout: ${method}`));
+        reject(new Error(`Timeout: ${method} id=${id} exitCode=${child.exitCode} signalCode=${child.signalCode}\n${stderr}`));
       }, 20_000);
       pending.set(id, {
         resolve(value) { clearTimeout(timer); resolve(value); },
@@ -71,13 +87,26 @@ function startCore(phase, options={}) {
     });
   }
 
-  return { child, call };
+  async function close() {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    child.stdin.end();
+    child.kill();
+    await new Promise(function waitForExit(resolve) {
+      const timer = setTimeout(resolve, 2000);
+      child.once('exit', function finishClose() {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
+
+  return { call, close };
 }
 
 {
   const phase='crash-after-policy-shell-write';
   const username='arcane-retry-user';
-  const {child,call}=startCore(phase,{existingUser:username});
+  const {call,close}=startCore(phase,{existingUser:username});
   try{
     await call('installation.ensure');
     await assert.rejects(
@@ -99,14 +128,13 @@ function startCore(phase, options={}) {
     assert.equal(assigned.recordedAssignmentMode,'windows-dual');
     await call('users.restoreShell',{username});
   }finally{
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 {
   const username='arcane-legacy-user';
-  const {child,call}=startCore('',{legacyUser:username});
+  const {call,close}=startCore('',{legacyUser:username});
   try{
     await call('installation.ensure');
     const migrated=await call('users.add',{usernames:[username]});
@@ -120,14 +148,13 @@ function startCore(phase, options={}) {
     assert.equal(restored.legacyShell,'explorer.exe','dual restore after migration must return to the original legacy baseline');
     assert.equal(restored.policyShellPresent,false);
   }finally{
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 {
   const username='arcane-legacy-drift';
-  const {child,call}=startCore('',{legacyDriftUser:username});
+  const {call,close}=startCore('',{legacyDriftUser:username});
   try{
     await call('installation.ensure');
     await assert.rejects(
@@ -139,14 +166,13 @@ function startCore(phase, options={}) {
     assert.equal(preserved.legacyShell,'third-party-shell.exe');
     assert.equal(preserved.shellMutationPhase,'assigned','external drift must not overwrite the original journal');
   }finally{
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 {
   const username='arcane-u-repair';
-  const {child,call}=startCore('',{unsignedUser:username});
+  const {call,close}=startCore('',{unsignedUser:username});
   try{
     await call('installation.ensure');
     const before=(await call('users.list')).users.find((item)=>item.username===username);
@@ -158,21 +184,20 @@ function startCore(phase, options={}) {
     assert.equal(assigned.shellAssigned,true,'signed repair must restore the durable baseline before assigning the normalized signed command');
     assert.equal(assigned.previousPolicyShell,'explorer.exe');
     assert.equal(assigned.previousLegacyShell,'explorer.exe');
-    assert.equal(assigned.recordedSecurityMode,'publisher-verified');
+    assert.equal(assigned.recordedSecurityMode,'simulation');
     assert.doesNotMatch(assigned.policyShell,/--allow-unsigned-local-release/);
     await call('users.restoreShell',{username});
     const restored=(await call('users.list')).users.find((item)=>item.username===username);
     assert.equal(restored.policyShell,'explorer.exe');
     assert.equal(restored.legacyShell,'explorer.exe');
   }finally{
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 {
   const username='arcane-linux-legacy';
-  const {child,call}=startCore('',{platform:'linux',existingUser:username});
+  const {call,close}=startCore('',{platform:'linux',existingUser:username});
   try{
     await call('installation.ensure');
     const provisioned=await call('users.add',{usernames:[username]});
@@ -185,13 +210,12 @@ function startCore(phase, options={}) {
     const restored=await call('users.restoreShell',{username});
     assert.equal(restored.user.shellAssigned,false);
   }finally{
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 for (const phase of phases) {
-  const { child, call } = startCore(phase);
+  const { call, close } = startCore(phase);
   const username = `arcane-tx-${phase.replace('after-', '')}`;
   try {
     await call('installation.ensure');
@@ -214,14 +238,13 @@ for (const phase of phases) {
     assert.equal(activated.user.enabled, true, `${phase} account must activate after credential delivery`);
     await call('users.restoreShell', { username });
   } finally {
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 {
   const phase = 'crash-before-native-return';
-  const { child, call } = startCore(phase);
+  const { call, close } = startCore(phase);
   const username = 'arcane-tx-no-sid';
   try {
     await call('installation.ensure');
@@ -237,14 +260,13 @@ for (const phase of phases) {
     const partial = listed.users.find((item) => item.username === username);
     assert.ok(partial && partial.enabled === false && partial.accountMutationPhase === 'cleanup-required');
   } finally {
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 {
   const phase = 'crash-activation-pending';
-  const { child, call } = startCore(phase);
+  const { call, close } = startCore(phase);
   const username = 'arcane-tx-pending';
   try {
     await call('installation.ensure');
@@ -255,13 +277,12 @@ for (const phase of phases) {
     await call('users.activate', { username });
     await call('users.restoreShell', { username });
   } finally {
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 for (const [phase, username] of [['crash-during-activation', 'arcane-tx-act'], ['crash-after-enable', 'arcane-tx-enable']]) {
-  const { child, call } = startCore(phase);
+  const { call, close } = startCore(phase);
   try {
     await call('installation.ensure');
     const staged = await call('users.add', { usernames: [username] });
@@ -273,14 +294,13 @@ for (const [phase, username] of [['crash-during-activation', 'arcane-tx-act'], [
     assert.equal(retried.user.enabled, true, `${phase} activation retry must reconcile safely`);
     await call('users.restoreShell', { username });
   } finally {
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 
 {
   const phase = 'crash-after-password-apply';
-  const { child, call } = startCore(phase);
+  const { call, close } = startCore(phase);
   const username = 'arcane-tx-password';
   try {
     await call('installation.ensure');
@@ -311,8 +331,7 @@ for (const [phase, username] of [['crash-during-activation', 'arcane-tx-act'], [
     assert.ok(reconciled.passwordChangedAt, 'a successful retry must durably record when the password was changed');
     await call('users.restoreShell', { username });
   } finally {
-    child.stdin.end();
-    child.kill();
+    await close();
   }
 }
 

@@ -330,6 +330,16 @@ test('BOSS build is isolated, runtime-enabled, hashed, and deterministic', async
   const targetBundle = JSON.parse(await fs.readFile(path.join(first.target, 'arcane-bundle.json'), 'utf8'));
   assert.deepEqual(Object.keys(targetBundle.apps), ['boss']);
   assert.equal(targetBundle.apps.boss.entry, 'boss/index.html');
+  const targetCore = await fs.readFile(path.join(first.target, 'runtime', 'arcane-core.cjs'), 'utf8');
+  assert.match(targetCore, /const CORE_PLATFORM_ADAPTER_FACTORIES = Object\.freeze\(/);
+  assert.match(targetCore, /win32: createWindowsNativeAdapter/);
+  assert.match(targetCore, /linux: createLinuxNativeAdapter/);
+  assert.match(targetCore, /const native = createCoreNativeAdapter\(platform, nativeContext\)/);
+  assert.doesNotMatch(targetCore, /__ARCANE_NATIVE_ADAPTERS__/);
+  assert.match(targetCore, /const METHOD_POLICIES = Object\.freeze\(\{/);
+  assert.match(targetCore, /'platform\.status': Object\.freeze\(\{ capability:"system\.read" \}\)/);
+  assert.match(targetCore, /'users\.add': Object\.freeze\(\{ capability:"users\.manage", appTypes:Object\.freeze\(\["provisioner"\]\), privileged:true, exclusiveMutation:true \}\)/);
+  assert.doesNotMatch(targetCore, /__ARCANE_METHOD_POLICIES__/);
 
   let previousManifestText = firstManifestText;
   let matchedStableInput = false;

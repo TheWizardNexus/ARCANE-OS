@@ -77,7 +77,7 @@ async function loadAdapter(platform, options = {}) {
     os,
     path,
     production: platform !== 'windows',
-    simulate: false,
+    simulate: options.simulate === true,
     spawnSync() { return { status: 1, stdout: '', stderr: '' }; },
   });
 }
@@ -256,6 +256,13 @@ for (const platform of ['windows', 'linux']) {
     }
 
     if (platform === 'windows') {
+      const simulatedAdapter = await loadAdapter(platform, { simulate: true });
+      const firstSimulatedPayload = simulatedAdapter.installPayload(fixtureRoot);
+      const reusedSimulatedPayload = simulatedAdapter.installPayload(fixtureRoot);
+      const otherRootPayload = simulatedAdapter.installPayload(`${fixtureRoot}-other-root`);
+      assert.strictEqual(reusedSimulatedPayload, firstSimulatedPayload, 'simulation must reuse verified payload evidence for the same resolved bundle root');
+      assert.notStrictEqual(otherRootPayload, firstSimulatedPayload, 'simulation must not reuse payload evidence across bundle roots');
+
       const strictAdapter = await loadAdapter(platform, { allowUnsigned: false });
       const strictPayload = strictAdapter.installPayload(fixtureRoot);
       assert.equal(strictPayload.releaseReady, false, 'unsigned fixtures must require the explicit host-attested local-test mode');

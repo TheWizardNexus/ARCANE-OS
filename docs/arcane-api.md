@@ -1,10 +1,14 @@
 # Arcane API Reference
 
-`window.Arcane` is the immutable application-facing API provided by the Arcane native host bridge. Arcane applications use the same contract when hosted by WebView2 on Microsoft NT, WebKitGTK on Linux, or the development HTTP bridge. This is not a browser-only API: calls cross into the native Arcane runtime, and the available native operation is governed by the application's declared capabilities and host policy.
+`window.Arcane` is the immutable application-facing API provided by the Arcane native host bridge. Arcane applications use the same contract when hosted by WebView2 on Microsoft NT, WebKitGTK on Linux, the Android WebView launcher bridge, or the development HTTP bridge. This is not a browser-only API: calls cross into the native Arcane runtime or platform service, and the available native operation is governed by the application's declared capabilities and host policy.
+
+The Android bridge is an experimental foundation. Its source controller binds one WebView to one immutable packaged entry at the exact reserved HTTPS origin and denies non-packaged navigation and resources. A generated Android application registry derives the bundle version plus Shell identity, entry, and grant intersection from the canonical bundle manifest and method policy registry. One immutable host session has no caller-supplied identity, entry, or grant inputs; it requires the installed launcher package version to equal the generated bundle version and snapshots minimized platform facts without exposing WebView patch version. The controller consumes that same session entry. AndroidX WebKit injects the bridge only at that origin, and the bridge admits messages only from the main frame after checking source origin, method admission, grant where required, and replay state. The controller can be installed only once and exposes a UI-thread teardown result that distinguishes removal of native bridge authority from full WebView destruction; failed destruction remains retryable, and authority-revoked controllers cannot load or install again. This teardown does not erase the shared WebView profile, cookies, DOM storage, cache, or service-worker data. The canonical Shell receives capability-free, bound-session `system.ping`, `version.current`, and `app.current` plus `platform.status` and `network.status`. Ping returns only `{ok:true}` and does not claim health, readiness, privilege, or trust. Version and application identity are provider-free reads of the immutable session; Android application trust remains `unverified` with no publisher or revocation claim. Android network status preserves the Core meaning of `{ online, interfaceCount }` by counting interfaces with non-loopback addresses, returns no interface identity or address, bounds malformed provider results, and requires no Android permission. The reviewed mailto-only `external.open` host implementation remains unavailable to the Shell because its canonical manifest does not grant that capability. Every other method and URI scheme fails closed. Generated source authority and package-version equality are not APK-signer or runtime-session authentication. Kotlin compilation/runtime behavior is not yet proven, and this does not establish a complete Android launcher, authenticated package/session policy, signed application catalog, persistent-profile retention/deletion policy, scoped-storage resource grant, process recovery, update, or release contract.
 
 Every operation returns a `Promise` unless the return column says otherwise. Rejected operations use `Arcane.Error`, which exposes `code`, `message`, `resolution`, `diagnosticId`, and technical diagnostic fields when available.
 
 Parameter objects shown as optional may be omitted. Actual availability is also controlled by the application's declared capabilities and native policy.
+
+Android host installation reports whether cleanup remains required and includes the teardown result after a partial setup failure. A launcher must retain that controller and retry close rather than treating every failed installation as clean.
 
 ## Core and events
 
@@ -50,17 +54,17 @@ Parameter objects shown as optional may be omitted. Actual availability is also 
 
 | Method | Parameters | Return | Description |
 |---|---|---|---|
-| `Arcane.app.current()` | None | `Promise<app record>` | Gets the current application's identity and context. |
+| `Arcane.app.current()` | None | `Promise<app record>` | Gets the exact bound application descriptor. Android returns immutable generated Shell identity with `unverified` publisher status. |
 | `Arcane.applications.list()` | None | `Promise<app[]>` | Lists applications visible to the current host/app. |
 | `Arcane.applications.launch(id)` | Application ID | `Promise<launch result>` | Launches a registered application. |
-| `Arcane.external.open(uri)` | Absolute URI; currently `mailto:` only | `Promise<{opened, uri}>` | Hands a validated URI to the operating system's registered default application. Requires `external.open`. |
+| `Arcane.external.open(uri)` | Exact printable-ASCII URI without whitespace, fragments, backslashes, malformed escapes, or encoded controls; currently `mailto:` only | `Promise<{opened, uri}>` | Hands a validated URI to the operating system's registered default application. `opened: true` means only that the OS accepted the handoff, not that a composer opened or a message was sent. Simulation fails explicitly instead of claiming a handoff. Requires `external.open`. |
 | `Arcane.terminal.start(options?)` | `{shell="auto", cwd="", columns=120, rows=32}` | `Promise<session>` | Starts a native terminal session. |
 | `Arcane.terminal.list()` | None | `Promise<session[]>` | Lists terminal sessions owned by the app. |
 | `Arcane.terminal.write(sessionId, data)` | Session ID; input text | `Promise<result>` | Writes data to a session. |
 | `Arcane.terminal.resize(sessionId, columns, rows)` | Session ID; numeric dimensions | `Promise<result>` | Resizes a terminal session. |
 | `Arcane.terminal.signal(sessionId, signal="interrupt")` | Session ID; signal | `Promise<result>` | Sends a supported control signal. |
 | `Arcane.terminal.close(sessionId)` | Session ID | `Promise<result>` | Closes a terminal session. |
-| `Arcane.capabilities.list()` | None | `Promise<capability[]>` | Lists the current application's allowed capabilities. |
+| `Arcane.capabilities.list()` | None | `Promise<{ app, grants, methods }>` | Returns the current application descriptor, its granted capabilities, and its exact allowed RPC methods. |
 
 ## Platform, installation, users, and system
 
@@ -68,10 +72,10 @@ Parameter objects shown as optional may be omitted. Actual availability is also 
 |---|---|---|---|
 | `Arcane.platform.status()` | None | `Promise<status>` | Gets native platform status. |
 | `Arcane.permissions.status()` | None | `Promise<status>` | Gets permission/elevation status. |
-| `Arcane.version.current()` | None | `Promise<version>` | Gets the current Arcane bundle version. |
+| `Arcane.version.current()` | None | `Promise<string>` | Gets the version identifier of the active packaged ARCANE payload bound to this host session. It is not signer, update, or RC attestation. |
 | `Arcane.version.installation()` | None | `Promise<installation status>` | Alias-like access to installation status. |
 | `Arcane.machine.status()` | None | `Promise<status>` | Gets machine readiness/status. |
-| `Arcane.user.current()` | None | `Promise<user>` | Gets the active Arcane/operating-system user context. |
+| `Arcane.user.current()` | `identity.read` | `Promise<identity>` | Gets the privacy-minimized bound identity. Windows/Linux return a `host-account`; Android returns an anonymous `local-session` with null account identifiers. |
 | `Arcane.requirements.list()` | None | `Promise<requirement[]>` | Lists installation requirements. |
 | `Arcane.requirements.ensure(requirementIds)` | Array of requirement IDs, or omitted for all | `Promise<result>` | Ensures selected requirements are installed/configured. |
 | `Arcane.installation.status()` | None | `Promise<status>` | Gets installation state. |
@@ -85,9 +89,13 @@ Parameter objects shown as optional may be omitted. Actual availability is also 
 | `Arcane.users.verifyShell(username)` | Username | `Promise<verification>` | Verifies the user's Arcane shell configuration. |
 | `Arcane.users.restoreShell(username)` | Username | `Promise<result>` | Restores the supported shell configuration. |
 | `Arcane.system.lock()` | None | `Promise<result>` | Locks the operating-system session. |
-| `Arcane.system.ping()` | None | `Promise<pong/status>` | Performs a short-timeout native liveness check. |
+| `Arcane.system.ping()` | None | `Promise<{ok:true}>` | Confirms only that the bound host bridge admitted and answered the request. It does not claim dependency readiness, system health, privilege, signer trust, or release-candidate status. |
 | `Arcane.system.metrics()` | None | `Promise<metrics>` | Gets allowed machine metrics. |
-| `Arcane.network.status()` | None | `Promise<status>` | Gets network status. |
+| `Arcane.network.status()` | None | `Promise<{online, interfaceCount}>` | Counts interfaces with at least one non-loopback address. `online` does not claim Internet, DNS, captive-portal, route, or service reachability. |
+
+Core-backed `platform.status` and `machine.status` records include `execution.hostPlatform`, `execution.effectivePlatform`, `execution.simulation`, and `execution.evidenceClass`. The Android bridge returns the same execution fields with `application-host` evidence. A simulated effective platform is test evidence only; no simulation or source-only Android assertion is real-host, publisher, signing, or release-candidate evidence.
+
+The canonical semantic definitions for the currently shared Core/Android methods live in `machine_bundles/arcane-os-machine-bundle-v0.8.4/src/api/method-contracts.json`. They are deliberately separate from method authority policy: semantic effect metadata cannot grant a capability, admit an application or host, or imply privilege. Core executes the closed input/output validators at its request and response boundaries. Android consumes separately generated semantic constants and validates or constructs the corresponding results, but Kotlin execution remains source-asserted until the pinned Gradle/JVM/instrumentation environment exists. The registry remains a partial vertical slice: privacy-safe audit and confirmation infrastructure, definitions for the remaining 69 Core-only methods, and candidate/device conformance are still required.
 
 ## Filesystem, storage, preferences, and appearance
 

@@ -63,6 +63,7 @@ Run these from `machine_bundles/arcane-os-machine-bundle-v0.8.4`, or add `npm --
 
 | Script | Purpose | Result / output |
 |---|---|---|
+| `generate:method-policies` | Generates host method-policy artifacts from the canonical application and capability manifests. | Synchronized Core and Android policy sources. |
 | `build` | Generates the core runtime from its canonical template. | `runtime/arcane-core.cjs`. |
 | `verify` | Verifies runtime, API source, directory selection, and Windows-host source contracts. | Verification report. |
 | `smoke` | Runs bridge, API, security, provisioning, installation, and isolation smoke tests. | Smoke-test report. |

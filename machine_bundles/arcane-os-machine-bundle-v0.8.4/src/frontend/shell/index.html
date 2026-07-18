@@ -342,12 +342,17 @@
     async function initialize() {
       try {
         await Arcane.system.ping();
-        const [version, user, platform, application] = await Promise.all([
-          Arcane.version.current(), Arcane.user.current(), Arcane.platform.status(), Arcane.app.current()
-        ]);
+        const [version, user, platform, application] = await Promise.all(
+          [
+            Arcane.version.current(),
+            Arcane.user.current(),
+            Arcane.platform.status(),
+            Arcane.app.current()
+          ]
+        );
         setSecurityMode(application.securityMode, application.publisherTrustSource, application.revocationStatus);
         $('#version').textContent = 'v' + (version.version || version);
-        $('#identity').textContent = user.accountName || user.username;
+        $('#identity').textContent = user.accountName || user.username || user.displayName;
         $('#userValue').textContent = user.displayName || user.username;
         $('#osValue').textContent = platform.os && platform.os.displayName || platform.displayName || platform.platform;
         $('#hostValue').textContent = platform.os && platform.os.hostname || platform.hostname || 'Local machine';

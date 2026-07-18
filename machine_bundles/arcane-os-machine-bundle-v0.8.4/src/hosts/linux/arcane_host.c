@@ -30,6 +30,8 @@ typedef struct {
   gchar **host_argv;
 } ArcaneHost;
 
+#define ARCANE_MAX_BRIDGE_REQUEST_BYTES (1024 * 1024)
+
 typedef struct {
   ArcaneHost *host;
   gchar *json;
@@ -169,8 +171,7 @@ static gpointer read_core_errors_thread(gpointer data) {
   return NULL;
 }
 
-static gboolean send_to_core(ArcaneHost *host, const gchar *json, GError **error) {
-  gsize body_length = strlen(json);
+static gboolean send_to_core(ArcaneHost *host, const gchar *json, gsize body_length, GError **error) {
   gchar *header = g_strdup_printf("Content-Length: %" G_GSIZE_FORMAT "\r\n\r\n", body_length);
   g_mutex_lock(&host->write_mutex);
   gsize wrote = 0;
@@ -188,10 +189,32 @@ static gboolean on_script_message(WebKitUserContentManager *manager,
                                   gpointer user_data) {
   (void)manager;
   ArcaneHost *host = user_data;
-  gchar *request = jsc_value_to_string(value);
-  GError *error = NULL;
-  gboolean accepted = send_to_core(host, request, &error);
   JSCContext *context = jsc_value_get_context(value);
+  if (!jsc_value_is_string(value)) {
+    JSCValue *reply_value = jsc_value_new_string(context, "{\"accepted\":false,\"error\":{\"code\":\"NATIVE_BRIDGE_INVALID_REQUEST\",\"message\":\"Arcane requires a string Linux WebKitGTK request.\"}}");
+    webkit_script_message_reply_return_value(reply, reply_value);
+    g_object_unref(reply_value);
+    return TRUE;
+  }
+  GBytes *request_bytes = jsc_value_to_string_as_bytes(value);
+  gsize request_length = 0;
+  const gchar *request = request_bytes ? g_bytes_get_data(request_bytes, &request_length) : NULL;
+  if (!request || request_length > ARCANE_MAX_BRIDGE_REQUEST_BYTES) {
+    JSCValue *reply_value = jsc_value_new_string(context, "{\"accepted\":false,\"error\":{\"code\":\"NATIVE_BRIDGE_MESSAGE_TOO_LARGE\",\"message\":\"Arcane rejected an oversized Linux WebKitGTK request.\"}}");
+    webkit_script_message_reply_return_value(reply, reply_value);
+    g_object_unref(reply_value);
+    if (request_bytes) g_bytes_unref(request_bytes);
+    return TRUE;
+  }
+  if (memchr(request, '\0', request_length) != NULL) {
+    JSCValue *reply_value = jsc_value_new_string(context, "{\"accepted\":false,\"error\":{\"code\":\"NATIVE_BRIDGE_INVALID_REQUEST\",\"message\":\"Arcane rejected a Linux WebKitGTK request containing a null character.\"}}");
+    webkit_script_message_reply_return_value(reply, reply_value);
+    g_object_unref(reply_value);
+    g_bytes_unref(request_bytes);
+    return TRUE;
+  }
+  GError *error = NULL;
+  gboolean accepted = send_to_core(host, request, request_length, &error);
   gchar *error_json = error ? json_string(error->message) : NULL;
   gchar *acknowledgement = accepted
     ? g_strdup("{\"accepted\":true}")
@@ -201,7 +224,7 @@ static gboolean on_script_message(WebKitUserContentManager *manager,
   g_object_unref(reply_value);
   g_free(error_json);
   g_free(acknowledgement);
-  g_free(request);
+  g_bytes_unref(request_bytes);
   if (error) g_error_free(error);
   return TRUE;
 }

@@ -7,6 +7,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
+import {readMethodPolicies} from './method-policies.mjs';
 
 const require=createRequire(import.meta.url);
 const toolsRoot=path.dirname(fileURLToPath(import.meta.url));
@@ -53,37 +54,37 @@ async function nativeFactory(relative,name){
   return module.exports;
 }
 
-test('frontend exposes one bounded native directory-selection request',async()=>{
+test('frontend exposes one bounded native directory-selection request',async function testFrontendDirectorySelection(){
   const source=await bundleSource('src/frontend/shared/arcane-api.js');
   let request=null;
   const window={
     __ARCANE_DEV_HTTP__:true,
-    crypto:{randomUUID:()=>`request-${Date.now()}`},
+    crypto:{randomUUID:function randomUUID(){return `request-${Date.now()}`;}},
   };
-  const fetch=async(_url,options)=>{
+  async function fetch(_url,options){
     request=JSON.parse(options.body);
     return {
       ok:true,
-      json:async()=>({
+      json:async function json(){return {
         protocol:'arcane/1',
         type:'response',
         id:request.id,
         ok:true,
         result:{cancelled:false,path:bundleRoot},
-      }),
+      };},
     };
-  };
+  }
   vm.runInNewContext(source,{window,fetch,console,setTimeout,clearTimeout},{filename:'arcane-api.js'});
 
   const result=await window.Arcane.filesystem.selectDirectory({title:'Choose a repository',initialPath:bundleRoot});
   assert.equal(request.method,'filesystem.directory.select');
   assert.deepEqual(request.parameters,{title:'Choose a repository',initialPath:bundleRoot});
   assert.deepEqual(result,{cancelled:false,path:bundleRoot});
-  assert.throws(()=>window.Arcane.filesystem.selectDirectory([]),/options must be an object/i);
+  assert.throws(function selectDirectoryWithInvalidOptions(){window.Arcane.filesystem.selectDirectory([]);},/options must be an object/i);
   assert.doesNotMatch(source,/showDirectoryPicker|webkitdirectory/);
 });
 
-test('Windows native selector has real read-only dialog behavior and deterministic simulation',async()=>{
+test('Windows native selector has real read-only dialog behavior and deterministic simulation',async function testWindowsDirectorySelector(){
   const source=await bundleSource('src/native/windows.cjs');
   const createWindowsNativeAdapter=await nativeFactory('src/native/windows.cjs','createWindowsNativeAdapter');
   const adapter=createWindowsNativeAdapter(nativeContext());
@@ -109,29 +110,91 @@ test('Windows native selector has real read-only dialog behavior and determinist
   assert.doesNotMatch(selector,/\bRunAs\b|Start-Process|\bNew-Item\b|Set-Content|WriteAll|mkdir/i);
 });
 
-test('Linux native selector fails explicitly without spawning or mutating',async()=>{
+test('Linux native selector uses an argv-only desktop picker and normalizes selection',async function testLinuxDirectorySelector(){
   const createLinuxNativeAdapter=await nativeFactory('src/native/linux.cjs','createLinuxNativeAdapter');
-  const adapter=createLinuxNativeAdapter(nativeContext());
-  await assert.rejects(
-    adapter.selectDirectory({title:'Choose a repository',initialPath:bundleRoot}),
-    (error)=>error?.code==='FILESYSTEM_DIRECTORY_SELECTION_UNSUPPORTED'&&error?.status===501
-  );
+  const calls=[];
+  const selectedPath='/home/arcane/repository';
+  const fakeFs=Object.create(fs);
+  fakeFs.existsSync=function fakeExistsSync(value){return value==='/usr/bin/zenity';};
+  const adapter=createLinuxNativeAdapter(nativeContext({
+    simulate:false,
+    path:path.posix,
+    fs:fakeFs,
+    spawnSync(executable,args,options){calls.push({executable,args,options});return {status:0,stdout:`${selectedPath}\n`,stderr:''};},
+  }));
+  assert.deepEqual(JSON.parse(JSON.stringify(await adapter.selectDirectory({title:'Choose a repository',initialPath:selectedPath}))),{cancelled:false,path:selectedPath});
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].executable,'/usr/bin/zenity');
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].args)),['--file-selection','--directory','--title=Choose a repository',`--filename=${selectedPath}/`]);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].options)),{encoding:'utf8',windowsHide:true});
+  const source=await bundleSource('src/native/linux.cjs');
+  const start=source.indexOf('async function selectDirectory(input)');
+  const end=source.indexOf('\n  async function launchElevated',start);
+  const selector=source.slice(start,end);
+  assert.match(selector,/command: 'zenity'/);
+  assert.match(selector,/command: 'kdialog'/);
+  assert.doesNotMatch(selector,/shell\s*:\s*true|\bexec\s*\(|\bspawn\s*\(/);
 });
 
-test('Core policy, dispatch, validation, and package allowlists bind the selector capability',async()=>{
-  const [core,packager,windows]=await Promise.all([
+test('Linux native selector distinguishes cancellation, missing picker, and picker failure',async function testLinuxDirectorySelectorFailures(){
+  const createLinuxNativeAdapter=await nativeFactory('src/native/linux.cjs','createLinuxNativeAdapter');
+  const pickerFs=Object.create(fs);
+  pickerFs.existsSync=function pickerExistsSync(value){return value==='/usr/bin/zenity';};
+  const cancelled=createLinuxNativeAdapter(nativeContext({
+    simulate:false,
+    path:path.posix,
+    fs:pickerFs,
+    spawnSync(){return {status:1,stdout:'',stderr:''};},
+  }));
+  assert.deepEqual(JSON.parse(JSON.stringify(await cancelled.selectDirectory({title:'Choose',initialPath:'/home/arcane'}))),{cancelled:true,path:null});
+
+  const missingFs=Object.create(fs);
+  missingFs.existsSync=function missingExistsSync(){return false;};
+  const missing=createLinuxNativeAdapter(nativeContext({simulate:false,path:path.posix,fs:missingFs}));
+  await assert.rejects(missing.selectDirectory({title:'Choose',initialPath:'/home/arcane'}),function isMissingPicker(error){return error?.code==='FILESYSTEM_DIRECTORY_SELECTION_UNSUPPORTED'&&error?.status===501;});
+
+  const failed=createLinuxNativeAdapter(nativeContext({
+    simulate:false,
+    path:path.posix,
+    fs:pickerFs,
+    spawnSync(){return {status:2,stdout:'',stderr:'picker failed'};},
+  }));
+  await assert.rejects(failed.selectDirectory({title:'Choose',initialPath:'/home/arcane'}),function isPickerFailure(error){return error?.code==='FILESYSTEM_DIRECTORY_SELECTION_FAILED'&&error?.status===500&&error?.details?.picker==='zenity'&&error?.details?.status===2;});
+});
+
+test('Core preserves the exact native picker path before canonicalization',async function testExactSelectedDirectoryPath(){
+  const core=await bundleSource('src/core/arcane-core.template.cjs');
+  assert.match(core,/const selected=typeof result\.path==='string'\?result\.path:'';/);
+  assert.doesNotMatch(core,/result\.path\.trim\(\)/);
+
+  const createLinuxNativeAdapter=await nativeFactory('src/native/linux.cjs','createLinuxNativeAdapter');
+  const selectedPath='/home/arcane/name ';
+  const pickerFs=Object.create(fs);
+  pickerFs.existsSync=function pickerExistsSync(value){return value==='/usr/bin/zenity';};
+  const adapter=createLinuxNativeAdapter(nativeContext({
+    simulate:false,
+    path:path.posix,
+    fs:pickerFs,
+    spawnSync(){return {status:0,stdout:`${selectedPath}\n`,stderr:''};},
+  }));
+  assert.equal((await adapter.selectDirectory({title:'Choose',initialPath:'/home/arcane'})).path,selectedPath);
+});
+
+test('Core policy, dispatch, validation, and package allowlists bind the selector capability',async function testDirectorySelectionAuthority(){
+  const [core,packager,windows,policies]=await Promise.all([
     bundleSource('src/core/arcane-core.template.cjs'),
     bundleSource('tools/app-packager-lib.mjs'),
     bundleSource('src/native/windows.cjs'),
+    readMethodPolicies(bundleRoot),
   ]);
-  const policy=/['"]filesystem\.directory\.select['"]:\s*Object\.freeze\(\{\s*capability:['"]filesystem\.directory\.select['"]\s*\}\)/;
-  assert.match(core,policy);
+  assert.deepEqual(policies['filesystem.directory.select'],{capability:'filesystem.directory.select'});
   assert.match(core,/case 'filesystem\.directory\.select': return selectFilesystemDirectory\(parameters\);/);
   assert.match(core,/function filesystemDirectorySelectionRequest\(parameters\)/);
   assert.match(core,/allowed=new Set\(\['initialPath','title'\]\)/);
   assert.match(core,/fs\.realpathSync\(selected\)/);
   assert.match(core,/fs\.statSync\(canonical\)\.isDirectory\(\)/);
-  assert.doesNotMatch(core.match(policy)?.[0]||'',/privileged|exclusiveMutation/);
+  assert.equal(Object.hasOwn(policies['filesystem.directory.select'],'privileged'),false);
+  assert.equal(Object.hasOwn(policies['filesystem.directory.select'],'exclusiveMutation'),false);
   assert.match(packager,/'filesystem\.directory\.select'/);
   assert.match(windows,/SAFE_APP_CAPABILITIES[\s\S]*?'filesystem\.directory\.select'/);
 });

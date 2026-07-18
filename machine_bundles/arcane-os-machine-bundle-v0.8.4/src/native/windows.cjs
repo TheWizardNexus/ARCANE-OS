@@ -2512,7 +2512,9 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
     await ctx.powershell(script, { action });
   }
 
-  function installPayload(root) {
+  let simulatedInstallPayloadCache = null;
+
+  function readInstallPayload(root) {
     const sourceIsInstalled = ctx.path.resolve(root).toLowerCase() === ctx.path.resolve(paths.installRoot).toLowerCase();
     const candidates = [root, ctx.path.join(root, 'dist', 'windows'), ctx.path.join(root, 'dist')];
     const dist = candidates.find((candidate) => (
@@ -2596,6 +2598,17 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
       missingRelease: [...new Set(missingRelease)],
       releaseProblem,
     };
+  }
+
+  function installPayload(root) {
+    if (!ctx.simulate) return readInstallPayload(root);
+    const cacheKey = ctx.path.resolve(root).toLowerCase();
+    if (simulatedInstallPayloadCache && simulatedInstallPayloadCache.key === cacheKey) {
+      return simulatedInstallPayloadCache.payload;
+    }
+    const payload = readInstallPayload(root);
+    simulatedInstallPayloadCache = { key: cacheKey, payload };
+    return payload;
   }
 
   async function writeLaunchers(stage, payload) {
@@ -3844,7 +3857,7 @@ $restoredShell=if($previousPresent){$previous}else{$null}
   }
 
   function openExternalUri(uri) {
-    if (ctx.simulate) return { opened: true, uri };
+    if (ctx.simulate) throw ctx.arcaneError('EXTERNAL_OPEN_SIMULATED','Arcane simulation cannot hand a link to the operating system.','Test external link handling from a real Arcane host.',501);
     const child = ctx.spawn(ctx.path.join(systemRoot, 'explorer.exe'), [uri], {
       detached: true,
       stdio: 'ignore',
