@@ -56,6 +56,7 @@ const EMAIL_REGEX =
  * @property {string} email
  * @property {string|number} phone
  * @property {string} license_key
+ * @property {string} subscription_key
  * @property {string|number} contact_1
  * @property {string|number} contact_2
  * @property {string|number} contact_3
@@ -99,6 +100,7 @@ class UserEntity {
             'phone',
             'language',
             'license_key',
+            'subscription_key',
 
             'contact_1',
             'contact_2',
@@ -124,6 +126,7 @@ class UserEntity {
     #email = '';
     #phone = '';
     #license_key = '';
+    #subscription_key = '';
     #language = '';
 
     #contact_1 = '';
@@ -244,6 +247,22 @@ class UserEntity {
         }
 
         this.#license_key = v;
+
+        this.#persist();
+    }
+
+    /** @returns {string} */
+    get subscription_key(){
+        return this.#subscription_key;
+    }
+
+    /** @param {string} v */
+    set subscription_key(v){
+        if(!is.string(v)){
+            throw new Error('subscription_key must be string');
+        }
+
+        this.#subscription_key = v;
 
         this.#persist();
     }
