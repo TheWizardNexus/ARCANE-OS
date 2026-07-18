@@ -1,0 +1,1011 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+
+<style>
+    :host{
+        color:var(--text-color);
+        display:block;
+        min-width:0;
+    }
+
+    [hidden]{
+        display:none !important;
+    }
+
+    .markdown-document{
+        min-width:0;
+    }
+
+    .document-state{
+        background:var(--secondary-color);
+        border:1px solid var(--border-color);
+        border-radius:.5rem;
+        color:var(--muted-text-color);
+        margin:0;
+        padding:1rem;
+    }
+
+    .document-state[data-state="error"]{
+        border-inline-start:.3rem solid var(--danger-color);
+        color:var(--text-color);
+    }
+
+    .table-of-contents{
+        background:var(--secondary-color);
+        border:1px solid var(--border-color);
+        border-radius:.5rem;
+        margin-block:0 1.5rem;
+        padding:1rem 1.25rem;
+    }
+
+    .table-of-contents h2{
+        font-size:1rem;
+        margin:0 0 .6rem;
+    }
+
+    .table-of-contents ol{
+        margin:0;
+        padding-inline-start:1.5rem;
+    }
+
+    .table-of-contents li+li{
+        margin-block-start:.35rem;
+    }
+
+    .table-of-contents li[data-level="3"]{
+        margin-inline-start:1rem;
+    }
+
+    .table-of-contents li[data-level="4"],
+    .table-of-contents li[data-level="5"],
+    .table-of-contents li[data-level="6"]{
+        margin-inline-start:2rem;
+    }
+
+    .document-content{
+        line-height:1.65;
+        min-width:0;
+        overflow-wrap:anywhere;
+    }
+
+    .document-content:focus{
+        outline:none;
+    }
+
+    .document-content :where(h1,h2,h3,h4,h5,h6){
+        line-height:1.25;
+        scroll-margin-block-start:1rem;
+    }
+
+    .document-content :where(h1,h2,h3,h4,h5,h6):focus{
+        border-radius:.25rem;
+        outline:3px solid var(--focus-color);
+        outline-offset:.2rem;
+    }
+
+    .document-content a,
+    .table-of-contents a{
+        color:var(--focus-color);
+        text-decoration-thickness:.08em;
+        text-underline-offset:.15em;
+    }
+
+    .document-content a:focus-visible,
+    .table-of-contents a:focus-visible{
+        border-radius:.2rem;
+        outline:3px solid var(--focus-color);
+        outline-offset:.2rem;
+    }
+
+    .document-content blockquote{
+        border-inline-start:.25rem solid var(--border-color);
+        color:var(--muted-text-color);
+        margin-inline:0;
+        padding-inline-start:1rem;
+    }
+
+    .document-content :where(code,kbd){
+        background:var(--secondary-color);
+        border-radius:.25rem;
+        font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        padding:.08em .3em;
+    }
+
+    .document-content pre{
+        background:var(--secondary-color);
+        border:1px solid var(--border-color);
+        border-radius:.5rem;
+        overflow:auto;
+        padding:1rem;
+    }
+
+    .document-content pre code{
+        background:transparent;
+        padding:0;
+    }
+
+    .document-content img{
+        block-size:auto;
+        border-radius:.35rem;
+        max-inline-size:100%;
+    }
+
+    .document-content table{
+        border-collapse:collapse;
+        inline-size:100%;
+    }
+
+    .document-content :where(th,td){
+        border:1px solid var(--border-color);
+        padding:.5rem;
+        text-align:start;
+        vertical-align:top;
+    }
+
+    .document-content th{
+        background:var(--secondary-color);
+    }
+
+    @media (forced-colors:active){
+        .document-state,
+        .table-of-contents,
+        .document-content pre,
+        .document-content :where(th,td){
+            border-color:CanvasText;
+        }
+
+        .document-content :where(h1,h2,h3,h4,h5,h6):focus,
+        .document-content a:focus-visible,
+        .table-of-contents a:focus-visible{
+            outline-color:Highlight;
+        }
+    }
+</style>
+
+<section id="document" class="markdown-document" part="container" aria-busy="false">
+    <p
+        id="status"
+        class="document-state"
+        part="status"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        tabindex="-1"
+    ></p>
+
+    <nav
+        id="tableOfContents"
+        class="table-of-contents"
+        part="table-of-contents"
+        aria-labelledby="tableOfContentsTitle"
+        hidden
+    >
+        <h2 id="tableOfContentsTitle"></h2>
+        <ol id="tableOfContentsList"></ol>
+    </nav>
+
+    <article
+        id="content"
+        class="document-content"
+        part="content"
+        tabindex="-1"
+        hidden
+    ></article>
+</section>
+
+<script type="module">
+    const host=this;
+    host.ready=false;
+
+    const componentURL=new URL(
+        host.getAttribute('href')||'./arcane/components/markdown-document.html',
+        document.baseURI
+    );
+    const moduleURL=name=>new URL(`../modules/${name}`,componentURL).href;
+    const {default:MD}=await import(moduleURL('MD.js?v=2'));
+
+    const documentElement=host.shadowRoot.querySelector('#document');
+    const statusElement=host.shadowRoot.querySelector('#status');
+    const tableOfContentsElement=host.shadowRoot.querySelector('#tableOfContents');
+    const tableOfContentsTitle=host.shadowRoot.querySelector('#tableOfContentsTitle');
+    const tableOfContentsList=host.shadowRoot.querySelector('#tableOfContentsList');
+    const contentElement=host.shadowRoot.querySelector('#content');
+
+    // BEGIN MARKDOWN_DOCUMENT_POLICY
+    const MARKDOWN_DOCUMENT_ALLOWED_ELEMENTS=Object.freeze([
+        'A','ABBR','BLOCKQUOTE','BR','CODE','DEL','EM',
+        'H1','H2','H3','H4','H5','H6','HR','IMG','KBD','LI',
+        'OL','P','PRE','S','STRONG','SUB','SUP','TABLE','TBODY',
+        'TD','TFOOT','TH','THEAD','TR','UL'
+    ]);
+    const MARKDOWN_DOCUMENT_ALLOWED_ATTRIBUTES=Object.freeze(
+        {
+            A:Object.freeze(['href','title']),
+            ABBR:Object.freeze(['title']),
+            CODE:Object.freeze(['class']),
+            IMG:Object.freeze(['alt','src','title']),
+            LI:Object.freeze(['value']),
+            OL:Object.freeze(['start']),
+            TD:Object.freeze(['colspan','rowspan']),
+            TH:Object.freeze(['colspan','rowspan','scope'])
+        }
+    );
+    const MARKDOWN_DOCUMENT_LINK_PROTOCOLS=new Set(['http:','https:','mailto:']);
+    const MARKDOWN_DOCUMENT_ASSET_PROTOCOLS=new Set(['http:','https:']);
+
+    function markdownDocumentElementAllowed(name=''){
+        return MARKDOWN_DOCUMENT_ALLOWED_ELEMENTS.includes(
+            String(name||'').toUpperCase()
+        );
+    }
+
+    function markdownDocumentAllowedAttributes(name=''){
+        return MARKDOWN_DOCUMENT_ALLOWED_ATTRIBUTES[
+            String(name||'').toUpperCase()
+        ]||Object.freeze([]);
+    }
+
+    function markdownDocumentCleanURLInput(value=''){
+        const input=String(value??'').trim();
+        if(!input||/[\u0000-\u001F\u007F]/.test(input)){
+            return '';
+        }
+        return input;
+    }
+
+    function markdownDocumentDecodeFragment(value=''){
+        try{
+            return decodeURIComponent(String(value||''));
+        }catch{
+            return String(value||'');
+        }
+    }
+
+    function markdownDocumentSourceURL(value='',baseURL='',pageOrigin=''){
+        const fallback=baseURL||document.baseURI;
+        const expectedOrigin=pageOrigin
+            ||globalThis.location?.origin
+            ||new URL(fallback).origin;
+        const input=markdownDocumentCleanURLInput(value||fallback);
+        if(!input){
+            return '';
+        }
+
+        try{
+            const url=new URL(input,fallback);
+            if(
+                !MARKDOWN_DOCUMENT_ASSET_PROTOCOLS.has(url.protocol)
+                ||url.origin!==expectedOrigin
+                ||url.username
+                ||url.password
+            ){
+                return '';
+            }
+            return url.href;
+        }catch{
+            return '';
+        }
+    }
+
+    function markdownDocumentLinkPolicy(value='',sourceURL='',pageOrigin=''){
+        const input=markdownDocumentCleanURLInput(value);
+        if(!input){
+            return null;
+        }
+
+        const expectedOrigin=pageOrigin
+            ||globalThis.location?.origin
+            ||new URL(sourceURL).origin;
+
+        if(input.startsWith('#')){
+            const fragment=markdownDocumentDecodeFragment(input.slice(1))
+                .replace(/[\u0000-\u001F\u007F]/g,'')
+                .slice(0,256);
+            if(!fragment){
+                return null;
+            }
+            return Object.freeze(
+                {
+                    external:false,
+                    fragment,
+                    href:`#${encodeURIComponent(fragment)}`,
+                    kind:'fragment',
+                    targetURL:new URL(`#${encodeURIComponent(fragment)}`,sourceURL).href
+                }
+            );
+        }
+
+        try{
+            const url=new URL(input,sourceURL);
+            if(
+                !MARKDOWN_DOCUMENT_LINK_PROTOCOLS.has(url.protocol)
+                ||url.username
+                ||url.password
+            ){
+                return null;
+            }
+
+            const sameOrigin=url.origin===expectedOrigin;
+            const markdown=sameOrigin&&/\.(?:md|markdown)$/i.test(url.pathname);
+            return Object.freeze(
+                {
+                    external:!sameOrigin,
+                    fragment:markdownDocumentDecodeFragment(url.hash.slice(1)).slice(0,256),
+                    href:url.href,
+                    kind:markdown?'markdown':'link',
+                    targetURL:url.href
+                }
+            );
+        }catch{
+            return null;
+        }
+    }
+
+    function markdownDocumentAssetURL(value='',sourceURL='',pageOrigin=''){
+        const input=markdownDocumentCleanURLInput(value);
+        if(!input){
+            return '';
+        }
+
+        const expectedOrigin=pageOrigin
+            ||globalThis.location?.origin
+            ||new URL(sourceURL).origin;
+        try{
+            const url=new URL(input,sourceURL);
+            if(
+                !MARKDOWN_DOCUMENT_ASSET_PROTOCOLS.has(url.protocol)
+                ||url.origin!==expectedOrigin
+                ||url.username
+                ||url.password
+            ){
+                return '';
+            }
+            return url.href;
+        }catch{
+            return '';
+        }
+    }
+
+    function markdownDocumentHeadingBase(value=''){
+        const identifier=String(value||'')
+            .normalize('NFKD')
+            .replace(/[\u0300-\u036f]/g,'')
+            .toLowerCase()
+            .replace(/&/g,' and ')
+            .replace(/[^a-z0-9]+/g,'-')
+            .replace(/^-+|-+$/g,'')
+            .slice(0,80);
+        return identifier||'section';
+    }
+
+    function markdownDocumentNextHeadingIdentifier(value='',usedIdentifiers=new Set()){
+        const base=markdownDocumentHeadingBase(value);
+        let candidate=base;
+        let suffix=2;
+        while(usedIdentifiers.has(candidate)){
+            candidate=`${base}-${suffix++}`;
+        }
+        usedIdentifiers.add(candidate);
+        return candidate;
+    }
+    // END MARKDOWN_DOCUMENT_POLICY
+
+    const pageOrigin=globalThis.location?.origin||new URL(document.baseURI).origin;
+    const defaultSourceURL=markdownDocumentSourceURL(
+        document.baseURI,
+        document.baseURI,
+        pageOrigin
+    );
+    const defaultOptions=Object.freeze(
+        {
+            labels:Object.freeze(
+                {
+                    content:'Document content',
+                    empty:'No document content is available.',
+                    error:'Unable to display this document.',
+                    loading:'Loading document…',
+                    tableOfContents:'On this page'
+                }
+            ),
+            onNavigate:null,
+            showTableOfContents:true,
+            sourceURL:defaultSourceURL
+        }
+    );
+
+    let currentMarkdown='';
+    let currentSourceURL=defaultSourceURL;
+    let loadSequence=0;
+    let options=normalizeOptions(optionsFromDataset(),defaultOptions);
+    let state='empty';
+    let tableOfContents=[];
+
+    host.clear=clear;
+    host.configure=configure;
+    host.fail=fail;
+    host.focus=focusDocument;
+    host.focusFragment=focusFragment;
+    host.load=load;
+    host.render=render;
+
+    Object.defineProperties(
+        host,
+        {
+            options:{get:getOptions,set:configure},
+            sourceURL:{get:()=>currentSourceURL,set:setSourceURL},
+            state:{get:()=>state},
+            tableOfContents:{get:()=>tableOfContents.map(entry=>({...entry}))},
+            value:{get:()=>currentMarkdown,set:value=>render(value)}
+        }
+    );
+
+    documentElement.addEventListener('click',handleNavigation);
+
+    function optionsFromDataset(){
+        const configured={};
+        if(host.dataset.sourceUrl!==undefined){
+            configured.sourceURL=host.dataset.sourceUrl;
+        }
+        if(host.dataset.showTableOfContents!==undefined){
+            configured.showTableOfContents=host.dataset.showTableOfContents!=='false';
+        }
+        return configured;
+    }
+
+    function normalizeOptions(input={},previous=defaultOptions){
+        if(!input||typeof input!=='object'||Array.isArray(input)){
+            throw new TypeError('Markdown document options must be an object.');
+        }
+
+        const labelInput=input.labels===undefined?{}:input.labels;
+        if(!labelInput||typeof labelInput!=='object'||Array.isArray(labelInput)){
+            throw new TypeError('Markdown document labels must be an object.');
+        }
+
+        const labels={...previous.labels};
+        for(const name of ['content','empty','error','loading','tableOfContents']){
+            if(labelInput[name]!==undefined){
+                if(typeof labelInput[name]!=='string'||!labelInput[name].trim()){
+                    throw new TypeError(`Markdown document labels.${name} must be a nonempty string.`);
+                }
+                labels[name]=labelInput[name].trim();
+            }
+        }
+
+        const sourceInput=input.sourceURL??input.sourceUrl??previous.sourceURL;
+        const sourceURL=markdownDocumentSourceURL(
+            sourceInput,
+            previous.sourceURL||document.baseURI,
+            pageOrigin
+        );
+        if(!sourceURL){
+            throw new TypeError('Markdown document sourceURL must resolve to a same-origin HTTP(S) URL.');
+        }
+
+        const onNavigate=input.onNavigate===undefined
+            ?previous.onNavigate
+            :input.onNavigate;
+        if(onNavigate!==null&&typeof onNavigate!=='function'){
+            throw new TypeError('Markdown document onNavigate must be a function or null.');
+        }
+
+        const showTableOfContents=input.showTableOfContents===undefined
+            ?previous.showTableOfContents
+            :input.showTableOfContents;
+        if(typeof showTableOfContents!=='boolean'){
+            throw new TypeError('Markdown document showTableOfContents must be boolean.');
+        }
+
+        return Object.freeze(
+            {
+                labels:Object.freeze(labels),
+                onNavigate,
+                showTableOfContents,
+                sourceURL
+            }
+        );
+    }
+
+    function getOptions(){
+        return {
+            labels:{...options.labels},
+            onNavigate:options.onNavigate,
+            showTableOfContents:options.showTableOfContents,
+            sourceURL:options.sourceURL
+        };
+    }
+
+    function configure(input={}){
+        const priorSourceURL=options.sourceURL;
+        options=normalizeOptions(input,options);
+        renderLabels();
+
+        if(!currentMarkdown){
+            currentSourceURL=options.sourceURL;
+            updateStateDOM();
+        }else if(priorSourceURL!==options.sourceURL){
+            render(currentMarkdown,{sourceURL:options.sourceURL});
+        }else{
+            buildTableOfContents(tableOfContents);
+            updateStateDOM();
+        }
+
+        return getOptions();
+    }
+
+    function renderLabels(){
+        contentElement.setAttribute('aria-label',options.labels.content);
+        tableOfContentsTitle.textContent=options.labels.tableOfContents;
+        updateStateDOM();
+    }
+
+    function sourceURLFrom(input={},fallback=options.sourceURL){
+        if(!input||typeof input!=='object'||Array.isArray(input)){
+            throw new TypeError('Markdown document render options must be an object.');
+        }
+        const candidate=input.sourceURL??input.sourceUrl??fallback;
+        const result=markdownDocumentSourceURL(
+            candidate,
+            fallback||document.baseURI,
+            pageOrigin
+        );
+        if(!result){
+            throw new TypeError('Markdown document sourceURL must resolve to a same-origin HTTP(S) URL.');
+        }
+        return result;
+    }
+
+    function setSourceURL(value=''){
+        options=normalizeOptions({sourceURL:value},options);
+        if(currentMarkdown){
+            render(currentMarkdown,{sourceURL:options.sourceURL});
+        }else{
+            currentSourceURL=options.sourceURL;
+            updateStateDOM();
+        }
+        return currentSourceURL;
+    }
+
+    async function load(source='',loadOptions={}){
+        const sequence=++loadSequence;
+        let sourceURL;
+        try{
+            sourceURL=sourceURLFrom(loadOptions,currentSourceURL||options.sourceURL);
+        }catch(error){
+            if(sequence===loadSequence){
+                showError(error);
+            }
+            return false;
+        }
+
+        currentSourceURL=sourceURL;
+        transition('loading');
+
+        try{
+            const pending=typeof source==='function'
+                ?source({sourceURL})
+                :source;
+            const result=await pending;
+            if(sequence!==loadSequence){
+                return false;
+            }
+
+            if(
+                result
+                &&typeof result==='object'
+                &&!Array.isArray(result)
+            ){
+                sourceURL=sourceURLFrom(
+                    result,
+                    sourceURL
+                );
+                return renderMarkdown(result.markdown??result.value??'',sourceURL);
+            }
+            return renderMarkdown(result??'',sourceURL);
+        }catch(error){
+            if(sequence===loadSequence){
+                showError(error);
+            }
+            return false;
+        }
+    }
+
+    function render(markdown='',renderOptions={}){
+        ++loadSequence;
+        try{
+            const sourceURL=sourceURLFrom(
+                renderOptions,
+                currentSourceURL||options.sourceURL
+            );
+            return renderMarkdown(markdown,sourceURL);
+        }catch(error){
+            showError(error);
+            return false;
+        }
+    }
+
+    function renderMarkdown(markdown='',sourceURL=options.sourceURL){
+        if(typeof markdown!=='string'){
+            throw new TypeError('Markdown document content must be a string.');
+        }
+
+        currentMarkdown=markdown;
+        currentSourceURL=sourceURL;
+        contentElement.replaceChildren();
+        tableOfContents=[];
+        tableOfContentsList.replaceChildren();
+
+        if(!markdown.trim()){
+            transition('empty');
+            return true;
+        }
+
+        // MD.safeRendered is the shared first pass. The detached template used
+        // below is inert while the stricter positive policy removes anything
+        // that the shared sanitizer intentionally leaves available.
+        const safeRendered=new MD(markdown).safeRendered;
+        const fragment=strictMarkdownFragment(safeRendered,sourceURL);
+        const meaningful=Boolean(
+            fragment.textContent?.trim()
+            ||fragment.querySelector('img,hr,table')
+        );
+        if(!meaningful){
+            transition('empty');
+            return true;
+        }
+
+        tableOfContents=decorateHeadings(fragment);
+        contentElement.replaceChildren(fragment);
+        buildTableOfContents(tableOfContents);
+        transition(
+            'ready',
+            {
+                characters:markdown.length,
+                headings:tableOfContents.map(entry=>({...entry}))
+            }
+        );
+        return true;
+    }
+
+    function strictMarkdownFragment(html='',sourceURL=options.sourceURL){
+        const template=document.createElement('template');
+        template.innerHTML=html;
+
+        const elements=Array.from(template.content.querySelectorAll('*'));
+        for(const element of elements){
+            const name=element.tagName.toUpperCase();
+            if(!markdownDocumentElementAllowed(name)){
+                // Removing the complete subtree rejects custom elements such as
+                // html-import rather than preserving executable descendants.
+                element.remove();
+                continue;
+            }
+
+            const allowedAttributes=new Set(markdownDocumentAllowedAttributes(name));
+            for(const attribute of Array.from(element.attributes)){
+                if(!allowedAttributes.has(attribute.name.toLowerCase())){
+                    element.removeAttribute(attribute.name);
+                }
+            }
+
+            sanitizeAllowedAttributeValues(element,name);
+            if(name==='A'){
+                sanitizeLink(element,sourceURL);
+            }else if(name==='IMG'){
+                sanitizeImage(element,sourceURL);
+            }
+        }
+
+        const comments=[];
+        const commentWalker=document.createTreeWalker(
+            template.content,
+            globalThis.NodeFilter?.SHOW_COMMENT||128
+        );
+        while(commentWalker.nextNode()){
+            comments.push(commentWalker.currentNode);
+        }
+        comments.forEach(comment=>comment.remove());
+        return template.content;
+    }
+
+    function sanitizeAllowedAttributeValues(element,name){
+        for(const attribute of Array.from(element.attributes)){
+            if(attribute.value.length>2048){
+                element.setAttribute(attribute.name,attribute.value.slice(0,2048));
+            }
+        }
+
+        if(name==='CODE'&&element.hasAttribute('class')){
+            const className=element.getAttribute('class').trim();
+            if(!/^language-[a-z0-9][a-z0-9_+-]{0,63}$/i.test(className)){
+                element.removeAttribute('class');
+            }
+        }
+
+        for(const attribute of ['colspan','rowspan']){
+            if(element.hasAttribute(attribute)){
+                sanitizeIntegerAttribute(element,attribute,1,100);
+            }
+        }
+        if(name==='OL'&&element.hasAttribute('start')){
+            sanitizeIntegerAttribute(element,'start',-100000,100000);
+        }
+        if(name==='LI'&&element.hasAttribute('value')){
+            sanitizeIntegerAttribute(element,'value',-100000,100000);
+        }
+        if(name==='TH'&&element.hasAttribute('scope')){
+            const scope=element.getAttribute('scope').toLowerCase();
+            if(!['col','colgroup','row','rowgroup'].includes(scope)){
+                element.removeAttribute('scope');
+            }else{
+                element.setAttribute('scope',scope);
+            }
+        }
+    }
+
+    function sanitizeIntegerAttribute(element,name,min,max){
+        const value=Number(element.getAttribute(name));
+        if(!Number.isSafeInteger(value)||value<min||value>max){
+            element.removeAttribute(name);
+            return;
+        }
+        element.setAttribute(name,String(value));
+    }
+
+    function sanitizeLink(link,sourceURL){
+        const originalHref=link.getAttribute('href')||'';
+        const policy=markdownDocumentLinkPolicy(
+            originalHref,
+            sourceURL,
+            pageOrigin
+        );
+        if(!policy){
+            link.removeAttribute('href');
+            return;
+        }
+
+        link.setAttribute('href',policy.href);
+        link.dataset.markdownKind=policy.kind;
+        link.dataset.markdownOriginalHref=originalHref.slice(0,2048);
+        link.dataset.markdownTargetUrl=policy.targetURL;
+        link.dataset.markdownFragment=policy.fragment;
+
+        if(
+            policy.external
+            &&/^https?:$/i.test(new URL(policy.targetURL).protocol)
+        ){
+            link.target='_blank';
+            link.rel='noopener noreferrer';
+            link.referrerPolicy='no-referrer';
+        }
+    }
+
+    function sanitizeImage(image,sourceURL){
+        const resolved=markdownDocumentAssetURL(
+            image.getAttribute('src')||'',
+            sourceURL,
+            pageOrigin
+        );
+        if(resolved){
+            image.setAttribute('src',resolved);
+        }else{
+            image.removeAttribute('src');
+        }
+        image.alt=image.getAttribute('alt')||'';
+        image.loading='lazy';
+        image.decoding='async';
+        image.referrerPolicy='no-referrer';
+    }
+
+    function decorateHeadings(fragment){
+        const usedHeadingIds=new Set();
+        return Array.from(fragment.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+            .map(
+                heading=>{
+                    const text=heading.textContent.trim()||'Untitled section';
+                    const id=markdownDocumentNextHeadingIdentifier(
+                        text,
+                        usedHeadingIds
+                    );
+                    const level=Number(heading.tagName.slice(1));
+                    heading.id=id;
+                    heading.tabIndex=-1;
+                    return Object.freeze({id,level,text});
+                }
+            );
+    }
+
+    function buildTableOfContents(entries=[]){
+        const fragment=document.createDocumentFragment();
+        for(const entry of entries){
+            const item=document.createElement('li');
+            const link=document.createElement('a');
+            const href=`#${encodeURIComponent(entry.id)}`;
+            const targetURL=new URL(href,currentSourceURL).href;
+
+            item.dataset.level=String(entry.level);
+            link.href=href;
+            link.textContent=entry.text;
+            link.dataset.markdownKind='fragment';
+            link.dataset.markdownOriginalHref=href;
+            link.dataset.markdownTargetUrl=targetURL;
+            link.dataset.markdownFragment=entry.id;
+            item.append(link);
+            fragment.append(item);
+        }
+        tableOfContentsList.replaceChildren(fragment);
+    }
+
+    function clear(){
+        ++loadSequence;
+        currentMarkdown='';
+        currentSourceURL=options.sourceURL;
+        contentElement.replaceChildren();
+        tableOfContents=[];
+        tableOfContentsList.replaceChildren();
+        transition('empty');
+        return true;
+    }
+
+    function fail(error){
+        ++loadSequence;
+        return showError(error);
+    }
+
+    function showError(error){
+        currentMarkdown='';
+        contentElement.replaceChildren();
+        tableOfContents=[];
+        tableOfContentsList.replaceChildren();
+        const message=error instanceof Error
+            ?error.message
+            :String(error||options.labels.error);
+        transition('error',{message:message.slice(0,2048)});
+        return false;
+    }
+
+    function transition(nextState,detail={}){
+        state=nextState;
+        updateStateDOM();
+
+        const eventDetail=Object.freeze(
+            {
+                ...detail,
+                sourceURL:currentSourceURL,
+                state
+            }
+        );
+        host.dispatchEvent(
+            new CustomEvent(
+                'markdown-document-state',
+                {bubbles:true,composed:true,detail:eventDetail}
+            )
+        );
+
+        const stateEvent={
+            empty:'markdown-document-empty',
+            error:'markdown-document-error',
+            loading:'markdown-document-loading',
+            ready:'markdown-document-rendered'
+        }[state];
+        if(stateEvent){
+            host.dispatchEvent(
+                new CustomEvent(
+                    stateEvent,
+                    {bubbles:true,composed:true,detail:eventDetail}
+                )
+            );
+        }
+        return eventDetail;
+    }
+
+    function updateStateDOM(){
+        const readyState=state==='ready';
+        const loadingState=state==='loading';
+        documentElement.setAttribute('aria-busy',String(loadingState));
+        host.setAttribute('aria-busy',String(loadingState));
+        host.dataset.state=state;
+        statusElement.dataset.state=state;
+        statusElement.hidden=readyState;
+        contentElement.hidden=!readyState;
+        tableOfContentsElement.hidden=(
+            !readyState
+            ||!options.showTableOfContents
+            ||tableOfContents.length===0
+        );
+
+        statusElement.textContent={
+            empty:options.labels.empty,
+            error:options.labels.error,
+            loading:options.labels.loading,
+            ready:''
+        }[state]||'';
+    }
+
+    function focusDocument(){
+        if(state==='ready'){
+            const heading=contentElement.querySelector('h1,h2,h3,h4,h5,h6');
+            (heading||contentElement).focus({preventScroll:true});
+            return true;
+        }
+        statusElement.focus({preventScroll:true});
+        return false;
+    }
+
+    function handleNavigation(event){
+        if(event.defaultPrevented||event.button!==0){
+            return;
+        }
+        const link=event.composedPath().find(
+            node=>node?.tagName==='A'&&documentElement.contains(node)
+        );
+        if(!link||!link.hasAttribute('href')){
+            return;
+        }
+
+        const detail=Object.freeze(
+            {
+                fragment:link.dataset.markdownFragment||'',
+                href:link.dataset.markdownOriginalHref||link.getAttribute('href'),
+                kind:link.dataset.markdownKind||'link',
+                sourceURL:currentSourceURL,
+                targetURL:link.dataset.markdownTargetUrl||link.href
+            }
+        );
+        const navigationEvent=new CustomEvent(
+            'markdown-document-navigate',
+            {
+                bubbles:true,
+                cancelable:true,
+                composed:true,
+                detail
+            }
+        );
+        const continueNavigation=host.dispatchEvent(navigationEvent);
+
+        if(detail.kind==='fragment'||detail.kind==='markdown'){
+            event.preventDefault();
+        }
+        if(!continueNavigation){
+            event.preventDefault();
+            return;
+        }
+
+        if(detail.kind==='fragment'){
+            focusFragment(detail.fragment);
+        }else if(detail.kind==='markdown'&&options.onNavigate){
+            Promise.resolve(options.onNavigate(detail)).catch(
+                error=>console.error('Markdown document navigation callback failed.',error)
+            );
+        }
+    }
+
+    function focusFragment(fragment=''){
+        const decoded=markdownDocumentDecodeFragment(fragment);
+        const generatedIdentifier=markdownDocumentHeadingBase(decoded);
+        const target=Array.from(contentElement.querySelectorAll('[id]')).find(
+            element=>element.id===decoded||element.id===generatedIdentifier
+        );
+        if(!target){
+            return false;
+        }
+        target.focus({preventScroll:true});
+        target.scrollIntoView({block:'start'});
+        return true;
+    }
+
+    renderLabels();
+    host.ready=true;
+    transition('empty');
+    host.dispatchEvent(
+        new CustomEvent(
+            'markdown-document-ready',
+            {
+                bubbles:true,
+                composed:true,
+                detail:{component:host,state}
+            }
+        )
+    );
+</script>

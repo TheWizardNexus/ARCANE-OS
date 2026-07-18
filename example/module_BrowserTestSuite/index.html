@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Browser test suite example</title>
+    <link rel="stylesheet" href="../../arcane/css/theme.css">
+    <link rel="stylesheet" href="../../arcane/css/primitives.css">
+    <script type="module" src="../../arcane/modules/ThemeBootstrap.js"></script>
+</head>
+<body>
+    <main>
+        <h1>Browser test suite</h1>
+        <p>The checks below are deterministic trusted callbacks bundled with this example.</p>
+        <button id="run" type="button">Run synthetic checks</button>
+        <p id="status" role="status" aria-live="polite">Ready.</p>
+        <pre id="result" tabindex="0" aria-label="Browser check results"></pre>
+    </main>
+    <script type="module">
+        import BrowserTestSuite from '../../arcane/modules/BrowserTestSuite.js';
+
+        const suite=new BrowserTestSuite({
+            tests:[
+                {
+                    id:'arithmetic',
+                    name:'Synthetic arithmetic',
+                    run:({assert})=>assert(2+2===4,'Two plus two must equal four.'),
+                },
+                {
+                    id:'optional-capability',
+                    name:'Optional synthetic capability',
+                    run:({skip})=>skip('This optional capability is intentionally absent.'),
+                },
+            ],
+        });
+        const button=document.querySelector('#run');
+        const status=document.querySelector('#status');
+        const result=document.querySelector('#result');
+        button.addEventListener('click',async()=>{
+            button.disabled=true;
+            status.textContent='Running two checks.';
+            try{
+                const summary=await suite.run();
+                status.textContent=`Checks complete: ${summary.totals.pass} passed, ${summary.totals.fail} failed, and ${summary.totals.skip} skipped.`;
+                result.textContent=JSON.stringify(summary,null,2);
+            }catch(error){
+                status.textContent=`The checks could not run: ${error.message}`;
+                result.textContent='';
+            }finally{
+                button.disabled=false;
+            }
+        });
+    </script>
+</body>
+</html>

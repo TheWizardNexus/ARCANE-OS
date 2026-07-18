@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "siteId": "arcane-docs",
+  "audience": "public",
+  "screenshots": [
+    {
+      "source": "example/_example_assets/htmlimportExample.png",
+      "output": "htmlimportExample.png"
+    },
+    {
+      "source": "example/_example_assets/modalExample.png",
+      "output": "modalExample.png"
+    },
+    {
+      "source": "example/_example_assets/navExample.png",
+      "output": "navExample.png"
+    },
+    {
+      "source": "example/_example_assets/navExampleMobile.png",
+      "output": "navExampleMobile.png"
+    },
+    {
+      "source": "example/_example_assets/chatExample.png",
+      "output": "chatExample.png"
+    },
+    {
+      "source": "example/_example_assets/dbopfsExample.png",
+      "output": "dbopfsExample.png"
+    }
+  ],
+  "documents": [
+    {
+      "id": "overview",
+      "source": "README.md",
+      "title": "Arcane OS overview",
+      "summary": "Architecture, repository map, supported hosts, and project status.",
+      "category": "Overview",
+      "tags": ["architecture", "repository", "status"]
+    },
+    {
+      "id": "provision-user",
+      "source": "apps/docs/guides/provision-user.md",
+      "title": "Provision an Arcane OS user",
+      "summary": "Safely stage, save credentials for, activate, verify, and recover an Arcane user on Microsoft NT.",
+      "category": "Get started",
+      "tags": ["provisioning", "account", "microsoft-nt", "onboarding"]
+    },
+    {
+      "id": "developer-setup",
+      "source": "apps/docs/guides/developer-setup.md",
+      "title": "Developer setup",
+      "summary": "Prepare a checkout, run the gates, package apps, and use the installed Developer workspace.",
+      "category": "Get started",
+      "tags": ["developer", "setup", "build", "test"]
+    },
+    {
+      "id": "app-building",
+      "source": "docs/app-building.md",
+      "title": "Application-building SOP",
+      "summary": "Required shared-core boundary, theme order, contracts, examples, tests, and capability declarations.",
+      "category": "Build",
+      "tags": ["apps", "components", "theme", "sop"]
+    },
+    {
+      "id": "app-packaging",
+      "source": "docs/app-packaging.md",
+      "title": "Application packaging",
+      "summary": "Positive app inventories, shared payloads, adapters, deterministic output, and verification.",
+      "category": "Build",
+      "tags": ["package", "manifest", "adapter", "release"]
+    },
+    {
+      "id": "developer-commands",
+      "source": "docs/developer-commands.md",
+      "title": "Developer command reference",
+      "summary": "Supported setup, development, test, package, signing, and release commands.",
+      "category": "Reference",
+      "tags": ["commands", "npm", "windows", "testing"]
+    },
+    {
+      "id": "arcane-api",
+      "source": "docs/arcane-api.md",
+      "title": "Arcane native API",
+      "summary": "Application-facing bridge methods, parameters, returns, and capability boundaries.",
+      "category": "Reference",
+      "tags": ["api", "bridge", "capabilities", "native"]
+    },
+    {
+      "id": "code-style",
+      "source": "docs/code-style.md",
+      "title": "Code style",
+      "summary": "Arcane JavaScript, HTML, CSS, naming, and automated style contracts.",
+      "category": "Build",
+      "tags": ["javascript", "html", "css", "style"]
+    },
+    {
+      "id": "readiness",
+      "source": "docs/readiness.md",
+      "title": "Readiness contract",
+      "summary": "Load-order-safe event and persistent-state patterns for modules and imported components.",
+      "category": "Reference",
+      "tags": ["events", "components", "lifecycle", "ready"]
+    },
+    {
+      "id": "debugging",
+      "source": "docs/debugging.md",
+      "title": "Debugging SOP",
+      "summary": "Evidence-led reproduction, isolation, manual verification, code repair, rebuild, and clean-state retest.",
+      "category": "Build",
+      "tags": ["debugging", "testing", "evidence", "sop"]
+    },
+    {
+      "id": "accessibility",
+      "source": "docs/accessibility-verification.md",
+      "title": "Accessibility verification",
+      "summary": "Complete-journey accessibility process for keyboard, assistive technology, themes, scaling, errors, and recovery.",
+      "category": "Assurance",
+      "tags": ["accessibility", "keyboard", "screen-reader", "contrast"]
+    },
+    {
+      "id": "security-privacy",
+      "source": "docs/security-privacy-review.md",
+      "title": "Security and privacy review",
+      "summary": "Required trust-boundary, data-flow, abuse-case, control, evidence, and residual-risk process.",
+      "category": "Assurance",
+      "tags": ["security", "privacy", "threat-model", "review"]
+    },
+    {
+      "id": "build-release",
+      "source": "docs/build-release.md",
+      "title": "Build and release SOP",
+      "summary": "Reproducible dependencies, byte preservation, signing separation, and clean-state platform gates.",
+      "category": "Assurance",
+      "tags": ["build", "release", "signing", "reproducible"]
+    },
+    {
+      "id": "ollama",
+      "source": "docs/ollama-module.md",
+      "title": "Arcane Ollama models",
+      "summary": "Local model variants, service behavior, selection, and configuration contracts.",
+      "category": "AI",
+      "tags": ["ai", "ollama", "models", "local"]
+    }
+  ]
+}

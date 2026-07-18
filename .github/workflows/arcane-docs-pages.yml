@@ -1,0 +1,113 @@
+name: Arcane Docs Pages
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - '.github/workflows/arcane-docs-pages.yml'
+            - '.gitattributes'
+            - 'README.md'
+            - 'apps/docs/**'
+            - 'arcane/**'
+            - 'arcane-packager.json'
+            - 'docs/**'
+            - 'example/_example_assets/**'
+            - 'package-lock.json'
+            - 'package.json'
+            - 'test/browser-test-suite.test.mjs'
+            - 'test/async-boundary.test.mjs'
+            - 'test/app-data-scope.test.mjs'
+            - 'test/component-contracts.test.mjs'
+            - 'test/configured-ai-chat-session.test.mjs'
+            - 'test/docs-public-package.test.mjs'
+            - 'test/docs-site.test.mjs'
+            - 'test/document-catalog-publication.test.mjs'
+            - 'test/html-import-cache.test.mjs'
+            - 'test/markdown-document-component.test.mjs'
+            - 'test/scoped-opfs-cache.test.mjs'
+            - 'test/static-document-catalog.test.mjs'
+            - 'test/wait-for-component.test.mjs'
+            - 'tools/app-packager/**'
+            - 'tools/document-catalog/**'
+            - 'tools/package-app.mjs'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: arcane-docs-pages-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build:
+        name: Build verified Pages artifact
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: read
+            pages: read
+        steps:
+            - name: Check out the exact revision
+              uses: actions/checkout@v6
+
+            - name: Use the supported Node.js toolchain
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+                  cache: npm
+
+            - name: Verify public dependency sources
+              run: npm run verify:package-locks
+
+            - name: Install locked dependencies
+              run: npm ci
+
+            - name: Test document publication policy
+              run: >-
+                  node --test
+                  test/app-data-scope.test.mjs
+                  test/async-boundary.test.mjs
+                  test/browser-test-suite.test.mjs
+                  test/component-contracts.test.mjs
+                  test/configured-ai-chat-session.test.mjs
+                  test/docs-site.test.mjs
+                  test/document-catalog-publication.test.mjs
+                  test/docs-public-package.test.mjs
+                  test/html-import-cache.test.mjs
+                  test/markdown-document-component.test.mjs
+                  test/scoped-opfs-cache.test.mjs
+                  test/static-document-catalog.test.mjs
+                  test/wait-for-component.test.mjs
+
+            - name: Package Arcane Docs
+              run: node tools/package-app.mjs package docs
+
+            - name: Verify Arcane Docs package
+              run: node tools/package-app.mjs check docs
+
+            - name: Configure GitHub Pages
+              uses: actions/configure-pages@v5
+
+            - name: Upload only the verified Docs package
+              uses: actions/upload-pages-artifact@v4
+              with:
+                  path: dist/docs
+
+    deploy:
+        name: Deploy GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        needs: build
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - name: Deploy verified artifact
+              id: deployment
+              uses: actions/deploy-pages@v4

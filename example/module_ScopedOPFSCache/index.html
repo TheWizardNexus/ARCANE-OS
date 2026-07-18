@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Scoped OPFS cache example</title>
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+</head>
+<body>
+    <main class="arcane-card" style="margin:2rem auto;max-width:42rem">
+        <header class="arcane-card__header">
+            <h1 class="arcane-view-heading">Scoped OPFS cache</h1>
+        </header>
+        <div class="arcane-card__body">
+            <p>This example writes, reads, and deletes one JSON value in the example's own cache directory.</p>
+            <button id="run" class="arcane-button" type="button">Run cache example</button>
+            <p id="status" role="status" aria-live="polite">Not run.</p>
+        </div>
+    </main>
+    <script type="module" src="./example/module_ScopedOPFSCache/example.js"></script>
+</body>
+</html>

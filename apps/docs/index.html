@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="arcane-app-id" content="docs">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Search Arcane OS documentation, follow onboarding guides, inspect live components, and run browser checks.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Arcane OS">
+    <meta property="og:title" content="Arcane OS Docs">
+    <meta property="og:description" content="Search Arcane OS documentation, follow onboarding guides, inspect live components, and run browser checks.">
+    <meta property="og:image" content="https://thewizardnexus.github.io/ARCANE-OS/arcane/img/arcane-os-everywhere.png">
+    <meta property="og:image:width" content="1672">
+    <meta property="og:image:height" content="941">
+    <meta property="og:image:alt" content="Arcane OS running across desktop, mobile, server, and vehicle displays">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="theme-color" content="rgb(23, 34, 56)">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'self'; img-src 'self' data:; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests">
+    <title>Arcane OS Docs</title>
+    <link rel="manifest" href="./apps/docs/manifest.json">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="./apps/docs/docs.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=7"></script>
+</head>
+<body>
+    <a class="skip-link" href="./apps/docs/index.html#mainContent">Skip to content</a>
+    <html-import
+        id="appBar"
+        class="app-bar"
+        data-product-name="Arcane OS Docs"
+        data-brand-mark="A"
+        data-brand-href="./apps/docs/index.html#/home"
+        data-status="Loading public catalog"
+        data-status-tone="warning"
+        href="./arcane/components/app-bar.html?v=3">
+        <html-import
+            slot="trailing"
+            class="theme-switcher"
+            href="./arcane/components/theme-switcher.html?v=2">
+        </html-import>
+    </html-import>
+
+    <main id="mainContent" class="docs-shell" tabindex="-1">
+        <section class="docs-view home-view" data-view="home" aria-labelledby="homeTitle">
+            <header class="hero">
+                <div class="hero__copy">
+                    <p class="eyebrow">The system, explained by its source</p>
+                    <h1 id="homeTitle">Build, provision, and understand Arcane OS.</h1>
+                    <p class="hero__lede">A searchable public guide assembled from the repository's reviewed documentation, with live Arcane components and checks that run in your browser.</p>
+                    <div class="hero__actions">
+                        <a class="arcane-button arcane-button--action" href="./apps/docs/index.html#/docs/provision-user">Provision an Arcane user</a>
+                        <a class="arcane-button arcane-button--secondary" href="./apps/docs/index.html#/docs/developer-setup">Set up a developer checkout</a>
+                    </div>
+                </div>
+                <aside class="hero__status arcane-card" aria-labelledby="releaseBoundaryTitle">
+                    <div class="arcane-card__header">
+                        <div>
+                            <p class="eyebrow">Current boundary</p>
+                            <h2 id="releaseBoundaryTitle" class="arcane-section-heading">Honest by default</h2>
+                        </div>
+                        <span class="arcane-badge" data-status="review">Pre-RC</span>
+                    </div>
+                    <div class="arcane-card__body">
+                        <p>Arcane has substantial Microsoft NT runtime and packaging foundations. This site distinguishes implemented, experimental, partial, and release-candidate work.</p>
+                        <p class="arcane-help">The site is static: it cannot provision users, run shell commands, read your checkout, or hold provider secrets.</p>
+                    </div>
+                </aside>
+            </header>
+
+            <html-import
+                id="catalogSummary"
+                data-aria-label="Public documentation summary"
+                data-empty-label="Loading catalog summary."
+                href="./arcane/components/summary-strip.html?v=2">
+            </html-import>
+
+            <section class="journey-section" aria-labelledby="journeyTitle">
+                <header class="section-heading">
+                    <div>
+                        <p class="eyebrow">Start with a complete journey</p>
+                        <h2 id="journeyTitle">Choose where you are going</h2>
+                    </div>
+                </header>
+                <div class="journey-grid">
+                    <article class="journey-card arcane-card">
+                        <div class="journey-card__number" aria-hidden="true">01</div>
+                        <div class="arcane-card__body">
+                            <p class="eyebrow">Administrator</p>
+                            <h3>Provision an Arcane OS user</h3>
+                            <p>Stage a standard Microsoft NT account, save its temporary credential, activate it separately, verify first sign-in, and understand recovery.</p>
+                            <a href="./apps/docs/index.html#/docs/provision-user">Open provisioning guide <span aria-hidden="true">→</span></a>
+                        </div>
+                    </article>
+                    <article class="journey-card arcane-card">
+                        <div class="journey-card__number" aria-hidden="true">02</div>
+                        <div class="arcane-card__body">
+                            <p class="eyebrow">Contributor</p>
+                            <h3>Set up a developer checkout</h3>
+                            <p>Bootstrap the supported tools, install locked dependencies, run focused gates, package an app, and keep local signing distinct from release trust.</p>
+                            <a href="./apps/docs/index.html#/docs/developer-setup">Open developer guide <span aria-hidden="true">→</span></a>
+                        </div>
+                    </article>
+                    <article class="journey-card arcane-card">
+                        <div class="journey-card__number" aria-hidden="true">03</div>
+                        <div class="arcane-card__body">
+                            <p class="eyebrow">Builder</p>
+                            <h3>Learn the shared runtime</h3>
+                            <p>Inspect components running against the same Arcane theme and browser modules shipped in packaged applications.</p>
+                            <a href="./apps/docs/index.html#/components">Explore live components <span aria-hidden="true">→</span></a>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="home-search arcane-card" aria-labelledby="homeSearchTitle">
+                <div class="arcane-card__body home-search__body">
+                    <div>
+                        <p class="eyebrow">Search locally</p>
+                        <h2 id="homeSearchTitle" class="arcane-section-heading">Find the contract behind the behavior</h2>
+                        <p>Search titles, summaries, tags, and indexed Markdown without sending a query to a server.</p>
+                    </div>
+                    <form id="homeSearchForm" class="search-form" role="search">
+                        <label class="arcane-field">
+                            <span class="arcane-field__label">Search Arcane documentation</span>
+                            <span class="search-control">
+                                <input id="homeSearchInput" type="search" minlength="2" maxlength="160" autocomplete="off" placeholder="Try capabilities, packaging, Ollama…">
+                                <button class="arcane-button" type="submit">Search</button>
+                            </span>
+                        </label>
+                    </form>
+                </div>
+            </section>
+        </section>
+
+        <section class="docs-view" data-view="docs" aria-labelledby="docsTitle" hidden>
+            <header class="view-heading">
+                <div>
+                    <p class="eyebrow">Public source catalog</p>
+                    <h1 id="docsTitle">Documentation</h1>
+                    <p>Every result maps to a reviewed Markdown source copied into the verified public package.</p>
+                </div>
+                <a class="arcane-button arcane-button--secondary" href="https://github.com/TheWizardNexus/ARCANE-OS" target="_blank" rel="noopener noreferrer">View repository</a>
+            </header>
+            <div class="document-workspace">
+                <aside class="catalog-panel arcane-card" aria-labelledby="catalogTitle">
+                    <div class="arcane-card__header">
+                        <div>
+                            <p class="eyebrow">Browse</p>
+                            <h2 id="catalogTitle" class="arcane-section-heading">Catalog</h2>
+                        </div>
+                        <span id="resultCount" class="arcane-count" aria-label="0 documents">0</span>
+                    </div>
+                    <div class="arcane-card__body catalog-panel__body">
+                        <form id="documentSearchForm" role="search">
+                            <label class="arcane-field">
+                                <span class="arcane-field__label">Filter documents</span>
+                                <input id="documentSearchInput" type="search" maxlength="160" autocomplete="off" placeholder="Search titles, summaries, tags">
+                            </label>
+                        </form>
+                        <nav id="documentResults" class="document-results" aria-label="Documentation results"></nav>
+                        <p id="catalogStatus" class="catalog-status" role="status" aria-live="polite">Loading the public catalog…</p>
+                    </div>
+                </aside>
+                <article class="document-panel arcane-card" aria-label="Selected documentation">
+                    <html-import
+                        id="documentViewer"
+                        href="./arcane/components/markdown-document.html?v=1">
+                    </html-import>
+                </article>
+            </div>
+        </section>
+
+        <section class="docs-view" data-view="components" aria-labelledby="componentsTitle" hidden>
+            <header class="view-heading">
+                <div>
+                    <p class="eyebrow">Shared runtime, live</p>
+                    <h1 id="componentsTitle">Component gallery</h1>
+                    <p>These specimens load the packaged files from `arcane/components`; they are not screenshots pretending to be controls.</p>
+                </div>
+            </header>
+            <div class="component-grid">
+                <article class="specimen arcane-card">
+                    <header class="arcane-card__header">
+                        <div><p class="eyebrow">Input + computation</p><h2 class="arcane-section-heading">Calculator</h2></div>
+                        <span class="arcane-badge" data-status="success">Live</span>
+                    </header>
+                    <div class="arcane-card__body specimen__stage">
+                        <html-import id="calculatorSpecimen" href="./arcane/components/calculator.html?v=1"></html-import>
+                    </div>
+                    <footer class="arcane-card__footer"><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/arcane/components/calculator.html" target="_blank" rel="noopener noreferrer">View source</a></footer>
+                </article>
+                <article class="specimen arcane-card">
+                    <header class="arcane-card__header">
+                        <div><p class="eyebrow">Status overview</p><h2 class="arcane-section-heading">Summary strip</h2></div>
+                        <span class="arcane-badge" data-status="success">Live</span>
+                    </header>
+                    <div class="arcane-card__body specimen__stage">
+                        <html-import id="summarySpecimen" href="./arcane/components/summary-strip.html?v=2"></html-import>
+                    </div>
+                    <footer class="arcane-card__footer"><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/arcane/components/summary-strip.html" target="_blank" rel="noopener noreferrer">View source</a></footer>
+                </article>
+                <article class="specimen arcane-card">
+                    <header class="arcane-card__header">
+                        <div><p class="eyebrow">Long-running work</p><h2 class="arcane-section-heading">Task progress</h2></div>
+                        <span class="arcane-badge" data-status="success">Live</span>
+                    </header>
+                    <div class="arcane-card__body specimen__stage">
+                        <html-import id="progressSpecimen" href="./arcane/components/task-progress.html?v=1"></html-import>
+                    </div>
+                    <footer class="arcane-card__footer"><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/arcane/components/task-progress.html" target="_blank" rel="noopener noreferrer">View source</a></footer>
+                </article>
+                <article class="specimen arcane-card">
+                    <header class="arcane-card__header">
+                        <div><p class="eyebrow">Safe content</p><h2 class="arcane-section-heading">Markdown document</h2></div>
+                        <span class="arcane-badge" data-status="success">Live</span>
+                    </header>
+                    <div class="arcane-card__body specimen__stage">
+                        <html-import id="markdownSpecimen" href="./arcane/components/markdown-document.html?v=1"></html-import>
+                    </div>
+                    <footer class="arcane-card__footer"><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/arcane/components/markdown-document.html" target="_blank" rel="noopener noreferrer">View source</a></footer>
+                </article>
+            </div>
+            <section class="screenshots-section" aria-labelledby="screenshotsTitle">
+                <header class="section-heading">
+                    <div><p class="eyebrow">Recorded states</p><h2 id="screenshotsTitle">Component screenshots</h2></div>
+                    <p>Historical example captures complement the live specimens when a component needs native or provider context.</p>
+                </header>
+                <div id="screenshotGallery" class="screenshot-grid"></div>
+            </section>
+        </section>
+
+        <section class="docs-view" data-view="tests" aria-labelledby="testsTitle" hidden>
+            <header class="view-heading">
+                <div>
+                    <p class="eyebrow">Trusted checks only</p>
+                    <h1 id="testsTitle">Browser test lab</h1>
+                    <p>Run a fixed suite against the deployed catalog, component lifecycle, project-path resolution, storage boundary, and AI fail-closed behavior. No pasted code is evaluated.</p>
+                </div>
+                <button id="runTests" class="arcane-button arcane-button--action" type="button">Run browser checks</button>
+            </header>
+            <html-import
+                id="testSummary"
+                data-aria-label="Browser test summary"
+                data-empty-label="Run the browser checks to see results."
+                href="./arcane/components/summary-strip.html?v=2">
+            </html-import>
+            <section class="test-results arcane-card" aria-labelledby="testResultsTitle">
+                <header class="arcane-card__header">
+                    <h2 id="testResultsTitle" class="arcane-section-heading">Results</h2>
+                    <span id="testRunStatus" class="arcane-badge">Not run</span>
+                </header>
+                <ol id="testResults" class="arcane-card__body test-result-list" aria-live="polite">
+                    <li class="arcane-state arcane-state--empty">Checks have not run in this browser.</li>
+                </ol>
+            </section>
+        </section>
+
+        <section class="docs-view" data-view="assistant" aria-labelledby="assistantTitle" hidden>
+            <header class="view-heading">
+                <div>
+                    <p class="eyebrow">Optional, bounded, host-configured</p>
+                    <h1 id="assistantTitle">Ask Arcane Docs</h1>
+                    <p>Local catalog search is always available. AI activates only when a trusted Arcane host exposes a complete configured-provider profile and chat bridge.</p>
+                </div>
+            </header>
+            <div class="assistant-layout">
+                <aside class="assistant-disclosure arcane-card" aria-labelledby="assistantBoundaryTitle">
+                    <div class="arcane-card__header">
+                        <div><p class="eyebrow">Data boundary</p><h2 id="assistantBoundaryTitle" class="arcane-section-heading">You remain in control</h2></div>
+                    </div>
+                    <div class="arcane-card__body disclosure-list">
+                        <p id="assistantProvider">Checking for a configured Arcane AI provider…</p>
+                        <ul>
+                            <li>Only the strongest bounded excerpts from the public catalog are attached.</li>
+                            <li>Retrieved text is labeled untrusted data, not system instructions.</li>
+                            <li>No tools, shell, account changes, repository writes, or automatic memories are available.</li>
+                            <li>The GitHub Pages origin never stores an API key.</li>
+                        </ul>
+                        <label id="remoteConsentLabel" class="consent-control" hidden>
+                            <input id="remoteConsent" type="checkbox">
+                            <span>I understand that the selected excerpts and my question will be sent to the named cloud provider for this session.</span>
+                        </label>
+                    </div>
+                </aside>
+                <section class="assistant-region" aria-label="Arcane documentation assistant">
+                    <html-import
+                        id="docsAssistant"
+                        class="assistant-panel"
+                        data-layout="docked"
+                        data-open
+                        data-title="Ask Arcane Docs"
+                        data-subtitle="Public catalog context only"
+                        href="./arcane/components/assistant-panel.html?v=3">
+                        <ol id="assistantMessages" class="chat-messages" slot="messages" aria-label="Assistant messages"></ol>
+                        <div class="assistant-footer" slot="footer">
+                            <p id="assistantContext">Catalog context has not been requested.</p>
+                            <p>For local-only AI, select Ollama in Arcane Settings.</p>
+                        </div>
+                    </html-import>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p>Arcane OS Docs · Generated from a positive public-source allowlist · <a href="https://github.com/TheWizardNexus/ARCANE-OS" target="_blank" rel="noopener noreferrer">Source on GitHub</a></p>
+    </footer>
+
+    <script type="module" src="./apps/docs/modules/DocsApp.js?v=1"></script>
+</body>
+</html>

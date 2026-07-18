@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Async boundary example</title>
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+</head>
+<body>
+    <main class="arcane-card" style="margin:2rem auto;max-width:42rem">
+        <header class="arcane-card__header">
+            <h1 class="arcane-view-heading">Async boundary</h1>
+        </header>
+        <div class="arcane-card__body">
+            <p>Run a synthetic task that either completes inside its boundary or cooperatively stops at the timeout.</p>
+            <label for="scenario">Task behavior</label>
+            <select id="scenario">
+                <option value="complete">Complete after 100 ms</option>
+                <option value="timeout">Exceed the 300 ms timeout</option>
+            </select>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--arcane-space-2);margin-top:var(--arcane-space-4)">
+                <button id="run" class="arcane-button" type="button">Run task</button>
+                <button id="cancel" class="arcane-button arcane-button--secondary" type="button" disabled>Cancel task</button>
+            </div>
+            <p id="status" role="status" aria-live="polite">Ready.</p>
+        </div>
+    </main>
+    <script type="module" src="./example/module_AsyncBoundary/example.js"></script>
+</body>
+</html>

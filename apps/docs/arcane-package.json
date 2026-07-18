@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "docs",
+  "displayName": "Arcane OS Docs",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "strategy": "adapter",
+  "include": [
+    "docs.css",
+    "index.html",
+    "manifest.json",
+    "modules",
+    "prompts",
+    "public-content.json"
+  ],
+  "exclude": [
+    "README.md",
+    "scripts"
+  ],
+  "shared": [
+    "browser-runtime"
+  ],
+  "adapter": "scripts/build_public_release.mjs"
+}

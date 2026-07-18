@@ -165,6 +165,9 @@ The longer-range product direction prefers JavaScript and Node.js for orchestrat
 | [Ollama module contract](./docs/ollama-module.md) | Shared local-model integration contract. |
 | [Communications design](./docs/communications-design.md) | Communications capability boundary and credential policy. |
 | [Utility application design](./docs/utility-apps-design.md) | Reusable browser, media, editor, calculator, capture, weather, and API-model boundaries. |
+| [Arcane Docs site design](./docs/arcane-docs-site-design.md) | Public documentation, component gallery, browser-test, scoped-cache, AI, and GitHub Pages capability boundary. |
+| [Arcane Docs security review](./docs/arcane-docs-site-security-review.md) | Public catalog, Markdown, shared-origin storage, optional provider, and Pages deployment threat review. |
+| [Arcane Docs accessibility record](./docs/arcane-docs-site-accessibility.md) | Public-site semantics, keyboard, theme, reflow, assistive-technology matrix, and remaining evidence gates. |
 | [Readiness contract](./docs/readiness.md) | Dual event and persistent `.ready` contract for load-order-safe system processes, modules, entities, services, and components. |
 | [Application documentation](./apps/) | Application-level README and architecture files describing purpose, composition, and constraints. |
 
@@ -210,6 +213,7 @@ Example entry points:
 | Redress | <http://localhost:8000/apps/redress/index.html> | Legal workbench and evidence application. |
 | Arcane Terminal | <http://localhost:8000/apps/terminal/index.html> | Native terminal-session interface and registered system tools. |
 | Arcane Developer | <http://localhost:8000/apps/developer/index.html> | Development workspace inspection, setup, and assistance. |
+| Arcane Docs (packaged) | <http://localhost:8000/dist/docs/> | Verified public documentation catalog, onboarding guides, live components, screenshots, and browser checks. Build it first with `npm run app:package -- docs`. |
 | Files | <http://localhost:8000/apps/files/index.html> | Shared file-management interface. |
 | Settings | <http://localhost:8000/apps/settings/index.html> | Shared preference and appearance settings. |
 | Arcane Mail | <http://localhost:8000/apps/mail/index.html> | Provider-neutral mail interface. |
