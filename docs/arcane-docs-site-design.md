@@ -19,6 +19,7 @@ Inputs are reviewed repository Markdown, selected shared source files, synthetic
 
 - `arcane/modules/StaticDocumentCatalog.js`: validates a versioned, positive-inventory catalog; performs deterministic weighted search; hydrates only bounded same-origin text; verifies declared content hashes; and builds bounded untrusted context. Persistence is injected rather than selected by the module.
 - `arcane/components/markdown-document.html`: renders reviewed Markdown through the shared Marked/`MD.js` path, applies a positive HTML and attribute allowlist, assigns deterministic heading identifiers, emits a table of contents, rewrites document-relative links through an injected route callback, and exposes loading, empty, error, ready, and navigation states.
+- `arcane/components/source-code-viewer.html`: renders bounded source exclusively through text nodes, exposes original-path/language metadata and safe line focus, and supplies loading, empty, error, and ready states without parsing source as markup.
 - `arcane/modules/BrowserTestSuite.js`: runs parent-supplied trusted checks sequentially with bounded timeouts and normalized pass, fail, and skip results. It does not evaluate visitor-authored code.
 - `arcane/modules/AsyncBoundary.js`: gives fetch, body-read, profile, and prompt operations one reusable finite timeout/abort contract with stable error codes.
 - `arcane/modules/AppDataScope.js` and `arcane/modules/ScopedOPFSCache.js`: resolve one canonical application identity, open only `apps/<application-id>`, and expose exact-key bounded JSON cache operations without enumeration, export, restore, or whole-origin clearing.
@@ -31,7 +32,7 @@ Inputs are reviewed repository Markdown, selected shared source files, synthetic
 
 - `apps/docs/` owns the route map, content taxonomy, onboarding copy, component gallery, screenshot choices, browser checks, provider disclosure, prompt, and positive publication manifest.
 - A thin app-local package adapter supplies the public allowlist to the shared catalog builder and verifies the generated Pages tree.
-- `.github/workflows/arcane-docs-pages.yml` builds and verifies `dist/docs` and uploads only that directory to GitHub Pages.
+- `.github/workflows/arcane-docs-pages.yml` validates the same deterministic package on pull requests with read-only permissions; trusted `main` runs alone upload `dist/docs` and receive the separate Pages deployment authority.
 
 Dependencies flow from `apps/docs` to `arcane/` and `tools/`. Shared code does not import the docs app.
 
@@ -45,18 +46,19 @@ Dependencies flow from `apps/docs` to `arcane/` and `tools/`. Shared code does n
 ## Public content and deployment boundary
 
 - The repository root is never a web root. The only deployable unit is the packager-verified `dist/docs` directory.
+- Git attributes pin every Docs and shared browser-runtime text extension to LF, so Microsoft NT and Linux checkouts feed the packager the same canonical source bytes. Dependency bytes still come from the public lockfile and the immutable registry package.
 - The app policy explicitly selects documentation, shared runtime source, synthetic examples, and reviewed screenshots. It excludes local data, case material, BOSS working documents, machine build output, credentials, caches, repository metadata, and untracked files.
-- The generated catalog records normalized relative paths, kind, title, summary, tags, byte size, SHA-256, headings, and optional example/screenshot relationships.
+- The generated catalog records normalized published and original paths, kind, language, media type, title, summary, tags, bounded code search terms, byte size, SHA-256, headings, and optional example/screenshot relationships. Reviewed source is copied beneath `catalog/sources` with an added `.txt` suffix, so HTML source is served as inert text rather than executable page content.
 - GitHub Pages is treated as static hosting. All asset and content URLs are project-path safe, routing uses the URL hash, and the artifact contains `.nojekyll` plus a root entry document.
 - Browser packages do not gain native Arcane authority. Provisioning and developer pages explain supported native workflows but cannot execute them.
 
 ## Storage and AI boundary
 
 - Search works directly from the static catalog and does not require persistence.
-- Optional offline source caching automatically stores only the published public corpus in a docs-specific, versioned namespace on the shared GitHub Pages origin. It does not request persistent-storage treatment, accept private checkout content, or call whole-origin DBOPFS clear, backup, or restore operations. Later refreshes update only exact hash-bound keys in that namespace when the public catalog version changes; browser site-data controls remain the deletion path.
+- Optional offline source caching automatically stores only the published public corpus in `apps/docs/arcane-docs-public-corpus-v2` on the shared GitHub Pages origin. It does not request persistent-storage treatment, accept private checkout content, enumerate arbitrary origin files, or call whole-origin DBOPFS clear, backup, or restore operations. Each item remains version/hash/size-bound and non-authoritative; browser site-data controls remain the deletion path.
 - GitHub Pages never asks for or stores an OpenAI key. The legacy BOSS browser provider, user entity, chat memory, and automatic private-upload retrieval paths are not reused.
 - AI is enabled only when a provider implementing the configured Arcane chat contract is injected. The default path is `window.Arcane.ai.chat`; ordinary GitHub Pages therefore shows local search and an explicit unavailable state.
-- Selected catalog excerpts are bounded, hash-verified, labeled untrusted, and inserted through `ConfiguredAIChatSession` as data rather than system instructions. Provider identity and local/remote status are disclosed before transmission; a remote provider requires explicit confirmation for the current site session.
+- Selected documentation and source excerpts are bounded, hash-verified, labeled untrusted, and inserted through `ConfiguredAIChatSession` as data rather than system instructions. Code identifiers are represented by build-generated bounded search terms so reviewed files remain discoverable without granting filesystem enumeration. The Ask surface reports attached original paths and line ranges. Provider identity and local/remote status are disclosed before transmission; a remote provider requires explicit confirmation for the current site session.
 - AI output is advisory Markdown only. The site exposes no tool execution, filesystem authority, shell, package, provisioning, or repository-write operation.
 
 ## Onboarding journeys
@@ -79,8 +81,8 @@ The guide is grounded in the root README, build/release SOP, and developer comma
 
 ## Verification plan
 
-1. Focused module tests for hostile catalog records, deterministic ranking, bounded hydration/context, hash mismatch, cache-version handling, timeouts, and normalized test results.
-2. Component contract tests for Markdown injection, custom elements, unsafe protocols and remote images, duplicate headings, nested relative links, loading/error states, readiness in both orders, keyboard semantics, and emitted events.
+1. Focused module and build tests for hostile catalog records, deterministic source search terms, source-to-inert-path publication, source tampering, total/per-file bounds, deterministic ranking, bounded hydration/context, line ranges, hash mismatch, cache-version handling, timeouts, and normalized test results.
+2. Component contract tests for Markdown injection, custom elements, unsafe protocols and remote images, duplicate headings, nested relative links, inert source rendering, bounded line focus, loading/error states, readiness in both orders, keyboard semantics, and emitted events.
 3. App tests for Arcane theme order, saved appearance bootstrap, route and landmark structure, public allowlist coverage, component/example/screenshot truthfulness, provisioning/developer guide sources, AI fail-closed behavior, storage namespace, and Pages project-path resolution.
 4. Package inspection, build, and verification with the existing Arcane application packager.
 5. Local HTTP browser checks at a simulated `/ARCANE-OS/` project path, including keyboard flow, narrow and zoomed layouts, light/dark/system themes, reduced motion, and error states.

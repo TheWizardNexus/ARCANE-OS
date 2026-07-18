@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Arcane source-code viewer example</title>
+    <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./arcane/modules/HTMLImport.js?v=7"></script>
+    <style>
+        body{
+            box-sizing:border-box;
+            display:block;
+            min-block-size:100vh;
+            padding:clamp(1rem,4vw,3rem);
+        }
+
+        main{
+            margin-inline:auto;
+            max-inline-size:72rem;
+        }
+
+        .controls{
+            display:flex;
+            flex-wrap:wrap;
+            gap:.5rem;
+            margin-block:1rem;
+        }
+
+        .viewer-shell{
+            background:var(--modal-background);
+            border:1px solid var(--border-color);
+            border-radius:.75rem;
+            display:block;
+            min-block-size:20rem;
+            padding:clamp(1rem,3vw,2rem);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Source-code viewer component</h1>
+        <p>This synthetic example renders hostile-looking source as text and demonstrates programmatic line focus.</p>
+        <div class="controls" aria-label="Source viewer examples">
+            <button id="renderSource" type="button">Render source</button>
+            <button id="focusLine" type="button">Focus line 4</button>
+            <button id="showError" type="button">Show error</button>
+            <button id="clearSource" type="button">Clear</button>
+        </div>
+        <html-import
+            id="sourceViewer"
+            class="viewer-shell"
+            href="./arcane/components/source-code-viewer.html?v=1"
+        ></html-import>
+    </main>
+
+    <script type="module">
+        import waitForComponent from './arcane/modules/WaitForComponent.js';
+
+        const viewer=await waitForComponent(
+            document.querySelector('#sourceViewer'),
+            {
+                event:'source-code-viewer-ready',
+                methods:['clear','configure','fail','focus','focusLine','load','render'],
+                property:'ready'
+            }
+        );
+        const source=[
+            'export function greet(name) {',
+            '    const label = String(name || "traveler");',
+            '    // This remains text, even when it resembles active markup.',
+            '    return `<img src=x onerror="globalThis.unsafe=true">Hello ${label}`;',
+            '}'
+        ].join('\n');
+
+        function render(){
+            viewer.render(source,{
+                language:'javascript',
+                repositoryURL:'https://github.com/TheWizardNexus/ARCANE-OS',
+                sourcePath:'example/synthetic/greeting.js',
+                title:'Synthetic greeting module'
+            });
+        }
+
+        document.querySelector('#renderSource').addEventListener('click',render);
+        document.querySelector('#focusLine').addEventListener('click',()=>viewer.focusLine(4));
+        document.querySelector('#showError').addEventListener('click',()=>viewer.fail(new Error('Synthetic source unavailable.')));
+        document.querySelector('#clearSource').addEventListener('click',()=>viewer.clear());
+        render();
+    </script>
+</body>
+</html>

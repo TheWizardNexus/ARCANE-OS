@@ -83,6 +83,30 @@ test('static catalog validates and freezes a canonical positive inventory',()=>{
     );
 });
 
+test('static catalog preserves legacy manifests while exposing canonical optional source metadata',()=>{
+    const legacy=normalizeStaticDocumentCatalog(manifest([documentRecord()])).documents[0];
+    assert.equal(legacy.mediaType,'text/markdown');
+    assert.equal(legacy.sourcePath,'');
+    assert.equal(legacy.language,'');
+    assert.deepEqual(legacy.searchTerms,[]);
+    assert(Object.isFrozen(legacy.searchTerms));
+
+    const source=normalizeStaticDocumentCatalog(manifest([documentRecord({
+        id:'source-record',
+        path:'documents/source-record.txt',
+        kind:'source',
+        mediaType:'text/plain',
+        sourcePath:'arcane/modules/StaticDocumentCatalog.js',
+        language:'javascript',
+        searchTerms:['StaticDocumentCatalog','buildContext'],
+    })])).documents[0];
+    assert.equal(source.mediaType,'text/plain');
+    assert.equal(source.sourcePath,'arcane/modules/StaticDocumentCatalog.js');
+    assert.equal(source.language,'javascript');
+    assert.deepEqual(source.searchTerms,['StaticDocumentCatalog','buildContext']);
+    assert(Object.isFrozen(source.searchTerms));
+});
+
 test('static catalog rejects hostile paths, unknown fields, and case collisions',()=>{
     for(const path of [
         '../private.md',
@@ -135,6 +159,43 @@ test('static catalog rejects hostile paths, unknown fields, and case collisions'
     );
 });
 
+test('static catalog rejects hostile or unbounded source metadata',()=>{
+    for(const mediaType of ['TEXT/PLAIN','text/html','application/javascript','']){
+        assert.throws(
+            ()=>normalizeStaticDocumentCatalog(manifest([documentRecord({mediaType})])),
+            error=>error?.code==='STATIC_DOCUMENT_INVALID_CATALOG',
+            mediaType,
+        );
+    }
+    for(const sourcePath of ['../private.js','/root.js','arcane\\module.js','arcane%2Fmodule.js','arcane/module.js?raw=1','']){
+        assert.throws(
+            ()=>normalizeStaticDocumentCatalog(manifest([documentRecord({sourcePath})])),
+            error=>['STATIC_DOCUMENT_INVALID_CATALOG','STATIC_DOCUMENT_UNSAFE_PATH'].includes(error?.code),
+            sourcePath,
+        );
+    }
+    for(const language of ['JavaScript','javascript/esm','java script','x'.repeat(33),'']){
+        assert.throws(
+            ()=>normalizeStaticDocumentCatalog(manifest([documentRecord({language})])),
+            error=>error?.code==='STATIC_DOCUMENT_INVALID_CATALOG',
+            language,
+        );
+    }
+    for(const searchTerms of [
+        'restoreShell',
+        ['restoreShell','RESTORESHELL'],
+        ['e\u0301'],
+        ['bad\u0000term'],
+        ['x'.repeat(129)],
+        Array.from({length:129},(_,index)=>`term-${index}`),
+    ]){
+        assert.throws(
+            ()=>normalizeStaticDocumentCatalog(manifest([documentRecord({searchTerms})])),
+            error=>error?.code==='STATIC_DOCUMENT_INVALID_CATALOG',
+        );
+    }
+});
+
 test('static catalog search is weighted, filtered, bounded, and deterministic',()=>{
     const records=[
         documentRecord({
@@ -185,6 +246,50 @@ test('static catalog search is weighted, filtered, bounded, and deterministic',(
     );
     assert.throws(()=>catalog.search('x',{limit:11}),error=>error?.code==='STATIC_DOCUMENT_INVALID_LIMIT');
     assert.throws(()=>catalog.search('../\u0000'),error=>error?.code==='STATIC_DOCUMENT_INVALID_QUERY');
+});
+
+test('static catalog ranks searchTerms deterministically without hydrating bodies',()=>{
+    const symbol='Arcane.users.restoreShell';
+    let fetches=0;
+    const catalog=new StaticDocumentCatalog(manifest([
+        documentRecord({
+            id:'source-b',
+            path:'documents/source-b.txt',
+            kind:'source',
+            title:'Equal source',
+            mediaType:'text/plain',
+            sourcePath:'arcane/modules/UsersB.js',
+            language:'javascript',
+            searchTerms:[symbol],
+        }),
+        documentRecord({
+            id:'source-a',
+            path:'documents/source-a.txt',
+            kind:'source',
+            title:'Equal source',
+            mediaType:'text/plain',
+            sourcePath:'arcane/modules/UsersA.js',
+            language:'javascript',
+            searchTerms:[symbol],
+        }),
+        documentRecord({
+            id:'summary-only',
+            path:'documents/summary-only.md',
+            title:'Reference',
+            summary:`The ${symbol} method is described here.`,
+        }),
+    ]),options({
+        maxResults:10,
+        fetchImpl:async()=>{fetches++;return '# Unexpected hydration\n';},
+    }));
+
+    const first=catalog.search(symbol,{limit:3});
+    const second=catalog.search(symbol,{limit:3});
+    assert.deepEqual(first.map(result=>result.id),['source-a','source-b','summary-only']);
+    assert.deepEqual(second.map(result=>result.id),first.map(result=>result.id));
+    assert(first[0].score>first[2].score);
+    assert(first[0].matchedFields.includes('searchTerms'));
+    assert.equal(fetches,0);
 });
 
 test('static catalog hydrates same-directory UTF-8, verifies bytes and hash, and reuses versioned cache',async()=>{
@@ -390,6 +495,13 @@ test('static catalog builds deterministic bounded untrusted context and reports 
     assert.match(context.text,/UNTRUSTED STATIC DOCUMENT CONTEXT/);
     assert.equal(context.documents.length,2);
     assert(context.documents.every(item=>item.characters<=60));
+    assert.equal(context.documents[0].contextType,'DOCUMENT');
+    assert.equal(context.documents[0].mediaType,'text/markdown');
+    assert.equal(context.documents[0].sourcePath,context.documents[0].path);
+    assert.equal(context.documents[0].language,'');
+    assert.match(context.documents[0].sha256,/^[a-f0-9]{64}$/);
+    assert.equal(context.documents[0].lineStart,1);
+    assert.equal(context.documents[0].lineEnd,1);
     assert.deepEqual(context.failures.map(item=>item.id),['broken']);
     assert.equal(context.failures[0].code,'STATIC_DOCUMENT_HASH_MISMATCH');
     assert.equal(context.truncated,true);
@@ -448,6 +560,119 @@ test('static catalog can ground context from body-only terms with a relevant bou
     });
     assert.deepEqual(errorsContext.documents.map(item=>item.id),['api-reference']);
     assert.match(errorsContext.text,/recentErrors returns recent diagnostic error records/);
+});
+
+test('static catalog retrieves an indexed source symbol beyond the 100-record body scan boundary',async()=>{
+    const fillerContent='# Synthetic\n';
+    const symbol='NativeBridge.restoreShell';
+    const sourceContent=[
+        'export class NativeBridge {',
+        '    restoreShell(user) {',
+        '        return this.call("users.restoreShell", user);',
+        '    }',
+        '}',
+    ].join('\n');
+    const records=Array.from({length:105},(_,index)=>{
+        const suffix=String(index).padStart(3,'0');
+        return documentRecord({
+            content:fillerContent,
+            id:`filler-${suffix}`,
+            path:`documents/filler-${suffix}.md`,
+            title:`Filler ${suffix}`,
+        });
+    });
+    records.push(documentRecord({
+        content:sourceContent,
+        id:'zz-native-bridge',
+        path:'documents/zz-native-bridge.txt',
+        kind:'source',
+        title:'Native bridge',
+        mediaType:'text/plain',
+        sourcePath:'arcane/modules/NativeBridge.js',
+        language:'javascript',
+        searchTerms:[symbol,'restoreShell'],
+    }));
+    const fetches=[];
+    const catalog=new StaticDocumentCatalog(manifest(records),options({
+        maxContextCharacters:2000,
+        maxDocumentContextCharacters:500,
+        fetchImpl:async url=>{
+            fetches.push(url);
+            return url.endsWith('/zz-native-bridge.txt')?sourceContent:fillerContent;
+        },
+    }));
+
+    assert(catalog.list().findIndex(record=>record.id==='zz-native-bridge')>100);
+    assert.deepEqual(catalog.search(symbol).map(record=>record.id),['zz-native-bridge']);
+    assert.equal(fetches.length,0);
+
+    const context=await catalog.buildContext(symbol,{
+        bodySearch:true,
+        scanLimit:100,
+        maxCharacters:2000,
+        maxDocumentCharacters:500,
+    });
+    assert.deepEqual(context.documents.map(record=>record.id),['zz-native-bridge']);
+    assert.equal(fetches.length,1);
+    assert(fetches[0].endsWith('/zz-native-bridge.txt'));
+    assert.equal(context.documents[0].contextType,'SOURCE CODE');
+    assert.equal(context.documents[0].sourcePath,'arcane/modules/NativeBridge.js');
+    assert.equal(context.documents[0].language,'javascript');
+    assert.equal(context.documents[0].sha256,digest(sourceContent));
+    assert.match(context.text,/\[BEGIN UNTRUSTED SOURCE CODE\]/);
+    assert.match(context.text,/sourcePath: "arcane\/modules\/NativeBridge\.js"/);
+    assert.match(context.text,/language: "javascript"/);
+    assert.match(context.text,new RegExp(`sha256: "${digest(sourceContent)}"`));
+});
+
+test('static catalog reports relevant one-based source line ranges for bounded excerpts',async()=>{
+    const lines=[
+        '// line 1: unrelated setup padding',
+        '// line 2: unrelated setup padding',
+        '// line 3: unrelated setup padding',
+        '// line 4: unrelated setup padding',
+        '// line 5: nearby context',
+        '// line 6: nearby context',
+        'export function targetSymbol(user) {',
+        '    return user?.id ?? null;',
+        '}',
+        '// line 10: unrelated ending padding',
+        '// line 11: unrelated ending padding',
+    ];
+    const content=lines.join('\n');
+    const targetLine=7;
+    const record=documentRecord({
+        content,
+        id:'line-aware-source',
+        path:'documents/line-aware-source.txt',
+        kind:'source',
+        title:'Line-aware source',
+        mediaType:'text/plain',
+        sourcePath:'arcane/modules/LineAware.js',
+        language:'javascript',
+        searchTerms:['targetSymbol'],
+    });
+    const catalog=new StaticDocumentCatalog(manifest([record]),options({
+        maxContextCharacters:1600,
+        maxDocumentContextCharacters:90,
+        fetchImpl:async()=>content,
+    }));
+
+    const context=await catalog.buildContext('targetSymbol',{
+        bodySearch:true,
+        maxCharacters:1600,
+        maxDocumentCharacters:90,
+        scanLimit:1,
+    });
+    const metadata=context.documents[0];
+    assert.equal(metadata.contextType,'SOURCE CODE');
+    assert(metadata.lineStart>1);
+    assert(metadata.lineStart<=targetLine);
+    assert(metadata.lineEnd>=targetLine);
+    assert(metadata.lineEnd<=lines.length);
+    assert.match(context.text,/targetSymbol/);
+    assert.match(context.text,new RegExp(`lines: ${metadata.lineStart}-${metadata.lineEnd}`));
+    assert.equal(metadata.truncated,true);
 });
 
 test('static catalog search remains usable without browser networking and aborts hydration explicitly',async()=>{

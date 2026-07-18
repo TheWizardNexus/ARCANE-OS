@@ -12,6 +12,12 @@ on:
             - 'arcane-packager.json'
             - 'docs/**'
             - 'example/_example_assets/**'
+            - 'example/component_markdown_document/**'
+            - 'example/component_source_code_viewer/**'
+            - 'example/module_AsyncBoundary/**'
+            - 'example/module_BrowserTestSuite/**'
+            - 'example/module_ScopedOPFSCache/**'
+            - 'example/module_StaticDocumentCatalog/**'
             - 'package-lock.json'
             - 'package.json'
             - 'test/browser-test-suite.test.mjs'
@@ -25,6 +31,43 @@ on:
             - 'test/html-import-cache.test.mjs'
             - 'test/markdown-document-component.test.mjs'
             - 'test/scoped-opfs-cache.test.mjs'
+            - 'test/source-code-viewer.test.mjs'
+            - 'test/static-document-catalog.test.mjs'
+            - 'test/wait-for-component.test.mjs'
+            - 'tools/app-packager/**'
+            - 'tools/document-catalog/**'
+            - 'tools/package-app.mjs'
+    pull_request:
+        branches: [main]
+        paths:
+            - '.github/workflows/arcane-docs-pages.yml'
+            - '.gitattributes'
+            - 'README.md'
+            - 'apps/docs/**'
+            - 'arcane/**'
+            - 'arcane-packager.json'
+            - 'docs/**'
+            - 'example/_example_assets/**'
+            - 'example/component_markdown_document/**'
+            - 'example/component_source_code_viewer/**'
+            - 'example/module_AsyncBoundary/**'
+            - 'example/module_BrowserTestSuite/**'
+            - 'example/module_ScopedOPFSCache/**'
+            - 'example/module_StaticDocumentCatalog/**'
+            - 'package-lock.json'
+            - 'package.json'
+            - 'test/browser-test-suite.test.mjs'
+            - 'test/async-boundary.test.mjs'
+            - 'test/app-data-scope.test.mjs'
+            - 'test/component-contracts.test.mjs'
+            - 'test/configured-ai-chat-session.test.mjs'
+            - 'test/docs-public-package.test.mjs'
+            - 'test/docs-site.test.mjs'
+            - 'test/document-catalog-publication.test.mjs'
+            - 'test/html-import-cache.test.mjs'
+            - 'test/markdown-document-component.test.mjs'
+            - 'test/scoped-opfs-cache.test.mjs'
+            - 'test/source-code-viewer.test.mjs'
             - 'test/static-document-catalog.test.mjs'
             - 'test/wait-for-component.test.mjs'
             - 'tools/app-packager/**'
@@ -42,15 +85,15 @@ concurrency:
 jobs:
     build:
         name: Build verified Pages artifact
-        if: github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         timeout-minutes: 10
         permissions:
             contents: read
-            pages: read
         steps:
             - name: Check out the exact revision
               uses: actions/checkout@v6
+              with:
+                  persist-credentials: false
 
             - name: Use the supported Node.js toolchain
               uses: actions/setup-node@v4
@@ -78,6 +121,7 @@ jobs:
                   test/html-import-cache.test.mjs
                   test/markdown-document-component.test.mjs
                   test/scoped-opfs-cache.test.mjs
+                  test/source-code-viewer.test.mjs
                   test/static-document-catalog.test.mjs
                   test/wait-for-component.test.mjs
 
@@ -87,17 +131,15 @@ jobs:
             - name: Verify Arcane Docs package
               run: node tools/package-app.mjs check docs
 
-            - name: Configure GitHub Pages
-              uses: actions/configure-pages@v5
-
             - name: Upload only the verified Docs package
+              if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
               uses: actions/upload-pages-artifact@v4
               with:
                   path: dist/docs
 
     deploy:
         name: Deploy GitHub Pages
-        if: github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         needs: build
         runs-on: ubuntu-latest
         timeout-minutes: 10
@@ -108,6 +150,9 @@ jobs:
             name: github-pages
             url: ${{ steps.deployment.outputs.page_url }}
         steps:
+            - name: Configure GitHub Pages
+              uses: actions/configure-pages@v5
+
             - name: Deploy verified artifact
               id: deployment
               uses: actions/deploy-pages@v4

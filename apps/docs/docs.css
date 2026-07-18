@@ -175,7 +175,7 @@ html-import[data-component-state="error"]::part(error){
 .journey-grid{
     display:grid;
     gap:var(--arcane-space-4);
-    grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));
 }
 
 .journey-card{
@@ -327,8 +327,13 @@ html-import[data-component-state="error"]::part(error){
 }
 
 #documentViewer,
+#sourceViewer,
 #markdownSpecimen{
     display:block;
+}
+
+#sourceViewer{
+    padding:clamp(1rem,3vw,2rem);
 }
 
 .component-grid{
@@ -355,6 +360,13 @@ html-import[data-component-state="error"]::part(error){
     margin:auto;
     max-width:100%;
     width:100%;
+}
+
+.specimen__stage--source>html-import{
+    inline-size:100%;
+    margin:0;
+    padding:0;
+    text-align:start;
 }
 
 .screenshot-grid{

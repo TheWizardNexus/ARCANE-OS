@@ -5,11 +5,11 @@
     <base href="../../">
     <meta name="arcane-app-id" content="docs">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="description" content="Search Arcane OS documentation, follow onboarding guides, inspect live components, and run browser checks.">
+    <meta name="description" content="Search Arcane OS documentation and reviewed source, follow onboarding guides, inspect live components, and run browser checks.">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Arcane OS">
     <meta property="og:title" content="Arcane OS Docs">
-    <meta property="og:description" content="Search Arcane OS documentation, follow onboarding guides, inspect live components, and run browser checks.">
+    <meta property="og:description" content="Search Arcane OS documentation and reviewed source, follow onboarding guides, inspect live components, and run browser checks.">
     <meta property="og:image" content="https://thewizardnexus.github.io/ARCANE-OS/arcane/img/arcane-os-everywhere.png">
     <meta property="og:image:width" content="1672">
     <meta property="og:image:height" content="941">
@@ -51,7 +51,7 @@
                 <div class="hero__copy">
                     <p class="eyebrow">The system, explained by its source</p>
                     <h1 id="homeTitle">Build, provision, and understand Arcane OS.</h1>
-                    <p class="hero__lede">A searchable public guide assembled from the repository's reviewed documentation, with live Arcane components and checks that run in your browser.</p>
+                    <p class="hero__lede">A searchable public guide assembled from reviewed documentation and source, with live Arcane components and checks that run in your browser.</p>
                     <div class="hero__actions">
                         <a class="arcane-button arcane-button--action" href="./apps/docs/index.html#/docs/provision-user">Provision an Arcane user</a>
                         <a class="arcane-button arcane-button--secondary" href="./apps/docs/index.html#/docs/developer-setup">Set up a developer checkout</a>
@@ -114,6 +114,15 @@
                             <a href="./apps/docs/index.html#/components">Explore live components <span aria-hidden="true">→</span></a>
                         </div>
                     </article>
+                    <article class="journey-card arcane-card">
+                        <div class="journey-card__number" aria-hidden="true">04</div>
+                        <div class="arcane-card__body">
+                            <p class="eyebrow">Explorer</p>
+                            <h3>Browse reviewed source</h3>
+                            <p>Inspect the exact, hash-verified source snapshot used for local retrieval and optional AI grounding.</p>
+                            <a href="./apps/docs/index.html#/sources">Explore source catalog <span aria-hidden="true">→</span></a>
+                        </div>
+                    </article>
                 </div>
             </section>
 
@@ -122,7 +131,7 @@
                     <div>
                         <p class="eyebrow">Search locally</p>
                         <h2 id="homeSearchTitle" class="arcane-section-heading">Find the contract behind the behavior</h2>
-                        <p>Search titles, summaries, tags, and indexed Markdown without sending a query to a server.</p>
+                        <p>Search documentation metadata without sending a query to a server, then browse the separate reviewed source catalog.</p>
                     </div>
                     <form id="homeSearchForm" class="search-form" role="search">
                         <label class="arcane-field">
@@ -170,6 +179,44 @@
                     <html-import
                         id="documentViewer"
                         href="./arcane/components/markdown-document.html?v=1">
+                    </html-import>
+                </article>
+            </div>
+        </section>
+
+        <section class="docs-view" data-view="sources" aria-labelledby="sourcesTitle" hidden>
+            <header class="view-heading">
+                <div>
+                    <p class="eyebrow">Inert, integrity-checked snapshot</p>
+                    <h1 id="sourcesTitle">Reviewed source</h1>
+                    <p>Every entry comes from an explicit public allowlist, is copied as non-executable text, and is verified by byte size and SHA-256 before display or retrieval.</p>
+                </div>
+                <a class="arcane-button arcane-button--secondary" href="https://github.com/TheWizardNexus/ARCANE-OS" target="_blank" rel="noopener noreferrer">View repository</a>
+            </header>
+            <div class="document-workspace">
+                <aside class="catalog-panel arcane-card" aria-labelledby="sourceCatalogTitle">
+                    <div class="arcane-card__header">
+                        <div>
+                            <p class="eyebrow">Reviewed coverage</p>
+                            <h2 id="sourceCatalogTitle" class="arcane-section-heading">Source catalog</h2>
+                        </div>
+                        <span id="sourceResultCount" class="arcane-count" aria-label="0 source files">0</span>
+                    </div>
+                    <div class="arcane-card__body catalog-panel__body">
+                        <form id="sourceSearchForm" role="search">
+                            <label class="arcane-field">
+                                <span class="arcane-field__label">Filter source files</span>
+                                <input id="sourceSearchInput" type="search" maxlength="160" autocomplete="off" placeholder="Search paths, symbols, languages, tags">
+                            </label>
+                        </form>
+                        <nav id="sourceResults" class="document-results" aria-label="Source-code results"></nav>
+                        <p id="sourceCatalogStatus" class="catalog-status" role="status" aria-live="polite">Loading the reviewed source catalog…</p>
+                    </div>
+                </aside>
+                <article class="document-panel arcane-card" aria-label="Selected source code">
+                    <html-import
+                        id="sourceViewer"
+                        href="./arcane/components/source-code-viewer.html?v=1">
                     </html-import>
                 </article>
             </div>
@@ -224,6 +271,16 @@
                     </div>
                     <footer class="arcane-card__footer"><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/arcane/components/markdown-document.html" target="_blank" rel="noopener noreferrer">View source</a></footer>
                 </article>
+                <article class="specimen arcane-card">
+                    <header class="arcane-card__header">
+                        <div><p class="eyebrow">Inert source text</p><h2 class="arcane-section-heading">Source-code viewer</h2></div>
+                        <span class="arcane-badge" data-status="success">Live</span>
+                    </header>
+                    <div class="arcane-card__body specimen__stage specimen__stage--source">
+                        <html-import id="sourceSpecimen" href="./arcane/components/source-code-viewer.html?v=1"></html-import>
+                    </div>
+                    <footer class="arcane-card__footer"><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/arcane/components/source-code-viewer.html" target="_blank" rel="noopener noreferrer">View source</a></footer>
+                </article>
             </div>
             <section class="screenshots-section" aria-labelledby="screenshotsTitle">
                 <header class="section-heading">
@@ -276,7 +333,7 @@
                     <div class="arcane-card__body disclosure-list">
                         <p id="assistantProvider">Checking for a configured Arcane AI provider…</p>
                         <ul>
-                            <li>Only the strongest bounded excerpts from the public catalog are attached.</li>
+                            <li>Only the strongest bounded excerpts from reviewed documentation and source are attached.</li>
                             <li>Retrieved text is labeled untrusted data, not system instructions.</li>
                             <li>No tools, shell, account changes, repository writes, or automatic memories are available.</li>
                             <li>The GitHub Pages origin never stores an API key.</li>
@@ -294,7 +351,7 @@
                         data-layout="docked"
                         data-open
                         data-title="Ask Arcane Docs"
-                        data-subtitle="Public catalog context only"
+                        data-subtitle="Reviewed public corpus only"
                         href="./arcane/components/assistant-panel.html?v=3">
                         <ol id="assistantMessages" class="chat-messages" slot="messages" aria-label="Assistant messages"></ol>
                         <div class="assistant-footer" slot="footer">
@@ -308,7 +365,7 @@
     </main>
 
     <footer class="site-footer">
-        <p>Arcane OS Docs · Generated from a positive public-source allowlist · <a href="https://github.com/TheWizardNexus/ARCANE-OS" target="_blank" rel="noopener noreferrer">Source on GitHub</a></p>
+        <p>Arcane OS Docs · Generated from positive documentation, source, and screenshot allowlists · <a href="https://github.com/TheWizardNexus/ARCANE-OS" target="_blank" rel="noopener noreferrer">Source on GitHub</a></p>
     </footer>
 
     <script type="module" src="./apps/docs/modules/DocsApp.js?v=1"></script>

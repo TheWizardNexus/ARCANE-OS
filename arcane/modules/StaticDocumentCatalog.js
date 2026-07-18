@@ -22,9 +22,13 @@ const HARD_LIMITS=Object.freeze({
 const CONTROL_CHARACTERS=/[\u0000-\u001f\u007f]/;
 const ID_PATTERN=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const KIND_PATTERN=/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+const LANGUAGE_PATTERN=/^[a-z][a-z0-9.+#_-]{0,31}$/;
+const MEDIA_TYPES=new Set(['text/markdown','text/plain']);
 const SHA256_PATTERN=/^[a-f0-9]{64}$/;
 const TEXTUAL_CONTENT_TYPE=/^(?:text\/|application\/(?:javascript|json|xml|xhtml\+xml)(?:;|$)|image\/svg\+xml(?:;|$))/i;
-const SEARCH_FIELD_ORDER=Object.freeze(['title','tags','headings','summary','path','id']);
+const SEARCH_FIELD_ORDER=Object.freeze([
+    'title','searchTerms','tags','headings','summary','sourcePath','path','language','id'
+]);
 const SEARCH_STOP_WORDS=new Set([
     'a','an','and','are','as','at','be','by','do','does','for','from','how','i',
     'in','is','it','of','on','or','that','the','this','to','use','using','what',
@@ -125,6 +129,40 @@ function normalizeTags(value){
     return Object.freeze(tags);
 }
 
+function normalizeMediaType(value,label){
+    if(value===undefined) return 'text/markdown';
+    const mediaType=boundedText(value,label,32);
+    if(!MEDIA_TYPES.has(mediaType)){
+        fail(`${label} must be text/plain or text/markdown.`,'STATIC_DOCUMENT_INVALID_CATALOG');
+    }
+    return mediaType;
+}
+
+function normalizeLanguage(value,label){
+    if(value===undefined) return '';
+    const language=boundedText(value,label,32);
+    if(!LANGUAGE_PATTERN.test(language)){
+        fail(`${label} must be a lowercase language identifier.`,'STATIC_DOCUMENT_INVALID_CATALOG');
+    }
+    return language;
+}
+
+function normalizeSearchTerms(value,label){
+    if(value===undefined) return Object.freeze([]);
+    if(!Array.isArray(value)||value.length>128){
+        fail(`${label} must be an array containing at most 128 entries.`,'STATIC_DOCUMENT_INVALID_CATALOG');
+    }
+    const seen=new Set();
+    const terms=value.map((item,index)=>{
+        const term=boundedText(item,`${label} entry ${index+1}`,128);
+        const key=canonicalKey(term);
+        if(seen.has(key)) fail(`${label} contains a duplicate value: ${term}.`,'STATIC_DOCUMENT_INVALID_CATALOG');
+        seen.add(key);
+        return term;
+    });
+    return Object.freeze(terms);
+}
+
 function normalizeHeadings(value){
     if(value===undefined) return Object.freeze([]);
     if(!Array.isArray(value)||value.length>256){
@@ -168,7 +206,10 @@ function normalizeRecord(input,index,maxDocumentBytes){
     if(!isPlainRecord(input)) fail(`Document record ${index+1} must be a plain object.`,'STATIC_DOCUMENT_INVALID_CATALOG');
     assertKnownKeys(
         input,
-        new Set(['byteSize','examples','headings','id','kind','path','screenshots','sha256','summary','tags','title']),
+        new Set([
+            'byteSize','examples','headings','id','kind','language','mediaType','path',
+            'screenshots','searchTerms','sha256','sourcePath','summary','tags','title'
+        ]),
         `Document record ${index+1}`,
     );
     const id=boundedText(input.id,`Document record ${index+1} id`,128);
@@ -177,13 +218,20 @@ function normalizeRecord(input,index,maxDocumentBytes){
     if(!KIND_PATTERN.test(kind)) fail(`Document record ${index+1} has an invalid kind.`,'STATIC_DOCUMENT_INVALID_CATALOG');
     const sha256=boundedText(input.sha256,`Document record ${index+1} SHA-256`,64).toLowerCase();
     if(!SHA256_PATTERN.test(sha256)) fail(`Document record ${index+1} has an invalid SHA-256 digest.`,'STATIC_DOCUMENT_INVALID_CATALOG');
+    const path=relativePath(input.path,`Document record ${index+1} path`);
     return Object.freeze({
         id,
-        path:relativePath(input.path,`Document record ${index+1} path`),
+        path,
         kind,
+        mediaType:normalizeMediaType(input.mediaType,`Document record ${index+1} mediaType`),
+        sourcePath:input.sourcePath===undefined
+            ?''
+            :relativePath(input.sourcePath,`Document record ${index+1} sourcePath`),
+        language:normalizeLanguage(input.language,`Document record ${index+1} language`),
         title:boundedText(input.title,`Document record ${index+1} title`,256),
         summary:boundedText(input.summary,`Document record ${index+1} summary`,2048,{optional:true}),
         tags:normalizeTags(input.tags),
+        searchTerms:normalizeSearchTerms(input.searchTerms,`Document record ${index+1} searchTerms`),
         byteSize:boundedInteger(input.byteSize,`Document record ${index+1} byteSize`,{minimum:0,maximum:maxDocumentBytes}),
         sha256,
         headings:normalizeHeadings(input.headings),
@@ -322,9 +370,12 @@ function searchIndex(record){
     return Object.freeze({
         id:normalizedSearchText(record.id),
         path:normalizedSearchText(record.path),
+        sourcePath:normalizedSearchText(record.sourcePath),
+        language:normalizedSearchText(record.language),
         title:normalizedSearchText(record.title),
         summary:normalizedSearchText(record.summary),
         tags:record.tags.map(normalizedSearchText),
+        searchTerms:record.searchTerms.map(normalizedSearchText),
         headings:record.headings.map(heading=>normalizedSearchText(heading.text)),
     });
 }
@@ -337,7 +388,11 @@ function fieldScore(index,phrase,tokens){
     if(index.id===phrase){score+=100;matched.add('id');}
     else if(index.id.includes(phrase)){score+=20;matched.add('id');}
     if(index.path.includes(phrase)){score+=24;matched.add('path');}
+    if(index.sourcePath.includes(phrase)){score+=24;matched.add('sourcePath');}
+    if(index.language===phrase){score+=30;matched.add('language');}
     if(index.summary.includes(phrase)){score+=18;matched.add('summary');}
+    if(index.searchTerms.some(term=>term===phrase)){score+=110;matched.add('searchTerms');}
+    else if(index.searchTerms.some(term=>term.includes(phrase))){score+=52;matched.add('searchTerms');}
     for(const tag of index.tags){
         if(tag===phrase){score+=40;matched.add('tags');}
         else if(tag.includes(phrase)){score+=16;matched.add('tags');}
@@ -351,6 +406,10 @@ function fieldScore(index,phrase,tokens){
         else if(index.tags.some(tag=>tag.includes(token))){score+=5;matched.add('tags');}
         if(index.headings.some(heading=>heading.includes(token))){score+=5;matched.add('headings');}
         if(index.summary.includes(token)){score+=3;matched.add('summary');}
+        if(index.searchTerms.some(term=>term===token)){score+=18;matched.add('searchTerms');}
+        else if(index.searchTerms.some(term=>term.includes(token))){score+=9;matched.add('searchTerms');}
+        if(index.sourcePath.includes(token)){score+=4;matched.add('sourcePath');}
+        if(index.language===token){score+=8;matched.add('language');}
         if(index.path.includes(token)){score+=4;matched.add('path');}
         if(index.id.includes(token)){score+=5;matched.add('id');}
     }
@@ -367,8 +426,8 @@ function bodyScore(value,phrase,tokens){
     return score;
 }
 
-function relevantSlice(value,query,maximum){
-    if(value.length<=maximum)return value;
+function relevantSliceStart(value,query,maximum){
+    if(value.length<=maximum)return 0;
     const phrase=String(query||'').trim().toLowerCase();
     const tokens=searchTokens(query);
     const body=value.toLowerCase();
@@ -378,11 +437,36 @@ function relevantSlice(value,query,maximum){
         .filter(index=>index>=0);
     const match=positions.length?Math.min(...positions):0;
     let start=Math.max(0,match-Math.floor(maximum/3));
+    const priorNewline=start>0?value.lastIndexOf('\n',start-1):-1;
+    const alignedStart=priorNewline+1;
+    if(match-alignedStart<=Math.floor(maximum*2/3))start=alignedStart;
     if(start>0){
         const code=value.charCodeAt(start);
         if(code>=0xdc00&&code<=0xdfff)start++;
     }
-    return safeSlice(value.slice(start),maximum);
+    return start;
+}
+
+function lineNumberAt(value,offset){
+    let line=1;
+    let cursor=value.indexOf('\n');
+    while(cursor>=0&&cursor<offset){
+        line++;
+        cursor=value.indexOf('\n',cursor+1);
+    }
+    return line;
+}
+
+function contextExcerpt(value,query,maximum,{relevant=false}={}){
+    const start=relevant?relevantSliceStart(value,query,maximum):0;
+    const text=safeSlice(value.slice(start),maximum);
+    const end=start+text.length;
+    return Object.freeze({
+        lineEnd:lineNumberAt(value,Math.max(start,end-1)),
+        lineStart:lineNumberAt(value,start),
+        text,
+        truncated:start>0||end<value.length,
+    });
 }
 
 function queryText(value){
@@ -606,6 +690,25 @@ function safeSlice(value,maximum){
     return value.slice(0,end);
 }
 
+function contextType(record){
+    return record.mediaType==='text/plain'?'SOURCE CODE':'DOCUMENT';
+}
+
+function contextSourcePath(record){
+    return record.sourcePath||record.path;
+}
+
+function contextHeading(record,lines){
+    if(contextType(record)==='DOCUMENT'){
+        return `\n[BEGIN UNTRUSTED DOCUMENT]\nid: ${JSON.stringify(record.id)}\npath: ${JSON.stringify(record.path)}\ntitle: ${JSON.stringify(record.title)}\ncontent:\n`;
+    }
+    return `\n[BEGIN UNTRUSTED SOURCE CODE]\nid: ${JSON.stringify(record.id)}\npath: ${JSON.stringify(record.path)}\nsourcePath: ${JSON.stringify(contextSourcePath(record))}\nlanguage: ${JSON.stringify(record.language)}\nsha256: ${JSON.stringify(record.sha256)}\nlines: ${lines.lineStart}-${lines.lineEnd}\ntitle: ${JSON.stringify(record.title)}\ncontent:\n`;
+}
+
+function contextFooter(record){
+    return `\n[END UNTRUSTED ${contextType(record)}]\n`;
+}
+
 /**
  * Validates and searches a positive inventory of static text documents.
  *
@@ -613,6 +716,9 @@ function safeSlice(value,maximum){
  * the configured HTTP(S) base directory, bounded by declared bytes and time,
  * decoded as UTF-8, and accepted only after exact size and SHA-256 checks.
  * Persistence is optional and entirely owned by the injected cache adapter.
+ * Records may add inert source metadata (`mediaType`, `sourcePath`, `language`,
+ * and `searchTerms`); manifests without those fields retain document defaults.
+ * Context metadata reports the verified digest and one-based excerpt lines.
  */
 export default class StaticDocumentCatalog{
     #baseURL;
@@ -835,14 +941,13 @@ export default class StaticDocumentCatalog{
             'Context body-search scan limit',
             {minimum:1,maximum:Math.min(this.size,100)},
         ):0;
-        const candidates=new Map(
-            this.search(queryValue,{limit:this.#limits.maxResults})
-                .map(match=>[match.id,match]),
-        );
+        const indexedMatches=this.search(queryValue,{limit:this.#limits.maxResults});
+        const searchTermMatch=indexedMatches.some(match=>match.matchedFields.includes('searchTerms'));
+        const candidates=new Map(indexedMatches.map(match=>[match.id,match]));
         const hydratedById=new Map();
         const failures=[];
         const failedIds=new Set();
-        if(bodySearch){
+        if(bodySearch&&!searchTermMatch){
             const phrase=normalizedSearchText(queryValue);
             const tokens=searchTokens(queryValue);
             for(const record of this.#manifest.documents.slice(0,scanLimit)){
@@ -893,24 +998,30 @@ export default class StaticDocumentCatalog{
                 }
                 continue;
             }
-            const heading=`\n[BEGIN UNTRUSTED DOCUMENT]\nid: ${JSON.stringify(match.id)}\npath: ${JSON.stringify(match.path)}\ntitle: ${JSON.stringify(match.title)}\ncontent:\n`;
-            const footer='\n[END UNTRUSTED DOCUMENT]\n';
-            const remaining=maxCharacters-text.length-heading.length-footer.length;
+            const maximumLine=lineNumberAt(hydrated.text,hydrated.text.length);
+            const budgetHeading=contextHeading(match,{lineStart:maximumLine,lineEnd:maximumLine});
+            const footer=contextFooter(match);
+            const remaining=maxCharacters-text.length-budgetHeading.length-footer.length;
             if(remaining<=0){truncated=true;break;}
             const allowed=Math.min(maxDocumentCharacters,remaining);
-            const excerpt=bodySearch
-                ?relevantSlice(hydrated.text,queryValue,allowed)
-                :safeSlice(hydrated.text,allowed);
-            const bodyTruncated=excerpt.length<hydrated.text.length;
-            text+=heading+excerpt+footer;
-            truncated=truncated||bodyTruncated;
+            const excerpt=contextExcerpt(hydrated.text,queryValue,allowed,{relevant:bodySearch});
+            const heading=contextHeading(match,excerpt);
+            text+=heading+excerpt.text+footer;
+            truncated=truncated||excerpt.truncated;
             documents.push(Object.freeze({
-                characters:excerpt.length,
+                characters:excerpt.text.length,
+                contextType:contextType(match),
                 id:match.id,
+                language:match.language,
+                lineEnd:excerpt.lineEnd,
+                lineStart:excerpt.lineStart,
+                mediaType:match.mediaType,
                 path:match.path,
+                sha256:match.sha256,
                 source:hydrated.source,
+                sourcePath:contextSourcePath(match),
                 title:match.title,
-                truncated:bodyTruncated,
+                truncated:excerpt.truncated,
             }));
         }
         if(matches.length>documents.length+failures.length) truncated=true;

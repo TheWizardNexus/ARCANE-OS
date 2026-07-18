@@ -1,7 +1,7 @@
 {
   "name": "Arcane OS Docs",
   "short_name": "Arcane Docs",
-  "description": "Search Arcane OS documentation, follow onboarding guides, inspect live components, and run browser checks.",
+  "description": "Search Arcane OS documentation and reviewed source, follow onboarding guides, inspect live components, and run browser checks.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

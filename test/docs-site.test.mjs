@@ -18,6 +18,7 @@ const [
     prompt,
     scopedCache,
     appBarSource,
+    sourceViewerSource,
     themeSource
 ]=await Promise.all([
     read('apps/docs/index.html'),
@@ -30,6 +31,7 @@ const [
     read('apps/docs/prompts/system.md'),
     read('arcane/modules/ScopedOPFSCache.js'),
     read('arcane/components/app-bar.html'),
+    read('arcane/components/source-code-viewer.html'),
     read('arcane/css/theme.css')
 ]);
 
@@ -69,8 +71,8 @@ test('Docs app-bar active routes and brand retain AA contrast in light and dark 
     assert(contrastRatio([237,241,250],[26,33,52])>=4.5);
 });
 
-test('Arcane Docs exposes the five semantic product views and onboarding journeys',()=>{
-    for(const view of ['home','docs','components','tests','assistant']){
+test('Arcane Docs exposes the six semantic product views and onboarding journeys',()=>{
+    for(const view of ['home','docs','sources','components','tests','assistant']){
         assert.match(index,new RegExp(`data-view="${view}"`));
     }
     assert.match(index,/<main\b[^>]*id="mainContent"/i);
@@ -86,9 +88,10 @@ test('Arcane Docs exposes the five semantic product views and onboarding journey
 });
 
 test('the public content policy is a positive, unique, existing source inventory',async()=>{
-    assert.equal(publication.schemaVersion,1);
+    assert.equal(publication.schemaVersion,2);
     assert.equal(publication.audience,'public');
     assert(publication.documents.length>=12);
+    assert(publication.sources.length>=30);
     const ids=new Set();
     const sources=new Set();
     for(const document of publication.documents){
@@ -103,6 +106,26 @@ test('the public content policy is a positive, unique, existing source inventory
     }
     assert(ids.has('provision-user'));
     assert(ids.has('developer-setup'));
+
+    for(const source of publication.sources){
+        assert.match(source.id,/^[a-z0-9][a-z0-9-]*$/);
+        assert(!ids.has(source.id.toLowerCase()),`duplicate source id: ${source.id}`);
+        assert(!sources.has(source.source.toLowerCase()),`duplicate source path: ${source.source}`);
+        ids.add(source.id.toLowerCase());
+        sources.add(source.source.toLowerCase());
+        assert(!path.posix.isAbsolute(source.source));
+        assert(!source.source.split('/').includes('..'));
+        await access(path.join(root,...source.source.split('/')));
+    }
+
+    const staticCatalogSource=publication.sources.find(
+        source=>source.id==='source-static-document-catalog'
+    );
+    assert(staticCatalogSource);
+    assert.equal(
+        staticCatalogSource.source,
+        'arcane/modules/StaticDocumentCatalog.js'
+    );
 });
 
 test('screenshot publication is explicit and matches every gallery image',async()=>{
@@ -113,6 +136,63 @@ test('screenshot publication is explicit and matches every gallery image',async(
         await access(path.join(root,...screenshot.source.split('/')));
         assert.match(app,new RegExp(screenshot.output.replaceAll('.','\\.')));
     }
+});
+
+test('reviewed source has a searchable route and an inert shared viewer',()=>{
+    assert.match(index,/href="\.\/apps\/docs\/index\.html#\/sources"/);
+    assert.match(index,/id="sourceSearchForm"[^>]*role="search"/);
+    assert.match(index,/id="sourceSearchInput"[^>]*type="search"/);
+    assert.match(index,/id="sourceResultCount"[^>]*aria-label="0 source files"/);
+    assert.match(
+        index,
+        /id="sourceCatalogStatus"[^>]*role="status"[^>]*aria-live="polite"/
+    );
+    assert.equal(
+        (index.match(/href="\.\/arcane\/components\/source-code-viewer\.html\?v=1"/g)||[]).length,
+        2
+    );
+    assert.match(index,/id="sourceViewer"/);
+    assert.match(index,/id="sourceSpecimen"/);
+    assert.match(
+        app,
+        /methods:\['configure','load','render','fail','focusLine'\][\s\S]*?event:'source-code-viewer-ready'/
+    );
+    assert.match(
+        app,
+        /methods:\['configure','render','focusLine'\][\s\S]*?event:'source-code-viewer-ready'/
+    );
+    assert.match(app,/kinds:\[SOURCE_KIND\]/);
+    assert.match(app,/renderSourceCatalog\(elements\.sourceSearchInput\.value\)/);
+    assert.match(app,/elements\.sourceResultCount\.textContent=String\(records\.length\)/);
+    assert.match(
+        app,
+        /reviewed source files\. Select one to verify and render as inert text/
+    );
+    assert.match(app,/if\(parsed\.view==='sources'\)/);
+    assert.match(app,/await openSource\(id\)/);
+    assert.match(app,/if\(parsed\.line&&elements\.sourceViewer\.focusLine\?\.\(parsed\.line\)\)return/);
+    assert.match(
+        app,
+        /link\.href=`\$\{APP_ENTRY_URL\}#\/\$\{route\}\/\$\{encodeURIComponent\(record\.id\)\}`/
+    );
+    assert.match(
+        app,
+        /repositoryURL:repositoryFileURL\(record\.sourcePath\|\|record\.path\)/
+    );
+    assert.match(app,/sourcePath:record\.sourcePath\|\|record\.path/);
+    assert.match(app,/text:hydrated\.text/);
+    assert.match(
+        app,
+        /const REPOSITORY_FILE_URL='https:\/\/github\.com\/TheWizardNexus\/ARCANE-OS\/blob\/main\/'/
+    );
+    assert.match(sourceViewerSource,/code\.textContent=line\|\|' '/);
+    assert.match(sourceViewerSource,/host\.ready=true/);
+    assert.match(sourceViewerSource,/source-code-viewer-ready/);
+    assert.match(
+        sourceViewerSource,
+        /target="_blank"[\s\S]*?rel="noopener noreferrer"[\s\S]*?referrerpolicy="no-referrer"/
+    );
+    assert.doesNotMatch(sourceViewerSource,/\.innerHTML\s*=|\beval\s*\(|new Function\b/);
 });
 
 test('provisioning preserves credential delivery, activation, and recovery boundaries',()=>{
@@ -150,8 +230,19 @@ test('assistant is profile-bound, context-bounded, consent-aware, and fail-close
     assert.match(app,/chatSession===null/);
     assert.doesNotMatch(app,/modules\/DBOPFS\.js/);
     assert.doesNotMatch(app,/apiKey|localStorage/i);
+    assert.doesNotMatch(app,/\btools\s*:/);
+    assert.match(index,/reviewed documentation and source are attached/i);
     assert.match(prompt,/untrusted reference content/i);
+    assert.match(prompt,/documentation and source excerpts/i);
+    assert.match(prompt,/original source paths and line ranges/i);
     assert.match(prompt,/Do not claim to execute commands/i);
+    assert.match(
+        app,
+        /Ask about the published Arcane OS documentation or reviewed source/
+    );
+    assert.match(app,/const path=item\.sourcePath\|\|item\.path\|\|item\.id/);
+    assert.match(app,/item\.lineStart&&item\.lineEnd/);
+    assert.match(app,/citations\.join\('; '\)/);
     assert.match(app,/methods:\['open','setState','scrollToEnd'\]/);
     assert.match(app,/parsed\.view==='assistant'\)elements\.assistant\.open\?\.\(\{focus:false\}\)/);
     assert.match(css,/\.assistant-panel::part\(close-button\)\{[\s\S]*?display:none/);
@@ -180,7 +271,15 @@ test('hash routing preserves skip-link focus and cross-document fragments',()=>{
     assert.match(app,/timeoutMs:COMPONENT_READY_TIMEOUT_MS/);
     assert.match(app,/const DOCUMENT_ID_PATTERN=\/\^\[a-z0-9\]\[a-z0-9-\]\*\$\//);
     assert.match(app,/invalidDocument=true/);
+    assert.match(
+        app,
+        /\['home','docs','sources','components','tests','assistant'\]\.includes\(viewPart\)/
+    );
+    assert.match(app,/if\(view==='sources'&&rest\[0\]\)/);
+    assert.match(app,/const match=\/\^L\?\(\[1-9\]\[0-9\]\{0,5\}\)\$\/i\.exec\(lineText\)/);
+    assert.match(app,/invalidSource=true/);
     assert.match(app,/No public document matches this address/);
+    assert.match(app,/No reviewed source file matches this address/);
     assert.match(app,/selectedDocumentId='';[\s\S]*?renderCatalog\(elements\.documentSearchInput\.value\)/);
     assert.match(app,/try\{return catalog\.get\(id\)\|\|null\}catch\{return null\}/);
 });
@@ -207,13 +306,18 @@ test('route anchors remain inside the deployed app under a Pages project path',(
         assert.equal(resolved.pathname,'/ARCANE-OS/apps/docs/index.html',href);
     }
     assert.match(app,/const APP_ENTRY_URL='\.\/apps\/docs\/index\.html'/);
-    assert.match(app,/link\.href=`\$\{APP_ENTRY_URL\}#\/docs\//);
+    assert.match(app,/recordLink\(record,\{[\s\S]*?route:'docs'/);
+    assert.match(
+        app,
+        /link\.href=`\$\{APP_ENTRY_URL\}#\/\$\{route\}\/\$\{encodeURIComponent\(record\.id\)\}`/
+    );
 });
 
 test('catalog persistence is automatic but scoped to exact keys in one docs namespace',()=>{
-    assert.match(app,/arcane-docs-public-catalog-v1/);
+    assert.match(app,/arcane-docs-public-corpus-v2/);
     assert.match(app,/scheduleCatalogCache/);
     assert.match(app,/catalog\.hydrate\(record\.id\)/);
+    assert.doesNotMatch(app,/modules\/DBOPFS\.js|localStorage/i);
     assert.match(scopedCache,/exact-key get, set, and delete/);
     assert.doesNotMatch(scopedCache,/clearAllStorage|restoreFromPNG|downloadCompressedPNG/);
     assert.doesNotMatch(scopedCache,/async\s+(?:list|clear)\s*\(/);

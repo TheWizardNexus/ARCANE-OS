@@ -14,16 +14,25 @@ import {
     normalizeStaticDocumentCatalog
 } from '../../arcane/modules/StaticDocumentCatalog.js';
 
-const POLICY_SCHEMA_VERSION = 1;
+const LEGACY_POLICY_SCHEMA_VERSION = 1;
+const POLICY_SCHEMA_VERSION = 2;
 const CATALOG_FILE_NAME = 'document-catalog.json';
 const DOCUMENT_DIRECTORY = 'documents';
+const SOURCE_DIRECTORY = 'sources';
 const SCREENSHOT_DIRECTORY = 'screenshots';
 const MAXIMUM_DOCUMENT_BYTES = 1048576;
+const MAXIMUM_SOURCE_BYTES = 524288;
+const MAXIMUM_TOTAL_SOURCE_BYTES = 16 * 1024 * 1024;
 const MAXIMUM_SCREENSHOT_BYTES = 5242880;
 const MAXIMUM_DOCUMENTS = 512;
+const MAXIMUM_SOURCES = 1024;
 const MAXIMUM_SCREENSHOTS = 64;
 const MAXIMUM_HEADINGS = 256;
+const MAXIMUM_SOURCE_LINES = 20000;
+const MAXIMUM_SEARCH_TERMS = 128;
+const MAXIMUM_SEARCH_TERM_LENGTH = 128;
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
+const BINARY_CONTROL_CHARACTERS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 const DOCUMENT_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const SITE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const WINDOWS_RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
@@ -32,6 +41,14 @@ const SCREENSHOT_EXTENSIONS = new Set([
     '.jpg',
     '.png',
     '.webp'
+]);
+const SOURCE_LANGUAGES = new Map([
+    ['.cjs', 'javascript'],
+    ['.css', 'css'],
+    ['.html', 'html'],
+    ['.js', 'javascript'],
+    ['.json', 'json'],
+    ['.mjs', 'javascript']
 ]);
 const FORBIDDEN_SOURCE_SEGMENTS = new Set([
     '.agents',
@@ -74,6 +91,10 @@ function compareDocuments(left, right) {
 
 function compareScreenshots(left, right) {
     return compareText(left.output, right.output);
+}
+
+function compareSources(left, right) {
+    return compareText(left.id, right.id);
 }
 
 function compareFileRecords(left, right) {
@@ -310,6 +331,87 @@ function normalizeTags(value, label) {
     return tags;
 }
 
+function searchTermKey(value) {
+    return value.normalize('NFC').toLocaleLowerCase('en-US');
+}
+
+function normalizeSearchTerms(value, label) {
+    if (!Array.isArray(value) || value.length > MAXIMUM_SEARCH_TERMS) {
+        fail(`${label} must contain at most ${MAXIMUM_SEARCH_TERMS} search terms.`);
+    }
+
+    const terms = [];
+    const seen = new Set();
+
+    for (let index = 0; index < value.length; index += 1) {
+        const term = boundedText(
+            value[index],
+            `${label}[${index}]`,
+            MAXIMUM_SEARCH_TERM_LENGTH
+        );
+        const key = searchTermKey(term);
+
+        if (seen.has(key)) {
+            fail(`${label} contains a duplicate search term: ${term}`);
+        }
+
+        seen.add(key);
+        terms.push(term);
+    }
+
+    return terms;
+}
+
+function identifierParts(value) {
+    return String(value)
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/[_$]+/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean);
+}
+
+function extractSearchTerms(text) {
+    const terms = [];
+    const seen = new Set();
+    const identifiers = String(text).match(/[\p{L}_$][\p{L}\p{N}_$]*/gu) || [];
+
+    function include(value) {
+        const term = String(value).normalize('NFC');
+
+        if (
+            term.length < 2
+            || term.length > MAXIMUM_SEARCH_TERM_LENGTH
+            || !/[\p{L}\p{N}]/u.test(term)
+            || CONTROL_CHARACTERS.test(term)
+        ) {
+            return;
+        }
+
+        const key = searchTermKey(term);
+
+        if (seen.has(key) || terms.length >= MAXIMUM_SEARCH_TERMS) {
+            return;
+        }
+
+        seen.add(key);
+        terms.push(term);
+    }
+
+    for (const identifier of identifiers) {
+        include(identifier);
+
+        for (const part of identifierParts(identifier)) {
+            include(part);
+        }
+
+        if (terms.length >= MAXIMUM_SEARCH_TERMS) {
+            break;
+        }
+    }
+
+    return terms;
+}
+
 function categoryKind(value, label) {
     const category = boundedText(value, label, 64);
     const kind = category
@@ -367,6 +469,54 @@ function normalizeDocumentPolicy(value, index) {
     };
 }
 
+function sourceLanguage(source, label) {
+    const extension = path.posix.extname(source).toLowerCase();
+    const language = SOURCE_LANGUAGES.get(extension);
+
+    if (!language) {
+        fail(
+            `${label} must select a supported UTF-8 source file: ${[
+                ...SOURCE_LANGUAGES.keys()
+            ].join(', ')}`
+        );
+    }
+
+    return language;
+}
+
+function normalizeSourcePolicy(value, index) {
+    const label = `sources[${index}]`;
+
+    assertOnlyKeys(
+        value,
+        new Set([
+            'id',
+            'source',
+            'summary',
+            'tags',
+            'title'
+        ]),
+        label
+    );
+
+    const id = boundedText(value.id, `${label}.id`, 80);
+
+    if (!DOCUMENT_ID.test(id)) {
+        fail(`${label}.id must be a lowercase, filesystem-safe identifier.`);
+    }
+
+    const source = safeSourcePath(value.source, `${label}.source`);
+
+    return {
+        id,
+        language: sourceLanguage(source, `${label}.source`),
+        source,
+        summary: boundedText(value.summary, `${label}.summary`, 2048),
+        tags: normalizeTags(value.tags, `${label}.tags`),
+        title: boundedText(value.title, `${label}.title`, 256)
+    };
+}
+
 function normalizeScreenshotPolicy(value, index) {
     const label = `screenshots[${index}]`;
 
@@ -410,21 +560,36 @@ function assertUnique(values, field, label) {
 }
 
 function normalizePolicy(value) {
+    if (!isPlainObject(value)) {
+        fail('Public content policy must be a JSON object.');
+    }
+
+    if (
+        value.schemaVersion !== LEGACY_POLICY_SCHEMA_VERSION
+        && value.schemaVersion !== POLICY_SCHEMA_VERSION
+    ) {
+        fail(
+            `Public content policy schemaVersion must be ${LEGACY_POLICY_SCHEMA_VERSION} or ${POLICY_SCHEMA_VERSION}.`
+        );
+    }
+
+    const policyKeys = [
+        'audience',
+        'documents',
+        'schemaVersion',
+        'screenshots',
+        'siteId'
+    ];
+
+    if (value.schemaVersion === POLICY_SCHEMA_VERSION) {
+        policyKeys.push('sources');
+    }
+
     assertOnlyKeys(
         value,
-        new Set([
-            'audience',
-            'documents',
-            'schemaVersion',
-            'screenshots',
-            'siteId'
-        ]),
+        new Set(policyKeys),
         'Public content policy'
     );
-
-    if (value.schemaVersion !== POLICY_SCHEMA_VERSION) {
-        fail(`Public content policy schemaVersion must be ${POLICY_SCHEMA_VERSION}.`);
-    }
 
     if (value.audience !== 'public') {
         fail('Public content policy audience must be "public".');
@@ -451,8 +616,26 @@ function normalizePolicy(value) {
         fail(`Public content policy screenshots must contain at most ${MAXIMUM_SCREENSHOTS} entries.`);
     }
 
+    const declaredSources = value.schemaVersion === POLICY_SCHEMA_VERSION
+        ? value.sources
+        : undefined;
+
+    if (
+        declaredSources !== undefined
+        && (
+            !Array.isArray(declaredSources)
+            || !declaredSources.length
+            || declaredSources.length > MAXIMUM_SOURCES
+        )
+    ) {
+        fail(
+            `Public content policy sources must be omitted or contain 1 through ${MAXIMUM_SOURCES} entries.`
+        );
+    }
+
     const documents = [];
     const screenshots = [];
+    const sources = [];
 
     for (let index = 0; index < value.documents.length; index += 1) {
         documents.push(normalizeDocumentPolicy(value.documents[index], index));
@@ -462,18 +645,25 @@ function normalizePolicy(value) {
         screenshots.push(normalizeScreenshotPolicy(value.screenshots[index], index));
     }
 
-    assertUnique(documents, 'id', 'Public content policy documents');
+    for (let index = 0; index < (declaredSources?.length || 0); index += 1) {
+        sources.push(normalizeSourcePolicy(declaredSources[index], index));
+    }
+
+    assertUnique([...documents, ...sources], 'id', 'Public content policy records');
     assertUnique(documents, 'source', 'Public content policy documents');
     assertUnique(screenshots, 'source', 'Public content policy screenshots');
     assertUnique(screenshots, 'output', 'Public content policy screenshots');
+    assertUnique(sources, 'source', 'Public content policy sources');
     documents.sort(compareDocuments);
     screenshots.sort(compareScreenshots);
+    sources.sort(compareSources);
 
     return {
         audience: 'public',
         documents,
-        schemaVersion: POLICY_SCHEMA_VERSION,
+        schemaVersion: value.schemaVersion,
         screenshots,
+        sources,
         siteId
     };
 }
@@ -645,7 +835,7 @@ function extractHeadings(markdown) {
     return headings;
 }
 
-async function inspectDocument(sourceRoot, policy) {
+async function inspectDocument(sourceRoot, policy, schemaVersion) {
     const source = await assertRealSourceFile(
         sourceRoot,
         policy.source,
@@ -674,7 +864,72 @@ async function inspectDocument(sourceRoot, policy) {
         title: policy.title
     };
 
+    if (schemaVersion === POLICY_SCHEMA_VERSION) {
+        Object.assign(
+            record,
+            {
+                language: 'markdown',
+                mediaType: 'text/markdown',
+                searchTerms: extractSearchTerms(text),
+                sourcePath: policy.source
+            }
+        );
+    }
+
     return {bytes, policy, record};
+}
+
+async function inspectSource(sourceRoot, policy) {
+    const source = await assertRealSourceFile(
+        sourceRoot,
+        policy.source,
+        `Source-code input for ${policy.id}`
+    );
+    const sourceBytes = await readFile(source);
+
+    if (sourceBytes.byteLength > MAXIMUM_SOURCE_BYTES) {
+        fail(`Source ${policy.id} exceeds ${MAXIMUM_SOURCE_BYTES} bytes.`);
+    }
+
+    const sourceText = decodeUtf8(sourceBytes, `Source ${policy.id}`);
+
+    if (BINARY_CONTROL_CHARACTERS.test(sourceText)) {
+        fail(`Source ${policy.id} contains binary control characters.`);
+    }
+
+    const text = sourceText.replace(/\r\n?|\n/g, '\n');
+    const bytes = Buffer.from(text, 'utf8');
+    const lineCount = text.length ? text.split('\n').length : 0;
+
+    if (bytes.byteLength > MAXIMUM_SOURCE_BYTES) {
+        fail(`Source ${policy.id} exceeds ${MAXIMUM_SOURCE_BYTES} normalized bytes.`);
+    }
+
+    if (lineCount > MAXIMUM_SOURCE_LINES) {
+        fail(`Source ${policy.id} exceeds ${MAXIMUM_SOURCE_LINES} lines.`);
+    }
+
+    return {
+        bytes,
+        policy,
+        record: {
+            byteSize: bytes.byteLength,
+            examples: [],
+            headings: [],
+            id: policy.id,
+            kind: 'source-code',
+            language: policy.language,
+            mediaType: 'text/plain',
+            path: `${SOURCE_DIRECTORY}/${policy.source}.txt`,
+            screenshots: [],
+            searchTerms: extractSearchTerms(text),
+            sha256: sha256(bytes),
+            sourcePath: policy.source,
+            summary: policy.summary,
+            tags: policy.tags,
+            title: policy.title
+        }
+    };
 }
 
 async function inspectScreenshot(sourceRoot, policy) {
@@ -698,17 +953,187 @@ async function inspectScreenshot(sourceRoot, policy) {
     };
 }
 
+function projectBaseCatalogRecord(record) {
+    return {
+        byteSize: record.byteSize,
+        examples: record.examples,
+        headings: record.headings,
+        id: record.id,
+        kind: record.kind,
+        path: record.path,
+        screenshots: record.screenshots,
+        sha256: record.sha256,
+        summary: record.summary,
+        tags: record.tags,
+        title: record.title
+    };
+}
+
+function validateCatalogMetadata(record, index) {
+    assertOnlyKeys(
+        record,
+        new Set([
+            'byteSize',
+            'examples',
+            'headings',
+            'id',
+            'kind',
+            'language',
+            'mediaType',
+            'path',
+            'screenshots',
+            'searchTerms',
+            'sha256',
+            'sourcePath',
+            'summary',
+            'tags',
+            'title'
+        ]),
+        `Catalog record ${index + 1}`
+    );
+
+    const sourcePath = safeSourcePath(
+        record.sourcePath,
+        `Catalog record ${index + 1} sourcePath`
+    );
+    const language = boundedText(
+        record.language,
+        `Catalog record ${index + 1} language`,
+        32
+    );
+    const mediaType = boundedText(
+        record.mediaType,
+        `Catalog record ${index + 1} mediaType`,
+        64
+    );
+
+    normalizeSearchTerms(
+        record.searchTerms,
+        `Catalog record ${index + 1} searchTerms`
+    );
+
+    if (mediaType === 'text/markdown') {
+        if (
+            language !== 'markdown'
+            || record.path !== `${DOCUMENT_DIRECTORY}/${sourcePath}`
+        ) {
+            fail(`Catalog record ${index + 1} has inconsistent Markdown metadata.`);
+        }
+    } else if (mediaType === 'text/plain') {
+        if (
+            record.kind !== 'source-code'
+            || !new Set(SOURCE_LANGUAGES.values()).has(language)
+            || !record.path.startsWith(`${SOURCE_DIRECTORY}/`)
+            || record.path !== `${SOURCE_DIRECTORY}/${sourcePath}.txt`
+        ) {
+            fail(`Catalog record ${index + 1} has inconsistent source-code metadata.`);
+        }
+    } else {
+        fail(`Catalog record ${index + 1} has an unsupported mediaType.`);
+    }
+}
+
+function createCatalogManifest(records, version, schemaVersion) {
+    const normalizedBase = normalizeStaticDocumentCatalog(
+        {
+            documents: records.map(projectBaseCatalogRecord),
+            version
+        }
+    );
+    const base = Object.freeze({
+        documents: Object.freeze(
+            normalizedBase.documents.map(projectBaseCatalogRecord)
+        ),
+        version: normalizedBase.version
+    });
+
+    if (schemaVersion === LEGACY_POLICY_SCHEMA_VERSION) {
+        return base;
+    }
+
+    const metadataById = new Map(
+        records.map(
+            record=>[
+                record.id,
+                {
+                    language: record.language,
+                    mediaType: record.mediaType,
+                    searchTerms: record.searchTerms,
+                    sourcePath: record.sourcePath
+                }
+            ]
+        )
+    );
+    const documents = base.documents.map(
+        function attachCatalogMetadata(record, index) {
+            const combined = Object.freeze({
+                ...record,
+                ...metadataById.get(record.id)
+            });
+
+            validateCatalogMetadata(combined, index);
+            return combined;
+        }
+    );
+
+    return Object.freeze({
+        documents: Object.freeze(documents),
+        version: base.version
+    });
+}
+
+function validateCatalogManifest(manifest, schemaVersion) {
+    if (schemaVersion === LEGACY_POLICY_SCHEMA_VERSION) {
+        return normalizeStaticDocumentCatalog(manifest);
+    }
+
+    if (!isPlainObject(manifest)) {
+        fail('Catalog manifest must be a JSON object.');
+    }
+
+    assertOnlyKeys(manifest, new Set(['documents', 'version']), 'Catalog manifest');
+
+    if (!Array.isArray(manifest.documents)) {
+        fail('Catalog manifest documents must be an array.');
+    }
+
+    manifest.documents.forEach(validateCatalogMetadata);
+    return normalizeStaticDocumentCatalog(
+        {
+            documents: manifest.documents.map(projectBaseCatalogRecord),
+            version: manifest.version
+        }
+    );
+}
+
 async function inspectPublicationInputs(sourceRoot, policyFile) {
     const policy = await loadPolicy(sourceRoot, policyFile);
     const documents = [];
     const screenshots = [];
+    const sources = [];
+    let totalSourceBytes = 0;
 
     for (const documentPolicy of policy.documents) {
-        documents.push(await inspectDocument(sourceRoot, documentPolicy));
+        documents.push(
+            await inspectDocument(sourceRoot, documentPolicy, policy.schemaVersion)
+        );
     }
 
     for (const screenshotPolicy of policy.screenshots) {
         screenshots.push(await inspectScreenshot(sourceRoot, screenshotPolicy));
+    }
+
+    for (const sourcePolicy of policy.sources) {
+        const inspected = await inspectSource(sourceRoot, sourcePolicy);
+        totalSourceBytes += inspected.bytes.byteLength;
+
+        if (totalSourceBytes > MAXIMUM_TOTAL_SOURCE_BYTES) {
+            fail(
+                `Published sources exceed the ${MAXIMUM_TOTAL_SOURCE_BYTES}-byte total limit.`
+            );
+        }
+
+        sources.push(inspected);
     }
 
     const records = [];
@@ -717,10 +1142,14 @@ async function inspectPublicationInputs(sourceRoot, policyFile) {
         records.push(document.record);
     }
 
+    for (const source of sources) {
+        records.push(source.record);
+    }
+
     const versionSource = {
         audience: policy.audience,
         documents: records,
-        schemaVersion: POLICY_SCHEMA_VERSION,
+        schemaVersion: policy.schemaVersion,
         screenshots: screenshots.map(
             function projectScreenshot(screenshot) {
                 return {
@@ -733,14 +1162,9 @@ async function inspectPublicationInputs(sourceRoot, policyFile) {
         siteId: policy.siteId
     };
     const version = `catalog-${sha256(Buffer.from(JSON.stringify(versionSource), 'utf8'))}`;
-    const manifest = normalizeStaticDocumentCatalog(
-        {
-            documents: records,
-            version
-        }
-    );
+    const manifest = createCatalogManifest(records, version, policy.schemaVersion);
 
-    return {documents, manifest, policy, screenshots};
+    return {documents, manifest, policy, screenshots, sources};
 }
 
 function renderedManifest(manifest) {
@@ -796,6 +1220,11 @@ function normalizePublicationOptions(options) {
         packageRoot,
         policyFile: path.resolve(options.policyFile),
         publicRoot,
+        publishedSourceRoot: resolveInside(
+            publicRoot,
+            `catalog/${SOURCE_DIRECTORY}`,
+            'source-code output'
+        ),
         screenshotRoot: resolveInside(
             publicRoot,
             SCREENSHOT_DIRECTORY,
@@ -883,6 +1312,14 @@ async function buildDocumentCatalogPublication(options) {
 
     await assertFreshDirectory(normalized.catalogRoot, 'Catalog output');
     await mkdir(normalized.documentRoot);
+
+    if (inspected.sources.length) {
+        await assertFreshDirectory(
+            normalized.publishedSourceRoot,
+            'Source-code output'
+        );
+    }
+
     await assertFreshDirectory(normalized.screenshotRoot, 'Screenshot output');
 
     for (const document of inspected.documents) {
@@ -894,6 +1331,18 @@ async function buildDocumentCatalogPublication(options) {
 
         await mkdir(path.dirname(destination), {recursive: true});
         await writeFile(destination, document.bytes, {flag: 'wx'});
+    }
+
+    for (const source of inspected.sources) {
+        const output = `${source.policy.source}.txt`;
+        const destination = resolveInside(
+            normalized.publishedSourceRoot,
+            output,
+            `Source-code output for ${source.policy.id}`
+        );
+
+        await mkdir(path.dirname(destination), {recursive: true});
+        await writeFile(destination, source.bytes, {flag: 'wx'});
     }
 
     for (const screenshot of inspected.screenshots) {
@@ -919,6 +1368,7 @@ async function buildDocumentCatalogPublication(options) {
     return {
         documentCount: inspected.documents.length,
         screenshotCount: inspected.screenshots.length,
+        sourceCount: inspected.sources.length,
         version: inspected.manifest.version
     };
 }
@@ -953,6 +1403,15 @@ async function verifyDocumentCatalogPublication(options) {
         normalized.sourceRoot,
         normalized.policyFile
     );
+
+    if (inspected.sources.length) {
+        await assertRealDirectoryWithin(
+            normalized.catalogRoot,
+            normalized.publishedSourceRoot,
+            'Source-code output'
+        );
+    }
+
     const manifestPath = resolveInside(
         normalized.catalogRoot,
         CATALOG_FILE_NAME,
@@ -976,13 +1435,17 @@ async function verifyDocumentCatalogPublication(options) {
         fail(`Catalog manifest is not valid JSON: ${error.message}`);
     }
 
-    normalizeStaticDocumentCatalog(actualManifest);
+    validateCatalogManifest(actualManifest, inspected.policy.schemaVersion);
 
     const catalogFiles = await collectFiles(normalized.catalogRoot);
     const expectedCatalogFiles = [CATALOG_FILE_NAME];
 
     for (const document of inspected.documents) {
         expectedCatalogFiles.push(`${DOCUMENT_DIRECTORY}/${document.policy.source}`);
+    }
+
+    for (const source of inspected.sources) {
+        expectedCatalogFiles.push(`${SOURCE_DIRECTORY}/${source.policy.source}.txt`);
     }
 
     assertExactInventory(catalogFiles, expectedCatalogFiles, 'Catalog output');
@@ -998,6 +1461,20 @@ async function verifyDocumentCatalogPublication(options) {
 
         if (!buffersEqual(published, document.bytes)) {
             fail(`Published document bytes changed: ${document.policy.id}`);
+        }
+    }
+
+    for (const source of inspected.sources) {
+        const published = await readFile(
+            resolveInside(
+                normalized.publishedSourceRoot,
+                `${source.policy.source}.txt`,
+                `Published source ${source.policy.id}`
+            )
+        );
+
+        if (!buffersEqual(published, source.bytes)) {
+            fail(`Published source bytes changed: ${source.policy.id}`);
         }
     }
 
@@ -1031,6 +1508,7 @@ async function verifyDocumentCatalogPublication(options) {
     return {
         documentCount: inspected.documents.length,
         screenshotCount: inspected.screenshots.length,
+        sourceCount: inspected.sources.length,
         verified: true,
         version: inspected.manifest.version
     };
@@ -1039,9 +1517,17 @@ async function verifyDocumentCatalogPublication(options) {
 export {
     CATALOG_FILE_NAME,
     DOCUMENT_DIRECTORY,
+    LEGACY_POLICY_SCHEMA_VERSION,
+    MAXIMUM_SEARCH_TERMS,
+    MAXIMUM_SOURCE_BYTES,
+    MAXIMUM_SOURCE_LINES,
+    MAXIMUM_SOURCES,
+    MAXIMUM_TOTAL_SOURCE_BYTES,
     POLICY_SCHEMA_VERSION,
     SCREENSHOT_DIRECTORY,
+    SOURCE_DIRECTORY,
     buildDocumentCatalogPublication,
     extractHeadings,
+    extractSearchTerms,
     verifyDocumentCatalogPublication
 };

@@ -9,16 +9,18 @@ const CATALOG_URL='./apps/docs/catalog/document-catalog.json';
 const CATALOG_BASE_URL='./apps/docs/catalog/';
 const APP_ENTRY_URL='./apps/docs/index.html';
 const REPOSITORY_FILE_URL='https://github.com/TheWizardNexus/ARCANE-OS/blob/main/';
-const CACHE_NAMESPACE='arcane-docs-public-catalog-v1';
+const CACHE_NAMESPACE='arcane-docs-public-corpus-v2';
 const CATALOG_FETCH_TIMEOUT_MS=10000;
 const COMPONENT_READY_TIMEOUT_MS=5000;
 const DOCUMENT_ID_PATTERN=/^[a-z0-9][a-z0-9-]*$/;
 const AI_PROFILE_TIMEOUT_MS=3000;
 const SYSTEM_PROMPT_TIMEOUT_MS=5000;
 const MAX_SEARCH_RESULTS=48;
+const SOURCE_KIND='source-code';
 const NAVIGATION=Object.freeze([
     Object.freeze({label:'Home',href:`${APP_ENTRY_URL}#/home`,route:'home'}),
     Object.freeze({label:'Docs',href:`${APP_ENTRY_URL}#/docs`,route:'docs'}),
+    Object.freeze({label:'Source',href:`${APP_ENTRY_URL}#/sources`,route:'sources'}),
     Object.freeze({label:'Components',href:`${APP_ENTRY_URL}#/components`,route:'components'}),
     Object.freeze({label:'Tests',href:`${APP_ENTRY_URL}#/tests`,route:'tests'}),
     Object.freeze({label:'Ask',href:`${APP_ENTRY_URL}#/assistant`,route:'assistant'})
@@ -55,6 +57,13 @@ const elements={
     resultCount:document.querySelector('#resultCount'),
     runTests:document.querySelector('#runTests'),
     screenshotGallery:document.querySelector('#screenshotGallery'),
+    sourceCatalogStatus:document.querySelector('#sourceCatalogStatus'),
+    sourceResults:document.querySelector('#sourceResults'),
+    sourceResultCount:document.querySelector('#sourceResultCount'),
+    sourceSearchForm:document.querySelector('#sourceSearchForm'),
+    sourceSearchInput:document.querySelector('#sourceSearchInput'),
+    sourceSpecimen:document.querySelector('#sourceSpecimen'),
+    sourceViewer:document.querySelector('#sourceViewer'),
     summarySpecimen:document.querySelector('#summarySpecimen'),
     testResults:document.querySelector('#testResults'),
     testRunStatus:document.querySelector('#testRunStatus'),
@@ -69,6 +78,7 @@ let cacheState='unavailable';
 let catalog=null;
 let chatSession=null;
 let selectedDocumentId='';
+let selectedSourceId='';
 let systemPrompt='';
 let routeSequence=0;
 
@@ -91,8 +101,9 @@ async function initialize(){
     if(catalogResult.status==='fulfilled'){
         catalog=catalogResult.value;
         renderCatalog('');
+        renderSourceCatalog('');
         renderCatalogSummary();
-        elements.appBar.setStatus?.(`${catalog.size} verified public documents`,'success');
+        elements.appBar.setStatus?.(`${documentRecords().length} docs · ${sourceRecords().length} source files`,'success');
         browserTests=createBrowserTests();
         configureAssistant();
         route();
@@ -100,7 +111,9 @@ async function initialize(){
     }else{
         const message=errorMessage(catalogResult.reason,'The public document catalog could not be loaded.');
         elements.catalogStatus.textContent=message;
+        elements.sourceCatalogStatus.textContent=message;
         elements.documentViewer.fail?.(catalogResult.reason);
+        elements.sourceViewer.fail?.(catalogResult.reason);
         elements.appBar.setStatus?.('Catalog unavailable','error');
         configureAssistant();
         renderCatalogSummary();
@@ -112,6 +125,8 @@ function bindEvents(){
     window.addEventListener('hashchange',route);
     elements.documentSearchForm.addEventListener('submit',event=>event.preventDefault());
     elements.documentSearchInput.addEventListener('input',()=>renderCatalog(elements.documentSearchInput.value));
+    elements.sourceSearchForm.addEventListener('submit',event=>event.preventDefault());
+    elements.sourceSearchInput.addEventListener('input',()=>renderSourceCatalog(elements.sourceSearchInput.value));
     elements.homeSearchForm.addEventListener('submit',event=>{
         event.preventDefault();
         const query=elements.homeSearchInput.value.trim();
@@ -136,10 +151,12 @@ async function initializeComponents(){
         {element:elements.appBar,label:'Primary navigation',contract:{methods:['setActiveRoute','setNavigation','setStatus'],property:'ready',event:'app-bar-ready'}},
         {element:elements.catalogSummary,label:'Catalog summary',contract:{methods:['configure','setItems'],event:'summary-strip-ready'}},
         {element:elements.documentViewer,label:'Document viewer',contract:{methods:['configure','load','render','fail','focusFragment'],property:'ready',event:'markdown-document-ready'}},
+        {element:elements.sourceViewer,label:'Source viewer',contract:{methods:['configure','load','render','fail','focusLine'],property:'ready',event:'source-code-viewer-ready'}},
         {element:elements.calculatorSpecimen,label:'Calculator specimen',contract:{methods:['calculate'],property:'ready',event:'calculator-ready'}},
         {element:elements.summarySpecimen,label:'Summary specimen',contract:{methods:['configure','setItems'],event:'summary-strip-ready'}},
         {element:elements.progressSpecimen,label:'Progress specimen',contract:{methods:['configure','setTasks'],event:'task-progress-ready'}},
         {element:elements.markdownSpecimen,label:'Markdown specimen',contract:{methods:['configure','render'],property:'ready',event:'markdown-document-ready'}},
+        {element:elements.sourceSpecimen,label:'Source viewer specimen',contract:{methods:['configure','render','focusLine'],property:'ready',event:'source-code-viewer-ready'}},
         {element:elements.testSummary,label:'Test summary',contract:{methods:['configure','setItems'],event:'summary-strip-ready'}},
         {element:elements.assistant,label:'Assistant',contract:{methods:['open','setState','scrollToEnd'],property:'ready',event:'assistant-ready'}}
     ];
@@ -159,6 +176,15 @@ async function initializeComponents(){
             error:'This document could not be displayed.'
         },
         showTableOfContents:true
+    });
+    elements.sourceViewer.configure?.({
+        labels:{
+            content:'Verified source code',
+            empty:'Choose a reviewed source file from the catalog.',
+            error:'This source file could not be verified or displayed.',
+            loading:'Loading and verifying source code…',
+            repository:'View this file on GitHub'
+        }
     });
     elements.summarySpecimen.configure?.({ariaLabel:'Example build summary'});
     elements.summarySpecimen.setItems?.([
@@ -189,6 +215,21 @@ async function initializeComponents(){
         'viewer.render(markdown, {sourceURL});',
         '```'
     ].join('\n'));
+    elements.sourceSpecimen.configure?.({
+        labels:{content:'Synthetic source specimen'}
+    });
+    elements.sourceSpecimen.render?.([
+        'export function verifiedGreeting(name) {',
+        '    const label = String(name || "traveler");',
+        '    // Markup-looking text remains inert source.',
+        '    return `<strong>Hello ${label}</strong>`;',
+        '}'
+    ].join('\n'),{
+        language:'javascript',
+        repositoryURL:'https://github.com/TheWizardNexus/ARCANE-OS/blob/main/arcane/components/source-code-viewer.html',
+        sourcePath:'example/synthetic/verified-greeting.js',
+        title:'Synthetic source specimen'
+    });
     elements.testSummary.configure?.({ariaLabel:'Browser test summary'});
     elements.testSummary.setItems?.([]);
     renderAssistantHistory();
@@ -235,9 +276,9 @@ async function initializeCatalog(){
         baseURL:new URL(CATALOG_BASE_URL,document.baseURI).href,
         cache,
         maxResults:MAX_SEARCH_RESULTS,
-        maxContextDocuments:6,
-        maxContextCharacters:24000,
-        maxDocumentContextCharacters:6000,
+        maxContextDocuments:7,
+        maxContextCharacters:28000,
+        maxDocumentContextCharacters:5000,
         onCacheError:()=>{
             cacheState='degraded';
             renderCatalogSummary();
@@ -248,31 +289,17 @@ async function initializeCatalog(){
 function renderCatalog(query=''){
     if(!catalog)return;
     const normalized=String(query||'').trim();
-    const records=catalog.search(normalized,{limit:MAX_SEARCH_RESULTS});
+    const records=catalog.search(normalized,{
+        kinds:documentKinds(),
+        limit:MAX_SEARCH_RESULTS
+    });
     const fragment=document.createDocumentFragment();
 
     for(const record of records){
-        const link=document.createElement('a');
-        const title=document.createElement('span');
-        const summary=document.createElement('span');
-        const metadata=document.createElement('span');
-        const kind=document.createElement('span');
-        const tags=document.createElement('span');
-        link.className='document-result';
-        link.href=`${APP_ENTRY_URL}#/docs/${encodeURIComponent(record.id)}`;
-        link.dataset.documentId=record.id;
-        if(record.id===selectedDocumentId)link.setAttribute('aria-current','page');
-        title.className='document-result__title';
-        title.textContent=record.title;
-        summary.className='document-result__summary';
-        summary.textContent=record.summary||'Public Arcane documentation.';
-        metadata.className='document-result__meta';
-        kind.textContent=record.kind;
-        tags.textContent=record.tags.slice(0,3).join(' · ');
-        metadata.append(kind);
-        if(tags.textContent)metadata.append(tags);
-        link.append(title,summary,metadata);
-        fragment.append(link);
+        fragment.append(recordLink(record,{
+            route:'docs',
+            selected:record.id===selectedDocumentId
+        }));
     }
 
     if(!records.length){
@@ -289,21 +316,91 @@ function renderCatalog(query=''){
         :`${records.length} public documents. Select one to verify and render it.`;
 }
 
+function renderSourceCatalog(query=''){
+    if(!catalog)return;
+    const normalized=String(query||'').trim();
+    const records=catalog.search(normalized,{
+        kinds:[SOURCE_KIND],
+        limit:MAX_SEARCH_RESULTS
+    });
+    const fragment=document.createDocumentFragment();
+
+    for(const record of records){
+        fragment.append(recordLink(record,{
+            route:'sources',
+            selected:record.id===selectedSourceId,
+            source:true
+        }));
+    }
+
+    if(!records.length){
+        const empty=document.createElement('p');
+        empty.className='arcane-state arcane-state--empty';
+        empty.textContent='No reviewed source files match this search.';
+        fragment.append(empty);
+    }
+
+    elements.sourceResults.replaceChildren(fragment);
+    elements.sourceResultCount.textContent=String(records.length);
+    elements.sourceResultCount.setAttribute('aria-label',`${records.length} source file${records.length===1?'':'s'}`);
+    elements.sourceCatalogStatus.textContent=normalized
+        ?`${records.length} result${records.length===1?'':'s'} for “${normalized}”. Search stays in this browser.`
+        :`${records.length} reviewed source files. Select one to verify and render as inert text.`;
+}
+
+function recordLink(record,{route,selected=false,source=false}={}){
+    const link=document.createElement('a');
+    const title=document.createElement('span');
+    const summary=document.createElement('span');
+    const metadata=document.createElement('span');
+    const kind=document.createElement('span');
+    const tags=document.createElement('span');
+    link.className='document-result';
+    link.href=`${APP_ENTRY_URL}#/${route}/${encodeURIComponent(record.id)}`;
+    if(source)link.dataset.sourceId=record.id;
+    else link.dataset.documentId=record.id;
+    if(selected)link.setAttribute('aria-current','page');
+    title.className='document-result__title';
+    title.textContent=record.title;
+    summary.className='document-result__summary';
+    summary.textContent=record.summary||(source?'Reviewed Arcane source code.':'Public Arcane documentation.');
+    metadata.className='document-result__meta';
+    kind.textContent=source?(record.language||'source code'):record.kind;
+    tags.textContent=record.tags.slice(0,3).join(' · ');
+    metadata.append(kind);
+    if(tags.textContent)metadata.append(tags);
+    link.append(title,summary,metadata);
+    return link;
+}
+
+function sourceRecords(){
+    return catalog?.list().filter(record=>record.kind===SOURCE_KIND)||[];
+}
+
+function documentRecords(){
+    return catalog?.list().filter(record=>record.kind!==SOURCE_KIND)||[];
+}
+
+function documentKinds(){
+    return [...new Set(documentRecords().map(record=>record.kind))];
+}
+
 function renderCatalogSummary(){
     if(typeof elements.catalogSummary?.setItems!=='function')return;
     const storage={
-        ready:{value:'Scoped OPFS',detail:'Verified public documents are cached in an Arcane Docs-only directory.',status:'success'},
-        caching:{value:'Caching',detail:'The reviewed public corpus is being stored for faster local retrieval.',status:'warning'},
-        complete:{value:'Cached',detail:'The reviewed public corpus is available to local retrieval.',status:'success'},
+        ready:{value:'Scoped OPFS',detail:'Verified documentation and source use an Arcane Docs-only cache.',status:'success'},
+        caching:{value:'Caching',detail:'The reviewed public corpus is being loaded automatically for local retrieval.',status:'warning'},
+        complete:{value:'Cached',detail:'The reviewed documentation and source corpus is available to local retrieval.',status:'success'},
         degraded:{value:'Network fallback',detail:'A cache operation failed; verified network hydration remains available.',status:'warning'},
         unavailable:{value:'Memory only',detail:'OPFS is unavailable; search still works from the published manifest.',status:'warning'}
     }[cacheState]||{value:'Memory only',detail:'No persistent cache is active.',status:'warning'};
     const aiReady=assistantReady();
     elements.catalogSummary.setItems([
-        {id:'documents',value:String(catalog?.size||0),label:'Public documents',detail:'Positive allowlist; exact byte size and SHA-256 verified.',status:catalog?'success':'warning'},
-        {id:'components',value:'4',label:'Live specimens',detail:'Loaded from the shared Arcane runtime.',status:'success'},
+        {id:'documents',value:String(documentRecords().length),label:'Public documents',detail:'Positive allowlist; exact byte size and SHA-256 verified.',status:catalog?'success':'warning'},
+        {id:'sources',value:String(sourceRecords().length),label:'Reviewed source',detail:'Copied to inert text paths and integrity verified before use.',status:catalog?'success':'warning'},
+        {id:'components',value:'5',label:'Live specimens',detail:'Loaded from the shared Arcane runtime.',status:'success'},
         {id:'storage',value:storage.value,label:'Catalog cache',detail:storage.detail,status:storage.status},
-        {id:'assistant',value:aiReady?'Available':'Local search',label:'Assistant mode',detail:aiReady?'Uses the current Arcane AI profile with bounded public excerpts.':'No complete Arcane AI bridge is exposed to this page.',status:aiReady?'success':'review'}
+        {id:'assistant',value:aiReady?'Available':'Local search',label:'Assistant mode',detail:aiReady?'Uses the current Arcane AI profile with bounded reviewed excerpts.':'No complete Arcane AI bridge is exposed to this page.',status:aiReady?'success':'review'}
     ]);
 }
 
@@ -319,7 +416,7 @@ async function route(){
     document.title=`${viewTitle(parsed.view)} · Arcane OS Docs`;
     if(parsed.view==='docs'){
         const id=parsed.documentId||selectedDocumentId||'provision-user';
-        if(catalogRecord(id)){
+        if(documentRecord(id)){
             await openDocument(id);
             if(sequence!==routeSequence)return;
             if(parsed.fragment&&elements.documentViewer.focusFragment?.(parsed.fragment))return;
@@ -330,6 +427,19 @@ async function route(){
             elements.catalogStatus.textContent='No public document matches this address. Choose a document from the catalog.';
         }
     }
+    if(parsed.view==='sources'){
+        const id=parsed.sourceId||selectedSourceId||sourceRecords()[0]?.id||'';
+        if(sourceRecord(id)){
+            await openSource(id);
+            if(sequence!==routeSequence)return;
+            if(parsed.line&&elements.sourceViewer.focusLine?.(parsed.line))return;
+        }else if(catalog&&(parsed.invalidSource||parsed.sourceId)){
+            selectedSourceId='';
+            elements.sourceViewer.clear?.();
+            renderSourceCatalog(elements.sourceSearchInput.value);
+            elements.sourceCatalogStatus.textContent='No reviewed source file matches this address. Choose one from the catalog.';
+        }
+    }
     if(parsed.view==='assistant')elements.assistant.open?.({focus:false});
     document.querySelector(`[data-view="${parsed.view}"] h1`)?.setAttribute('tabindex','-1');
     requestAnimationFrame(()=>document.querySelector(`[data-view="${parsed.view}"] h1`)?.focus({preventScroll:true}));
@@ -338,10 +448,13 @@ async function route(){
 function parseRoute(hash=''){
     const source=String(hash||'').replace(/^#\/?/,'');
     const [viewPart='',...rest]=source.split('/');
-    const view=['home','docs','components','tests','assistant'].includes(viewPart)?viewPart:'home';
+    const view=['home','docs','sources','components','tests','assistant'].includes(viewPart)?viewPart:'home';
     let documentId='';
     let fragment='';
     let invalidDocument=false;
+    let sourceId='';
+    let line=0;
+    let invalidSource=false;
     if(view==='docs'&&rest[0]){
         try{
             documentId=decodeURIComponent(rest[0]);
@@ -356,15 +469,33 @@ function parseRoute(hash=''){
             try{fragment=decodeURIComponent(rest[1])}catch{fragment=''}
         }
     }
-    return {view,documentId,fragment,invalidDocument};
+    if(view==='sources'&&rest[0]){
+        try{
+            sourceId=decodeURIComponent(rest[0]);
+            if(!DOCUMENT_ID_PATTERN.test(sourceId)){
+                sourceId='';
+                invalidSource=true;
+            }
+        }catch{
+            invalidSource=true;
+        }
+        if(rest[1]){
+            let lineText='';
+            try{lineText=decodeURIComponent(rest[1])}catch{lineText=''}
+            const match=/^L?([1-9][0-9]{0,5})$/i.exec(lineText);
+            if(match)line=Number.parseInt(match[1],10);
+            else invalidSource=true;
+        }
+    }
+    return {view,documentId,fragment,invalidDocument,sourceId,line,invalidSource};
 }
 
 function viewTitle(view){
-    return {home:'Home',docs:'Documentation',components:'Components',tests:'Browser tests',assistant:'Assistant'}[view]||'Home';
+    return {home:'Home',docs:'Documentation',sources:'Reviewed source',components:'Components',tests:'Browser tests',assistant:'Assistant'}[view]||'Home';
 }
 
 async function openDocument(id){
-    if(!catalogRecord(id))return;
+    if(!documentRecord(id))return;
     selectedDocumentId=id;
     renderCatalog(elements.documentSearchInput.value);
     elements.documentResults.querySelector(`[data-document-id="${CSS.escape(id)}"]`)?.setAttribute('aria-current','page');
@@ -378,9 +509,48 @@ async function openDocument(id){
     });
 }
 
+async function openSource(id){
+    const record=sourceRecord(id);
+    if(!record)return;
+    selectedSourceId=id;
+    renderSourceCatalog(elements.sourceSearchInput.value);
+    elements.sourceResults.querySelector(`[data-source-id="${CSS.escape(id)}"]`)?.setAttribute('aria-current','page');
+    if(typeof elements.sourceViewer.load!=='function'){
+        elements.sourceCatalogStatus.textContent='The source viewer component is unavailable. The searchable source catalog remains available.';
+        return;
+    }
+    await elements.sourceViewer.load(async()=>{
+        const hydrated=await catalog.hydrate(id);
+        return {
+            language:record.language||'text',
+            repositoryURL:repositoryFileURL(record.sourcePath||record.path),
+            sourcePath:record.sourcePath||record.path,
+            text:hydrated.text,
+            title:record.title
+        };
+    });
+}
+
 function catalogRecord(id){
     if(!catalog||typeof id!=='string'||!DOCUMENT_ID_PATTERN.test(id))return null;
     try{return catalog.get(id)||null}catch{return null}
+}
+
+function documentRecord(id){
+    const record=catalogRecord(id);
+    return record&&record.kind!==SOURCE_KIND?record:null;
+}
+
+function sourceRecord(id){
+    const record=catalogRecord(id);
+    return record?.kind===SOURCE_KIND?record:null;
+}
+
+function repositoryFileURL(sourcePath=''){
+    if(typeof sourcePath!=='string'||!sourcePath||sourcePath.includes('..'))return '';
+    const segments=sourcePath.split('/').filter(Boolean);
+    if(!segments.length||segments.some(segment=>segment.includes('\\')))return '';
+    return new URL(segments.map(encodeURIComponent).join('/'),REPOSITORY_FILE_URL).href;
 }
 
 function navigateFromMarkdown(event){
@@ -472,12 +642,23 @@ function createBrowserTests(){
         tests:[
             {
                 id:'catalog-integrity',
-                name:'Catalog documents verify before rendering',
+                name:'Catalog documentation verifies before rendering',
                 async run({assert}){
-                    assert(catalog.size>=12,'The public catalog should contain the initial documentation set.');
+                    assert(documentRecords().length>=12,'The public catalog should contain the initial documentation set.');
                     const hydrated=await catalog.hydrate('provision-user',{bypassCache:true});
                     assert(hydrated.text.includes('Activate this account'),'The provisioning guide did not contain its separate activation step.');
                     return {status:'pass',message:`Verified ${hydrated.record.title} from ${hydrated.source}.`};
+                }
+            },
+            {
+                id:'source-integrity',
+                name:'Reviewed source verifies before retrieval',
+                async run({assert}){
+                    assert(sourceRecords().length>=12,'The reviewed source catalog should contain the initial implementation set.');
+                    const hydrated=await catalog.hydrate('source-static-document-catalog',{bypassCache:true});
+                    assert(hydrated.text.includes('StaticDocumentCatalog'),'The reviewed source snapshot did not contain the catalog implementation.');
+                    assert(hydrated.record.mediaType==='text/plain','Source was not published with an inert text media type.');
+                    return {status:'pass',message:`Verified ${hydrated.record.sourcePath} as inert text.`};
                 }
             },
             {
@@ -505,10 +686,26 @@ function createBrowserTests(){
                 }
             },
             {
+                id:'source-safety',
+                name:'Source viewer keeps active-looking code inert',
+                run({assert}){
+                    const hostile='<img src=x onerror="globalThis.__arcaneSourceUnsafe=true"><script>globalThis.__arcaneSourceUnsafe=true</script>';
+                    elements.sourceSpecimen.render(hostile,{
+                        language:'html',
+                        sourcePath:'synthetic/hostile.html',
+                        title:'Hostile-looking source'
+                    });
+                    assert(!elements.sourceSpecimen.shadowRoot.querySelector('img,script'),'Source text became executable markup.');
+                    assert(elements.sourceSpecimen.shadowRoot.textContent.includes('<script>'),'The inert source text was not preserved.');
+                    assert(globalThis.__arcaneSourceUnsafe!==true,'Source text executed code.');
+                    return {status:'pass',message:'Active-looking HTML remained literal source text.'};
+                }
+            },
+            {
                 id:'component-readiness',
                 name:'Shared component readiness contracts are complete',
                 run({assert}){
-                    const components=[elements.appBar,elements.documentViewer,elements.calculatorSpecimen,elements.summarySpecimen,elements.progressSpecimen,elements.markdownSpecimen];
+                    const components=[elements.appBar,elements.documentViewer,elements.sourceViewer,elements.calculatorSpecimen,elements.summarySpecimen,elements.progressSpecimen,elements.markdownSpecimen,elements.sourceSpecimen];
                     assert(components.every(component=>component.ready===true),'At least one shared component was not ready.');
                     return {status:'pass',message:`${components.length} shared components reported persistent readiness.`};
                 }
@@ -635,7 +832,7 @@ function configureAssistant(){
     const model=profileModelLabel(aiProfile);
     if(typeof elements.assistant.setState!=='function'){
         chatSession=null;
-        elements.assistantProvider.textContent='The assistant component is unavailable. Documentation search remains local and available.';
+        elements.assistantProvider.textContent='The assistant component is unavailable. Documentation and source search remain local and available.';
         elements.remoteConsentLabel.hidden=true;
         renderCatalogSummary();
         return;
@@ -644,7 +841,7 @@ function configureAssistant(){
         chatSession=null;
         elements.assistantProvider.textContent='No complete host-configured Arcane AI bridge is available. GitHub Pages stays in local-search mode.';
         elements.remoteConsentLabel.hidden=true;
-        elements.assistant.setState('error','AI is unavailable here. Use documentation search, or open this app in a compatible Arcane host with a configured provider.');
+        elements.assistant.setState('error','AI is unavailable here. Use documentation or source search, or open this app in a compatible Arcane host with a configured provider.');
         renderCatalogSummary();
         return;
     }
@@ -658,18 +855,16 @@ function configureAssistant(){
         contextBuilder:async({input})=>{
             const context=await catalog.buildContext(input,{
                 bodySearch:true,
-                limit:6,
-                maxCharacters:24000,
-                maxDocumentCharacters:6000,
+                limit:7,
+                maxCharacters:28000,
+                maxDocumentCharacters:5000,
                 scanLimit:Math.min(catalog.size,100)
             });
-            elements.assistantContext.textContent=context.documents.length
-                ?`Attached ${context.documents.length} verified public excerpt${context.documents.length===1?'':'s'}${context.truncated?' (bounded)':''}.`
-                :'No matching document excerpt was attached.';
+            renderAssistantContext(context);
             return context.text;
         }
     });
-    elements.assistant.setState('empty','Ask about the published Arcane OS documentation.');
+    elements.assistant.setState('empty','Ask about the published Arcane OS documentation or reviewed source.');
     renderCatalogSummary();
 }
 
@@ -684,6 +879,24 @@ function assistantReady(){
     );
 }
 
+function renderAssistantContext(context){
+    if(!context?.documents?.length){
+        elements.assistantContext.textContent='No matching reviewed excerpt was attached.';
+        return;
+    }
+    const citations=context.documents.map(item=>{
+        const path=item.sourcePath||item.path||item.id;
+        const lines=item.lineStart&&item.lineEnd
+            ?` lines ${item.lineStart}–${item.lineEnd}`
+            :'';
+        return `${path}${lines}`;
+    });
+    elements.assistantContext.textContent=[
+        `Attached ${context.documents.length} verified public excerpt${context.documents.length===1?'':'s'}${context.truncated?' (bounded)':''}:`,
+        citations.join('; ')
+    ].join(' ');
+}
+
 async function sendAssistantMessage(event){
     const message=String(event.detail?.message||'').trim();
     if(!message)return;
@@ -694,7 +907,7 @@ async function sendAssistantMessage(event){
     }
     if(aiProfile.local===false&&!elements.remoteConsent.checked){
         event.preventDefault();
-        elements.assistant.setState('error','Review the cloud-provider disclosure and confirm it before sending public excerpts.');
+        elements.assistant.setState('error','Review the cloud-provider disclosure and confirm it before sending reviewed public excerpts.');
         elements.remoteConsent.focus();
         return;
     }
@@ -719,7 +932,7 @@ function clearAssistant(event){
         chatSession?.clear();
         elements.assistantMessages.replaceChildren();
         elements.assistantContext.textContent='Catalog context has not been requested.';
-        elements.assistant.setState(chatSession?'empty':'error',chatSession?'Ask about the published Arcane OS documentation.':'AI is unavailable here.');
+        elements.assistant.setState(chatSession?'empty':'error',chatSession?'Ask about the published Arcane OS documentation or reviewed source.':'AI is unavailable here.');
     }catch(error){
         event.preventDefault();
         elements.assistant.setState('error',errorMessage(error,'Wait for the current request to finish.'));
