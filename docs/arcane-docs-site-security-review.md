@@ -57,7 +57,7 @@
 - Natural-language catalog retrieval against all fourteen packaged documents selected `arcane-api` for `providerModels`, `restoreShell`, and `recentErrors`, and each bounded excerpt contained the requested API term.
 - The packaged app loaded beneath `/dist/docs/apps/docs/index.html`, preserving project-site routes. Provisioning and developer guides rendered, local search returned the expected security result, all four live specimens loaded, all six screenshots decoded with nonzero width, and the in-browser fixed suite passed 6/6.
 - Ordinary Pages mode displayed the explicit AI-unavailable boundary and exposed no provider request path. Current-run console inspection reported no warning or error associated with the packaged `/dist/docs/` origin.
-- The built package must continue to pass `npm run app:check -- docs`; only `dist/docs` may be uploaded. The final artifact inventory and digest are recorded after the last clean package run.
+- A detached worktree at commit `e89422e` passed dependency-registry verification, the 86-test Pages suite, packaging, and `app:check`. The exact clean artifact contains 146 files (3.20 MiB) with content SHA-256 `2e21958d53bbde64b1952e142014cf20e34abb2b958a43457e9d64ea11eedab9`; only that regenerated `dist/docs` tree may be uploaded.
 - First GitHub Pages deployment still requires inspection of the actual public URL, artifact contents, platform CSP behavior, and repository Pages source configuration.
 - No provider request, provider credential, native capability, privileged action, or private-data flow was exercised by this review.
 - Independent security/privacy authority review and risk acceptance remain required for any release-candidate or supported injected-AI claim.
