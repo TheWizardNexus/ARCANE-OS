@@ -9038,7 +9038,7 @@ const METHOD_POLICIES = Object.freeze({
   'users.verifyShell': Object.freeze({ capability:"users.manage", appTypes:Object.freeze(["provisioner"]), privileged:true }),
   'users.restoreShell': Object.freeze({ capability:"users.manage", appTypes:Object.freeze(["provisioner"]), privileged:true, exclusiveMutation:true }),
 });
-const METHOD_CONTRACTS = Object.freeze({"app.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"application-descriptor-v1","exact":true,"maxApplicationIdLength":64,"maxDisplayNameLength":256,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64})}),"external.open":Object.freeze({"version":"1.0.0","effect":"external-handoff","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","uri-scheme-allowlist"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"operating-system-handoff","input":Object.freeze({"kind":"external-open-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"}),"output":Object.freeze({"kind":"external-open-result-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"})}),"network.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"network-status-v1","exact":true,"onlineMeaning":"non-loopback-interface-present","maxInterfaceCount":64})}),"platform.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"platform-status-v1","exact":true,"maxStatusStringLength":256,"maxListItems":256,"maxProbeItems":64,"maxApplicationIdLength":64,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64,"maxRendererExecutableLength":4096})}),"system.ping":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"system-ping-result-v1","exact":true})}),"user.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","privacy-minimized-identity"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"user-identity-v1","exact":true,"maxUsernameLength":128,"maxAccountNameLength":256,"maxDisplayNameLength":256})}),"version.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"version-string-v1","exact":true,"maxLength":64,"meaning":"active-arcane-host-release-version"})})});
+const METHOD_CONTRACTS = Object.freeze({"app.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"application-descriptor-v1","exact":true,"maxApplicationIdLength":64,"maxDisplayNameLength":256,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64})}),"apps.launch":Object.freeze({"version":"1.0.0","effect":"application-dispatch","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","installed-application-catalog"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"application-to-host","input":Object.freeze({"kind":"application-launch-v1","exact":true,"maxApplicationIdLength":64,"idMeaning":"installed-launchable-application-id"}),"output":Object.freeze({"kind":"application-launch-result-v1","exact":true,"maxApplicationIdLength":64,"acceptedMeaning":"dispatch-request-accepted"})}),"apps.list":Object.freeze({"version":"1.0.0","effect":"observe","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-catalog-integrity","application-identity-allowlist","capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"application-catalog-v1","exact":true,"maxApplications":256,"maxApplicationIdLength":64,"maxDisplayNameLength":80,"maxDescriptionLength":240,"maxIconUrlLength":1024,"maxApplicationVersionLength":64,"maxOrder":100000,"maxSecurityEvidenceLength":256,"ordering":"ascending-order"})}),"external.open":Object.freeze({"version":"1.0.0","effect":"external-handoff","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","uri-scheme-allowlist"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"operating-system-handoff","input":Object.freeze({"kind":"external-open-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"}),"output":Object.freeze({"kind":"external-open-result-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"})}),"network.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"network-status-v1","exact":true,"onlineMeaning":"non-loopback-interface-present","maxInterfaceCount":64})}),"platform.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"platform-status-v1","exact":true,"maxStatusStringLength":256,"maxListItems":256,"maxProbeItems":64,"maxApplicationIdLength":64,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64,"maxRendererExecutableLength":4096})}),"system.ping":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"system-ping-result-v1","exact":true})}),"user.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","privacy-minimized-identity"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"user-identity-v1","exact":true,"maxUsernameLength":128,"maxAccountNameLength":256,"maxDisplayNameLength":256})}),"version.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"version-string-v1","exact":true,"maxLength":64,"meaning":"active-arcane-host-release-version"})})});
 
 function contractFailure(code, message, status) {
   throw arcaneError(code,message,'Repair or reinstall Arcane OS and retry the operation.',status);
@@ -9133,6 +9133,82 @@ function validateApplicationDescriptorV1(app, shape) {
   return app.version===VERSION ? app : null;
 }
 
+function validateApplicationLaunchV1(parameters, shape) {
+  return isExactDataRecord(parameters,['id'],[])
+    &&parameters.id.length<=shape.maxApplicationIdLength
+    &&isCanonicalApplicationId(parameters.id) ? parameters : null;
+}
+
+function validateApplicationLaunchResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','id'],[])
+    &&result.accepted===true
+    &&result.id.length<=shape.maxApplicationIdLength
+    &&isCanonicalApplicationId(result.id) ? result : null;
+}
+
+function isBoundedApplicationCatalogText(value, maximumLength, nullable, allowEmpty) {
+  if(nullable&&value===null)return true;
+  return typeof value==='string'
+    &&value.length<=maximumLength
+    &&(allowEmpty||value.length>0)
+    &&value===value.trim()
+    &&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value);
+}
+
+function isSafeApplicationCatalogIcon(value, applicationId, shape) {
+  if(value===null)return true;
+  if(!isBoundedApplicationCatalogText(value,shape.maxIconUrlLength,false,false)
+    ||!value.startsWith('/')
+    ||value.startsWith('//')
+    ||value.includes('\\')
+    ||value.includes('%')
+    ||value.includes('?')
+    ||value.includes('#'))return false;
+  const segments=value.slice(1).split('/');
+  if(segments.some(function unsafeIconSegment(segment){return !segment||segment==='.'||segment==='..';}))return false;
+  return value.startsWith(`/apps/${applicationId}/`)||value.startsWith(`/arcane/${applicationId}/app/`);
+}
+
+function validateApplicationCatalogRecordV1(record, verified, shape) {
+  if(!isExactDataRecord(record,['description','displayName','iconUrl','id','order','verified','version'],[]))return null;
+  if(!isCanonicalApplicationId(record.id)||record.id.length>shape.maxApplicationIdLength)return null;
+  if(!isBoundedApplicationCatalogText(record.displayName,shape.maxDisplayNameLength,false,false))return null;
+  if(!isBoundedApplicationCatalogText(record.description,shape.maxDescriptionLength,true,true))return null;
+  if(!isSafeApplicationCatalogIcon(record.iconUrl,record.id,shape))return null;
+  if(!isBoundedApplicationCatalogText(record.version,shape.maxApplicationVersionLength,true,false))return null;
+  if(!Number.isSafeInteger(record.order)||record.order<0||record.order>shape.maxOrder||record.verified!==verified)return null;
+  return record;
+}
+
+function validateApplicationCatalogV1(result, shape) {
+  if(!isExactDataRecord(result,['applications','publisherTrustSource','revocationStatus','securityMode','verified'],[])
+    ||typeof result.verified!=='boolean'
+    ||!Array.isArray(result.applications)
+    ||result.applications.length>shape.maxApplications)return null;
+  const noTrustEvidence=result.publisherTrustSource===null&&result.revocationStatus===null;
+  if(result.securityMode==='publisher-verified'){
+    if(!result.verified
+      ||!isBoundedApplicationCatalogText(result.publisherTrustSource,shape.maxSecurityEvidenceLength,false,false)
+      ||!isBoundedApplicationCatalogText(result.revocationStatus,shape.maxSecurityEvidenceLength,false,false)
+      ||!['administrator-policy','administrator-policy-rotation','installed-continuity','uac-approved-tofu','fresh-unpinned'].includes(result.publisherTrustSource)
+      ||!['online-good','cache-good','attested-degraded'].includes(result.revocationStatus))return null;
+  }else if(result.securityMode==='unsigned-local-test'){
+    if(!result.verified||!noTrustEvidence)return null;
+  }else if(result.securityMode==='unverified'){
+    if(result.verified||!noTrustEvidence)return null;
+  }else return null;
+  const seen=new Set();
+  let previousOrder=-1;
+  for(const record of result.applications){
+    if(!validateApplicationCatalogRecordV1(record,result.verified,shape)
+      ||seen.has(record.id)
+      ||record.order<previousOrder)return null;
+    seen.add(record.id);
+    previousOrder=record.order;
+  }
+  return result;
+}
+
 function validateContractStringList(value, maximumItems, maximumStringLength) {
   if(!Array.isArray(value)||value.length>maximumItems)return false;
   if(value.some(function invalidListEntry(entry){return !isBoundedContractString(entry,maximumStringLength,false);}))return false;
@@ -9181,6 +9257,7 @@ function validateMethodContractInput(method, parameters) {
   if(!contract)return parameters;
   let validated=null;
   if(contract.input.kind==='empty-object-v1')validated=validateEmptyObjectV1(parameters);
+  else if(contract.input.kind==='application-launch-v1')validated=validateApplicationLaunchV1(parameters,contract.input);
   else if(contract.input.kind==='external-open-v1')validated=validateExternalOpenV1(parameters,contract.input);
   else contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected an unknown method input contract.',500);
   if(!validated)contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected a request that did not match the method contract.',400);
@@ -9191,7 +9268,9 @@ function validateMethodContractOutput(method, result) {
   const contract=METHOD_CONTRACTS[method];
   if(!contract)return result;
   let validated=null;
-  if(contract.output.kind==='external-open-result-v1')validated=validateExternalOpenResultV1(result,contract.output);
+  if(contract.output.kind==='application-catalog-v1')validated=validateApplicationCatalogV1(result,contract.output);
+  else if(contract.output.kind==='application-launch-result-v1')validated=validateApplicationLaunchResultV1(result,contract.output);
+  else if(contract.output.kind==='external-open-result-v1')validated=validateExternalOpenResultV1(result,contract.output);
   else if(contract.output.kind==='application-descriptor-v1')validated=validateApplicationDescriptorV1(result,contract.output);
   else if(contract.output.kind==='network-status-v1')validated=validateNetworkStatusV1(result,contract.output);
   else if(contract.output.kind==='platform-status-v1')validated=validatePlatformStatusV1(result,contract.output);

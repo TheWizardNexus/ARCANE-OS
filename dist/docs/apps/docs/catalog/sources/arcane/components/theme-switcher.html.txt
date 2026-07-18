@@ -1,0 +1,46 @@
+<style>
+    :host{display:inline-block;color:inherit}
+    .switcher{align-items:center;display:flex;gap:.15rem;padding:.2rem;border:1px solid var(--app-bar-border,var(--border-color,rgba(255,255,255,.25)));border-radius:999px;background:color-mix(in srgb,currentColor 8%,transparent)}
+    button{appearance:none;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;font:700 .68rem/1 system-ui,sans-serif;min-height:1.85rem;padding:.42rem .58rem}
+    button:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
+    button[aria-pressed="true"]{background:var(--app-bar-accent,var(--secondary-color,#c49a52));color:var(--app-bar-active-text,var(--primary-color,#172238))}
+    button:focus-visible{outline:.18rem solid var(--focus-color,currentColor);outline-offset:.12rem}
+    @media(max-width:32rem){button{font-size:0;padding-inline:.5rem}button::first-letter{font-size:.72rem}}
+</style>
+<div class="switcher" role="group" aria-label="Color scheme">
+    <button type="button" data-scheme="system" aria-pressed="false" title="Use device theme">Auto</button>
+    <button type="button" data-scheme="light" aria-pressed="false" title="Use light theme">Light</button>
+    <button type="button" data-scheme="dark" aria-pressed="false" title="Use dark theme">Dark</button>
+    <button type="button" data-scheme="custom" aria-pressed="false" title="Use my custom skin" disabled>Skin</button>
+</div>
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const buttons=Array.from(root.querySelectorAll('[data-scheme]'));
+    const {default:ThemeManager}=await import('../modules/ThemeManager.js');
+    const manager=new ThemeManager();
+
+    host.setMode=setMode;
+    host.refresh=refresh;
+    root.querySelector('.switcher').addEventListener('click',async event=>{
+        const button=event.target.closest('[data-scheme]');
+        if(!button) return;
+        setBusy(true);
+        try{
+            const state=button.dataset.scheme==='custom'?await manager.activateCustom():await manager.setScheme(button.dataset.scheme);
+            setMode(state.mode);setCustomAvailable(Boolean(state.theme));
+        }finally{setBusy(false);setCustomAvailable(Boolean(manager.customTheme));}
+    });
+    globalThis.addEventListener('arcane-theme-change',()=>refresh().catch(()=>{}));
+
+    function setMode(mode='system'){
+        for(const button of buttons) button.setAttribute('aria-pressed',String(button.dataset.scheme===mode));
+        host.dataset.mode=mode;
+        return mode;
+    }
+    function setBusy(value){for(const button of buttons) button.disabled=Boolean(value);}
+    function setCustomAvailable(value){root.querySelector('[data-scheme="custom"]').disabled=!value;}
+    async function refresh(){const state=await manager.load();setMode(state.mode);setCustomAvailable(Boolean(state.theme));return state;}
+
+    refresh().catch(()=>setMode('system'));
+</script>

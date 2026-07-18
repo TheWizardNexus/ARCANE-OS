@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Privacy and data boundaries · PreCrisis AI</title>
+    <meta name="description" content="Understand the browser-storage, model-provider, export, and emergency-service boundaries of the current PreCrisis AI experience.">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="stylesheet" href="/arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="/arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="/site.css?v=5">
+    <script type="module" src="/arcane/modules/ThemeBootstrap.js?v=1"></script>
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+        <div class="header-inner">
+            <a class="wordmark" href="/" aria-label="PreCrisis AI home">
+                <span class="wordmark-mark" aria-hidden="true">P</span>
+                <span>PreCrisis<span class="wordmark-dot">.AI</span></span>
+            </a>
+            <a class="button button-small" href="https://app.precrisis.ai/">Preview PreCrisis AI</a>
+        </div>
+    </header>
+    <main class="legal-main" id="main" tabindex="-1">
+        <article class="legal-copy">
+            <p class="eyebrow">Current product boundary</p>
+            <h1>Privacy and data boundaries</h1>
+            <p class="legal-meta">Effective July 18, 2026. This notice describes the current browser-hosted experience and should be reviewed again when the deployment or providers change.</p>
+
+            <section aria-labelledby="preview-heading">
+                <h2 id="preview-heading">Preview limitation</h2>
+                <p>The currently packaged app's first-run terms do not yet fully describe optional network-model transfers. Until those terms are corrected and the app is repackaged, treat the app as a non-sensitive preview and do not enter personal, health, crisis, credential, or other confidential information.</p>
+            </section>
+
+            <section aria-labelledby="site-data-heading">
+                <h2 id="site-data-heading">This public site</h2>
+                <p>The marketing pages do not include an account system, analytics script, advertising tracker, form, or upload endpoint. Standard infrastructure logs may still record technical request information such as time, hostname, requested path, response status, and network address. The production operator must define retention and access controls before launch.</p>
+            </section>
+
+            <section aria-labelledby="records-heading">
+                <h2 id="records-heading">Browser records</h2>
+                <p>The current app is designed to keep journals, assessments, settings, and related records in storage associated with the app's browser origin. People who can access the same device and browser profile may be able to access those records. Clearing site data, using private browsing, changing browsers, or losing the device can remove access unless you exported a copy.</p>
+            </section>
+
+            <section aria-labelledby="models-heading">
+                <h2 id="models-heading">Model providers</h2>
+                <p>A local model and a network model are different privacy boundaries. If you select a configured network model, the app sends prompts and relevant conversation content to that provider so it can return a response. That provider's retention, training, account, location, and security terms apply. Do not select a network provider until you understand and accept those terms.</p>
+            </section>
+
+            <section aria-labelledby="control-heading">
+                <h2 id="control-heading">Import, export, and deletion</h2>
+                <ul>
+                    <li>Imported material becomes part of the app's browser-stored records.</li>
+                    <li>Exported files leave the app's storage boundary and are protected by the device, destination, and people you share them with.</li>
+                    <li>Browser storage controls may delete local records. Verify an export before clearing data you need to retain.</li>
+                </ul>
+            </section>
+
+            <section aria-labelledby="safety-heading">
+                <h2 id="safety-heading">No emergency monitoring</h2>
+                <p>PreCrisis AI does not continuously monitor a person, guarantee crisis detection, or automatically contact responders. In the United States, call or text <a href="tel:988">988</a> for the Suicide &amp; Crisis Lifeline. If anyone is in immediate danger or facing a medical emergency, call <a href="tel:911">911</a> or local emergency services.</p>
+            </section>
+
+            <section aria-labelledby="contact-heading">
+                <h2 id="contact-heading">Questions</h2>
+                <p>Questions about the published experience can be sent to <a href="mailto:brandon@risenwarriors.org">brandon@risenwarriors.org</a>. Do not send crisis details, medical records, passwords, or other sensitive content by ordinary email.</p>
+            </section>
+        </article>
+    </main>
+    <footer class="site-footer">
+        <a class="wordmark" href="/" aria-label="PreCrisis AI home">
+            <span class="wordmark-mark" aria-hidden="true">P</span>
+            <span>PreCrisis<span class="wordmark-dot">.AI</span></span>
+        </a>
+        <p>© 2026 PreCrisis AI.</p>
+        <p class="footer-note">AI output can be incomplete or wrong. Do not use this site or app as the only basis for health, safety, legal, employment, or emergency decisions.</p>
+    </footer>
+</body>
+</html>

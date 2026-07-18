@@ -1,6 +1,6 @@
 import CommunicationMessage from '../entities/CommunicationMessage.js';
 import CommunicationThread from '../entities/CommunicationThread.js';
-import CommunicationProviderRegistry from './CommunicationProviderRegistry.js';
+import CommunicationProviderRegistry from './CommunicationProviderRegistry.js?v=2';
 
 export default class CommunicationHub extends EventTarget{
     constructor({providers=[],enabledProviderIds=[]}={}){super();this.registry=providers instanceof CommunicationProviderRegistry?providers:new CommunicationProviderRegistry(providers);this.enabled=new Set(enabledProviderIds);this.threads=[];}

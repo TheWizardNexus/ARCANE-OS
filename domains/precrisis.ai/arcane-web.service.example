@@ -1,0 +1,37 @@
+[Unit]
+Description=Arcane PreCrisis static domain host
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arcane-web
+Group=arcane-web
+WorkingDirectory=/opt/arcane
+Environment=ARCANE_WEB_HOST=127.0.0.1
+Environment=ARCANE_HTTP_PORT=8080
+Environment=ARCANE_REQUIRE_TLS=false
+Environment=ARCANE_REDIRECT_HTTP=false
+Environment=ARCANE_ALLOW_DEVELOPMENT_HOSTS=false
+Environment=ARCANE_TLS_CERT_PATH=
+Environment=ARCANE_TLS_KEY_PATH=
+ExecStart=/usr/bin/node /opt/arcane/domains/precrisis.ai/server.mjs
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=35s
+UMask=0027
+
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

@@ -15,49 +15,45 @@ class HTMLImport extends HTMLElement {
       this.attachShadow({ mode: 'open' });
   }
 
-  #cacheVersion=3;
-
   async connectedCallback() {
     this.ready=false;
-    const href = this.getAttribute('href');
-    if (href) {
-      let cache=JSON.parse(localStorage.getItem(href));
-      if(cache&&cache.version===this.#cacheVersion&&cache.time&&cache.time>Date.now()-(7*24*60*60*1000)){
-        this.#loadHTML(
-          href,
-          false,
-          cache.html
-        )
-        return;
-      }else{
-        localStorage.removeItem(href);
-      }
+    const href=this.getAttribute('href');
+    let resolvedHref='';
+    if(!href){
+      console.log('no href provided for html-import tag',this);
+      return;
+    }
 
-      console.warn('need to sanitize and validate htref path to only be inside the root of this app');
-      const response = fetch(href,{cache:'reload'})
-        .then(this.#loadHTML.bind(this,href))
-        .catch(
-          (err)=>{
-            console.error('Error loading HTML component:', err);
-          }
-        );
-    }else{
-      console.log('no href provided for html-import tag',this)
+    try{
+      const baseURL=new URL(document.baseURI);
+      const resolvedURL=new URL(href,baseURL);
+      resolvedHref=resolvedURL.href;
+      if(resolvedURL.origin!==baseURL.origin){
+        throw new Error('HTML imports must use a same-origin URL.');
+      }
+      const response=await fetch(resolvedURL.href,{
+        cache:'default',
+        credentials:'same-origin',
+        method:'GET',
+        redirect:'error'
+      });
+      await this.#loadHTML(href,resolvedHref,response);
+    }catch(err){
+      console.error('Error loading HTML component:',err);
+      this.dispatchEvent(new CustomEvent('html-import-error',{
+        bubbles:true,
+        composed:true,
+        detail:{
+          code:'HTML_IMPORT_FAILED',
+          href,
+          message:'The component could not be loaded.',
+          resolvedHref
+        }
+      }));
     }
   }
 
-  #isStored=false;
-
-  async #loadHTML(href,response,cache=''){
-    if(cache){
-      response={
-        ok:true,
-        text:async ()=>{
-          return cache;
-        }
-      }
-    }
-    
+  async #loadHTML(href,resolvedHref,response){
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -67,24 +63,11 @@ class HTMLImport extends HTMLElement {
 
     this.#executeScripts();
 
-    if(!cache){
-      localStorage.setItem(
-        href,
-        JSON.stringify(
-          {
-            html:html,
-            time:Date.now(),
-            version:this.#cacheVersion
-          }
-        )
-      )
-    }
-
     this.ready=true;
     this.dispatchEvent(new CustomEvent('html-import-ready',{
       bubbles:true,
       composed:true,
-      detail:{href}
+      detail:{href,resolvedHref}
     }));
     return true;
   }

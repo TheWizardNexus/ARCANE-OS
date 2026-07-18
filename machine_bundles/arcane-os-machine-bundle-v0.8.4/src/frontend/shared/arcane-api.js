@@ -5,6 +5,8 @@
   const LONG_OPERATION_TIMEOUT = 50 * 60 * 1000;
   const pending = new Map();
   const listeners = new Map();
+  const completedEvents = new Map();
+  const completionEventNames = new Set(['core.ready', 'transport.ready']);
   let transport = null;
 
   function uuid() {
@@ -53,7 +55,9 @@
     if (!message || message.protocol !== PROTOCOL) return;
 
     if (message.type === 'event') {
-      emit(message.event, message.data || {});
+      const data = Object.prototype.hasOwnProperty.call(message, 'data') ? message.data : {};
+      if (completionEventNames.has(message.event)) complete(message.event, data);
+      else emit(message.event, data);
       return;
     }
     if (message.type !== 'response' || !message.id) return;
@@ -75,6 +79,7 @@
 
   class WebView2Transport {
     constructor() {
+      this.name = 'webview2';
       this.bridge = global.chrome.webview.hostObjects.arcaneBridge;
       global.chrome.webview.addEventListener('message', function onNativeMessage(event) {
         receive(event.data);
@@ -108,6 +113,10 @@
   }
 
   class WebKitGtkTransport {
+    constructor() {
+      this.name = 'webkitgtk';
+    }
+
     async send(request) {
       const handler = global.webkit.messageHandlers.arcane;
       let acknowledgement = await handler.postMessage(JSON.stringify(request));
@@ -120,8 +129,34 @@
     }
   }
 
+  function immutableCompletionSnapshot(value) {
+    if (value === null || typeof value !== 'object') return value;
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined) return Object.freeze({});
+    const snapshot = JSON.parse(serialized);
+    const queue = [snapshot];
+    for (let index = 0; index < queue.length; index += 1) {
+      const current = queue[index];
+      if (!current || typeof current !== 'object' || Object.isFrozen(current)) continue;
+      for (const child of Object.values(current)) {
+        if (child && typeof child === 'object') queue.push(child);
+      }
+      Object.freeze(current);
+    }
+    return snapshot;
+  }
+
+  function complete(eventName, data) {
+    if (!completionEventNames.has(eventName) || completedEvents.has(eventName)) return false;
+    const snapshot = immutableCompletionSnapshot(data);
+    completedEvents.set(eventName, snapshot);
+    emit(eventName, snapshot);
+    return true;
+  }
+
   class AndroidWebViewTransport {
     constructor() {
+      this.name = 'android-webview';
       this.bridge = global.arcaneAndroid;
       this.bridge.onmessage = function onAndroidNativeMessage(message) {
         receive(message && typeof message === 'object' && 'data' in message ? message.data : message);
@@ -150,6 +185,7 @@
 
   class DevelopmentHttpTransport {
     constructor() {
+      this.name = 'development-http';
       if (typeof EventSource === 'function') {
         this.events = new EventSource('/events');
         this.events.onmessage = function (event) { receive(event.data); };
@@ -181,8 +217,16 @@
     });
   }
 
+  function ensureTransport() {
+    if (!transport) {
+      transport = chooseTransport();
+      complete('transport.ready', { protocol: PROTOCOL, transport: transport.name });
+    }
+    return transport;
+  }
+
   async function invoke(method, parameters, options) {
-    if (!transport) transport = chooseTransport();
+    const selectedTransport = ensureTransport();
     const id = uuid();
     const timeoutMs = Number(options && options.timeoutMs || 10 * 60 * 1000);
     const request = {
@@ -207,7 +251,7 @@
       pending.set(id, { resolve: resolve, reject: reject, timer: timer, method: method });
     });
 
-    try { await transport.send(request); }
+    try { await selectedTransport.send(request); }
     catch (error) {
       const entry = pending.get(id);
       if (entry) {
@@ -234,6 +278,21 @@
         listener(value);
       });
       return unsubscribe;
+    },
+    when: function when(eventName, listener) {
+      if (!completionEventNames.has(eventName)) throw new TypeError('Arcane completion event is not designated as durable.');
+      if (typeof listener !== 'function') throw new TypeError('Arcane event listener must be a function.');
+      if (!completedEvents.has(eventName)) return events.once(eventName, listener);
+      const value = completedEvents.get(eventName);
+      let active = true;
+      Promise.resolve().then(function replayCompletedEvent() {
+        if (!active) return;
+        try { listener(value); } catch (error) { console.error('Arcane event listener failed', error); }
+      });
+      return function unsubscribe() { active = false; };
+    },
+    completed: function completed(eventName) {
+      return completionEventNames.has(eventName) && completedEvents.has(eventName);
     },
   });
 
@@ -394,4 +453,12 @@
     configurable: false,
     writable: false,
   });
+
+  try {
+    ensureTransport();
+  } catch (error) {
+    if (!(error instanceof ArcaneError) || error.code !== 'ARCANE_TRANSPORT_UNAVAILABLE') {
+      console.error('Arcane transport initialization failed', error);
+    }
+  }
 })(window);

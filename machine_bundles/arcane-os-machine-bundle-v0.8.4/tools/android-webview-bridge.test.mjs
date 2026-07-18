@@ -286,14 +286,16 @@ test('Kotlin host binds the Android bridge to one exact trusted main-frame origi
 
     assert.match(source, /const val TRUSTED_ORIGIN = "https:\/\/appassets\.androidplatform\.net"/);
     assert.match(source, /const val BRIDGE_NAME = "arcaneAndroid"/);
+    assert.match(source, /expectedOrigin: String/);
+    assert.match(source, /val trustedOrigin = validatedTrustedOrigin\(expectedOrigin\) \?: return false/);
     assert.match(
         source,
-        /WebViewCompat\.addWebMessageListener\(\s*webView,\s*BRIDGE_NAME,\s*setOf\(TRUSTED_ORIGIN\),\s*listener\s*\)/
+        /WebViewCompat\.addWebMessageListener\(\s*webView,\s*BRIDGE_NAME,\s*setOf\(expectedOrigin\),\s*listener\s*\)/
     );
-    assert.match(source, /if \(!isMainFrame \|\| !isTrustedOrigin\(sourceOrigin\)\)/);
-    assert.match(source, /origin\.scheme == "https"/);
-    assert.match(source, /origin\.host == "appassets\.androidplatform\.net"/);
-    assert.match(source, /origin\.port == -1/);
+    assert.match(source, /if \(!isMainFrame \|\| !isTrustedOrigin\(sourceOrigin, trustedOrigin\)\)/);
+    assert.match(source, /origin\.scheme == expected\.scheme/);
+    assert.match(source, /origin\.host == expected\.host/);
+    assert.match(source, /origin\.port == expected\.port/);
     assert.match(source, /origin\.userInfo == null/);
     assert.doesNotMatch(source, /setOf\([^)]*"\*"/);
 });
@@ -427,12 +429,14 @@ test('Android host session binds validated identity, exact grants, and platform 
     assert.match(sessionSource, /ArcaneWebViewBridge\.CapabilityGrantProvider/);
     assert.match(sessionSource, /ArcaneWebViewBridge\.PlatformStatusProvider/);
     assert.match(sessionSource, /ArcaneWebViewBridge\.ApplicationIdentityProvider/);
+    assert.match(sessionSource, /ArcaneWebViewBridge\.ApplicationCatalogProvider/);
     assert.match(sessionSource, /private val packageVersion = currentPackageVersion\(applicationContext\)/);
-    assert.match(sessionSource, /private val applicationDescriptor = validatedApplication\(packageVersion\)/);
-    assert.match(sessionSource, /GeneratedAndroidApplicationRegistry\.shellGrants\(\)\.toSet\(\)/);
+    assert.match(sessionSource, /private val applicationDescriptor = validatedApplication\(packageVersion, launchDescriptor\)/);
+    assert.match(sessionSource, /private val grants = validatedGrants\(launchDescriptor\)/);
     assert.match(sessionSource, /private val status = ArcaneWebViewBridge\.PlatformStatus\(/);
     assert.match(sessionSource, /AndroidBridgeProtocol\.isValidApplication\(protocolApplication\)/);
     assert.match(sessionSource, /internal fun createShell\(context: Context\): ArcaneAndroidHostSession/);
+    assert.match(sessionSource, /internal fun createApplication\(context: Context, id: String\): ArcaneAndroidHostSession/);
     assert.match(sessionSource, /GeneratedAndroidApplicationRegistry\.SHELL_ID/);
     assert.match(sessionSource, /GeneratedAndroidApplicationRegistry\.SHELL_ENTRY/);
     assert.match(applicationRegistry, /internal fun shellGrants\(\): Set<String>/);
@@ -441,7 +445,7 @@ test('Android host session binds validated identity, exact grants, and platform 
     assert.doesNotMatch(applicationRegistry, /internal val shellGrants/);
     assert.doesNotMatch(applicationRegistry, /EXTERNAL_OPEN_CAPABILITY/);
     assert.match(sessionSource, /return grants\.contains\(capability\)/);
-    assert.match(sessionSource, /return status/);
+    assert.match(sessionSource, /return status\.copy\(application = status\.application\.copy\(\)\)/);
     assert.match(sessionSource, /release = validatedStatus\(Build\.VERSION\.RELEASE, "Android release"\)/);
     assert.match(sessionSource, /for \(architecture in Build\.SUPPORTED_ABIS\)/);
     assert.match(sessionSource, /context\.packageManager\.getPackageInfo\(context\.packageName, 0\)/);
@@ -452,8 +456,8 @@ test('Android host session binds validated identity, exact grants, and platform 
     assert.match(controllerSource, /private val hostSession: ArcaneAndroidHostSession/);
     assert.match(controllerSource, /canonicalEntryPath\(hostSession\.entry\)/);
     assert.match(controllerSource, /AssetsPathHandler\(hostSession\.applicationContext\)/);
-    assert.doesNotMatch(controllerSource, /context: Context/);
-    assert.equal(controllerSource.match(/hostSession,/g)?.length, 4);
+    assert.doesNotMatch(controllerSource, /internal class ArcaneWebViewHostController\(\s*(?:private val )?context: Context/);
+    assert.equal(controllerSource.match(/hostSession,/g)?.length, 5);
     assert.match(sessionSource, /validated != GeneratedAndroidApplicationRegistry\.BUNDLE_VERSION/);
     assert.doesNotMatch(sessionSource, /grantedCapabilities:/);
     assert.doesNotMatch(sessionSource, /application: ArcaneWebViewBridge\.ApplicationDescriptor/);
@@ -652,13 +656,15 @@ test('Android host controller serves only packaged assets from the reserved HTTP
 
     assert.match(source, /WebViewAssetLoader\.Builder\(\)/);
     assert.match(source, /\.setHttpAllowed\(false\)/);
-    assert.match(source, /\.addPathHandler\(ASSET_PREFIX, WebViewAssetLoader\.AssetsPathHandler\(hostSession\.applicationContext\)\)/);
-    assert.match(source, /TRUSTED_HOST = "appassets\.androidplatform\.net"/);
+    assert.match(source, /\.addPathHandler\(urlPathPrefix, assetPathHandler\)/);
+    assert.match(source, /\.setDomain\(hostSession\.originHost\)/);
     assert.match(source, /ASSET_PREFIX = "\/arcane\/"/);
     assert.match(source, /assetLoader\.shouldInterceptRequest\(uri\) \?: forbiddenResponse\(\)/);
-    assert.match(source, /if \(!isTrustedAssetUri\(uri\)\) \{\s*return forbiddenResponse\(\)/);
+    assert.match(source, /if \(!isTrustedAssetUri\(uri\) \|\| !isInsideSessionAssetRoot\(uri\)\) \{\s*return forbiddenResponse\(\)/);
     assert.match(source, /mapOf\("Cache-Control" to "no-store"\)/);
     assert.match(source, /403,/);
+    assert.match(source, /ScopedAssetsPathHandler\(hostSession\.applicationContext, hostSession\.assetRoot\)/);
+    assert.match(source, /val assetPath = "\$assetRoot\/\$relativePath"/);
 });
 
 test('Android host controller binds one exact main-frame entry and safe asset paths', async function testAndroidNavigationPolicy() {
@@ -671,19 +677,19 @@ test('Android host controller binds one exact main-frame entry and safe asset pa
     assert.match(source, /if \(lifecycle != Lifecycle\.NEW\) \{/);
     assert.match(source, /if \(installedWebView !== webView/);
     assert.match(source, /if \(!request\.isForMainFrame\) return false/);
-    assert.match(source, /return !isAllowedEntry\(request\.url\)/);
-    assert.match(source, /request\.isForMainFrame && !isAllowedEntry\(uri\)/);
-    assert.match(source, /override fun onPageStarted/);
-    assert.match(source, /view\.stopLoading\(\)/);
-    assert.match(source, /view\.loadUrl\(BLANK_URI\)/);
+    assert.match(source, /return !isAllowedNavigation\(request\.url\)/);
+    assert.match(source, /request\.isForMainFrame && !isAllowedNavigation\(uri\)/);
+    assert.match(source, /allowedNavigationUris\.contains\(uri\.toString\(\)\)/);
+    assert.match(source, /path\.startsWith\(urlPathPrefix\)/);
+    assert.doesNotMatch(source, /override fun onPageStarted/);
+    assert.doesNotMatch(source, /view\.loadUrl\("about:blank"\)/);
     assert.match(source, /uri\.query != null \|\| uri\.fragment != null/);
     assert.match(source, /normalizedEncodedPath\.contains\("%2f"\)/);
     assert.match(source, /normalizedEncodedPath\.contains\("%5c"\)/);
     assert.match(source, /for \(segment in decodedPath\.split\('\/'\)\)/);
     assert.match(source, /private fun isAsciiEntryCharacter\(character: Char\): Boolean/);
     assert.match(source, /request\.method\.equals\("GET", ignoreCase = false\)/);
-    assert.doesNotMatch(source, /android\.content\.Intent|ACTION_VIEW|startActivity|setDomain\(/);
-    assert.doesNotMatch(source, /\{[^\r\n]*->|runCatching|\.map\(|\.any\s*\{|\.all\s*\{|\.none\s*\{/);
+    assert.doesNotMatch(source, /android\.content\.Intent|ACTION_VIEW|startActivity/);
 });
 
 test('Android controller hardens WebView before enabling JavaScript and loading entries', async function testAndroidControllerOrdering() {
@@ -781,4 +787,52 @@ test('Android controller rolls back partial bridge installation through retryabl
     assert.match(source, /webView\.settings\.javaScriptEnabled = true\s*\} catch \(_: Exception\) \{\s*val closeResult = close\(webView\)\s*return InstallResult\(false, closeResult\.retryable, closeResult, "WEBVIEW_SETUP_FAILED"\)/);
     assert.match(source, /return InstallResult\(true, false, null, null\)/);
     assert.match(source, /private fun resetUninstalled\(\)/);
+});
+
+test('Android application launch uses packaged descriptors and a fresh non-exported Activity session', async function testAndroidApplicationLaunchBoundary() {
+    const protocolSource = await bundleSource('src/hosts/android/AndroidBridgeProtocol.kt');
+    const bridgeSource = await bundleSource('src/hosts/android/ArcaneWebViewBridge.kt');
+    const catalogSource = await bundleSource('src/hosts/android/ArcaneAndroidApplicationCatalog.kt');
+    const sessionSource = await bundleSource('src/hosts/android/ArcaneAndroidHostSession.kt');
+    const controllerSource = await bundleSource('src/hosts/android/ArcaneWebViewHostController.kt');
+    const activitySource = await bundleSource('android/app/src/main/java/os/arcane/host/android/ArcaneApplicationActivity.kt');
+    const hostSource = await bundleSource('android/app/src/main/java/os/arcane/host/android/ArcaneActivityHost.kt');
+    const manifestSource = await bundleSource('android/app/src/main/AndroidManifest.xml');
+    const gradleSource = await bundleSource('android/app/build.gradle.kts');
+
+    assert.match(protocolSource, /method == GeneratedAndroidCapabilityRegistry\.APPS_LAUNCH_METHOD/);
+    assert.match(protocolSource, /hasExactKeys\(parameters, setOf\("id"\)\)/);
+    assert.match(protocolSource, /isCanonicalLaunchApplicationId\(candidate\)/);
+    assert.match(protocolSource, /internal fun applicationLaunchResponse/);
+    assert.match(bridgeSource, /fun interface ApplicationLaunchProvider/);
+    assert.match(bridgeSource, /applicationLaunchProvider\.launchApplication\(applicationId\)/);
+    assert.match(bridgeSource, /GeneratedAndroidCapabilityRegistry\.isAllowedForApplication/);
+    assert.match(catalogSource, /sha256\(packageBytes\) == entry\.packageManifestSha256/);
+    assert.match(catalogSource, /setOf\("schemaVersion", "protocolVersion", "bundleVersion", "app", "files"\)/);
+    assert.doesNotMatch(catalogSource, /"platform", "architecture", "native"/);
+    assert.match(catalogSource, /requireExactKeys\(value, setOf\("path", "size", "sha256"\)\)/);
+    assert.match(catalogSource, /require\(pathValue is String\)/);
+    assert.match(catalogSource, /is Int -> sizeValue\.toLong\(\)\s*is Long -> sizeValue/);
+    assert.match(catalogSource, /require\(hashValue is String\)/);
+    assert.match(catalogSource, /sha256\(contentBytes\) == entry\.contentManifestSha256/);
+    assert.match(catalogSource, /contentFiles == packageFiles\.filterKeys \{ path -> path\.startsWith\(APP_FILE_PREFIX\) \}/);
+    assert.match(catalogSource, /verifyAsset\("\$\{entry\.id\}\/\$packagePath", contentFile\)/);
+    assert.match(sessionSource, /requestedCapabilities\.filterTo\(linkedSetOf\(\)\)/);
+    assert.match(sessionSource, /"\$\{descriptor\.id\}\.arcane\.invalid"/);
+    assert.match(controllerSource, /\.setDomain\(hostSession\.originHost\)/);
+    assert.match(activitySource, /ArcaneAndroidHostSession\.createApplication\(this, applicationId\)/);
+    assert.match(hostSource, /Intent\(activity, ArcaneApplicationActivity::class\.java\)/);
+    assert.match(hostSource, /activity\.startActivity\(intent\)/);
+    assert.match(manifestSource, /android:name="\.ArcaneApplicationActivity"\s+android:exported="false"/);
+    assert.match(gradleSource, /val buildArcanePortableApps by tasks\.registering\(Exec::class\)[\s\S]*?commandLine\(\s*arcaneNodeExecutable,\s*"tools\/build-app\.mjs",\s*"--all",\s*"--platform=portable"/);
+    assert.match(gradleSource, /val buildArcaneAndroidAppProjection by tasks\.registering\(Exec::class\)[\s\S]*?commandLine\(\s*arcaneNodeExecutable,\s*"tools\/build-android-app-projection\.mjs"/);
+    assert.equal((gradleSource.match(/outputs\.upToDateWhen \{ false \}/g) || []).length, 2);
+    assert.match(gradleSource, /dependsOn\(buildArcanePortableApps\)/);
+    assert.match(gradleSource, /dependsOn\(buildArcaneAndroidAppProjection\)/);
+    assert.match(gradleSource, /from\("\.\.\/\.\.\/dist\/android-apps"\)/);
+    assert.doesNotMatch(gradleSource, /from\("\.\.\/\.\.\/dist\/apps"\)/);
+    assert.match(gradleSource, /include\("\*\/arcane-app-content\.json"\)/);
+    assert.match(gradleSource, /include\("\*\/arcane-app-package\.json"\)/);
+    assert.match(gradleSource, /include\("\*\/app\/\*\*"\)/);
+    assert.doesNotMatch(hostSource, /putExtra\([^,]+,\s*(?:entry|capabilities|grants|origin)/);
 });

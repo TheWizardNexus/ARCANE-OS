@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="arcane-app-id" content="investigator"><base href="../../">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Five-minute, source-cited police and District Attorney intake brief for case 24FL001068.">
+  <meta name="referrer" content="no-referrer"><title>Police / DA Brief | Arcane Investigator</title>
+  <link rel="manifest" href="./apps/investigator/manifest.json">
+  <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+  <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+  <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+  <link rel="stylesheet" href="./apps/investigator/investigator.css?v=12">
+  <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+  <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+  <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">AI</span><div><strong>Arcane Investigator</strong><small>Evidence to prosecutable theory</small></div></div><nav class="app-nav" aria-label="Investigator pages"><a href="./apps/investigator/index.html">Overview</a><a aria-current="page" href="./apps/investigator/brief.html">Police / DA brief</a><a href="./apps/investigator/data.html">Documents</a><a href="./apps/investigator/conduct.html">Conduct</a><a href="./apps/investigator/timeline.html">Timeline</a><a href="./apps/investigator/motives.html">Motives</a><a href="./apps/investigator/case-map.html">Case map</a></nav><div class="case-tag"><span>ACTIVE CASE</span><strong>24FL001068</strong></div></header>
+  <main class="brief-page">
+    <section class="brief-hero" aria-labelledby="pageTitle"><div><span class="eyebrow">Five-minute intake</span><h1 id="pageTitle">Police / DA evidence brief</h1><p>A narrow, source-cited screen of five allegations. Every item preserves contrary evidence, missing elements, defenses, and the next verification step.</p></div><aside class="brief-posture" aria-label="Legal posture"><strong>No finding of guilt</strong><span>Human-curated investigative candidates</span><small>Charging, admissibility, venue, and limitations remain agency decisions.</small></aside></section>
+    <html-import id="referralSummary" class="brief-summary" data-aria-label="Referral readiness summary" href="./arcane/components/summary-strip.html?v=2"></html-import>
+    <section class="brief-intake-theory" aria-labelledby="intakeTheoryHeading">
+      <article><span class="eyebrow">Executive theory</span><h2 id="intakeTheoryHeading">What the supplied record supports investigating</h2><p id="executiveSummary"></p></article>
+      <article class="intake-action"><span class="eyebrow">Requested agency action</span><h2>What the referral asks police and prosecutors to do</h2><p id="actionRequested"></p></article>
+    </section>
+    <div class="brief-workspace">
+      <aside class="candidate-rail" aria-labelledby="candidateHeading"><span class="eyebrow">Ranked screen</span><h2 id="candidateHeading">Allegation candidates</h2><p>Rank reflects current investigative value, not guilt or charge probability.</p><div id="candidateList" class="candidate-list"></div></aside>
+      <article class="candidate-detail" aria-live="polite">
+        <header class="candidate-header"><div><span id="candidateRank" class="candidate-rank"></span><h2 id="candidateTitle">Loading referral…</h2><p id="candidateAssessment"></p></div><div class="candidate-status"><span id="candidateActor"></span><strong id="candidateReadiness"></strong><small id="candidateRankBasis"></small></div></header>
+        <dl class="candidate-intake-strip" aria-label="Selected allegation intake essentials">
+          <div><dt>Potential offense</dt><dd id="candidateOffense"></dd></div>
+          <div><dt>Victim or target</dt><dd id="candidateTarget"></dd></div>
+          <div><dt>Event and venue</dt><dd id="candidateEventVenue"></dd></div>
+          <div><dt>Current evidence posture</dt><dd id="candidateEvidencePosture"></dd></div>
+          <div><dt>Decisive blocker</dt><dd id="candidatePrincipalBlocker"></dd></div>
+        </dl>
+        <section class="brief-callout"><div><span class="eyebrow">Why it matters</span><p id="candidateMateriality"></p></div><button id="openCandidate" type="button">Open full source analysis</button></section>
+        <section class="candidate-theory-grid" aria-label="Selected allegation theory">
+          <article><span class="eyebrow">Official legal screen</span><h3>Authorities used for this proof screen</h3><ul id="candidateAuthorities" class="authority-list"></ul><small>Links identify screening authorities, not a charging conclusion.</small></article>
+          <article><span class="eyebrow">Motive discipline</span><h3>Possible incentive and strongest alternative</h3><p id="candidateMotive"></p><p id="candidateMotiveContrary" class="contrary-explanation"></p></article>
+        </section>
+        <section aria-labelledby="elementsHeading"><div class="section-head"><div><span class="eyebrow">Proof screen</span><h3 id="elementsHeading">Elements and evidence</h3></div><p>Status describes the supplied record only.</p></div><div class="matrix-scroll"><table class="evidence-matrix"><caption class="sr-only">Element-by-element evidence and gap screen</caption><thead><tr><th scope="col">Status</th><th scope="col">Required proposition</th><th scope="col">Current support</th><th scope="col">Exact sources</th><th scope="col">Unresolved gap</th></tr></thead><tbody id="elementRows"></tbody></table></div></section>
+        <section aria-labelledby="candidateChronologyHeading"><div class="section-head"><div><span class="eyebrow">Temporal proof</span><h3 id="candidateChronologyHeading">Selected allegation chronology</h3></div><p id="candidateChronologySummary">Event dates remain distinct from filing dates.</p></div><div class="matrix-scroll"><table class="chronology-table"><caption class="sr-only">Chronology for the selected allegation showing event and filing dates separately</caption><thead><tr><th scope="col">Event date</th><th scope="col">Filed / created</th><th scope="col">Posture</th><th scope="col">Event</th><th scope="col">Exact sources</th></tr></thead><tbody id="candidateChronologyRows"></tbody></table></div></section>
+        <section class="source-section" aria-labelledby="sourceHeading"><div class="section-head"><div><span class="eyebrow">Original record</span><h3 id="sourceHeading">Supporting and contrary excerpts</h3></div><p>Select any source to open the complete cited analysis and original PDF.</p></div><div id="candidateSources" class="candidate-sources"></div></section>
+        <section class="two-up"><article><span class="eyebrow">Defense discipline</span><h3>Contrary explanations</h3><ul id="candidateDefenses"></ul></article><article><span class="eyebrow">Do not submit as complete</span><h3>Blocking gaps</h3><ul id="candidateGaps"></ul></article></section>
+        <section aria-labelledby="actionsHeading"><div class="section-head"><div><span class="eyebrow">Agency action queue</span><h3 id="actionsHeading">Requests that would resolve the screen</h3></div></div><ol id="candidateActions" class="action-list"></ol></section>
+      </article>
+    </div>
+    <section class="brief-lower">
+      <article class="relief-section" aria-labelledby="tracksHeading"><span class="eyebrow">Authority boundary</span><h2 id="tracksHeading">Keep criminal referral and family relief separate</h2><div class="relief-grid"><section><h3>Police / prosecutor track</h3><p id="criminalTrack"></p></section><section><h3>Family-court track</h3><p id="familyTrack"></p><small id="familyWarning"></small></section></div></article>
+      <article aria-labelledby="contactsHeading"><div class="section-head"><div><span class="eyebrow">Quick reference</span><h2 id="contactsHeading">People and custodians</h2></div><p>Contact details come from filed sources and must be verified before outreach.</p></div><div class="matrix-scroll"><table class="contact-table"><caption class="sr-only">Case contacts and source basis</caption><thead><tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col">Filed contact</th><th scope="col">Source</th></tr></thead><tbody id="contactRows"></tbody></table></div></article>
+      <article class="reports-section" aria-labelledby="reportsHeading"><div><span class="eyebrow">App-owned work product</span><h2 id="reportsHeading">Police report folder</h2><p>Generated reports are investigative work product, not original evidence. They remain inside this app’s private case-data folder.</p></div><div id="reportLinks" class="report-links"></div></article>
+    </section>
+  </main>
+  <html-import id="findingDialog" class="document-modal" data-label="Curated allegation explanation" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="findingDialogContent"><section class="filing-dialog-shell"><header class="filing-dialog-header"><span class="eyebrow">Source-cited legal screen</span><h2 data-dialog-title>Allegation candidate</h2><p data-dialog-subtitle></p></header><html-import data-source-explanation href="./arcane/components/source-explanation.html?v=9"></html-import></section></template>
+  <div id="appStatus" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="./apps/investigator/modules/InvestigatorBriefApp.js?v=4"></script>
+</body></html>

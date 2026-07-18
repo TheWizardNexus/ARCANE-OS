@@ -1,0 +1,11 @@
+{
+  "schemaVersion":1,
+  "id":"investigator",
+  "displayName":"Arcane Investigator",
+  "version":"0.1.0",
+  "entry":"index.html",
+  "strategy":"static",
+  "include":["index.html","brief.html","data.html","conduct.html","timeline.html","motives.html","case-map.html","manifest.json","investigator.css","modules","schemas"],
+  "exclude":["scripts","test","data"],
+  "shared":["browser-runtime"]
+}

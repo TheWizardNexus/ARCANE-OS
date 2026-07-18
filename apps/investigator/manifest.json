@@ -1,0 +1,10 @@
+{
+  "name":"Arcane Investigator",
+  "short_name":"Investigator",
+  "description":"A provenance-first police investigation workspace for reviewing filings, separating evidence, and preparing DA-ready case reports.",
+  "start_url":"./index.html",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"rgb(239, 242, 244)",
+  "theme_color":"rgb(20, 33, 43)"
+}

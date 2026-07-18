@@ -46,8 +46,10 @@ const source=await fs.readFile(sourcePath,'utf8');
 assert.equal(source.split(marker).length,2,'test adapter insertion marker must remain unique');
 const hostOverrideSource=source.replace('const hostPlatform = process.platform;',"const hostPlatform = 'win32';");
 assert.notEqual(hostOverrideSource,source,'test runtime must explicitly provide its Windows host seam');
-const mutableSource=hostOverrideSource.replace('const native = platform ===','let native = platform ===');
-assert.notEqual(mutableSource,source,'test runtime must expose the adapter seam');
+const nativeDeclaration=/const native\s*=\s*createCoreNativeAdapter\(platform,\s*nativeContext\);/;
+assert.match(hostOverrideSource,nativeDeclaration,'test runtime must contain the native adapter declaration');
+const mutableSource=hostOverrideSource.replace(nativeDeclaration,'let native = createCoreNativeAdapter(platform, nativeContext);');
+assert.notEqual(mutableSource,hostOverrideSource,'test runtime must expose the adapter seam');
 await fs.writeFile(runtimePath,mutableSource.replace(marker,`native=Object.assign({},native);\n${injectedAdapter}\n${marker}`),'utf8');
 
 function createClient(){
@@ -119,12 +121,12 @@ try{
   assert.deepEqual(launched,{id:'boss',accepted:true});
   for(const forbidden of ['path','pid','args','env','executable','command'])assert.equal(forbidden in launched,false);
 
-  await assert.rejects(client.call('apps.launch',{id:'boss',path:'C:\\untrusted.exe'}),(error)=>error.code==='INVALID_APPLICATION_REQUEST');
-  await assert.rejects(client.call('apps.list',null),(error)=>error.code==='INVALID_APPLICATION_REQUEST');
-  await assert.rejects(client.call('apps.launch',{id:'BOSS'}),(error)=>error.code==='INVALID_APPLICATION_ID');
-  await assert.rejects(client.call('apps.launch',{id:'boss '}),(error)=>error.code==='INVALID_APPLICATION_ID');
-  await assert.rejects(client.call('apps.launch',{id:'shell'}),(error)=>error.code==='INVALID_APPLICATION_ID');
-  await assert.rejects(client.call('apps.launch',{id:'con'}),(error)=>error.code==='INVALID_APPLICATION_ID');
+  await assert.rejects(client.call('apps.launch',{id:'boss',path:'C:\\untrusted.exe'}),(error)=>error.code==='METHOD_CONTRACT_INPUT_INVALID');
+  await assert.rejects(client.call('apps.list',null),(error)=>error.code==='METHOD_CONTRACT_INPUT_INVALID');
+  await assert.rejects(client.call('apps.launch',{id:'BOSS'}),(error)=>error.code==='METHOD_CONTRACT_INPUT_INVALID');
+  await assert.rejects(client.call('apps.launch',{id:'boss '}),(error)=>error.code==='METHOD_CONTRACT_INPUT_INVALID');
+  await assert.rejects(client.call('apps.launch',{id:'shell'}),(error)=>error.code==='METHOD_CONTRACT_INPUT_INVALID');
+  await assert.rejects(client.call('apps.launch',{id:'con'}),(error)=>error.code==='METHOD_CONTRACT_INPUT_INVALID');
   await assert.rejects(client.call('apps.launch',{id:'precrisis'}),(error)=>error.code==='APPLICATION_LAUNCH_REJECTED');
   await assert.rejects(
     client.call('apps.launch',{id:'throwing'}),

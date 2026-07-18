@@ -57,6 +57,12 @@ for (const token of ['SetCurrentProcessExplicitAppUserModelID','AddHostObjectToS
 if (!windowsHost.includes('public string Send(string requestJson)')) throw new Error('Windows bridge must expose Send through COM.');
 if (windowsHost.includes('public string Invoke(string requestJson)')) throw new Error('Windows bridge uses COM-reserved method name Invoke.');
 const linuxHost = await fs.readFile(path.join(root, 'src/hosts/linux/arcane_host.c'), 'utf8');
+const posixFeatureDeclaration = linuxHost.indexOf('#define _POSIX_C_SOURCE 200809L');
+const firstLinuxHostInclude = linuxHost.indexOf('#include ');
+if (posixFeatureDeclaration < 0 || posixFeatureDeclaration > firstLinuxHostInclude) throw new Error('Linux host must expose POSIX APIs before system headers are included.');
+if (!linuxHost.includes('index < G_N_ELEMENTS(candidates)') || !linuxHost.includes('if (!candidates[index] || !*candidates[index]) continue;')) {
+  throw new Error('Linux host bundle discovery must skip absent candidates without terminating fallback discovery.');
+}
 for (const token of ['webkit_user_content_manager_register_script_message_handler_with_reply','script-message-with-reply-received::arcane','JSCValue *value','webkit_web_view_evaluate_javascript']) {
   if (!linuxHost.includes(token)) throw new Error(`Linux WebKitGTK host feature missing: ${token}`);
 }

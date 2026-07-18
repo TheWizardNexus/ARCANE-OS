@@ -1,0 +1,23 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://arcane.local/schemas/investigator-referral-case.schema.json",
+  "title":"Arcane Investigator curated referral case",
+  "type":"object",
+  "required":["schemaVersion","generatedAt","case","theory","contacts","candidates","motives","chronology","requests","reliefTracks","sources","reports"],
+  "properties":{
+    "schemaVersion":{"const":1},
+    "generatedAt":{"type":"string","format":"date-time"},
+    "case":{"type":"object","required":["id","relatedCase","preparedFor","reportingParty","subject","purpose","posture"]},
+    "theory":{"type":"object","required":["executiveSummary","actionRequested","criminalScope","familyScope"]},
+    "contacts":{"type":"array","items":{"type":"object","required":["id","role","name","contact","sourceIds"]}},
+    "candidates":{"type":"array","minItems":1,"items":{"type":"object","required":["id","rank","actor","title","offenseTheory","victimTarget","eventVenue","rankBasis","evidencePosture","investigativeUrgency","principalBlocker","immediateActionId","status","readiness","assessment","authority","elements","sourceIds","contrarySourceIds","defenses","blockingGaps","actionIds"]}},
+    "motives":{"type":"array","items":{"type":"object","required":["id","candidateId","status","trigger","incentive","anticipatedBenefit","supportingSourceIds","contrary"]}},
+    "chronology":{"type":"array","items":{"type":"object","required":["id","datePrecision","filedDate","candidateIds","classification","title","sourceIds"]}},
+    "requests":{"type":"array","items":{"type":"object","required":["id","priority","candidateIds","action","target","status"]}},
+    "reliefTracks":{"type":"object","required":["criminalReferral","familyCourt"]},
+    "sources":{"type":"array","items":{"type":"object","required":["id","recordId","filename","pdfPath","markdownPath","page","lineStart","lineEnd","excerpt","role"]}},
+    "reports":{"type":"object","required":["actionReport","actionReportMarkdown","sourceIndex","manifest"]},
+    "reviewHistory":{"type":"array"}
+  },
+  "additionalProperties":true
+}

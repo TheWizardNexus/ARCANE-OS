@@ -43,6 +43,7 @@ for (const modelFile of ['Arcane-20B.Modelfile', 'Arcane-120B.Modelfile']) {
 for (const app of ['provisioner', 'shell']) {
   const source = path.join(root, `src/frontend/${app}/index.html`);
   let html = await fs.readFile(source, 'utf8');
+  html = html.replace(/\r\n?/g, '\n');
   const scriptMatches = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
   const scripts = scriptMatches.filter((match) => !/\bsrc\s*=/i.test(match[0])).map((match) => match[1]);
   scripts.forEach((script, index) => new vm.Script(script, { filename: `${app}.inline.${index + 1}.js` }));

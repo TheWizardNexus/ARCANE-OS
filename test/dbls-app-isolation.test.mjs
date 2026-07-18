@@ -117,24 +117,33 @@ test('shared refresh UI does not sweep another app\'s origin storage',async()=>{
 });
 
 test('shared fallback stores bind identical domain keys to the current app',async()=>{
-    const [communicationModule,preferenceModule]=await Promise.all([
+    const [communicationModule,reviewModule,preferenceModule]=await Promise.all([
         import('../arcane/modules/CommunicationPreferences.js'),
+        import('../arcane/modules/RecordReviewStore.js'),
         import('../arcane/modules/PreferenceStore.js')
     ]);
     const schema=[{key:'enabled',type:'boolean',defaultValue:false}];
 
     globalThis.document=documentFor('alpha');
     await new communicationModule.default('shared').save({demo:{enabled:true}});
+    const alphaReviews=new reviewModule.default({namespace:'shared'});
+    await alphaReviews.load();
+    await alphaReviews.set('same',{status:'reviewed'});
     await new preferenceModule.default({namespace:'shared',schema}).set('enabled',true);
 
     globalThis.document=documentFor('beta');
     await new communicationModule.default('shared').save({demo:{enabled:false}});
+    const betaReviews=new reviewModule.default({namespace:'shared'});
+    await betaReviews.load();
+    await betaReviews.set('same',{status:'pending'});
     await new preferenceModule.default({namespace:'shared',schema}).set('enabled',false);
 
     assert.notEqual(
         storage.getItem('arcane.apps.alpha:arcane.communications.shared'),
         storage.getItem('arcane.apps.beta:arcane.communications.shared')
     );
+    assert.match(storage.getItem('arcane.apps.alpha:arcane.record-review:shared'),/reviewed/);
+    assert.match(storage.getItem('arcane.apps.beta:arcane.record-review:shared'),/pending/);
     assert.equal(storage.getItem('arcane.apps.alpha:arcane.preferences:shared.enabled'),'true');
     assert.equal(storage.getItem('arcane.apps.beta:arcane.preferences:shared.enabled'),'false');
     globalThis.document=alphaDocument;

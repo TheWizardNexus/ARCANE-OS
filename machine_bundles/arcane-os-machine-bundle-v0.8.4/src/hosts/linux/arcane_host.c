@@ -1,3 +1,7 @@
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
 #include <jsc/jsc.h>
@@ -261,7 +265,8 @@ static gchar *locate_bundle_root(void) {
   gchar *cwd = g_get_current_dir();
   const gchar *env = g_getenv("ARCANE_BUNDLE_ROOT");
   gchar *candidates[] = { (gchar *)env, parent, exe_dir, cwd, NULL };
-  for (guint index = 0; candidates[index]; index++) {
+  for (guint index = 0; index < G_N_ELEMENTS(candidates); index++) {
+    if (!candidates[index] || !*candidates[index]) continue;
     gchar *manifest = g_build_filename(candidates[index], "arcane-bundle.json", NULL);
     gchar *app = g_build_filename(candidates[index], "app", NULL);
     gchar *dist_app = g_build_filename(candidates[index], "dist", "app", NULL);

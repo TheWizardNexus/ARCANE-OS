@@ -8,8 +8,8 @@ Warrior Spirit Companion is the Warrior Spirit white-label of The Wizard Nexus's
 - `companion.html` — the established PreCrisis conversation workflow presented as the Warrior Spirit Companion.
 - `reflection.html` — the existing PreCrisis journal and post-save workflow.
 - `mental-health.html` — the existing Personal Mental Health Center charts and notes.
-- `memories.html` — the existing on-device PreCrisis data browser.
-- `profile.html` — the existing PreCrisis profile with the Warrior Spirit AI Licence key visible and its color-palette, model setup, developer, and support-email controls hidden from the Warrior view.
+- `memories.html` — the established PreCrisis data-browser mechanism over Warrior Spirit records.
+- `profile.html` — the established PreCrisis profile workflow and schema, with the Warrior Spirit AI Licence key visible and its color-palette, model setup, developer, and support-email controls hidden from the Warrior view.
 
 The functional Warrior routes are direct top-level copies of the proven PreCrisis page documents, with no iframe boundary. They keep using the authoritative shared Arcane and PreCrisis modules, entities, and components. The app-local `modules/PreCrisisFrame.js` adapter applies only Warrior Spirit presentation and policy to the current page. `scripts/build_public_release.mjs` includes the PreCrisis dependencies in the public package.
 
@@ -19,7 +19,7 @@ Arcane's system/light/dark appearance remains the base. `precrisis-skin.css` add
 
 ## Local data and artificial intelligence
 
-The app uses the existing PreCrisis DBOPFS tables for profile, chats, journal entries, memories, notes, reports, and scores. Those records remain on this device unless the user exports them. AI requests send the necessary conversation or reflection content to the configured provider. The Warrior Spirit AI Licence key is stored in the on-device PreCrisis profile and supplies the inherited Cloud AI credential field.
+The app reuses the PreCrisis DBOPFS table names and record schemas for profile, chats, journal entries, memories, notes, reports, and scores. Its `arcane-app-id` is `warrior-spirit`, so those records live in the Warrior Spirit application-data folder and are isolated from records owned by `precrisis` and other apps. Records remain on this device unless the user exports them. AI requests send the necessary conversation or reflection content to the configured provider. The Warrior Spirit AI Licence key is stored in the on-device Warrior Spirit profile and supplies the inherited Cloud AI credential field.
 
 ## Crisis support
 

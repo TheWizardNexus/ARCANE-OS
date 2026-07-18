@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "site": "precrisis.ai",
+  "files": [
+    {
+      "path": "index.html",
+      "bytes": 15958,
+      "sha256": "3e07210169e3930f855e91adaa32970ef9bfa0be4ec92f93b1a68f683727aad4"
+    },
+    {
+      "path": "og.png",
+      "bytes": 2345680,
+      "sha256": "d64ab1b3ed90677420266c13abba0c68d69ef3bd6f11168746e913f3d9d663be"
+    },
+    {
+      "path": "privacy.html",
+      "bytes": 5727,
+      "sha256": "6829338b03ecead290263c867509e435e6916ff527320b7338aca775432ff09b"
+    },
+    {
+      "path": "site.css",
+      "bytes": 16894,
+      "sha256": "72883e6e25b8b3b71c1011ff8cdf9048a6a9d5506f2029f0edc100bd49277257"
+    },
+    {
+      "path": "site.js",
+      "bytes": 536,
+      "sha256": "8c18ff2bcd1891e60f00b1d26e90f29c73013c64c6c318ff39762817894644ab"
+    }
+  ]
+}

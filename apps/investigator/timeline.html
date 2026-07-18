@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="arcane-app-id" content="investigator"><base href="../../">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Full statement, evidence, police, treatment, filing, and order chronology for case 24FL001068.">
+  <meta name="referrer" content="no-referrer"><title>Case Timeline | Arcane Investigator</title>
+  <link rel="manifest" href="./apps/investigator/manifest.json">
+  <link rel="stylesheet" href="./arcane/css/layout.css?v=3"><link rel="stylesheet" href="./arcane/css/theme.css?v=1"><link rel="stylesheet" href="./arcane/css/primitives.css?v=1"><link rel="stylesheet" href="./apps/investigator/investigator.css?v=12">
+  <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script><script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+  <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">AI</span><div><strong>Arcane Investigator</strong><small>Evidence to prosecutable theory</small></div></div><nav class="app-nav" aria-label="Investigator pages"><a href="./apps/investigator/index.html">Overview</a><a href="./apps/investigator/brief.html">Police / DA brief</a><a href="./apps/investigator/data.html">Documents</a><a href="./apps/investigator/conduct.html">Conduct</a><a aria-current="page" href="./apps/investigator/timeline.html">Timeline</a><a href="./apps/investigator/motives.html">Motives</a><a href="./apps/investigator/case-map.html">Case map</a></nav><div class="case-tag"><span>ACTIVE CASE</span><strong>24FL001068</strong></div></header>
+  <main class="analysis-page">
+    <section class="analysis-hero" aria-labelledby="pageTitle"><div><span class="eyebrow">Full chronology tool</span><h1 id="pageTitle">What happened, what was said, and when it was tested</h1><p>Event dates remain separate from record-created, signature, filing, comparison, scheduled, and cancellation dates. Open any entry to inspect the exact source excerpt and original PDF page.</p></div><div class="timeline-key"><strong id="timelineTotal">0</strong><span>dated source events</span><small>Automated plus curated chronology</small></div></section>
+    <section class="timeline-layout">
+      <aside class="timeline-controls" aria-label="Timeline filters"><h2>Filter chronology</h2><label>Search<input id="timelineSearch" type="search" placeholder="Person, provider, event, filing…"></label><label>Event type<select id="timelineCategory"><option value="">All event types</option></select></label><label>From date<input id="timelineFrom" type="date"></label><label>Through date<input id="timelineThrough" type="date"></label><button type="button" id="clearTimelineFilters">Clear filters</button><p class="policy"><strong>Date rule</strong><span>“Scheduled” is not “occurred.” A later filing date is not the underlying event date.</span></p></aside>
+      <section class="timeline-main" aria-labelledby="timelineHeading"><div class="section-head"><div><span class="eyebrow">Source-linked chronology</span><h2 id="timelineHeading">Case events</h2></div><p id="timelineSummary" aria-live="polite"></p></div><html-import id="caseTimeline" href="./arcane/components/record-timeline.html?v=1"></html-import></section>
+      <aside class="order-ledger" aria-labelledby="orderHeading"><span class="eyebrow">Order ledger</span><h2 id="orderHeading">Orders and compliance status</h2><div id="orderList"></div></aside>
+    </section>
+  </main>
+  <html-import id="findingDialog" class="document-modal" data-label="Timeline source explanation" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="findingDialogContent"><section class="filing-dialog-shell"><header class="filing-dialog-header"><span class="eyebrow">Source-cited chronology</span><h2 data-dialog-title>Timeline event</h2><p data-dialog-subtitle></p></header><html-import data-source-explanation href="./arcane/components/source-explanation.html?v=9"></html-import></section></template>
+  <div id="appStatus" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="./apps/investigator/modules/InvestigatorTimelineApp.js?v=1"></script>
+</body></html>

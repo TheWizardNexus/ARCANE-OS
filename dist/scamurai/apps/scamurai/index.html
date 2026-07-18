@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="arcane-app-id" content="scamurai">
+    <base href="../../">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Scamurai</title>
+    <link rel="manifest" href="./apps/scamurai/manifest.json">
+    <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+    <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+    <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+    <link rel="stylesheet" href="./apps/scamurai/scamurai.css?v=1">
+    <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+    <script type="module" src="./apps/scamurai/modules/ScamuraiApp.js?v=1"></script>
+</head>
+<body>
+<main class="scamurai-shell">
+    <header class="hero"><p class="eyebrow">Protective pause</p><h1>Scamurai</h1><p>Check a suspicious message before you reply, pay, click, or share information.</p><div class="status"><span aria-hidden="true">●</span> Manual protection is ready</div></header>
+    <section class="card" aria-labelledby="check-title"><h2 id="check-title">Check a message</h2><p>Paste only the suspicious words you need checked. Remove account numbers, passwords, security codes, and private identifiers.</p><form id="check-form"><label for="message">Suspicious message or request</label><textarea id="message" required maxlength="20000" rows="8"></textarea><button type="submit">Check for scam warning signs</button></form><article id="result" class="result" tabindex="-1" hidden aria-live="polite"></article></section>
+    <section class="dashboard" aria-label="Scamurai dashboard"><article class="card"><h2>Protection status</h2><dl><div><dt>Background monitoring</dt><dd>Not enabled</dd></div><div><dt>Automatic sending</dt><dd>Off</dd></div><div><dt>Storage</dt><dd>This device only</dd></div></dl><p>Scamurai does not silently read other apps, calls, messages, or browser pages. An approved Arcane capability or browser extension is required for that protection.</p></article><article class="card"><h2>Trusted contacts</h2><p>Add up to three email addresses, one per line. Scamurai prepares an email; you review and send it.</p><label for="contacts">Trusted-contact emails</label><textarea id="contacts" rows="4" autocomplete="off"></textarea><button type="button" id="save-contacts">Save contacts</button><p id="contact-status" role="status"></p></article></section>
+    <section class="card" aria-labelledby="history-title"><h2 id="history-title">Recent checks</h2><div id="history"></div></section>
+    <aside class="help"><h2>Three safe moves</h2><ol><li>Stop the conversation.</li><li>Verify using a number or website you already trust.</li><li>Ask a trusted person before sending money or information.</li></ol></aside>
+</main>
+</body>
+</html>

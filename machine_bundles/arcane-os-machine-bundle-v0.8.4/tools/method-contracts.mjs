@@ -22,6 +22,9 @@ const FIELDS = new Set(CONTRACT_FIELDS);
 const AUTHORITY_FIELDS = new Set(
     ['appIds', 'appTypes', 'capability', 'exclusiveMutation', 'hosts', 'privileged']
 );
+const CROSS_HOST_POLICY = Object.freeze(
+    ['android', 'core']
+);
 const ENUMS = Object.freeze(
     {
         audit: new Set(
@@ -31,10 +34,10 @@ const ENUMS = Object.freeze(
             ['not-applicable', 'pre-dispatch-only']
         ),
         dataMovement: new Set(
-            ['host-to-application', 'operating-system-handoff']
+            ['application-to-host', 'host-to-application', 'operating-system-handoff']
         ),
         effect: new Set(
-            ['external-handoff', 'observe']
+            ['application-dispatch', 'external-handoff', 'observe']
         ),
         idempotency: new Set(
             ['non-idempotent', 'repeatable-read']
@@ -49,17 +52,6 @@ const ENUMS = Object.freeze(
             ['low', 'moderate', 'high', 'critical']
         )
     }
-);
-const CONTRACT_METHODS = Object.freeze(
-    [
-        'app.current',
-        'external.open',
-        'network.status',
-        'platform.status',
-        'system.ping',
-        'user.current',
-        'version.current'
-    ]
 );
 
 function fail(message) {
@@ -83,7 +75,10 @@ function validateShape(value, label) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) fail(`${label} must be an object.`);
     if (value.exact !== true || typeof value.kind !== 'string' || !value.kind) fail(`${label} must name an exact shape.`);
     const fieldsByKind = {
+        'application-catalog-v1': ['kind', 'exact', 'maxApplications', 'maxApplicationIdLength', 'maxDisplayNameLength', 'maxDescriptionLength', 'maxIconUrlLength', 'maxApplicationVersionLength', 'maxOrder', 'maxSecurityEvidenceLength', 'ordering'],
         'application-descriptor-v1': ['kind', 'exact', 'maxApplicationIdLength', 'maxDisplayNameLength', 'maxApplicationEntryLength', 'maxApplicationVersionLength'],
+        'application-launch-result-v1': ['kind', 'exact', 'maxApplicationIdLength', 'acceptedMeaning'],
+        'application-launch-v1': ['kind', 'exact', 'maxApplicationIdLength', 'idMeaning'],
         'empty-object-v1': ['kind', 'exact'],
         'external-open-v1': ['kind', 'exact', 'maxUriLength', 'scheme'],
         'external-open-result-v1': ['kind', 'exact', 'maxUriLength', 'scheme'],
@@ -102,12 +97,16 @@ function validateShape(value, label) {
     const expected = fieldsByKind[value.kind];
     const actualFields = Object.keys(value);
     if (!expected || JSON.stringify(actualFields) !== JSON.stringify(expected)) fail(`${label} contains an unknown kind or noncanonical fields.`);
-    for (const field of ['maxAccountNameLength', 'maxApplicationEntryLength', 'maxApplicationIdLength', 'maxApplicationVersionLength', 'maxDisplayNameLength', 'maxInterfaceCount', 'maxLength', 'maxListItems', 'maxProbeItems', 'maxRendererExecutableLength', 'maxStatusStringLength', 'maxUriLength', 'maxUsernameLength']) {
-        if (value[field] !== undefined && (!Number.isSafeInteger(value[field]) || value[field] < 1 || value[field] > 65536)) fail(`${label}.${field} is invalid.`);
+    for (const field of ['maxAccountNameLength', 'maxApplications', 'maxApplicationEntryLength', 'maxApplicationIdLength', 'maxApplicationVersionLength', 'maxDescriptionLength', 'maxDisplayNameLength', 'maxIconUrlLength', 'maxInterfaceCount', 'maxLength', 'maxListItems', 'maxOrder', 'maxProbeItems', 'maxRendererExecutableLength', 'maxSecurityEvidenceLength', 'maxStatusStringLength', 'maxUriLength', 'maxUsernameLength']) {
+        const maximum = field === 'maxOrder' ? 100000 : 65536;
+        if (value[field] !== undefined && (!Number.isSafeInteger(value[field]) || value[field] < 1 || value[field] > maximum)) fail(`${label}.${field} is invalid.`);
     }
+    if (value.acceptedMeaning !== undefined && value.acceptedMeaning !== 'dispatch-request-accepted') fail(`${label}.acceptedMeaning is invalid.`);
+    if (value.idMeaning !== undefined && value.idMeaning !== 'installed-launchable-application-id') fail(`${label}.idMeaning is invalid.`);
     if (value.scheme !== undefined && value.scheme !== 'mailto') fail(`${label}.scheme is invalid.`);
     if (value.onlineMeaning !== undefined && value.onlineMeaning !== 'non-loopback-interface-present') fail(`${label}.onlineMeaning is invalid.`);
     if (value.meaning !== undefined && value.meaning !== 'active-arcane-host-release-version') fail(`${label}.meaning is invalid.`);
+    if (value.ordering !== undefined && value.ordering !== 'ascending-order') fail(`${label}.ordering is invalid.`);
 }
 
 function deepFreeze(value) {
@@ -118,12 +117,22 @@ function deepFreeze(value) {
 
 export function validateMethodContracts(value, policies) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) fail('the root must be an object.');
+    if (!policies || typeof policies !== 'object' || Array.isArray(policies)) fail('the method policy registry is required.');
     const methods = Object.keys(value);
-    if (JSON.stringify(methods) !== JSON.stringify(CONTRACT_METHODS)) fail('the reviewed contract methods must be canonical and complete.');
+    const sortedMethods = [...methods].sort();
+    if (JSON.stringify(methods) !== JSON.stringify(sortedMethods)) fail('the reviewed contract methods must be sorted.');
+    const crossHostMethods = Object.entries(policies)
+        .filter(function reviewedCrossHostMethod([, policy]) {
+            return JSON.stringify(policy.hosts) === JSON.stringify(CROSS_HOST_POLICY);
+        })
+        .map(function crossHostMethodName([method]) {
+            return method;
+        })
+        .sort();
+    if (JSON.stringify(methods) !== JSON.stringify(crossHostMethods)) fail('every reviewed cross-host method must have exactly one semantic contract.');
     for (const method of methods) {
         if (!METHOD_PATTERN.test(method) || !policies?.[method]) fail(`${method} does not name a canonical policy method.`);
-        const crossHostPolicy = ['android', 'core'];
-        if (JSON.stringify(policies[method].hosts) !== JSON.stringify(crossHostPolicy)) fail(`${method} must remain a reviewed cross-host method.`);
+        if (JSON.stringify(policies[method].hosts) !== JSON.stringify(CROSS_HOST_POLICY)) fail(`${method} must remain a reviewed cross-host method.`);
         const contract = value[method];
         if (!contract || typeof contract !== 'object' || Array.isArray(contract)) fail(`${method} must map to an object.`);
         const contractFields = Object.keys(contract);
@@ -139,6 +148,11 @@ export function validateMethodContracts(value, policies) {
         validateShape(contract.input, `${method}.input`);
         validateShape(contract.output, `${method}.output`);
     }
+    const launch = value['apps.launch'];
+    if (launch.input.kind !== 'application-launch-v1' || launch.input.maxApplicationIdLength !== 64 || launch.input.idMeaning !== 'installed-launchable-application-id') fail('apps.launch input semantics have drifted.');
+    if (launch.output.kind !== 'application-launch-result-v1' || launch.output.maxApplicationIdLength !== 64 || launch.output.acceptedMeaning !== 'dispatch-request-accepted') fail('apps.launch output semantics have drifted.');
+    const catalog = value['apps.list'];
+    if (catalog.input.kind !== 'empty-object-v1' || catalog.output.kind !== 'application-catalog-v1' || catalog.output.maxApplications !== 256 || catalog.output.maxApplicationIdLength !== 64 || catalog.output.maxDisplayNameLength !== 80 || catalog.output.maxDescriptionLength !== 240 || catalog.output.maxIconUrlLength !== 1024 || catalog.output.maxApplicationVersionLength !== 64 || catalog.output.maxOrder !== 100000 || catalog.output.maxSecurityEvidenceLength !== 256 || catalog.output.ordering !== 'ascending-order') fail('apps.list semantics have drifted.');
     const external = value['external.open'];
     if (external.input.kind !== 'external-open-v1' || external.input.scheme !== 'mailto' || external.input.maxUriLength !== 4096) fail('external.open input semantics have drifted.');
     if (external.output.kind !== 'external-open-result-v1' || external.output.scheme !== 'mailto' || external.output.maxUriLength !== 4096) fail('external.open output semantics have drifted.');

@@ -11,10 +11,16 @@ internal object AndroidBridgeProtocol {
     private const val MAX_REMEMBERED_REQUEST_IDS = 4096
     private val requestIdPattern = Regex("^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
     private val sentAtPattern = Regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?Z$")
-    private val applicationIdPattern = Regex("^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    private val applicationIdPattern = Regex("^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+    private val windowsReservedApplicationIdPattern = Regex("^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\\..*)?$", RegexOption.IGNORE_CASE)
     private val applicationEntryPattern = Regex("^[A-Za-z0-9._/-]+$")
 
-    internal data class Request(val id: String, val method: String, val externalUri: String?)
+    internal data class Request(
+        val id: String,
+        val method: String,
+        val externalUri: String?,
+        val applicationId: String? = null
+    )
 
     internal data class Status(
         val release: String,
@@ -73,13 +79,20 @@ internal object AndroidBridgeProtocol {
             return null
         }
         var externalUri: String? = null
+        var applicationId: String? = null
         if (method == GeneratedAndroidCapabilityRegistry.SYSTEM_PING_METHOD
             || method == GeneratedAndroidCapabilityRegistry.VERSION_CURRENT_METHOD
             || method == GeneratedAndroidCapabilityRegistry.APP_CURRENT_METHOD
             || method == GeneratedAndroidCapabilityRegistry.USER_CURRENT_METHOD
+            || method == GeneratedAndroidCapabilityRegistry.APPS_LIST_METHOD
             || method == GeneratedAndroidCapabilityRegistry.PLATFORM_STATUS_METHOD
             || method == GeneratedAndroidCapabilityRegistry.NETWORK_STATUS_METHOD) {
             if (parameters.keys().hasNext()) return null
+        } else if (method == GeneratedAndroidCapabilityRegistry.APPS_LAUNCH_METHOD) {
+            if (!hasExactKeys(parameters, setOf("id"))) return null
+            val candidate = parameters.opt("id") as? String ?: return null
+            if (!isCanonicalLaunchApplicationId(candidate)) return null
+            applicationId = candidate
         } else if (method == GeneratedAndroidCapabilityRegistry.EXTERNAL_OPEN_METHOD) {
             if (!hasExactKeys(parameters, setOf("uri"))) return null
             val candidate = parameters.opt("uri") as? String ?: return null
@@ -87,7 +100,74 @@ internal object AndroidBridgeProtocol {
         } else {
             return null
         }
-        return Request(id, method, externalUri)
+        return Request(id, method, externalUri, applicationId)
+    }
+
+    internal fun applicationLaunchResponse(request: Request, applicationId: String): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.APPS_LAUNCH_METHOD
+            || request.applicationId != applicationId
+            || !isCanonicalLaunchApplicationId(applicationId)) {
+            return errorResponse(request.id, "METHOD_CONTRACT_OUTPUT_INVALID", "Android returned an invalid application launch result.")
+        }
+        return successResponse(
+            request.id,
+            JSONObject()
+                .put("id", applicationId)
+                .put("accepted", true)
+        )
+    }
+
+    internal fun applicationCatalogResponse(
+        request: Request,
+        catalog: ArcaneWebViewBridge.ApplicationCatalog
+    ): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.APPS_LIST_METHOD
+            || catalog.applications.size > 256) {
+            return errorResponse(request.id, "APPLICATION_CATALOG_UNVERIFIED", "Android returned an unverified application catalog.")
+        }
+        val applications = JSONArray()
+        val identifiers = mutableSetOf<String>()
+        var previousOrder = -1
+        for (application in catalog.applications) {
+            if (application.verified != catalog.verified
+                || !applicationIdPattern.matches(application.id)
+                || !identifiers.add(application.id)
+                || application.displayName.isEmpty()
+                || application.displayName.length > 80
+                || application.description.length > 240
+                || application.version != GeneratedAndroidApplicationRegistry.BUNDLE_VERSION
+                || application.order <= previousOrder
+                || !isSafeCatalogIconUrl(application.iconUrl, application.id)) {
+                return errorResponse(request.id, "APPLICATION_CATALOG_UNVERIFIED", "Android returned an unverified application catalog.")
+            }
+            applications.put(
+                JSONObject()
+                    .put("id", application.id)
+                    .put("displayName", application.displayName)
+                    .put("description", application.description)
+                    .put("iconUrl", application.iconUrl)
+                    .put("version", application.version)
+                    .put("order", application.order)
+                    .put("verified", application.verified)
+            )
+            previousOrder = application.order
+        }
+        val hasNoTrustEvidence = catalog.publisherTrustSource == null && catalog.revocationStatus == null
+        if (catalog.verified && (catalog.securityMode != "unsigned-local-test" || !hasNoTrustEvidence)) {
+            return errorResponse(request.id, "APPLICATION_CATALOG_UNVERIFIED", "Android returned invalid application catalog security evidence.")
+        }
+        if (!catalog.verified && (catalog.securityMode != "unverified" || !hasNoTrustEvidence)) {
+            return errorResponse(request.id, "APPLICATION_CATALOG_UNVERIFIED", "Android returned invalid application catalog security evidence.")
+        }
+        return successResponse(
+            request.id,
+            JSONObject()
+                .put("verified", catalog.verified)
+                .put("securityMode", catalog.securityMode)
+                .put("publisherTrustSource", catalog.publisherTrustSource ?: JSONObject.NULL)
+                .put("revocationStatus", catalog.revocationStatus ?: JSONObject.NULL)
+                .put("applications", applications)
+        )
     }
 
     internal fun systemPingResponse(request: Request): String {
@@ -253,6 +333,20 @@ internal object AndroidBridgeProtocol {
         return actual == expected
     }
 
+    private fun isSafeCatalogIconUrl(value: String, applicationId: String): Boolean {
+        if (!value.startsWith("/arcane/$applicationId/app/")
+            || value.contains('\\')
+            || value.contains('%')
+            || value.contains('?')
+            || value.contains('#')) {
+            return false
+        }
+        for (segment in value.split('/')) {
+            if (segment == "." || segment == "..") return false
+        }
+        return true
+    }
+
     internal fun isValidApplication(application: Application): Boolean {
         return validatedApplication(application) != null
     }
@@ -334,6 +428,13 @@ internal object AndroidBridgeProtocol {
         val scheme = validated.substring(0, separator)
         if (!scheme.equals(GeneratedAndroidMethodContracts.EXTERNAL_OPEN_INPUT_SCHEME, ignoreCase = true)) return null
         return GeneratedAndroidMethodContracts.EXTERNAL_OPEN_INPUT_SCHEME + validated.substring(separator)
+    }
+
+    private fun isCanonicalLaunchApplicationId(value: String): Boolean {
+        return value.length <= 64
+            && applicationIdPattern.matches(value)
+            && value !in setOf("provisioner", "shell")
+            && !windowsReservedApplicationIdPattern.matches(value)
     }
 
     private fun statusSuccessResponse(

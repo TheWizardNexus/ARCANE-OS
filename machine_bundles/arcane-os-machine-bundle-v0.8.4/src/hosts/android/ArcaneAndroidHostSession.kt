@@ -4,17 +4,20 @@ import android.content.Context
 import android.os.Build
 
 internal class ArcaneAndroidHostSession private constructor(
-    context: Context
+    context: Context,
+    private val snapshot: ArcaneAndroidApplicationCatalog.Snapshot,
+    launchDescriptor: ArcaneAndroidApplicationCatalog.LaunchDescriptor?
 ) :
     ArcaneWebViewBridge.CapabilityGrantProvider,
     ArcaneWebViewBridge.ApplicationIdentityProvider,
+    ArcaneWebViewBridge.ApplicationCatalogProvider,
     ArcaneWebViewBridge.UserIdentityProvider,
     ArcaneWebViewBridge.PlatformStatusProvider {
     internal val applicationContext = context.applicationContext
     private val packageVersion = currentPackageVersion(applicationContext)
-    private val applicationDescriptor = validatedApplication(packageVersion)
-    private val grants = GeneratedAndroidApplicationRegistry.shellGrants().toSet()
-    internal val webViewProfileName: String = "arcane-app-${applicationDescriptor.id}"
+    private val applicationDescriptor = validatedApplication(packageVersion, launchDescriptor)
+    private val grants = validatedGrants(launchDescriptor)
+    private val applicationCatalog = snapshot.publicCatalog
     private val userIdentity = ArcaneWebViewBridge.UserIdentity(
         identityKind = "local-session",
         username = null,
@@ -30,28 +33,46 @@ internal class ArcaneAndroidHostSession private constructor(
         application = applicationDescriptor
     )
 
+    internal val entry: String = applicationDescriptor.entry
+        ?: throw IllegalArgumentException("Android launcher entry is unavailable.")
+    internal val assetRoot: String = launchDescriptor?.assetRoot ?: ""
+    internal val originHost: String = launchDescriptor?.let { descriptor ->
+        "${descriptor.id}.arcane.invalid"
+    } ?: "appassets.androidplatform.net"
+    internal val webViewProfileName: String = "arcane-app-${applicationDescriptor.id}"
+    internal val navigationEntries: Set<String> = launchDescriptor?.navigationEntries?.toSet()
+        ?: setOf(entry)
+
     override fun isGranted(capability: String): Boolean {
         return grants.contains(capability)
     }
 
     override fun currentStatus(): ArcaneWebViewBridge.PlatformStatus {
-        return status
+        return status.copy(application = status.application.copy())
     }
 
     override fun currentApplicationIdentity(): ArcaneWebViewBridge.ApplicationDescriptor {
         return applicationDescriptor.copy()
     }
 
+    override fun currentApplicationCatalog(): ArcaneWebViewBridge.ApplicationCatalog {
+        return applicationCatalog.copy(applications = applicationCatalog.applications.toList())
+    }
+
     override fun currentUserIdentity(): ArcaneWebViewBridge.UserIdentity {
         return userIdentity.copy()
     }
 
-    internal val entry: String
-        get() = GeneratedAndroidApplicationRegistry.SHELL_ENTRY
-
     internal companion object {
         internal fun createShell(context: Context): ArcaneAndroidHostSession {
-            return ArcaneAndroidHostSession(context)
+            val snapshot = ArcaneAndroidApplicationCatalog(context).readSnapshot()
+            return ArcaneAndroidHostSession(context, snapshot, null)
+        }
+
+        internal fun createApplication(context: Context, id: String): ArcaneAndroidHostSession {
+            val snapshot = ArcaneAndroidApplicationCatalog(context).readSnapshot()
+            val descriptor = snapshot.requireLaunchDescriptor(id)
+            return ArcaneAndroidHostSession(context, snapshot, descriptor)
         }
     }
 
@@ -64,14 +85,27 @@ internal class ArcaneAndroidHostSession private constructor(
         throw IllegalStateException("Android architecture is unavailable.")
     }
 
-    private fun validatedApplication(packageVersion: String): ArcaneWebViewBridge.ApplicationDescriptor {
-        val application = ArcaneWebViewBridge.ApplicationDescriptor(
-            id = GeneratedAndroidApplicationRegistry.SHELL_ID,
-            displayName = GeneratedAndroidApplicationRegistry.SHELL_DISPLAY_NAME,
-            type = GeneratedAndroidApplicationRegistry.SHELL_TYPE,
-            entry = GeneratedAndroidApplicationRegistry.SHELL_ENTRY,
-            version = packageVersion
-        )
+    private fun validatedApplication(
+        packageVersion: String,
+        launchDescriptor: ArcaneAndroidApplicationCatalog.LaunchDescriptor?
+    ): ArcaneWebViewBridge.ApplicationDescriptor {
+        val application = if (launchDescriptor == null) {
+            ArcaneWebViewBridge.ApplicationDescriptor(
+                id = GeneratedAndroidApplicationRegistry.SHELL_ID,
+                displayName = GeneratedAndroidApplicationRegistry.SHELL_DISPLAY_NAME,
+                type = GeneratedAndroidApplicationRegistry.SHELL_TYPE,
+                entry = GeneratedAndroidApplicationRegistry.SHELL_ENTRY,
+                version = packageVersion
+            )
+        } else {
+            ArcaneWebViewBridge.ApplicationDescriptor(
+                id = launchDescriptor.id,
+                displayName = launchDescriptor.displayName,
+                type = launchDescriptor.type,
+                entry = launchDescriptor.entry,
+                version = packageVersion
+            )
+        }
         val protocolApplication = AndroidBridgeProtocol.Application(
             id = application.id,
             displayName = application.displayName,
@@ -84,6 +118,16 @@ internal class ArcaneAndroidHostSession private constructor(
             throw IllegalArgumentException("Android launcher application identity is invalid.")
         }
         return application.copy()
+    }
+
+    private fun validatedGrants(
+        launchDescriptor: ArcaneAndroidApplicationCatalog.LaunchDescriptor?
+    ): Set<String> {
+        if (launchDescriptor == null) return GeneratedAndroidApplicationRegistry.shellGrants().toSet()
+        val supported = GeneratedAndroidCapabilityRegistry.grants.toSet()
+        return launchDescriptor.requestedCapabilities.filterTo(linkedSetOf()) { capability ->
+            supported.contains(capability)
+        }.toSet()
     }
 
     private fun currentPackageVersion(context: Context): String {

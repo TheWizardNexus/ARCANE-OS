@@ -7,7 +7,7 @@ export default class CommunicationProviderRegistry{
         if(!PROVIDER_ID.test(id)) throw new TypeError('Communication provider id is invalid.');
         for(const method of ['listThreads','getMessages','send']) if(typeof provider[method]!=='function') throw new TypeError(`Provider ${id} must implement ${method}().`);
         if(this.providers.has(id)) throw new RangeError(`Communication provider already registered: ${id}`);
-        this.providers.set(id,{...provider,id,label:String(provider.label||id),channels:Object.freeze(Array.from(provider.channels||['other']))});
+        this.providers.set(id,{...provider,id,label:String(provider.label||id),channels:Object.freeze(Array.from(provider.channels||['other'])),listThreads:provider.listThreads.bind(provider),getMessages:provider.getMessages.bind(provider),send:provider.send.bind(provider)});
         return this.get(id);
     }
     get(id){const provider=this.providers.get(String(id||'').toLowerCase());if(!provider) throw new RangeError(`Unknown communication provider: ${id}`);return provider;}

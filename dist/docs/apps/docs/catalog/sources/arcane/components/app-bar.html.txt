@@ -1,0 +1,460 @@
+<style>
+    :host{
+        --app-bar-surface:var(--primary-color,#172238);
+        --app-bar-text:var(--button-text-color,#fff);
+        --app-bar-accent:var(--secondary-color,#c49a52);
+        --app-bar-active-text:var(--text-color,#fff);
+        --app-bar-border:var(--border-color,rgba(255,255,255,.18));
+        box-sizing:border-box;
+        display:block;
+        min-width:0;
+        color:var(--app-bar-text);
+    }
+
+    *,*::before,*::after{
+        box-sizing:border-box;
+    }
+
+    nav{
+        display:flex;
+        align-items:center;
+        gap:clamp(.7rem,2vw,1.5rem);
+        min-width:0;
+        min-height:4.25rem;
+        padding:.55rem clamp(.7rem,2vw,1.4rem);
+        color:inherit;
+        background:var(--app-bar-surface);
+        border-bottom:1px solid var(--app-bar-accent);
+        box-shadow:0 .35rem 1.1rem var(--shadow-color,rgba(0,0,0,.18));
+    }
+
+    .brand{
+        display:flex;
+        flex:0 0 auto;
+        align-items:center;
+        gap:.65rem;
+        min-width:0;
+        color:inherit;
+        text-decoration:none;
+    }
+
+    .brand-mark{
+        display:grid;
+        place-items:center;
+        width:2.45rem;
+        height:2.45rem;
+        overflow:hidden;
+        border:1px solid color-mix(in srgb,var(--app-bar-accent) 74%,white);
+        border-radius:.5rem;
+        color:var(--app-bar-active-text);
+        background:var(--app-bar-accent);
+        font:800 1.15rem/1 system-ui,sans-serif;
+    }
+
+    .product-name{
+        overflow:hidden;
+        font:750 .98rem/1.15 system-ui,sans-serif;
+        letter-spacing:.035em;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+    }
+
+    .routes{
+        flex:1 1 auto;
+        min-width:0;
+        overflow-x:auto;
+        scrollbar-width:thin;
+    }
+
+    #navigationSlot,
+    #generatedNavigation{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:.18rem;
+        min-width:max-content;
+    }
+
+    #generatedNavigation:empty{
+        display:none;
+    }
+
+    #generatedNavigation a,
+    ::slotted([slot="navigation"]){
+        display:block;
+        border:1px solid transparent;
+        border-radius:.5rem;
+        padding:.62rem .72rem;
+        color:inherit;
+        background:transparent;
+        font:680 .8rem/1 system-ui,sans-serif;
+        text-decoration:none;
+        white-space:nowrap;
+    }
+
+    #generatedNavigation a:hover,
+    #generatedNavigation a[aria-current="page"],
+    ::slotted([slot="navigation"]:hover),
+    ::slotted([slot="navigation"][aria-current="page"]){
+        color:var(--app-bar-active-text);
+        background:var(--app-bar-accent);
+        border-color:color-mix(in srgb,var(--app-bar-accent) 65%,white);
+    }
+
+    a:focus-visible,
+    ::slotted([slot="navigation"]:focus-visible),
+    ::slotted([slot="trailing"]:focus-visible){
+        outline:.18rem solid var(--focus-color,var(--app-bar-accent));
+        outline-offset:.14rem;
+    }
+
+    @media(forced-colors:active){
+        .brand-mark,
+        #generatedNavigation a:hover,
+        #generatedNavigation a[aria-current="page"],
+        ::slotted([slot="navigation"]:hover),
+        ::slotted([slot="navigation"][aria-current="page"]){
+            background:Highlight;
+            border-color:Highlight;
+            color:HighlightText;
+            forced-color-adjust:auto;
+        }
+    }
+
+    .end{
+        display:flex;
+        flex:0 0 auto;
+        align-items:center;
+        gap:.55rem;
+        min-width:0;
+    }
+
+    .status{
+        display:flex;
+        align-items:center;
+        gap:.42rem;
+        min-width:0;
+        color:color-mix(in srgb,var(--app-bar-text) 82%,transparent);
+        font:650 .72rem/1.2 system-ui,sans-serif;
+    }
+
+    .status-dot{
+        width:.5rem;
+        height:.5rem;
+        flex:0 0 auto;
+        border-radius:50%;
+        background:var(--app-bar-status-color,var(--app-bar-accent));
+        box-shadow:0 0 0 .16rem color-mix(in srgb,var(--app-bar-status-color,var(--app-bar-accent)) 20%,transparent);
+    }
+
+    :host([data-status-tone="success"]) .status{--app-bar-status-color:var(--success-color,#4f9a6b)}
+    :host([data-status-tone="warning"]) .status{--app-bar-status-color:var(--warning-color,#d69a32)}
+    :host([data-status-tone="error"]) .status{--app-bar-status-color:var(--danger-color,#c64c43)}
+    :host([data-status-tone="muted"]) .status{--app-bar-status-color:var(--app-bar-border)}
+    :host(:not([data-status])) #defaultStatus{display:none}
+
+    #defaultStatus{
+        display:flex;
+        align-items:center;
+        gap:.42rem;
+    }
+
+    .trailing{
+        display:flex;
+        align-items:center;
+        gap:.4rem;
+    }
+
+    @media(max-width:48rem){
+        nav{
+            flex-wrap:wrap;
+            gap:.45rem .75rem;
+            padding:.55rem .7rem;
+        }
+
+        .brand{
+            flex:1 1 auto;
+        }
+
+        .routes{
+            order:3;
+            flex-basis:100%;
+        }
+
+        #generatedNavigation{
+            justify-content:flex-start;
+        }
+    }
+
+    @media(max-width:30rem){
+        .product-name{
+            max-width:9rem;
+        }
+
+        .status-text{
+            max-width:6rem;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+    }
+</style>
+
+<nav aria-label="Primary navigation" part="nav">
+    <a class="brand" id="brandLink" href="./" part="brand">
+        <span class="brand-mark" part="brand-mark"><slot name="brand-mark"><span id="defaultBrandMark">A</span></slot></span>
+        <span class="product-name" part="product-name"><slot name="product-name"><span id="defaultProductName">Application</span></slot></span>
+    </a>
+
+    <div class="routes" part="routes">
+        <slot name="navigation" id="navigationSlot"><div id="generatedNavigation"></div></slot>
+    </div>
+
+    <div class="end" part="end">
+        <div class="status" role="status" aria-live="polite" part="status">
+            <slot name="status">
+                <span id="defaultStatus">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span class="status-text" id="statusText"></span>
+                </span>
+            </slot>
+        </div>
+        <div class="trailing" part="trailing"><slot name="trailing"></slot></div>
+    </div>
+</nav>
+
+<script type="module">
+    const host=this;
+    const root=host.shadowRoot;
+    const nav=root.querySelector('nav');
+    const brandLink=root.querySelector('#brandLink');
+    const navigationSlot=root.querySelector('#navigationSlot');
+    const generatedNavigation=root.querySelector('#generatedNavigation');
+    const statusText=root.querySelector('#statusText');
+    const statusTones=new Set(['default','success','warning','error','muted']);
+
+    let navigation=[];
+
+    host.setNavigation=setNavigation;
+    host.setActiveRoute=setActiveRoute;
+    host.setStatus=setStatus;
+    host.refresh=refresh;
+
+    Object.defineProperties(
+        host,
+        {
+            activeRoute:{
+                configurable:true,
+                get:()=>host.getAttribute('data-active-route')||routeFromLocation(),
+                set:value=>setActiveRoute(value)
+            },
+            navigation:{
+                configurable:true,
+                get:()=>navigation.slice(),
+                set:value=>setNavigation(value)
+            },
+            status:{
+                configurable:true,
+                get:()=>host.getAttribute('data-status')||'',
+                set:value=>setStatus(value,host.getAttribute('data-status-tone')||'default')
+            }
+        }
+    );
+
+    navigationSlot.addEventListener('slotchange',updateCurrent);
+    window.addEventListener('hashchange',onLocationChange);
+    window.addEventListener('popstate',onLocationChange);
+
+    const observer=new MutationObserver(
+        records=>{
+            const attributes=new Set(records.map(record=>record.attributeName));
+
+            if(attributes.has('data-brand-mark')||attributes.has('data-product-name')||attributes.has('data-brand-href')||attributes.has('data-label')){
+                syncBrand();
+            }
+            if(attributes.has('data-active-route')){
+                updateCurrent();
+            }
+            if(attributes.has('data-status')||attributes.has('data-status-tone')){
+                syncStatus();
+            }
+            if(attributes.has('data-navigation')){
+                readNavigationAttribute();
+            }
+        }
+    );
+
+    observer.observe(
+        host,
+        {
+            attributes:true,
+            attributeFilter:['data-brand-mark','data-product-name','data-brand-href','data-label','data-active-route','data-status','data-status-tone','data-navigation']
+        }
+    );
+
+    function syncBrand(){
+        root.querySelector('#defaultBrandMark').textContent=host.dataset.brandMark||'A';
+        root.querySelector('#defaultProductName').textContent=host.dataset.productName||'Application';
+        brandLink.href=host.dataset.brandHref||'./';
+        nav.setAttribute('aria-label',host.dataset.label||'Primary navigation');
+    }
+
+    function normalizeNavigation(items=[]){
+        if(!Array.isArray(items)){
+            return [];
+        }
+
+        return items.filter(item=>item&&typeof item==='object').map(
+            item=>({
+                label:String(item.label||item.name||item.route||''),
+                href:String(item.href||'#'),
+                route:String(item.route||item.id||'')
+            })
+        ).filter(item=>item.label);
+    }
+
+    function setNavigation(items=[]){
+        navigation=normalizeNavigation(items);
+        generatedNavigation.replaceChildren(
+            ...navigation.map(
+                item=>{
+                    const link=document.createElement('a');
+                    link.textContent=item.label;
+                    link.href=item.href;
+                    if(item.route){
+                        link.dataset.route=item.route;
+                    }
+                    return link;
+                }
+            )
+        );
+        updateCurrent();
+        return navigation.slice();
+    }
+
+    function readNavigationAttribute(){
+        const source=host.getAttribute('data-navigation');
+
+        if(!source){
+            if(navigation.length){
+                setNavigation([]);
+            }
+            return;
+        }
+
+        try{
+            setNavigation(JSON.parse(source));
+        }catch(error){
+            console.warn('Unable to parse app-bar data-navigation.',error);
+            setNavigation([]);
+        }
+    }
+
+    function routeFromLocation(){
+        const hash=globalThis.location?.hash?.replace(/^#/,'');
+        return hash||globalThis.location?.pathname||'';
+    }
+
+    function routeForLink(link){
+        if(link.dataset.route){
+            return link.dataset.route;
+        }
+        if(link.dataset.view){
+            return link.dataset.view;
+        }
+
+        try{
+            const url=new URL(link.href,globalThis.location?.href||'http://localhost/');
+            return url.hash.replace(/^#/,'')||url.pathname;
+        }catch{
+            return link.getAttribute('href')||'';
+        }
+    }
+
+    function navigationLinks(){
+        const assigned=navigationSlot.assignedElements({flatten:true});
+        const roots=assigned.length?assigned:[generatedNavigation];
+        const links=[];
+
+        roots.forEach(element=>{
+            if(element.matches?.('a[href],[data-route],[data-view]')){
+                links.push(element);
+            }
+            links.push(...element.querySelectorAll('a[href],[data-route],[data-view]'));
+        });
+
+        return [...new Set(links)];
+    }
+
+    function setActiveRoute(route=''){
+        if(route){
+            host.setAttribute('data-active-route',String(route).replace(/^#/,''));
+        }else{
+            host.removeAttribute('data-active-route');
+        }
+        updateCurrent();
+        return host.activeRoute;
+    }
+
+    function updateCurrent(){
+        const current=String(host.activeRoute||'').replace(/^#/,'');
+
+        navigationLinks().forEach(link=>{
+            const active=routeForLink(link).replace(/^#/,'')===current;
+            if(active){
+                link.setAttribute('aria-current','page');
+            }else{
+                link.removeAttribute('aria-current');
+            }
+        });
+    }
+
+    function onLocationChange(){
+        if(!host.hasAttribute('data-active-route')){
+            updateCurrent();
+        }
+    }
+
+    function setStatus(message='',tone='default'){
+        if(message===null||message===''){
+            host.removeAttribute('data-status');
+        }else{
+            host.setAttribute('data-status',String(message));
+        }
+        host.setAttribute('data-status-tone',statusTones.has(tone)?tone:'default');
+        syncStatus();
+        return host.status;
+    }
+
+    function syncStatus(){
+        statusText.textContent=host.dataset.status||'';
+        const tone=statusTones.has(host.dataset.statusTone)?host.dataset.statusTone:'default';
+        if(host.dataset.statusTone!==tone){
+            host.dataset.statusTone=tone;
+        }
+    }
+
+    function refresh(){
+        syncBrand();
+        syncStatus();
+        updateCurrent();
+        return host;
+    }
+
+    syncBrand();
+    syncStatus();
+    readNavigationAttribute();
+    updateCurrent();
+
+    host.ready=true;
+    host.dispatchEvent(
+        new CustomEvent(
+            'app-bar-ready',
+            {
+                detail:{appBar:host},
+                bubbles:true,
+                composed:true
+            }
+        )
+    );
+</script>

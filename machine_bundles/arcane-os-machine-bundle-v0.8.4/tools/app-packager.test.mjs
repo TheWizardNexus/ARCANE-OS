@@ -48,7 +48,7 @@ function sha256Source(source) {
   return `'sha256-${crypto.createHash('sha256').update(source, 'utf8').digest('base64')}'`;
 }
 
-async function assertSecurityMetadata(target, appId, microphone, frameSources = "'none'") {
+async function assertSecurityMetadata(target, appId, microphone, frameSources = "'none'", mail = false) {
   const appRoot = path.join(target, 'app', appId);
   const documents = [];
   async function visit(directory, relativeDirectory = '') {
@@ -84,7 +84,9 @@ async function assertSecurityMetadata(target, appId, microphone, frameSources = 
     assert(policy.includes(`frame-src ${frameSources}`), `${appId}/${document} has an unexpected frame policy`);
     assert.match(policy, /object-src 'none'/);
     assert.match(policy, /script-src-attr 'none'/);
-    assert.match(policy, /connect-src 'self' http:\/\/127\.0\.0\.1:11434 http:\/\/127\.0\.0\.1:8011 https:\/\/api\.openai\.com/);
+    assert.match(policy, mail
+      ? /connect-src 'self' http:\/\/127\.0\.0\.1:11434 http:\/\/127\.0\.0\.1:8011 http:\/\/127\.0\.0\.1:8025 https:\/\/api\.openai\.com/
+      : /connect-src 'self' http:\/\/127\.0\.0\.1:11434 http:\/\/127\.0\.0\.1:8011 https:\/\/api\.openai\.com/);
     assert.match(policy, /media-src 'self' blob: https:\/\/cdn\.openai\.com/);
     const scriptPolicy = /(?:^|; )script-src ([^;]+)/.exec(policy)?.[1] || '';
     assert(!scriptPolicy.includes("'unsafe-inline'"), `${appId} script policy allows arbitrary inline code`);
@@ -369,7 +371,7 @@ test('PreCrisis package contains every offline dependency without unrelated refe
   const dependencies = await verifyPackagedAppLinks({ packageRoot: result.target, appId: 'precrisis' });
   assert(dependencies.length > 0);
   assert.equal(manifest.app.security.verifiedDependencies, dependencies.length);
-  await assertSecurityMetadata(result.target, 'precrisis', true);
+  await assertSecurityMetadata(result.target, 'precrisis', true, "'none'", true);
 
   const entry = await fs.readFile(path.join(result.target, 'app/precrisis/index.html'), 'utf8');
   assert(!entry.includes('/apps/precrisis/'));
@@ -418,7 +420,7 @@ test('Warrior Spirit package bundles the registered PreCrisis snapshot with self
     () => verifyPackagedAppLinks({ packageRoot: result.target, appId: 'warrior-spirit' }),
     /payload contains undeclared root.*precrisis/,
   );
-  await assertSecurityMetadata(result.target, 'warrior-spirit', true, "'self'");
+  await assertSecurityMetadata(result.target, 'warrior-spirit', true, "'self'", true);
 
   const targetBundle = JSON.parse(await fs.readFile(path.join(result.target, 'arcane-bundle.json'), 'utf8'));
   assert.deepEqual(Object.keys(targetBundle.apps), ['warrior-spirit']);

@@ -1,5 +1,6 @@
 import Is from '../../../node_modules/strong-type/index.js';
 import '../../../arcane/modules/DBOPFS.js';
+import '../../../arcane/modules/DBLS.js';
 
 const is = new Is(false);
 
@@ -82,8 +83,9 @@ class Notes {
 	}
 
 	/**
-	 * Loads normalized OPFS notes and includes legacy localStorage
-	 * notes which are not already represented in OPFS.
+	 * Loads normalized OPFS notes and includes legacy records from this
+	 * application's scoped local-storage namespace when they are not already
+	 * represented in OPFS.
 	 *
 	 * @returns {Promise<NotesRecord[]>}
 	 */
@@ -91,7 +93,7 @@ class Notes {
 		const items = await dbopfs.getAll('notes');
 		const storedRecords = Object.values(items);
 		const records = [];
-		const legacyUsername = parseStoredRecord(localStorage.getItem('username'));
+		const legacyUsername = parseStoredRecord(window.dbls.get('username'));
 		const defaultUsername = window.user?.username || legacyUsername || '';
 
 		for (let i = 0; i < storedRecords.length; i++) {
@@ -113,7 +115,7 @@ class Notes {
 			topics_of_discussion_or_activities: 'topics of discussion',
 			treatment_options: 'treatment options'
 		};
-		const keys = Object.keys(localStorage);
+		const keys = window.dbls.getAllKeys();
 
 		for (let i = 0; i < keys.length; i++) {
 			const storageKey = keys[i];
@@ -140,7 +142,7 @@ class Notes {
 			}
 
 			const timestamps = getLegacyTimestamp(dateString);
-			const note = parseStoredRecord(localStorage.getItem(storageKey));
+			const note = parseStoredRecord(window.dbls.get(storageKey));
 
 			if (!Number.isFinite(timestamps) || !is.string(note) || !note) {
 				continue;

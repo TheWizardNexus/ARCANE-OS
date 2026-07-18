@@ -9,7 +9,25 @@ self.addEventListener(
         try{
             try{
                 const root=await navigator.storage.getDirectory();
-                const directory=await root.getDirectoryHandle(
+                const applicationId=String(event.data.applicationId||'');
+
+                if(applicationId.length>64
+                    ||!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(applicationId)){
+                    throw new DOMException(
+                        'Arcane rejected an invalid application data scope.',
+                        'SecurityError'
+                    );
+                }
+
+                const applications=await root.getDirectoryHandle(
+                    'apps',
+                    {create:operation==='write'}
+                );
+                const application=await applications.getDirectoryHandle(
+                    applicationId,
+                    {create:operation==='write'}
+                );
+                const directory=await application.getDirectoryHandle(
                     event.data.directoryName,
                     {create:operation==='write'}
                 );

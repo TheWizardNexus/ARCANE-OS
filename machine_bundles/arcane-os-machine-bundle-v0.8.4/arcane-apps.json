@@ -75,6 +75,7 @@
       "security": {
         "connectOrigins": [
           "http://127.0.0.1:8011",
+          "http://127.0.0.1:8025",
           "http://127.0.0.1:11434",
           "https://api.openai.com"
         ],
@@ -139,6 +140,7 @@
       "security": {
         "connectOrigins": [
           "http://127.0.0.1:8011",
+          "http://127.0.0.1:8025",
           "http://127.0.0.1:11434",
           "https://api.openai.com"
         ],

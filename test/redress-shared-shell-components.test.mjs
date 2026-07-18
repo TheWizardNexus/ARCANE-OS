@@ -55,6 +55,9 @@ test('app bar exposes domain-neutral brand, route, status, and trailing surfaces
     assert.match(source,/host\.setActiveRoute=setActiveRoute/);
     assert.match(source,/host\.setStatus=setStatus/);
     assert.match(source,/--app-bar-active-text/);
+    assert.match(source,/--app-bar-active-text:var\(--text-color,#fff\)/);
+    assert.match(source,/@media\(forced-colors:active\)/);
+    assert.match(source,/color:HighlightText/);
     assert.match(source,/app-bar-ready/);
     assert.match(source,/aria-current','page'/);
     assert.match(source,/@media\(max-width:48rem\)/);

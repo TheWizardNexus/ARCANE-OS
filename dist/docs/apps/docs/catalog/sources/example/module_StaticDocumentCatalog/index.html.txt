@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Static document catalog example</title>
+    <link rel="stylesheet" href="../../arcane/css/theme.css">
+    <link rel="stylesheet" href="../../arcane/css/primitives.css">
+    <script type="module" src="../../arcane/modules/ThemeBootstrap.js"></script>
+</head>
+<body>
+    <main>
+        <h1>Static document catalog</h1>
+        <p>This example searches and verifies one synthetic in-memory document.</p>
+        <form id="search-form">
+            <label for="query">Catalog search</label>
+            <input id="query" name="query" value="aurora" required maxlength="512">
+            <button type="submit">Search and verify</button>
+        </form>
+        <p id="status" role="status" aria-live="polite">Ready.</p>
+        <pre id="result" tabindex="0" aria-label="Catalog result"></pre>
+    </main>
+    <script type="module">
+        import StaticDocumentCatalog from '../../arcane/modules/StaticDocumentCatalog.js';
+
+        const source='# Aurora\n\nA synthetic document for verified catalog hydration.\n';
+        const bytes=new TextEncoder().encode(source);
+        const digest=await crypto.subtle.digest('SHA-256',bytes);
+        const sha256=[...new Uint8Array(digest)]
+            .map(byte=>byte.toString(16).padStart(2,'0'))
+            .join('');
+        const catalog=new StaticDocumentCatalog({
+            version:'synthetic-v1',
+            documents:[{
+                id:'aurora',
+                path:'synthetic/aurora.md',
+                kind:'guide',
+                title:'Aurora guide',
+                summary:'A deterministic synthetic catalog entry.',
+                tags:['sample','verification'],
+                byteSize:bytes.byteLength,
+                sha256,
+                headings:[{id:'aurora',level:1,text:'Aurora'}],
+                examples:[],
+                screenshots:[],
+            }],
+        },{
+            baseURL:new URL('./',location.href).href,
+            fetchImpl:async()=>source,
+        });
+
+        const form=document.querySelector('#search-form');
+        const status=document.querySelector('#status');
+        const result=document.querySelector('#result');
+        form.addEventListener('submit',async event=>{
+            event.preventDefault();
+            status.textContent='Checking the catalog.';
+            try{
+                const matches=catalog.search(form.elements.query.value);
+                const hydrated=matches[0]?await catalog.hydrate(matches[0].id):null;
+                status.textContent=hydrated?'One verified document found.':'No matching document found.';
+                result.textContent=JSON.stringify({matches,hydrated},null,2);
+            }catch(error){
+                status.textContent=`The catalog check failed: ${error.message}`;
+                result.textContent='';
+            }
+        });
+    </script>
+</body>
+</html>

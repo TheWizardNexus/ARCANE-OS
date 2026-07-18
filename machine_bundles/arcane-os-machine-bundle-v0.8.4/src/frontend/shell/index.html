@@ -176,7 +176,7 @@
       if (!failed) showOperationNotice.timer = setTimeout(() => notice.classList.remove('visible'), 5000);
     }
 
-    Arcane.events.on('core.ready', (event) => {
+    Arcane.events.when('core.ready', (event) => {
       $('#status').textContent = `Arcane Core ${event.version} connected`;
     });
     Arcane.events.on('operation.started', showOperationNotice);

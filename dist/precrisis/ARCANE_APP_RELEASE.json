@@ -9,19 +9,19 @@
     "start": "./apps/precrisis/index.html"
   },
   "policySha256": "2b9c13c0d2220bd6cdf3c2a33f44c1808a404bd611c219e205e8e4407adad197",
-  "fileCount": 146,
-  "totalBytes": 2869400,
-  "contentSha256": "cd1c0664be302c18e7f79e0266055715178d2805dafd54b854473f6ffefdc0be",
+  "fileCount": 167,
+  "totalBytes": 5049845,
+  "contentSha256": "69a4ed0e06a906d0cd5f879c892a57e43b489e660b3d25f29e6090c3194e3af6",
   "files": [
     {
       "path": "apps/precrisis/admin.html",
-      "bytes": 32203,
-      "sha256": "85c68ac83e1c3ff2df82703431dbc6e44f43f68098c2188f3a2401713adbc668"
+      "bytes": 32260,
+      "sha256": "92cc4755c21379dfbb40f38c402d590c1769fb50db531bbc35323cf9b994e4cf"
     },
     {
       "path": "apps/precrisis/chat.html",
-      "bytes": 41607,
-      "sha256": "4f2bd3567ebefecc3d69058e46ff7cf46ef092ce6e87e13744e21f83ff7cef32"
+      "bytes": 41747,
+      "sha256": "f26f4bc92f9349f2ebfa43a97fc8e48599503bf1643e7e018b19ea7c17d39a12"
     },
     {
       "path": "apps/precrisis/components/nav.html",
@@ -30,23 +30,23 @@
     },
     {
       "path": "apps/precrisis/dashboard-clinical.html",
-      "bytes": 8287,
-      "sha256": "2baff139b3fb7ba94d32f71671a3f819f5402203c3be06050d6b6686df0eb096"
+      "bytes": 8344,
+      "sha256": "1d08f06a6d81d3a54054804af7f90718a65b57eb4f59ad6a53ad34bd2a77d68c"
     },
     {
       "path": "apps/precrisis/dashboard-leadership.html",
-      "bytes": 10591,
-      "sha256": "89c145049cedecc3fb9f3b2791fbb8c643062a7c631bb21bdf5cf193e4fd66c0"
+      "bytes": 10648,
+      "sha256": "2d132f43ab8cf3286ddbc6d1b4ff5da87d5737a85d5148f9d9f316318c8c5da5"
     },
     {
       "path": "apps/precrisis/dashboard.html",
-      "bytes": 19460,
-      "sha256": "4103ad7176effe06889c6b2e154bf8aa59f5cabe9547e25fdfe85f8ee295a46a"
+      "bytes": 19517,
+      "sha256": "a735d9aaf9571ec3acb7740ca44ae058cc59d6907efdbbb0c6ddc271bcdc24ba"
     },
     {
       "path": "apps/precrisis/data.html",
-      "bytes": 3213,
-      "sha256": "ca70e90fe5335336a26e94e1cb324708cd1a7dd9fcfb73a0b83e87a9d7bb9be5"
+      "bytes": 3270,
+      "sha256": "073e13be1498957e27dc162604bee921795d05fcde8764095c976aa617c84395"
     },
     {
       "path": "apps/precrisis/entities/Journal.js",
@@ -55,8 +55,8 @@
     },
     {
       "path": "apps/precrisis/entities/Notes.js",
-      "bytes": 8089,
-      "sha256": "516866dc2ea38fc0743b1ff6a1381f2dc09556cc9a76268e54251b9a68e0f010"
+      "bytes": 8165,
+      "sha256": "53a89c457df769f80c11410c0710e76e29dbe96bec736a9461d11761332ca421"
     },
     {
       "path": "apps/precrisis/entities/Reports.js",
@@ -80,8 +80,8 @@
     },
     {
       "path": "apps/precrisis/export.html",
-      "bytes": 3521,
-      "sha256": "6d0d348ddfb27cc2a3f456c4f6d4e8285aeff1f8ca2d68eebfa615e89d6a9387"
+      "bytes": 3578,
+      "sha256": "cdf077487b80371e51d57ea7d82363e856ab3b6ec72c526545881e83cb3c76d0"
     },
     {
       "path": "apps/precrisis/img/1024.png",
@@ -115,23 +115,23 @@
     },
     {
       "path": "apps/precrisis/import-many.html",
-      "bytes": 7792,
-      "sha256": "bf9f482ef2174bbd75d676348c785d4fc4bf8c1455a881a11166e66b08c8e07f"
+      "bytes": 7849,
+      "sha256": "6c89651a7d164d173cab9bda05d355398f387daae38c53303d83685755e5bc20"
     },
     {
       "path": "apps/precrisis/import.html",
-      "bytes": 7690,
-      "sha256": "fb49cf560b1402163027643b11c80a97373fd8f21d84b11c023180197900a66c"
+      "bytes": 7747,
+      "sha256": "5aa6d075d10d0af4053da43145999e03c65b414dcba64b0bfd73ecb94f234ebb"
     },
     {
       "path": "apps/precrisis/index.html",
-      "bytes": 5438,
-      "sha256": "293c45e6d21a308a6d055f65600435b69a0814b97bc01c5ef63f25cd445d0620"
+      "bytes": 5495,
+      "sha256": "5aee5ab373597992af157354569e8f9f5e2d08a2f69cccfddd3c31b0dcd791b3"
     },
     {
       "path": "apps/precrisis/journal.html",
-      "bytes": 4487,
-      "sha256": "9891e2d38a8212bc7c729375eab89786d21e3bffb2c14b2d7f058d795fab25b0"
+      "bytes": 4544,
+      "sha256": "45726d01d7e9539031625fd83c3b5a99533aaf34e327b3ef1ec75b0fae4e0785"
     },
     {
       "path": "apps/precrisis/manifest.json",
@@ -180,23 +180,23 @@
     },
     {
       "path": "apps/precrisis/prev.html",
-      "bytes": 4648,
-      "sha256": "ee10cb79ffb7bd04a7ce055fcbab759b875991cb08b7803a6d3e3dd0689649f7"
+      "bytes": 4705,
+      "sha256": "0387c9e1d8ad0acaa68423f1f031ed92686e8440f53f46ab899af5b7a94d8d65"
     },
     {
       "path": "apps/precrisis/service-worker.js",
-      "bytes": 8391,
-      "sha256": "10e023cad709eaa968a94c3d5218b0eaf34e90c768a2675957f38c24d5a3499d"
+      "bytes": 8712,
+      "sha256": "d209ea7bea17be8f49c37d44ac5dece57e716b55a6ffb90d9a91a9b69074d7e8"
     },
     {
       "path": "apps/precrisis/soc.html",
-      "bytes": 4889,
-      "sha256": "b683e48cfe1bce78b24abdd8315e490e50469aa1b55642c771b6cda6b8bc2d16"
+      "bytes": 4946,
+      "sha256": "db3e45c0dbcd1c02532f0b3bc016f76ae97faf00eab1267352df25a50a77201c"
     },
     {
       "path": "arcane/components/app-bar.html",
-      "bytes": 13617,
-      "sha256": "0d9bc310960fe89f8229ce8345eab5e9b1a3ca2ae8123efb85ec527d8e30a7b9"
+      "bytes": 14019,
+      "sha256": "b60cd33a80570675069418490de1e476807334aa49bb06ffc079feca6ef148bc"
     },
     {
       "path": "arcane/components/assistant-panel.html",
@@ -210,8 +210,8 @@
     },
     {
       "path": "arcane/components/chart.html",
-      "bytes": 20623,
-      "sha256": "418ab098c26bb42b75b6b8c76b70597ffc327c6f7e9a244757e01757adc9cf8f"
+      "bytes": 20621,
+      "sha256": "b85694285e79feae8080f08cb4998faf5b548651bfa2863b3869c773e8b399a7"
     },
     {
       "path": "arcane/components/chat.html",
@@ -220,8 +220,8 @@
     },
     {
       "path": "arcane/components/conversation-view.html",
-      "bytes": 4276,
-      "sha256": "9182268ed27e558284af91c869e5df71d5fa18a7a8b57a0572da57a61adec3e0"
+      "bytes": 5985,
+      "sha256": "91cad617734f62c2ac55c0e94d057c4f004c28eca5572c4bdf0da02d37514eae"
     },
     {
       "path": "arcane/components/dashboard-config.html",
@@ -244,6 +244,11 @@
       "sha256": "131d37ec4f58cdc87737980f729ed39e035de106997bc4a4f23c9662b4f5543c"
     },
     {
+      "path": "arcane/components/document-inspector.html",
+      "bytes": 16884,
+      "sha256": "ea2057a56d5fa101ad1d23471b1274bb727f113e0627514d2cdb53d1f3321d40"
+    },
+    {
       "path": "arcane/components/file-drop.html",
       "bytes": 9163,
       "sha256": "59728c78f50d474ce36c4869aa241748554f18a2ba826fc7785b710bd56ff1ce"
@@ -260,13 +265,18 @@
     },
     {
       "path": "arcane/components/header.html",
-      "bytes": 4091,
-      "sha256": "706e6e7311cf9d287d76d9e60b4529a000c534c87ae67f6ab61596887f45ad19"
+      "bytes": 3589,
+      "sha256": "c5c659e8d4f53bcf6649f74bbd97e3fb213903fa6dc62775d2866f3e43ddced5"
     },
     {
       "path": "arcane/components/integration-settings.html",
       "bytes": 5417,
       "sha256": "1d59503859fe7c2c29499d011fabb2fe1bef76c85587a89af780c313a5ae4310"
+    },
+    {
+      "path": "arcane/components/markdown-document.html",
+      "bytes": 31574,
+      "sha256": "d7559b42495b296b877e2f19ec0cde858176e98557affc3d70ecf89c98cb9850"
     },
     {
       "path": "arcane/components/markdown-editor.html",
@@ -294,9 +304,29 @@
       "sha256": "42060c3781be5d88828922cedcd1b9f3180911c407ad4abb271959a79b53d276"
     },
     {
+      "path": "arcane/components/record-timeline.html",
+      "bytes": 6264,
+      "sha256": "d71745a8ca9154aa2d8b29cd169967110f1cf460d6a44ef46a3eb2d6ebe825fc"
+    },
+    {
+      "path": "arcane/components/relationship-board.html",
+      "bytes": 8021,
+      "sha256": "afa63a1dc7bb3aad467a03bd4664586b0380215c5380a386f268b35925cbaef5"
+    },
+    {
       "path": "arcane/components/screen-capture.html",
       "bytes": 4414,
       "sha256": "3454e7d3810370a32454ea908fdfbd38695eb697d7b9e80547b0e2b620de75d5"
+    },
+    {
+      "path": "arcane/components/source-code-viewer.html",
+      "bytes": 14422,
+      "sha256": "577dc3b93f6b3148dfe07b70aa3f8bc81b75d7db214351764b169ca4a0035576"
+    },
+    {
+      "path": "arcane/components/source-explanation.html",
+      "bytes": 11349,
+      "sha256": "367da28f21263da292d3b04646ea70f3022ce69eafe305df01ca5690f2ea132f"
     },
     {
       "path": "arcane/components/speech.html",
@@ -424,6 +454,11 @@
       "sha256": "1bd6b4a35a02568263449a8ccfc2bac636681c53421ca05acebdabf07afe5556"
     },
     {
+      "path": "arcane/entities/IntentEnvelope.js",
+      "bytes": 29763,
+      "sha256": "208aeb34c7f8d3c870c79b247bfa500eba95b8b43d8fe3226695454a0f091164"
+    },
+    {
       "path": "arcane/entities/Preference.js",
       "bytes": 3659,
       "sha256": "306d0627de621111d12267a8f4ae5df57ba93072ddbc768d45e402f672ed3b46"
@@ -440,13 +475,18 @@
     },
     {
       "path": "arcane/entities/User.js",
-      "bytes": 14343,
-      "sha256": "42b060c7146e9eeedb6f7436b4714938babdd9b9b88b709863c31269100a3f4e"
+      "bytes": 14793,
+      "sha256": "3542d81fdca0feb0961603398e3fb65aa6afcd98337925dd04749319afd70d67"
     },
     {
       "path": "arcane/entities/Weather.js",
       "bytes": 3241,
       "sha256": "b7b7da733d59cf9d2161370ac32d0ddf9d76d7f61a9e951ea913392cc5c5c5a4"
+    },
+    {
+      "path": "arcane/img/arcane-os-everywhere.png",
+      "bytes": 1947047,
+      "sha256": "ea4be2a8ae1dbbe2da9479206e729a1ed5f2add461156752f261c0e1631c54f1"
     },
     {
       "path": "arcane/img/arrow-left.png",
@@ -495,8 +535,8 @@
     },
     {
       "path": "arcane/modules/AI.js",
-      "bytes": 21483,
-      "sha256": "c46517d4e7750dcb41f8d771f503e616fec30524d9c40515c13a900fd696b898"
+      "bytes": 21121,
+      "sha256": "6b455aefd337f25a054182da25377cd40bc380277b88e0647ee6532bc94a2f82"
     },
     {
       "path": "arcane/modules/AnsiText.js",
@@ -509,6 +549,11 @@
       "sha256": "c09ffa2685fa2b07e266228a7fde293941d299edb3e0a9069534cb4aa50bc4a7"
     },
     {
+      "path": "arcane/modules/AppDataScope.js",
+      "bytes": 7642,
+      "sha256": "4ac7be2fc8c7e0e3dfae4d748ed6dfd7a9169464b3ffb91e12c65d6d69574a06"
+    },
+    {
       "path": "arcane/modules/AppearancePreferences.js",
       "bytes": 1973,
       "sha256": "0a6172f1c0d2a594c0761514b6488c36e66cee0f8de951b7d499daf7b5b795dd"
@@ -519,9 +564,24 @@
       "sha256": "dcc97e57034f0a53c8d4359d7b2cb8a71ca746ea9d28ff6aea68270895e4e77e"
     },
     {
+      "path": "arcane/modules/AsyncBoundary.js",
+      "bytes": 5384,
+      "sha256": "80688df370a8e1b3c4f0540fd5a594dbc66b15021c3b6556ce5b91a921d03358"
+    },
+    {
+      "path": "arcane/modules/BrowserTestSuite.js",
+      "bytes": 13479,
+      "sha256": "82edee3247b36d6d00d79a1ba4a5007a1af938e8b9fd097b2b86be7a87168765"
+    },
+    {
       "path": "arcane/modules/CalculatorEngine.js",
       "bytes": 3336,
       "sha256": "f2f1fe67e0fc88a4778a7f7ba3765bab8f2ed0849316a28c6ba8531a5ceab4ed"
+    },
+    {
+      "path": "arcane/modules/CaseEvidenceIndexer.js",
+      "bytes": 4439,
+      "sha256": "a856ab56d4c57fafc6958be88d258afa67e91448321809a641156809a116d10c"
     },
     {
       "path": "arcane/modules/ChartLibrary.js",
@@ -535,23 +595,23 @@
     },
     {
       "path": "arcane/modules/CommunicationAppController.js",
-      "bytes": 5911,
-      "sha256": "f8423bd9d0b1750f482b41440657a17ef2fb1a1a704c73c46e5f3549afb99ad8"
+      "bytes": 7070,
+      "sha256": "6a635baa521155198f2474976c506f641e22de7a84e5a7766654c1b226541c47"
     },
     {
       "path": "arcane/modules/CommunicationHub.js",
-      "bytes": 2120,
-      "sha256": "2ab0b8268f13c0800f6b952e47697cc53d0019e29023675b4a13647f9ce85ba2"
+      "bytes": 2123,
+      "sha256": "2b57c31dfbaa7639d14065a565f4c2aaf4ad20301bdf072daea5418336e9a24b"
     },
     {
       "path": "arcane/modules/CommunicationPreferences.js",
-      "bytes": 1057,
-      "sha256": "64a0f71235ff7542ebe455cf60311b439c8b3f3d1703886bfd56edf14d9f751c"
+      "bytes": 1192,
+      "sha256": "977313ecc35f0e3a1e29355d43258ec0bde97f44372e4e7dfe0500737cbe1c56"
     },
     {
       "path": "arcane/modules/CommunicationProviderRegistry.js",
-      "bytes": 1179,
-      "sha256": "02ede40bc8614722d77474a48eaa9c2a4aa70d355bcac9d5e16e87e93caed814"
+      "bytes": 1308,
+      "sha256": "90afb8811b5dc8634428576e4dae372895889d9f4b0af8606adca68b096c7bb2"
     },
     {
       "path": "arcane/modules/ComponentContracts.js",
@@ -570,18 +630,18 @@
     },
     {
       "path": "arcane/modules/DBLS.js",
-      "bytes": 3127,
-      "sha256": "16b01d2effdf295e15e18370a9777536a86c6fee523065bd60590b2afb6df0a9"
+      "bytes": 4488,
+      "sha256": "4d2321cb77283a32e58c5fe1832f47f4b533e17e1349f086ba78fec721817e2d"
     },
     {
       "path": "arcane/modules/DBOPFS.js",
-      "bytes": 30068,
-      "sha256": "781da555373fb5a3b3ece88f1bdd9c0033580101dfb57ccda6223ff2e4f4dae0"
+      "bytes": 30903,
+      "sha256": "f98d6a200515719c0fc4e54d7df51285c73ecf4e6308d8692100daac194b41e5"
     },
     {
       "path": "arcane/modules/DBOPFSWorker.js",
-      "bytes": 3280,
-      "sha256": "8e2b0240e0e8d2cab1ec53bad824a83bc6938135a1c9858569157fe39757240e"
+      "bytes": 4016,
+      "sha256": "c617a50ccb76254bb3c42b87751125aaf91169271c6971de18481fa95262e976"
     },
     {
       "path": "arcane/modules/DevelopmentWorkspace.js",
@@ -605,18 +665,23 @@
     },
     {
       "path": "arcane/modules/HTMLImport.js",
-      "bytes": 3947,
-      "sha256": "9a746fcbfeed98cc3bd02589159f31eaf0e882385dac5c785e79ac68adf55ce0"
+      "bytes": 3735,
+      "sha256": "00ab616efe4ec8ec74492d51747f744b08e2e35fca2b4429c744c14af88cb4c6"
+    },
+    {
+      "path": "arcane/modules/InMemoryCommunicationProvider.js",
+      "bytes": 1662,
+      "sha256": "68604439786f663e2b7ae38ac5e7b0a7bbeb5d02e8cd840501640528c016ca43"
     },
     {
       "path": "arcane/modules/Mail.js",
-      "bytes": 10691,
-      "sha256": "5d20a423da7179945b7cb8565e961c53577f17cee7b9d28110dbaa6eb1a35c6a"
+      "bytes": 11207,
+      "sha256": "ec599ecd9d367d491cb7b64711d700b69f1c07c528a7bcd3db3259d4f23e0eca"
     },
     {
       "path": "arcane/modules/MailTransport.mjs",
-      "bytes": 1589,
-      "sha256": "4461137c28beceb0289bb94d5b42073f08c58bd1b30677f23b9c6d33597f05da"
+      "bytes": 4653,
+      "sha256": "4d778dc969a22057fd5e59acb0d4074ea2e37df9ec42250fc71dbd8aa1ca2482"
     },
     {
       "path": "arcane/modules/Marked.min.js",
@@ -632,6 +697,11 @@
       "path": "arcane/modules/MemoryRecords.js",
       "bytes": 883,
       "sha256": "2301067e40a4601d1bd239838f301e6ea2da70085ca828ff5fcb5e81cfb944ae"
+    },
+    {
+      "path": "arcane/modules/MessageAdvisory.js",
+      "bytes": 1269,
+      "sha256": "be74a4c7e95d0a0661369c81678c050c777b75f405ca0f9de04f88ffd7893986"
     },
     {
       "path": "arcane/modules/Ollama.js",
@@ -650,8 +720,8 @@
     },
     {
       "path": "arcane/modules/PreferenceStore.js",
-      "bytes": 2958,
-      "sha256": "fb70a14e7d94c81b8e60b97e0083cc7720412e7dd0959348fb922d8f751e6b97"
+      "bytes": 3098,
+      "sha256": "34eae0a06469a84c14131448d6f806dffcf41e3510308e7d6012edfed2b1d0fe"
     },
     {
       "path": "arcane/modules/QRCode.min.js",
@@ -659,9 +729,44 @@
       "sha256": "c541ef06327885a8415bca8df6071e14189b4855336def4f36db54bde8484f36"
     },
     {
+      "path": "arcane/modules/RecordLinkIndex.js",
+      "bytes": 1142,
+      "sha256": "f9d9b0e734bc96bd3130b80023f9f1a446daabdd10178b8a83637e36d8af1090"
+    },
+    {
+      "path": "arcane/modules/RecordPassageIndex.js",
+      "bytes": 8449,
+      "sha256": "9ca73c82e7cd98efae160928dea481c24102000f5b62546f5c9730d1340dd291"
+    },
+    {
+      "path": "arcane/modules/RecordReviewStore.js",
+      "bytes": 3450,
+      "sha256": "0ddf891f4cfe86492e70fe66ffd0f68ecc74e037b476a097ba523fa78d87f232"
+    },
+    {
+      "path": "arcane/modules/RiskSignalAnalyzer.js",
+      "bytes": 1300,
+      "sha256": "ce3e3f17da0ee34c3c7de100fcaa25b1bb9535016b3f4278b18e6607dd1f52c7"
+    },
+    {
+      "path": "arcane/modules/ScamRiskPolicy.js",
+      "bytes": 2423,
+      "sha256": "7541fecd2415720f1ee5f9d17dfba34ea7ff49d7f17dd216e8e3a842fa3ba233"
+    },
+    {
+      "path": "arcane/modules/ScopedOPFSCache.js",
+      "bytes": 5923,
+      "sha256": "71247d8b98db29ebe521fc874648601143bd8857173e18436718987bfa751d02"
+    },
+    {
       "path": "arcane/modules/ScreenCapture.js",
       "bytes": 5346,
       "sha256": "8f5e5e21e6b82327d45113fa97f88348e91bf7b821a12f47a1d814bffd551b40"
+    },
+    {
+      "path": "arcane/modules/StaticDocumentCatalog.js",
+      "bytes": 46426,
+      "sha256": "27a99dbde7a06b18c73eabc7d183abf0ca87c67a85adf69baa662190d67a7eea"
     },
     {
       "path": "arcane/modules/SystemAppearance.js",
@@ -715,8 +820,8 @@
     },
     {
       "path": "arcane/modules/WaitForComponent.js",
-      "bytes": 1591,
-      "sha256": "d71b6605ba70aacde61215c5a90adb38ddc3564c77e33770c5ad5f18e6e02771"
+      "bytes": 2942,
+      "sha256": "a54580e9536e5d49066d8693396a7697c77ef99a0abdf707882dd14c354b8d81"
     },
     {
       "path": "arcane/modules/YouTubeMedia.js",

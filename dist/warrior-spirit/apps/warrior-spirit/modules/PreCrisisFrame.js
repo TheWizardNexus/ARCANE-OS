@@ -153,7 +153,7 @@ if(pageName){
             item.textContent='Add your Warrior Spirit AI Licence key to use your chosen AI with the Companion.';
             list.append(item);
         }
-        privacy.textContent='These details are stored with your on-device PreCrisis profile.';
+        privacy.textContent='These details are stored with your on-device Warrior Spirit profile.';
         button.type='button';
         button.autofocus=true;
         button.dataset.warriorProfileLink='';
@@ -297,7 +297,7 @@ if(pageName){
             const heading=section.querySelector('h1');
             const description=section.querySelector('p');
             if(heading)heading.textContent='Warrior Spirit AI Licence key';
-            if(description)description.textContent='Stored with your on-device PreCrisis profile. It is used only when the Companion sends a request to your chosen AI.';
+            if(description)description.textContent='Stored with your on-device Warrior Spirit profile. It is used only when the Companion sends a request to your chosen AI.';
             input.type='password';
             input.placeholder='Warrior Spirit AI Licence key';
             input.autocomplete='off';

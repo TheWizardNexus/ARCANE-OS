@@ -1,0 +1,9 @@
+[1:v]scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=29:d=0.45:alpha=1,fade=t=out:st=47.45:d=0.45:alpha=1[overview];
+[2:v]scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=48:d=0.4:alpha=1,fade=t=out:st=58.4:d=0.4:alpha=1[users];
+[3:v]scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=90:d=0.4:alpha=1,fade=t=out:st=96.6:d=0.4:alpha=1[shell];
+[0:v]format=yuv420p[base];
+[base][overview]overlay=0:0:eof_action=pass[v1];
+[v1][users]overlay=0:0:eof_action=pass[v2];
+[v2][shell]overlay=0:0:eof_action=pass[v3];
+[v3]tpad=stop_mode=clone:stop_duration=2,fade=t=out:st=105.934:d=1,format=yuv420p[vout];
+[0:a]apad=pad_dur=2,atrim=duration=106.934[aout]

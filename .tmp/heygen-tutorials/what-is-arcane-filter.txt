@@ -1,0 +1,17 @@
+[1:v]scale=1920:1080:flags=lanczos,drawbox=x=48:y=46:w=292:h=62:color=black@0.68:t=fill,drawtext=font='Segoe UI Semibold':text='PRODUCT VISION':fontcolor=white:fontsize=30:x=70:y=62,format=rgba,fade=t=in:st=4:d=0.45:alpha=1,fade=t=out:st=13.35:d=0.45:alpha=1[vision];
+[2:v]crop=1330:748:0:0,scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=14:d=0.45:alpha=1,fade=t=out:st=27.55:d=0.45:alpha=1[docs];
+[3:v]crop=960:540:0:40,scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=32:d=0.4:alpha=1,fade=t=out:st=38.6:d=0.4:alpha=1[scamurai];
+[4:v]crop=1472:828:0:0,scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=43:d=0.4:alpha=1,fade=t=out:st=51.6:d=0.4:alpha=1[settings];
+[5:v]crop=1472:828:0:0,scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=61:d=0.4:alpha=1,fade=t=out:st=65.2:d=0.4:alpha=1[boss];
+[6:v]crop=1472:828:0:0,scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=65.6:d=0.4:alpha=1,fade=t=out:st=69.9:d=0.4:alpha=1[warrior];
+[7:v]crop=1472:828:0:0,scale=1920:1080:flags=lanczos,format=rgba,fade=t=in:st=70.3:d=0.4:alpha=1,fade=t=out:st=74.6:d=0.4:alpha=1[redress];
+[0:v]format=yuv420p[base];
+[base][vision]overlay=0:0:eof_action=pass[v1];
+[v1][docs]overlay=0:0:eof_action=pass[v2];
+[v2][scamurai]overlay=0:0:eof_action=pass[v3];
+[v3][settings]overlay=0:0:eof_action=pass[v4];
+[v4][boss]overlay=0:0:eof_action=pass[v5];
+[v5][warrior]overlay=0:0:eof_action=pass[v6];
+[v6][redress]overlay=0:0:eof_action=pass[v7];
+[v7]tpad=stop_mode=clone:stop_duration=2,fade=t=out:st=98.44:d=1,format=yuv420p[vout];
+[0:a]apad=pad_dur=2,atrim=duration=99.44[aout]

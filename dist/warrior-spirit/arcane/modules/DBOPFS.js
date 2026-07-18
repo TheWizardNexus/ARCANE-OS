@@ -1,5 +1,21 @@
 import Is from "../../node_modules/strong-type/index.js";
+import {openApplicationDataDirectory} from './AppDataScope.js';
 const is=new Is(false);
+
+const DEFAULT_TABLE_DIRECTORIES=Object.freeze({
+    users:'users',
+    scores:'scores',
+    chats:'chats',
+    notes:'notes',
+    documents:'documents',
+    songs:'songs',
+    images:'images',
+    journal_entries:'journal_entries',
+    streams_of_consciousness:'streams_of_consciousness',
+    reports:'reports',
+    errors:'errors',
+    memories:'memory'
+});
 
 if(navigator.storage?.persist){
     await navigator.storage.persist().catch(()=>false);
@@ -72,6 +88,12 @@ class DBOPFS {
     /** @type {Worker|Object} */
     #writeWorker={}
 
+    /** @type {string} */
+    #applicationId=''
+
+    /** @type {string} */
+    #storagePath=''
+
     /**
      * Handles messages received from the service worker.
      * Placeholder for future synchronization logic.
@@ -96,6 +118,7 @@ class DBOPFS {
         await this.#requestFileWorker(
             {
                 operation:'write',
+                applicationId:this.#applicationId,
                 directoryName,
                 fileName,
                 fileData:fileDataBuffer,
@@ -120,6 +143,7 @@ class DBOPFS {
         const response=await this.#requestFileWorker(
             {
                 operation:'read',
+                applicationId:this.#applicationId,
                 directoryName,
                 fileName
             }
@@ -214,12 +238,15 @@ class DBOPFS {
     /** @type {boolean} */
     ready=false;
 
-    constructor(){
+    /** @type {Promise<void>} */
+    readyPromise=Promise.resolve();
+
+    constructor(options={}){
         if(window.dbopfs){
             return window.dbopfs;
         }
 
-        this.#init();
+        this.readyPromise=this.#init(options);
     }
 
     /**
@@ -228,21 +255,18 @@ class DBOPFS {
      *
      * @returns {Promise<void>}
      */
-    async #init(){
-        this.#db=await navigator.storage.getDirectory();
-
-        this.#tableHandles.users     =await this.#db.getDirectoryHandle("users",{create:true});
-        this.#tableHandles.scores    =await this.#db.getDirectoryHandle("scores",{create:true});
-        this.#tableHandles.chats     =await this.#db.getDirectoryHandle("chats",{create:true});
-        this.#tableHandles.notes     =await this.#db.getDirectoryHandle("notes",{create:true});
-        this.#tableHandles.documents =await this.#db.getDirectoryHandle("documents",{create:true});
-        this.#tableHandles.songs     =await this.#db.getDirectoryHandle("songs",{create:true});
-        this.#tableHandles.images    =await this.#db.getDirectoryHandle("images",{create:true});
-        this.#tableHandles.journal_entries          =await this.#db.getDirectoryHandle("journal_entries",{create:true});
-        this.#tableHandles.streams_of_consciousness=await this.#db.getDirectoryHandle("streams_of_consciousness",{create:true});
-        this.#tableHandles.reports   =await this.#db.getDirectoryHandle("reports",{create:true}); 
-        this.#tableHandles.errors    =await this.#db.getDirectoryHandle("errors",{create:true});
-        this.#tableHandles.memories  =await this.#db.getDirectoryHandle("memory",{create:true});
+    async #init(options={}){
+        const scope=await openApplicationDataDirectory({
+            storage:options.storage||navigator.storage,
+            applicationId:options.applicationId||null,
+            documentObject:options.documentObject||globalThis.document,
+            arcane:options.arcane||globalThis.Arcane,
+            create:true
+        });
+        this.#applicationId=scope.applicationId;
+        this.#storagePath=scope.path;
+        this.#db=scope.directory;
+        await this.#createDefaultTables();
 
         this.ready=true;
 
@@ -251,11 +275,40 @@ class DBOPFS {
                 'dbopfs-ready',
                 {
                     detail:{
-                        dbopfs:this
+                        dbopfs:this,
+                        applicationId:this.#applicationId,
+                        storagePath:this.#storagePath
                     }
                 }
             )
         );
+    }
+
+    async #createDefaultTables(){
+        for(const [alias,directoryName]of Object.entries(DEFAULT_TABLE_DIRECTORIES)){
+            this.#tableHandles[alias]=await this.#db.getDirectoryHandle(
+                directoryName,
+                {create:true}
+            );
+        }
+    }
+
+    /**
+     * Canonical application identity owning this database.
+     *
+     * @returns {string}
+     */
+    get applicationId(){
+        return this.#applicationId;
+    }
+
+    /**
+     * Application-relative OPFS directory used by this database.
+     *
+     * @returns {string}
+     */
+    get storagePath(){
+        return this.#storagePath;
     }
 
     /**
@@ -292,6 +345,10 @@ class DBOPFS {
      * @returns {Promise<FileSystemDirectoryHandle>}
      */
     async getTableHandle(tableName=''){
+        if(!this.ready){
+            await this.readyPromise;
+        }
+
         if(!this.#tableHandles[tableName]){
             const existingHandle=Object.values(this.#tableHandles).find(
                 handle=>handle.name===tableName
@@ -317,8 +374,6 @@ class DBOPFS {
      */
     async set(tableName='',fileName='',value={}, append=false){
         const lockKey=this.#getLockKey(tableName,fileName)
-
-        console.log('savin')
 
         const previousWrite=this.#writeLocks[lockKey]||Promise.resolve()
         const currentWrite=previousWrite.catch(()=>{}).then(
@@ -694,18 +749,23 @@ class DBOPFS {
     }
 
     /**
-     * Clears the entire OPFS storage.
+     * Clears only the current application's OPFS database.
      *
      * @returns {Promise<DBOPFS>}
      */
     async clearAllStorage(){
-        const root=await navigator.storage.getDirectory()
+        if(!this.ready){
+            await this.readyPromise;
+        }
 
-        for await(const [name]of root.entries()){
-            await root.removeEntry(name,{recursive:true})
+        for await(const [name]of this.#db.entries()){
+            await this.#db.removeEntry(name,{recursive:true})
         }
 
         this.#tables={}
+        this.#tableHandles={}
+        this.#writeLocks={}
+        await this.#createDefaultTables()
 
         return this
     }

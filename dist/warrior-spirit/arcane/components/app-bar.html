@@ -3,7 +3,7 @@
         --app-bar-surface:var(--primary-color,#172238);
         --app-bar-text:var(--button-text-color,#fff);
         --app-bar-accent:var(--secondary-color,#c49a52);
-        --app-bar-active-text:var(--primary-color,#172238);
+        --app-bar-active-text:var(--text-color,#fff);
         --app-bar-border:var(--border-color,rgba(255,255,255,.18));
         box-sizing:border-box;
         display:block;
@@ -106,6 +106,19 @@
     ::slotted([slot="trailing"]:focus-visible){
         outline:.18rem solid var(--focus-color,var(--app-bar-accent));
         outline-offset:.14rem;
+    }
+
+    @media(forced-colors:active){
+        .brand-mark,
+        #generatedNavigation a:hover,
+        #generatedNavigation a[aria-current="page"],
+        ::slotted([slot="navigation"]:hover),
+        ::slotted([slot="navigation"][aria-current="page"]){
+            background:Highlight;
+            border-color:Highlight;
+            color:HighlightText;
+            forced-color-adjust:auto;
+        }
     }
 
     .end{

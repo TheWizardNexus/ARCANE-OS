@@ -1,5 +1,6 @@
 package os.arcane.host.android
 
+import android.content.Context
 import android.net.Uri
 import android.os.Looper
 import android.view.ViewGroup
@@ -13,17 +14,33 @@ import androidx.webkit.WebViewClientCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.net.URLConnection
 import java.util.Locale
 
 internal class ArcaneWebViewHostController(
     private val hostSession: ArcaneAndroidHostSession
 ) {
+    private val trustedOrigin = "https://${hostSession.originHost}"
+    private val urlPathPrefix = if (hostSession.assetRoot.isEmpty()) ASSET_PREFIX else ROOT_ASSET_PREFIX
     private val allowedEntry = canonicalEntryPath(hostSession.entry)
     private val allowedEntryUri = entryUri(allowedEntry)
+    private val allowedNavigationUris = hostSession.navigationEntries
+        .map { entry -> entryUri(canonicalEntryPath(entry)) }
+        .toSet()
+    private val assetPathHandler: WebViewAssetLoader.PathHandler = if (hostSession.assetRoot.isEmpty()) {
+        WebViewAssetLoader.AssetsPathHandler(hostSession.applicationContext)
+    } else {
+        ScopedAssetsPathHandler(hostSession.applicationContext, hostSession.assetRoot)
+    }
     private val assetLoader = WebViewAssetLoader.Builder()
+        .setDomain(hostSession.originHost)
         .setHttpAllowed(false)
-        .addPathHandler(ASSET_PREFIX, WebViewAssetLoader.AssetsPathHandler(hostSession.applicationContext))
+        .addPathHandler(urlPathPrefix, assetPathHandler)
         .build()
+    init {
+        require(allowedNavigationUris.contains(allowedEntryUri))
+    }
     private var installedWebView: WebView? = null
     private var installedLooper: Looper? = null
     private var lifecycle = Lifecycle.NEW
@@ -45,6 +62,7 @@ internal class ArcaneWebViewHostController(
     @UiThread
     fun install(
         webView: WebView,
+        applicationLaunchProvider: ArcaneWebViewBridge.ApplicationLaunchProvider,
         externalOpenProvider: ArcaneWebViewBridge.ExternalOpenProvider,
         networkStatusProvider: ArcaneWebViewBridge.NetworkStatusProvider
     ): InstallResult {
@@ -79,11 +97,14 @@ internal class ArcaneWebViewHostController(
         val bridgeInstalled = try {
             ArcaneWebViewBridge.install(
                 webView,
+                trustedOrigin,
                 allowedEntry,
                 hostSession,
                 hostSession,
                 hostSession,
                 hostSession,
+                hostSession,
+                applicationLaunchProvider,
                 externalOpenProvider,
                 networkStatusProvider
             )
@@ -184,6 +205,7 @@ internal class ArcaneWebViewHostController(
         return true
     }
 
+    @Suppress("DEPRECATION")
     private fun hardenSettings(settings: WebSettings) {
         settings.javaScriptEnabled = false
         settings.domStorageEnabled = true
@@ -210,56 +232,39 @@ internal class ArcaneWebViewHostController(
     }
 
     private inner class Client : WebViewClientCompat() {
-        private var blankingUntrustedNavigation = false
-
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (!request.isForMainFrame) return false
-            return !isAllowedEntry(request.url)
+            return !isAllowedNavigation(request.url)
         }
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             val uri = request.url
-            if (!isTrustedAssetUri(uri)) {
+            if (!isTrustedAssetUri(uri) || !isInsideSessionAssetRoot(uri)) {
                 return forbiddenResponse()
             }
             if (!request.method.equals("GET", ignoreCase = false) || !hasSafeAssetPath(uri)) {
                 return forbiddenResponse()
             }
-            if (request.isForMainFrame && !isAllowedEntry(uri)) {
+            if (request.isForMainFrame && !isAllowedNavigation(uri)) {
                 return forbiddenResponse()
             }
             return assetLoader.shouldInterceptRequest(uri) ?: forbiddenResponse()
         }
 
-        override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
-            if (blankingUntrustedNavigation && url == BLANK_URI) {
-                blankingUntrustedNavigation = false
-                return
-            }
-            val uri = try {
-                Uri.parse(url)
-            } catch (_: Exception) {
-                null
-            }
-            if (uri != null && isAllowedEntry(uri)) return
-            view.stopLoading()
-            blankingUntrustedNavigation = true
-            view.loadUrl(BLANK_URI)
-        }
     }
 
-    private fun isAllowedEntry(uri: Uri): Boolean {
+    private fun isAllowedNavigation(uri: Uri): Boolean {
         if (!isTrustedAssetUri(uri) || !hasSafeAssetPath(uri)) return false
         if (uri.query != null || uri.fragment != null) return false
-        return uri.toString() == allowedEntryUri
+        return allowedNavigationUris.contains(uri.toString())
     }
 
     private fun isTrustedAssetUri(uri: Uri): Boolean {
         return uri.scheme == "https"
-            && uri.host == TRUSTED_HOST
+            && uri.host == hostSession.originHost
             && uri.port == -1
             && uri.userInfo == null
-            && uri.path?.startsWith(ASSET_PREFIX) == true
+            && uri.path?.startsWith(urlPathPrefix) == true
     }
 
     private fun hasSafeAssetPath(uri: Uri): Boolean {
@@ -274,8 +279,13 @@ internal class ArcaneWebViewHostController(
         return true
     }
 
+    private fun isInsideSessionAssetRoot(uri: Uri): Boolean {
+        val path = uri.path ?: return false
+        return path.startsWith(urlPathPrefix)
+    }
+
     private fun entryUri(entryPath: String): String {
-        return "https://$TRUSTED_HOST$ASSET_PREFIX$entryPath"
+        return "$trustedOrigin$urlPathPrefix$entryPath"
     }
 
     private fun canonicalEntryPath(value: String): String {
@@ -313,10 +323,57 @@ internal class ArcaneWebViewHostController(
         )
     }
 
+    private class ScopedAssetsPathHandler(
+        context: Context,
+        root: String
+    ) : WebViewAssetLoader.PathHandler {
+        private val applicationContext = context.applicationContext
+        private val assetRoot = canonicalAssetRoot(root)
+
+        override fun handle(path: String): WebResourceResponse? {
+            val relativePath = canonicalRequestPath(path) ?: return null
+            val assetPath = "$assetRoot/$relativePath"
+            return try {
+                val stream = applicationContext.assets.open(assetPath)
+                WebResourceResponse(
+                    URLConnection.guessContentTypeFromName(assetPath) ?: "application/octet-stream",
+                    if (isTextAsset(assetPath)) "UTF-8" else null,
+                    stream
+                )
+            } catch (_: IOException) {
+                null
+            }
+        }
+
+        private companion object {
+            fun canonicalAssetRoot(value: String): String {
+                require(value.isNotEmpty() && !value.startsWith('/') && !value.endsWith('/') && !value.contains('\\'))
+                require(value.split('/').none { segment -> segment.isEmpty() || segment == "." || segment == ".." })
+                return value
+            }
+
+            fun canonicalRequestPath(value: String): String? {
+                if (value.isEmpty() || value.startsWith('/') || value.endsWith('/') || value.contains('\\') || value.contains('%')) return null
+                if (value.split('/').any { segment -> segment.isEmpty() || segment == "." || segment == ".." }) return null
+                return value
+            }
+
+            fun isTextAsset(path: String): Boolean {
+                return path.endsWith(".css")
+                    || path.endsWith(".html")
+                    || path.endsWith(".js")
+                    || path.endsWith(".json")
+                    || path.endsWith(".md")
+                    || path.endsWith(".mjs")
+                    || path.endsWith(".svg")
+                    || path.endsWith(".txt")
+            }
+        }
+    }
+
     private companion object {
-        const val TRUSTED_HOST = "appassets.androidplatform.net"
         const val ASSET_PREFIX = "/arcane/"
-        const val BLANK_URI = "about:blank"
+        const val ROOT_ASSET_PREFIX = "/"
         const val MAX_ENTRY_PATH_LENGTH = 512
     }
 

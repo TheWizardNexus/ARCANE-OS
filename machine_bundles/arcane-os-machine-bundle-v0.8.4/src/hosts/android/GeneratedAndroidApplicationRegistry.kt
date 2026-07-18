@@ -12,6 +12,8 @@ internal object GeneratedAndroidApplicationRegistry {
 
     internal fun shellGrants(): Set<String> {
         val grants = LinkedHashSet<String>()
+        grants.add(GeneratedAndroidCapabilityRegistry.APPS_LAUNCH_CAPABILITY)
+        grants.add(GeneratedAndroidCapabilityRegistry.APPS_LIST_CAPABILITY)
         grants.add(GeneratedAndroidCapabilityRegistry.NETWORK_STATUS_CAPABILITY)
         grants.add(GeneratedAndroidCapabilityRegistry.PLATFORM_STATUS_CAPABILITY)
         grants.add(GeneratedAndroidCapabilityRegistry.USER_CURRENT_CAPABILITY)

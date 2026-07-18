@@ -78,11 +78,35 @@ test(
         );
 
         assert.equal(built.documentCount, policy.documents.length);
+        assert.equal(built.sourceCount, policy.sources.length);
         assert.equal(built.screenshotCount, 6);
         assert.equal(verified.verified, true);
+        assert.equal(verified.sourceCount, policy.sources.length);
         assert.equal(verified.version, built.version);
-        assert.equal(manifest.documents.length, policy.documents.length);
+        assert.equal(
+            manifest.documents.length,
+            policy.documents.length+policy.sources.length
+        );
         assert.equal((await readFile(path.join(outputRoot, '.nojekyll'))).length, 0);
+
+        const htmlSource=policy.sources.find(item=>item.source.endsWith('.html'));
+        const htmlRecord=manifest.documents.find(item=>item.id===htmlSource.id);
+        assert.equal(htmlRecord.mediaType,'text/plain');
+        assert.equal(htmlRecord.sourcePath,htmlSource.source);
+        assert.equal(htmlRecord.path,`sources/${htmlSource.source}.txt`);
+        assert.equal(
+            await readFile(
+                path.join(
+                    outputRoot,
+                    'apps',
+                    'docs',
+                    'catalog',
+                    ...htmlRecord.path.split('/')
+                ),
+                'utf8'
+            ),
+            (await readFile(path.join(TEST_ROOT,htmlSource.source),'utf8')).replace(/\r\n?/g,'\n')
+        );
 
         for (const screenshot of policy.screenshots) {
             const source = await readFile(path.join(TEST_ROOT, screenshot.source));
@@ -126,7 +150,7 @@ test(
 );
 
 test(
-    'defines a verified main-only GitHub Pages deployment',
+    'validates Docs pull requests read-only and deploys only trusted main builds',
     async function verifiesPagesWorkflow() {
         const workflow = await readFile(
             path.join(
@@ -137,6 +161,37 @@ test(
             ),
             'utf8'
         );
+        const pushStart = workflow.indexOf('    push:');
+        const pullRequestStart = workflow.indexOf('    pull_request:');
+        const dispatchStart = workflow.indexOf('    workflow_dispatch:');
+        const buildStart = workflow.indexOf('    build:');
+        const deployStart = workflow.indexOf('    deploy:');
+        const pushBlock = workflow.slice(pushStart, pullRequestStart);
+        const pullRequestBlock = workflow.slice(
+            pullRequestStart,
+            dispatchStart
+        );
+        const build = workflow.slice(buildStart, deployStart);
+        const deploy = workflow.slice(deployStart);
+        const collectPaths = function collectWorkflowPaths(block) {
+            return Array.from(
+                block.matchAll(/^\s{12}- '([^']+)'/gm),
+                function selectPath(match) {
+                    return match[1];
+                }
+            );
+        };
+        const pushPaths = collectPaths(pushBlock);
+        const pullRequestPaths = collectPaths(pullRequestBlock);
+        const mainOnlyCondition =
+            "if: github.event_name != 'pull_request' && "
+            + "github.ref == 'refs/heads/main'";
+
+        assert.notEqual(pushStart, -1);
+        assert.notEqual(pullRequestStart, -1);
+        assert.notEqual(dispatchStart, -1);
+        assert.notEqual(buildStart, -1);
+        assert.notEqual(deployStart, -1);
 
         assert.match(workflow, /actions\/checkout@v6/);
         assert.match(workflow, /actions\/configure-pages@v5/);
@@ -152,7 +207,31 @@ test(
         assert.match(workflow, /needs:\s*build/);
         assert.match(workflow, /pages:\s*write/);
         assert.match(workflow, /id-token:\s*write/);
-        assert.doesNotMatch(workflow, /pull_request:/);
+        assert.match(pullRequestBlock, /branches:\s*\[main\]/);
+        assert.doesNotMatch(workflow, /pull_request_target/);
+        assert.deepEqual(pullRequestPaths, pushPaths);
+        assert.match(
+            build,
+            /actions\/checkout@v6\s*\r?\n\s+with:\s*\r?\n\s+persist-credentials: false/
+        );
+        assert.match(build, /permissions:\s*\r?\n\s+contents: read/);
+        assert.doesNotMatch(build, /^\s+pages:\s*(?:read|write)\s*$/m);
+        assert.doesNotMatch(build, /^\s+id-token:/m);
+        assert.doesNotMatch(
+            build.slice(0, build.indexOf('runs-on:')),
+            /^\s+if:/m
+        );
+        assert.doesNotMatch(build, /actions\/configure-pages/);
+        assert.match(deploy, /permissions:\s*\r?\n\s+pages: write\s*\r?\n\s+id-token: write/);
+        assert.doesNotMatch(deploy, /^\s+contents:/m);
+        assert.equal(
+            build.includes(mainOnlyCondition),
+            true
+        );
+        assert.equal(
+            deploy.includes(mainOnlyCondition),
+            true
+        );
         assert(
             workflow.indexOf('node tools/package-app.mjs check docs')
             < workflow.indexOf('actions/upload-pages-artifact@v4')
@@ -161,17 +240,35 @@ test(
             workflow.indexOf('actions/upload-pages-artifact@v4')
             < workflow.indexOf('actions/deploy-pages@v4')
         );
+        assert(
+            deploy.indexOf('actions/configure-pages@v5')
+            < deploy.indexOf('actions/deploy-pages@v4')
+        );
         assert.equal(
             (
                 workflow.match(
-                    /if: github\.ref == 'refs\/heads\/main'/g
+                    /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/g
                 ) || []
             ).length,
             2
         );
 
         for (
+            const examplePath of [
+                'example/component_markdown_document/**',
+                'example/component_source_code_viewer/**',
+                'example/module_AsyncBoundary/**',
+                'example/module_BrowserTestSuite/**',
+                'example/module_ScopedOPFSCache/**',
+                'example/module_StaticDocumentCatalog/**'
+            ]
+        ) {
+            assert.equal(pushPaths.includes(examplePath), true);
+        }
+
+        for (
             const focusedTest of [
+                'app-data-scope',
                 'async-boundary',
                 'browser-test-suite',
                 'component-contracts',
@@ -182,6 +279,7 @@ test(
                 'html-import-cache',
                 'markdown-document-component',
                 'scoped-opfs-cache',
+                'source-code-viewer',
                 'static-document-catalog',
                 'wait-for-component'
             ]

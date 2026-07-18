@@ -1,0 +1,252 @@
+<style>
+    :host{display:block;color:var(--text-color);font-family:Inter,Segoe UI,sans-serif}
+    *{box-sizing:border-box}
+    .inspector{display:grid;grid-template-rows:auto minmax(28rem,1fr);gap:.8rem;min-height:32rem}
+    .tabs{display:flex;gap:.35rem;flex-wrap:wrap;border-bottom:1px solid var(--border-color)}
+    .tab{margin:0;padding:.65rem .9rem;border:0;border-bottom:.2rem solid transparent;border-radius:.35rem .35rem 0 0;background:transparent;color:var(--text-color);box-shadow:none}
+    .tab[aria-selected="true"]{border-bottom-color:var(--accent-color);background:var(--secondary-color);color:var(--text-color)}
+    .tab:focus-visible,.search input:focus-visible,.review select:focus-visible,.review textarea:focus-visible,.save:focus-visible{outline:.18rem solid var(--focus-color);outline-offset:.12rem}
+    .panel{min-height:0}
+    .panel[hidden]{display:none}
+    .pdf-frame{width:100%;height:min(68vh,52rem);min-height:34rem;border:1px solid var(--border-color);border-radius:.5rem;background:rgb(245,245,245)}
+    .text-panel{display:grid;grid-template-rows:auto minmax(0,1fr);gap:.7rem}
+    .search{display:flex;align-items:end;gap:.6rem}
+    .search label{display:grid;gap:.25rem;flex:1;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+    .search input{width:100%;margin:0;padding:.65rem .75rem}
+    .matches{min-width:7rem;padding-bottom:.65rem;color:var(--platinum);font-size:.78rem;text-align:right}
+    .markdown{height:min(62vh,46rem);overflow:auto;padding:1.2rem;border:1px solid var(--border-color);border-radius:.5rem;background:var(--modal-background);line-height:1.6}
+    .markdown h1,.markdown h2,.markdown h3{margin:1.2em 0 .45em}
+    .markdown h1:first-child,.markdown h2:first-child{margin-top:0}
+    .markdown table{width:100%;border-collapse:collapse}.markdown th,.markdown td{padding:.45rem;border:1px solid var(--border-color);vertical-align:top}
+    .markdown pre{overflow:auto}.markdown mark{padding:0 .08em;background:rgb(255,224,116);color:rgb(25,29,34)}
+    .loading,.error{padding:1.2rem;border:1px solid var(--border-color);border-radius:.5rem}.error{color:var(--danger-color)}
+    .details{display:grid;grid-template-columns:minmax(14rem,.8fr) minmax(18rem,1.2fr);gap:1rem}
+    .metadata,.review{padding:1rem;border:1px solid var(--border-color);border-radius:.5rem;background:var(--modal-background)}
+    .metadata h3,.review h3{margin:0 0 .8rem}
+    dl{display:grid;grid-template-columns:max-content 1fr;gap:.55rem .8rem;margin:0}dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
+    .review{display:grid;align-content:start;gap:.8rem}.review label,[data-review-fields]{display:grid;gap:.3rem;font-weight:700}[data-review-fields]{gap:.8rem}.review select,.review textarea,.review input{width:100%;margin:0}.review textarea{min-height:7rem;resize:vertical}.save{justify-self:start;margin:0;padding:.65rem 1rem}.save-state{min-height:1.2em;color:var(--success-color);font-size:.8rem}
+    @media(max-width:48rem){.inspector{grid-template-rows:auto auto}.pdf-frame{min-height:28rem}.details{grid-template-columns:1fr}.markdown{height:55vh}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<section class="inspector" aria-label="Document inspector">
+    <div class="tabs" role="tablist" aria-label="Document views">
+        <button class="tab" type="button" role="tab" id="pdf-tab" aria-controls="pdf-panel" aria-selected="true" data-view="pdf">Original PDF</button>
+        <button class="tab" type="button" role="tab" id="text-tab" aria-controls="text-panel" aria-selected="false" data-view="text">Filing text</button>
+        <button class="tab" type="button" role="tab" id="details-tab" aria-controls="details-panel" aria-selected="false" data-view="details">Details &amp; review</button>
+    </div>
+    <div id="pdf-panel" class="panel" role="tabpanel" aria-labelledby="pdf-tab" data-panel="pdf"><p class="loading">Loading original PDF…</p></div>
+    <div id="text-panel" class="panel text-panel" role="tabpanel" aria-labelledby="text-tab" data-panel="text" hidden>
+        <div class="search"><label><span data-text-search-label>Search filing text</span><input type="search" data-text-search placeholder="Search this filing…"></label><span class="matches" aria-live="polite"></span></div>
+        <article class="markdown" data-markdown><p class="loading" role="status">Loading filing text…</p></article>
+    </div>
+    <div id="details-panel" class="panel details" role="tabpanel" aria-labelledby="details-tab" data-panel="details" hidden>
+        <section class="metadata"><h3>Source details</h3><dl data-metadata></dl></section>
+        <form class="review"><h3 data-review-heading>Review</h3><label>Status<select data-review-status></select></label><label data-classification-field hidden><span data-classification-label>Classification</span><select data-review-classification></select></label><div data-review-fields></div><label><span data-notes-label>Notes</span><textarea data-review-notes maxlength="10000"></textarea></label><button class="save" type="submit">Save review</button><span class="save-state" aria-live="polite"></span></form>
+    </div>
+</section>
+
+<script type="module">
+    const host=this;
+    const shadow=host.shadowRoot;
+    const tabs=[...shadow.querySelectorAll('[role="tab"]')];
+    const panels=[...shadow.querySelectorAll('[role="tabpanel"]')];
+    const pdfTab=shadow.querySelector('[data-view="pdf"]');
+    const textTab=shadow.querySelector('[data-view="text"]');
+    const pdfPanel=shadow.querySelector('[data-panel="pdf"]');
+    const markdownSurface=shadow.querySelector('[data-markdown]');
+    const searchInput=shadow.querySelector('[data-text-search]');
+    const textSearchLabel=shadow.querySelector('[data-text-search-label]');
+    const matchStatus=shadow.querySelector('.matches');
+    const metadataList=shadow.querySelector('[data-metadata]');
+    const reviewForm=shadow.querySelector('.review');
+    const reviewStatus=shadow.querySelector('[data-review-status]');
+    const classificationField=shadow.querySelector('[data-classification-field]');
+    const classificationLabel=shadow.querySelector('[data-classification-label]');
+    const reviewClassification=shadow.querySelector('[data-review-classification]');
+    const reviewNotes=shadow.querySelector('[data-review-notes]');
+    const reviewFields=shadow.querySelector('[data-review-fields]');
+    const reviewHeading=shadow.querySelector('[data-review-heading]');
+    const notesLabel=shadow.querySelector('[data-notes-label]');
+    const saveState=shadow.querySelector('.save-state');
+    const {default:MD}=await import('../modules/MD.js');
+    let rawMarkdown='';
+    let renderedMarkdown='';
+    let markdownMessage=null;
+    let activeRecordId='';
+    let loadSequence=0;
+
+    host.loadDocument=loadDocument;
+    host.selectView=selectView;
+    host.ready=true;
+
+    tabs.forEach(tab=>tab.addEventListener('click',()=>selectView(tab.dataset.view)));
+    tabs.forEach(tab=>tab.addEventListener('keydown',event=>{
+        if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+        event.preventDefault();
+        const available=tabs.filter(candidate=>!candidate.hidden);
+        const index=available.indexOf(tab);
+        const next=event.key==='Home'?0:event.key==='End'?available.length-1:(index+(event.key==='ArrowRight'?1:-1)+available.length)%available.length;
+        selectView(available[next].dataset.view); available[next].focus();
+    }));
+    searchInput.addEventListener('input',()=>highlightSearch(searchInput.value));
+    reviewForm.addEventListener('submit',event=>{
+        event.preventDefault();
+        const attributes={};
+        reviewFields.querySelectorAll('[data-review-field]').forEach(field=>{attributes[field.dataset.reviewField]=field.value;});
+        const detail={recordId:activeRecordId,status:reviewStatus.value,classification:reviewClassification.value||'unassigned',attributes,notes:reviewNotes.value};
+        saveState.textContent='Saving…';
+        host.dispatchEvent(new CustomEvent('document-review-change',{detail,bubbles:true,composed:true}));
+    });
+
+    function sameOriginUrl(value){
+        if(!String(value||'').trim()) throw new TypeError('A document source is required.');
+        const url=new URL(String(value||''),document.baseURI);
+        if(url.origin!==location.origin) throw new TypeError('Document sources must use the current application origin.');
+        return url.href;
+    }
+
+    function pdfSourceUrl(value,page=null){
+        const url=new URL(sameOriginUrl(value));
+        if(page===null||page===undefined||page==='') return url.href;
+        const resolvedPage=Number(page);
+        if(!Number.isSafeInteger(resolvedPage)||resolvedPage<1) throw new TypeError('PDF page must be a positive integer.');
+        url.searchParams.set('arcane-pdf-page',String(resolvedPage));
+        url.hash=`page=${resolvedPage}`;
+        return url.href;
+    }
+
+    function selectView(view='pdf'){
+        const available=tabs.filter(tab=>!tab.hidden);
+        const selected=available.some(tab=>tab.dataset.view===view)?view:available[0]?.dataset.view;
+        tabs.forEach(tab=>{const active=tab.dataset.view===selected;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});
+        panels.forEach(panel=>panel.hidden=panel.dataset.panel!==selected);
+    }
+
+    function showSurfaceMessage(surface,message,className='loading'){
+        const paragraph=document.createElement('p');
+        paragraph.className=className;
+        paragraph.textContent=String(message||'');
+        paragraph.setAttribute('role',className==='error'?'alert':'status');
+        surface.replaceChildren(paragraph);
+    }
+
+    function safeMarkdown(markdown=''){
+        const template=document.createElement('template');
+        template.innerHTML=new MD(markdown).safeRendered;
+        template.content.querySelectorAll('img,video,audio,source,picture').forEach(element=>element.remove());
+        template.content.querySelectorAll('a').forEach(link=>{link.removeAttribute('href');link.removeAttribute('target');link.removeAttribute('rel');});
+        return template.innerHTML;
+    }
+
+    function showMarkdown(){
+        if(markdownMessage){showSurfaceMessage(markdownSurface,markdownMessage.message,markdownMessage.className);return;}
+        markdownSurface.innerHTML=renderedMarkdown||'<p>No document text is available.</p>';
+    }
+
+    function highlightSearch(term=''){
+        showMarkdown();
+        const query=String(term).trim();
+        if(!query){matchStatus.textContent='';return;}
+        const nodes=[]; const walker=document.createTreeWalker(markdownSurface,NodeFilter.SHOW_TEXT);
+        while(walker.nextNode()) nodes.push(walker.currentNode);
+        let count=0;
+        for(const node of nodes){
+            const text=node.nodeValue||''; const lower=text.toLocaleLowerCase(); const needle=query.toLocaleLowerCase();
+            if(!needle||!lower.includes(needle)) continue;
+            const fragment=document.createDocumentFragment(); let offset=0; let index=lower.indexOf(needle,offset);
+            while(index>-1){fragment.append(text.slice(offset,index));const mark=document.createElement('mark');mark.textContent=text.slice(index,index+query.length);fragment.append(mark);count++;offset=index+query.length;index=lower.indexOf(needle,offset);}
+            fragment.append(text.slice(offset)); node.replaceWith(fragment);
+        }
+        matchStatus.textContent=`${count} match${count===1?'':'es'}`;
+        markdownSurface.querySelector('mark')?.scrollIntoView({block:'center'});
+    }
+
+    function metadataRows(metadata={}){
+        metadataList.replaceChildren();
+        for(const [label,value] of Object.entries(metadata)){
+            if(value===null||value===undefined||value==='') continue;
+            const term=document.createElement('dt'); const detail=document.createElement('dd');
+            term.textContent=label; detail.textContent=String(value); metadataList.append(term,detail);
+        }
+    }
+
+    async function loadDocument(config={}){
+        const sequence=++loadSequence;
+        activeRecordId=String(config.recordId||'');
+        saveState.textContent=''; searchInput.value=''; matchStatus.textContent='';
+        const hasPdf=Boolean(String(config.pdfUrl||'').trim());
+        const hasText=Boolean(String(config.markdownUrl||'').trim());
+        pdfTab.hidden=!hasPdf;
+        textTab.hidden=!hasText;
+        const textViewLabel=String(config.textViewLabel||'Filing text');
+        textTab.textContent=textViewLabel;
+        textSearchLabel.textContent=`Search ${textViewLabel.toLocaleLowerCase()}`;
+        searchInput.placeholder=`Search this ${textViewLabel.toLocaleLowerCase()}…`;
+        reviewHeading.textContent=String(config.reviewHeading||'Review');
+        notesLabel.textContent=String(config.notesLabel||'Notes');
+        reviewStatus.replaceChildren(...(config.reviewOptions||[{value:'not-reviewed',label:'Not reviewed'},{value:'reviewed',label:'Reviewed'}]).map(option=>{
+            const element=document.createElement('option');element.value=String(option.value);element.textContent=String(option.label);return element;
+        }));
+        reviewStatus.value=String(config.review?.status||'not-reviewed');
+        if(!reviewStatus.value&&reviewStatus.options.length) reviewStatus.selectedIndex=0;
+        const classificationOptions=Array.isArray(config.classificationOptions)?config.classificationOptions:[];
+        classificationField.hidden=!classificationOptions.length;
+        classificationLabel.textContent=String(config.classificationLabel||'Classification');
+        reviewClassification.replaceChildren(...classificationOptions.map(option=>{
+            const element=document.createElement('option');element.value=String(option.value);element.textContent=String(option.label);return element;
+        }));
+        reviewClassification.value=String(config.review?.classification||'unassigned');
+        if(!reviewClassification.value&&reviewClassification.options.length) reviewClassification.selectedIndex=0;
+        reviewFields.replaceChildren();
+        for(const definition of Array.isArray(config.reviewFields)?config.reviewFields:[]){
+            const key=String(definition.key||'').replace(/[^a-z0-9._-]/gi,'-').slice(0,80);
+            if(!key) continue;
+            const label=document.createElement('label'); const caption=document.createElement('span'); caption.textContent=String(definition.label||key);
+            let field;
+            if(definition.type==='select'){
+                field=document.createElement('select');
+                field.append(...(definition.options||[]).map(option=>{const element=document.createElement('option');element.value=String(option.value);element.textContent=String(option.label);return element;}));
+            }else if(definition.type==='textarea'){
+                field=document.createElement('textarea'); field.rows=Number(definition.rows)||3;
+            }else{
+                field=document.createElement('input'); field.type='text';
+            }
+            field.dataset.reviewField=key; field.maxLength=Math.min(Number(definition.maxLength)||10000,10000); field.placeholder=String(definition.placeholder||'');
+            field.value=String(config.review?.attributes?.[key]||'');
+            if(definition.type==='select'&&!field.value&&field.options.length&&![...field.options].some(option=>option.value==='')) field.selectedIndex=0;
+            label.append(caption,field); reviewFields.append(label);
+        }
+        reviewNotes.value=String(config.review?.notes||'');
+        metadataRows(config.metadata||{});
+        pdfPanel.replaceChildren();
+        if(hasPdf){
+            try{
+                const resolvedPage=config.pdfPage===null||config.pdfPage===undefined||config.pdfPage===''?null:Number(config.pdfPage);
+                const frame=document.createElement('iframe'); frame.className='pdf-frame'; frame.title=`Original PDF: ${config.title||'document'}${resolvedPage?`, page ${resolvedPage}`:''}`; frame.referrerPolicy='no-referrer'; frame.src=pdfSourceUrl(config.pdfUrl,resolvedPage); pdfPanel.append(frame);
+            }catch(error){showSurfaceMessage(pdfPanel,error.message,'error');}
+        }
+        rawMarkdown=''; renderedMarkdown=''; markdownMessage=null;
+        selectView(config.initialView||(hasPdf?'pdf':hasText?'text':'details'));
+        if(hasText){
+            showSurfaceMessage(markdownSurface,'Loading document text…');
+            try{
+                const response=await fetch(sameOriginUrl(config.markdownUrl),{cache:'no-store',credentials:'same-origin'});
+                if(!response.ok) throw new Error(`Document text unavailable (${response.status}).`);
+                const markdown=await response.text();
+                if(sequence!==loadSequence) return false;
+                rawMarkdown=markdown; renderedMarkdown=safeMarkdown(rawMarkdown); showMarkdown();
+            }catch(error){
+                if(sequence!==loadSequence) return false;
+                markdownMessage={message:error.message,className:'error'}; showMarkdown();
+            }
+        }else{
+            markdownMessage={message:'No document text is available.',className:'loading'};
+            showMarkdown();
+        }
+        return true;
+    }
+
+    host.markSaved=message=>{saveState.textContent=String(message||'Saved');};
+    host.dispatchEvent(new CustomEvent('document-inspector-ready',{bubbles:true,composed:true}));
+</script>

@@ -1,14 +1,16 @@
 import Preference,{preferenceSchema} from '../entities/Preference.js';
+import {resolveApplicationLocalStorageKey} from './AppDataScope.js';
 
 function localAdapter(prefix){
     const storage=globalThis.localStorage;
+    const scopedPrefix=resolveApplicationLocalStorageKey(prefix);
     return {
         async get(key){
-            const raw=storage?.getItem(`${prefix}:${key}`);
+            const raw=storage?.getItem(`${scopedPrefix}:${key}`);
             return {found:raw!==null&&raw!==undefined,value:raw==null?null:JSON.parse(raw)};
         },
-        async set(key,value){ storage?.setItem(`${prefix}:${key}`,JSON.stringify(value)); return {key,value}; },
-        async delete(key){ storage?.removeItem(`${prefix}:${key}`); return {key,deleted:true}; }
+        async set(key,value){ storage?.setItem(`${scopedPrefix}:${key}`,JSON.stringify(value)); return {key,value}; },
+        async delete(key){ storage?.removeItem(`${scopedPrefix}:${key}`); return {key,deleted:true}; }
     };
 }
 

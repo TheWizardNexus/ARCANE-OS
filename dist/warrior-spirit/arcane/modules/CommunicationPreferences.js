@@ -1,7 +1,9 @@
+import {resolveApplicationLocalStorageKey} from './AppDataScope.js';
+
 function adapter(){
     const native=globalThis.Arcane?.preferences;
     if(native?.get&&native?.set) return native;
-    return {async get(key){const value=globalThis.localStorage?.getItem(key);return {found:value!=null,value:value==null?null:JSON.parse(value)}},async set(key,value){globalThis.localStorage?.setItem(key,JSON.stringify(value));return {key,value}}};
+    return {async get(key){const value=globalThis.localStorage?.getItem(resolveApplicationLocalStorageKey(key));return {found:value!=null,value:value==null?null:JSON.parse(value)}},async set(key,value){globalThis.localStorage?.setItem(resolveApplicationLocalStorageKey(key),JSON.stringify(value));return {key,value}}};
 }
 
 export default class CommunicationPreferences{

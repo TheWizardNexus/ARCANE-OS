@@ -1,0 +1,116 @@
+<style>
+  :host{display:block;color:var(--text-color);font-family:Inter,Segoe UI,sans-serif}
+  *{box-sizing:border-box}
+  .layout{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(17rem,.8fr);gap:1rem;align-items:start}
+  .board{display:grid;grid-template-columns:repeat(var(--lane-count,4),minmax(12rem,1fr));gap:.7rem;overflow:auto;padding:.25rem}
+  .lane{display:grid;align-content:start;gap:.55rem;min-height:18rem;padding:.7rem;border:1px solid var(--border-color);border-radius:.65rem;background:var(--background)}
+  .lane h3{margin:0;padding:0 0 .5rem;border-bottom:1px solid var(--border-color);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
+  .node{display:grid;gap:.28rem;width:100%;margin:0;padding:.65rem;border:1px solid var(--border-color);border-left:.32rem solid var(--accent-color);border-radius:.5rem;background:var(--modal-background);box-shadow:none;color:var(--text-color);text-align:left}
+  .node:hover,.node:focus-visible,.node[aria-pressed="true"]{background:var(--secondary-color);color:var(--text-color);box-shadow:none}
+  .node:focus-visible{outline:.18rem solid var(--focus-color);outline-offset:.12rem}
+  .node strong{font-size:.82rem;line-height:1.3}.node small{color:var(--platinum);line-height:1.35}
+  .connections{position:sticky;top:.7rem;display:grid;gap:.7rem;padding:.85rem;border:1px solid var(--border-color);border-radius:.65rem;background:var(--modal-background)}
+  .connections h3,.connections p{margin:0}.connections p{color:var(--platinum);font-size:.78rem;line-height:1.45}
+  .edge-list{display:grid;gap:.45rem;margin:0;padding:0;list-style:none}
+  .edge{width:100%;margin:0;padding:.55rem;border:1px solid var(--border-color);border-radius:.4rem;background:var(--background);box-shadow:none;color:var(--text-color);font-size:.75rem;text-align:left}
+  .edge:hover,.edge:focus-visible{background:var(--secondary-color);color:var(--text-color);box-shadow:none}.edge:focus-visible{outline:.18rem solid var(--focus-color);outline-offset:.12rem}
+  .empty{padding:.7rem;color:var(--platinum);font-size:.78rem}
+  @media(max-width:62rem){.layout{grid-template-columns:1fr}.connections{position:static}.board{grid-template-columns:repeat(var(--lane-count,4),minmax(15rem,1fr))}}
+  @media(forced-colors:active){.node,.edge{border-color:CanvasText}}
+</style>
+
+<section class="layout">
+  <div class="board" data-board aria-label="Relationship board"></div>
+  <aside class="connections" aria-live="polite" aria-atomic="true">
+    <h3 data-selected-title>Choose a card</h3>
+    <p data-selected-summary>Select a person, event, source, order, or hypothesis to see its record-based connections.</p>
+    <ul class="edge-list" data-edges></ul>
+  </aside>
+</section>
+
+<script type="module">
+  const host=this;
+  const board=host.shadowRoot.querySelector('[data-board]');
+  const selectedTitle=host.shadowRoot.querySelector('[data-selected-title]');
+  const selectedSummary=host.shadowRoot.querySelector('[data-selected-summary]');
+  const edgeList=host.shadowRoot.querySelector('[data-edges]');
+  let nodes=[]; let edges=[]; let lanes=[]; let selectedId='';
+
+  host.setGraph=setGraph;
+  host.populate=(graph={},options={})=>setGraph(graph,options);
+
+  board.addEventListener('click',event=>{
+    const trigger=event.target.closest('[data-node-id]');
+    if(!trigger) return;
+    selectedId=trigger.dataset.nodeId; renderSelection();
+    const node=nodes.find(item=>item.id===selectedId);
+    host.dispatchEvent(new CustomEvent('relationship-node-open',{bubbles:true,composed:true,detail:{id:selectedId,node:{...node}}}));
+  });
+  edgeList.addEventListener('click',event=>{
+    const trigger=event.target.closest('[data-edge-id]');
+    if(!trigger) return;
+    const edge=edges.find(item=>item.id===trigger.dataset.edgeId);
+    if(edge) host.dispatchEvent(new CustomEvent('relationship-edge-open',{bubbles:true,composed:true,detail:{id:edge.id,edge:{...edge}}}));
+  });
+
+  function normalizeNode(value,index){
+    const item=value&&typeof value==='object'?value:{};
+    if(!item.id) return null;
+    return {...item,id:String(item.id).slice(0,180),label:String(item.label||item.title||item.id).slice(0,500),summary:String(item.summary||'').slice(0,1800),lane:String(item.lane||item.kind||'Other').slice(0,100),order:Number.isFinite(Number(item.order))?Number(item.order):index};
+  }
+  function normalizeEdge(value,index,known){
+    const item=value&&typeof value==='object'?value:{};
+    const from=String(item.from||'').slice(0,180); const to=String(item.to||'').slice(0,180);
+    if(!from||!to||!known.has(from)||!known.has(to)) return null;
+    return {...item,id:String(item.id||`edge-${index+1}`).slice(0,180),from,to,label:String(item.label||'related to').slice(0,300),summary:String(item.summary||'').slice(0,1200)};
+  }
+
+  function setGraph(graph={},options={}){
+    nodes=(Array.isArray(graph.nodes)?graph.nodes:[]).slice(0,1500).map(normalizeNode).filter(Boolean);
+    const known=new Set(nodes.map(item=>item.id));
+    edges=(Array.isArray(graph.edges)?graph.edges:[]).slice(0,6000).map((item,index)=>normalizeEdge(item,index,known)).filter(Boolean);
+    const supplied=Array.isArray(options.lanes)?options.lanes:Array.isArray(graph.lanes)?graph.lanes:[];
+    lanes=[...new Set([...supplied.map(String),...nodes.map(item=>item.lane)])].slice(0,12);
+    board.style.setProperty('--lane-count',String(Math.max(1,Math.min(6,lanes.length))));
+    if(selectedId&&!known.has(selectedId)) selectedId='';
+    render();
+    return {nodes:nodes.map(item=>({...item})),edges:edges.map(item=>({...item}))};
+  }
+
+  function render(){
+    board.replaceChildren();
+    for(const laneName of lanes){
+      const lane=document.createElement('section'); lane.className='lane'; lane.setAttribute('aria-label',laneName);
+      const heading=document.createElement('h3'); heading.textContent=laneName; lane.append(heading);
+      const laneNodes=nodes.filter(node=>node.lane===laneName).sort((left,right)=>left.order-right.order||left.label.localeCompare(right.label));
+      for(const node of laneNodes){
+        const button=document.createElement('button'); button.type='button'; button.className='node'; button.dataset.nodeId=node.id; button.setAttribute('aria-pressed',String(node.id===selectedId));
+        const label=document.createElement('strong'); label.textContent=node.label; button.append(label);
+        if(node.summary){const summary=document.createElement('small'); summary.textContent=node.summary; button.append(summary);}
+        lane.append(button);
+      }
+      if(!laneNodes.length){const empty=document.createElement('p'); empty.className='empty'; empty.textContent='No cards in this lane.'; lane.append(empty);}
+      board.append(lane);
+    }
+    renderSelection();
+  }
+
+  function renderSelection(){
+    board.querySelectorAll('[data-node-id]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.nodeId===selectedId)));
+    const selected=nodes.find(item=>item.id===selectedId);
+    selectedTitle.textContent=selected?.label||'Choose a card';
+    selectedSummary.textContent=selected?.summary||'Select a person, event, source, order, or hypothesis to see its record-based connections.';
+    edgeList.replaceChildren();
+    if(!selected) return;
+    const related=edges.filter(edge=>edge.from===selectedId||edge.to===selectedId);
+    for(const edge of related){
+      const otherId=edge.from===selectedId?edge.to:edge.from; const other=nodes.find(node=>node.id===otherId);
+      const row=document.createElement('li'); const button=document.createElement('button');
+      button.type='button'; button.className='edge'; button.dataset.edgeId=edge.id; button.textContent=`${edge.label}: ${other?.label||otherId}`;
+      row.append(button); edgeList.append(row);
+    }
+    if(!related.length){const row=document.createElement('li'); row.className='empty'; row.textContent='No displayed connections.'; edgeList.append(row);}
+  }
+
+  host.dispatchEvent(new CustomEvent('relationship-board-ready',{bubbles:true,composed:true}));
+</script>

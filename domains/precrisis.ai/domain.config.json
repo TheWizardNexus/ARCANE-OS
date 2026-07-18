@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "projectRoot": "../..",
+  "canonicalHost": "precrisis.ai",
+  "baseDomain": "precrisis.ai",
+  "siteRoot": "domains/precrisis.ai/public",
+  "siteManifest": "domains/precrisis.ai/site-release.json",
+  "distRoot": "dist",
+  "appRegistry": "machine_bundles/arcane-os-machine-bundle-v0.8.4/arcane-apps.json",
+  "redirectHosts": {
+    "www.precrisis.ai": "precrisis.ai"
+  },
+  "distApps": {
+    "app": "precrisis",
+    "browser": "browser",
+    "calculator": "calculator",
+    "capture": "capture",
+    "developer": "developer",
+    "files": "files",
+    "mail": "mail",
+    "markdown": "markdown",
+    "messages": "messages",
+    "scamurai": "scamurai",
+    "settings": "settings",
+    "terminal": "terminal",
+    "warrior-spirit": "warrior-spirit",
+    "weather": "weather",
+    "youtube": "youtube",
+    "youtube-music": "youtube-music"
+  },
+  "publicAppSecurity": {
+    "browser": {
+      "frameOrigins": [
+        "https:"
+      ]
+    },
+    "precrisis": {
+      "connectOrigins": [
+        "https://api.openai.com"
+      ],
+      "mediaOrigins": [
+        "https://cdn.openai.com"
+      ]
+    },
+    "warrior-spirit": {
+      "connectOrigins": [
+        "https://api.openai.com"
+      ],
+      "mediaOrigins": [
+        "https://cdn.openai.com"
+      ]
+    },
+    "weather": {
+      "connectOrigins": [
+        "https://api.open-meteo.com",
+        "https://geocoding-api.open-meteo.com"
+      ]
+    },
+    "youtube": {
+      "frameOrigins": [
+        "https://www.youtube-nocookie.com"
+      ],
+      "mediaOrigins": [
+        "https://www.youtube-nocookie.com"
+      ]
+    },
+    "youtube-music": {
+      "frameOrigins": [
+        "https://www.youtube-nocookie.com"
+      ],
+      "mediaOrigins": [
+        "https://www.youtube-nocookie.com"
+      ]
+    }
+  },
+  "siteMounts": [
+    {
+      "urlPrefix": "/arcane/",
+      "distApp": "precrisis",
+      "pathPrefix": "arcane"
+    }
+  ],
+  "siteAssetAliases": {
+    "/favicon.png": {
+      "distApp": "precrisis",
+      "path": "apps/precrisis/img/favicon.png"
+    },
+    "/brand/lifeline.png": {
+      "distApp": "precrisis",
+      "path": "apps/precrisis/img/512.png"
+    }
+  },
+  "tls": {
+    "certificatePath": "/etc/letsencrypt/live/precrisis.ai/fullchain.pem",
+    "privateKeyPath": "/etc/letsencrypt/live/precrisis.ai/privkey.pem"
+  }
+}

@@ -3,6 +3,7 @@
 
     <head>
         <meta charset="utf-8">
+        <meta name="arcane-app-id" content="precrisis">
         <base href="../../">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title>PreCrisis.AI Assessment</title>
@@ -684,8 +685,6 @@ ${JSON.stringify(memories)}`
         }
 
         async function crisisHandler(params){
-            console.table(params);
-
             const savePromises=[];
 
             const score = new Score();
@@ -715,21 +714,6 @@ ${JSON.stringify(memories)}`
                 return false;
             }
 
-            console.log(
-                `%cCRISIS: ${crisis} > ${crisis_results.crisis}`,
-                "color: red; font-size: 48px; font-weight: 900;"
-            );
-
-            console.log(
-                `%cIMMEDIATE INTERVENTION REQUIRED: ${immediate_intervention_required} > ${crisis_results.immediate_intervention_required}`,
-                "color: red; font-size: 48px; font-weight: 900;"
-            );
-
-            console.log(
-                `%cCRISIS PREDICTION: ${crisis_prediction} ${crisis_results.crisis_prediction}`,
-                "color: red; font-size: 48px; font-weight: 900;"
-            );
-
             crisis_results.crisis=crisis;
             crisis_results.immediate_intervention_required=immediate_intervention_required;
             crisis_results.crisis_prediction=crisis_prediction;
@@ -752,8 +736,6 @@ ${JSON.stringify(memories)}`
                     user.contact_5,
                     user.contact_6,
                 ].filter(value=>typeof value==='string'&&value.trim());
-
-                console.table(to);
 
                 if(to.length===0){
                     modal.populate(`
@@ -778,6 +760,21 @@ ${JSON.stringify(memories)}`
                         `Create an email crisis notification appropriate for the crisis_result and use the chat_log to explain the result in a way anyone can understand.`,
                         'crisis_detected'
                     );
+
+                    if(!delivery.sent){
+                        const statusMessage=delivery.uncertain
+                            ? 'The mail provider could not confirm whether the notification was delivered.'
+                            : 'The notification was not accepted for every configured support contact.';
+                        modal.populate(`
+                            <h2>Support Contact Delivery Was Not Fully Confirmed</h2>
+                            <p>${statusMessage} Please contact your support network directly, and call or text 988 now if you need immediate help.</p>
+                            <div class="button-group">
+                                <button data-modal-action="callHotline">Speak to Someone Now (988)</button>
+                            </div>
+                        `);
+                        modal.open();
+                        return delivery;
+                    }
 
                     modal.close();
                     return delivery;
@@ -933,8 +930,6 @@ ${JSON.stringify(memories)}`
         }
 
         function saveTextAssessment(params){
-            console.table(params);
-
             const jobs=[Notes.saveFromTextAssessment(params,user?.username)];
 
             if(user.email){
@@ -985,7 +980,6 @@ ${JSON.stringify(memories)}`
                 return generateAssessmentReports(params);
             },
             possible_risks:async function possible_risks(params){
-                console.table(params);
                 return saveGeneratedReport(
                     'possible_risks',
                     params,
@@ -995,7 +989,6 @@ ${JSON.stringify(memories)}`
                 );
             },
             possible_risks_relationship:async function possible_risks_relationship(params){
-                console.table(params);
                 return saveGeneratedReport(
                     'possible_risks_relationship',
                     params,

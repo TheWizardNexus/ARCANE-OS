@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <base href="../../">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Arcane Markdown Document Component Example</title>
+
+        <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+        <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+        <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+        <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+        <script type="module" src="./arcane/modules/HTMLImport.js?v=2"></script>
+
+        <style>
+            body{
+                box-sizing:border-box;
+                display:block;
+                min-height:100vh;
+                padding:clamp(1rem,4vw,3rem);
+            }
+
+            main{
+                margin:0 auto;
+                max-width:70rem;
+            }
+
+            .controls{
+                display:flex;
+                flex-wrap:wrap;
+                gap:.5rem;
+                margin-block:1rem;
+            }
+
+            .example-document{
+                background:var(--modal-background);
+                border:1px solid var(--border-color);
+                border-radius:.75rem;
+                display:block;
+                min-height:18rem;
+                padding:clamp(1rem,3vw,2rem);
+            }
+
+            .example-output{
+                background:var(--secondary-color);
+                border:1px solid var(--border-color);
+                border-radius:.5rem;
+                min-height:4rem;
+                overflow:auto;
+                padding:1rem;
+                white-space:pre-wrap;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main>
+            <h1>Markdown document component</h1>
+            <p>
+                This synthetic example renders source-aware Markdown, builds an
+                on-page table of contents, and lets the parent own document routes.
+            </p>
+
+            <div class="controls" aria-label="Document state examples">
+                <button id="loadDocument" type="button">Load document</button>
+                <button id="showError" type="button">Show error state</button>
+                <button id="clearDocument" type="button">Show empty state</button>
+            </div>
+
+            <html-import
+                id="exampleDocument"
+                class="example-document"
+                href="./arcane/components/markdown-document.html?v=1"
+            ></html-import>
+
+            <h2>Parent event log</h2>
+            <pre id="exampleOutput" class="example-output" aria-live="polite">Waiting for the shared component…</pre>
+        </main>
+
+        <script type="module">
+            import waitForComponent from './arcane/modules/WaitForComponent.js';
+
+            const documentHost=document.querySelector('#exampleDocument');
+            const output=document.querySelector('#exampleOutput');
+            const loadButton=document.querySelector('#loadDocument');
+            const errorButton=document.querySelector('#showError');
+            const clearButton=document.querySelector('#clearDocument');
+            const sourceURL=new URL(
+                './example/component_markdown_document/guides/start.md',
+                document.baseURI
+            ).href;
+            const syntheticMarkdown=[
+                '# Safe Markdown rendering',
+                '',
+                'The parent supplies reviewed Markdown and its source URL.',
+                '',
+                '## Source-aware assets',
+                '',
+                '![Synthetic document icon](../../../arcane/img/doc.svg)',
+                '',
+                'Relative assets resolve from the Markdown source, not from the page route.',
+                '',
+                '## Repeated heading',
+                '',
+                'The table of contents receives a stable identifier.',
+                '',
+                '## Repeated heading',
+                '',
+                'A duplicate heading receives a collision-free identifier.',
+                '',
+                '## Parent-owned route',
+                '',
+                '[Open the next synthetic guide](../reference/next.md#details)',
+                '',
+                '<html-import href="./untrusted-component.html">This subtree is rejected.</html-import>'
+            ].join('\n');
+            const nextMarkdown=[
+                '# Next synthetic guide',
+                '',
+                '## Details',
+                '',
+                'The parent handled the Markdown route and supplied this replacement content.',
+                '',
+                '[Return to the first guide](../guides/start.md)'
+            ].join('\n');
+
+            const viewer=await waitForComponent(
+                documentHost,
+                {
+                    event:'markdown-document-ready',
+                    methods:['clear','configure','fail','focus','load','render'],
+                    property:'ready'
+                }
+            );
+
+            viewer.configure(
+                {
+                    labels:{
+                        content:'Synthetic Markdown document',
+                        tableOfContents:'Example contents'
+                    },
+                    onNavigate(detail){
+                        output.textContent=`Parent routed ${detail.href}\n${detail.targetURL}`;
+                        if(detail.targetURL.includes('/reference/next.md')){
+                            viewer.render(
+                                nextMarkdown,
+                                {sourceURL:detail.targetURL}
+                            );
+                            viewer.focus();
+                        }else if(detail.targetURL.includes('/guides/start.md')){
+                            viewer.render(
+                                syntheticMarkdown,
+                                {sourceURL:detail.targetURL}
+                            );
+                            viewer.focus();
+                        }
+                    },
+                    sourceURL
+                }
+            );
+
+            viewer.addEventListener(
+                'markdown-document-state',
+                event=>{
+                    output.textContent=[
+                        `state=${event.detail.state}`,
+                        `source=${event.detail.sourceURL}`
+                    ].join('\n');
+                }
+            );
+            viewer.addEventListener(
+                'markdown-document-navigate',
+                event=>{
+                    output.textContent=`navigate=${event.detail.kind}\n${event.detail.targetURL}`;
+                }
+            );
+
+            async function loadSyntheticDocument(){
+                await viewer.load(
+                    async ()=>({markdown:syntheticMarkdown,sourceURL}),
+                    {sourceURL}
+                );
+            }
+
+            loadButton.addEventListener('click',loadSyntheticDocument);
+            errorButton.addEventListener(
+                'click',
+                ()=>viewer.fail(new Error('Synthetic source is unavailable.'))
+            );
+            clearButton.addEventListener('click',()=>viewer.clear());
+
+            await loadSyntheticDocument();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,111 @@
+<style>
+  :host{display:block;color:var(--text-color);font-family:Inter,Segoe UI,sans-serif}
+  *{box-sizing:border-box}
+  .shell{display:grid;gap:1rem}
+  .lede{display:grid;gap:.55rem;padding:.9rem 1rem;border:1px solid var(--border-color);border-left:.38rem solid var(--accent-color);border-radius:.6rem;background:var(--modal-background)}
+  .badges{display:flex;gap:.4rem;flex-wrap:wrap}.badge{padding:.22rem .48rem;border:1px solid var(--border-color);border-radius:99rem;font-size:.68rem;font-weight:800}
+  h3{margin:0;font-size:1rem}p{margin:0;line-height:1.55}.lede p{font-weight:700}
+  .analysis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+  .section{display:grid;align-content:start;gap:.55rem;padding:.85rem;border:1px solid var(--border-color);border-radius:.55rem;background:var(--modal-background)}
+  .section ul{display:grid;gap:.4rem;margin:0;padding-left:1.2rem}.section li,.section p{font-size:.82rem;line-height:1.5}
+  .evidence-layout{display:grid;grid-template-columns:minmax(18rem,.85fr) minmax(24rem,1.15fr);gap:.8rem}
+  .evidence-list{display:grid;align-content:start;gap:.55rem;max-height:34rem;overflow:auto}
+  .evidence{display:grid;gap:.45rem;padding:.7rem;border:1px solid var(--border-color);border-radius:.5rem;background:var(--modal-background)}
+  .evidence header{display:flex;justify-content:space-between;gap:.5rem;font-size:.72rem}.evidence header strong{overflow-wrap:anywhere}.evidence header span{flex:0 0 auto;color:var(--platinum)}
+  blockquote{margin:0;padding:.65rem;border-left:.25rem solid var(--border-color);background:var(--background);font-size:.78rem;line-height:1.55}
+  .show-source{justify-self:start;margin:0;padding:.45rem .65rem;font-size:.72rem}
+  .original{display:grid;grid-template-rows:auto minmax(28rem,1fr);gap:.45rem;min-width:0}.original p{color:var(--platinum);font-size:.75rem}.original iframe{width:100%;height:min(60vh,38rem);min-height:28rem;border:1px solid var(--border-color);border-radius:.5rem;background:rgb(245,245,245)}
+  .review{display:grid;grid-template-columns:repeat(3,minmax(10rem,1fr));gap:.7rem;padding:.85rem;border:1px solid var(--border-color);border-radius:.55rem;background:var(--modal-background)}
+  .review h3,.review .notes,.save-row{grid-column:1/-1}.review label{display:grid;gap:.3rem;font-size:.75rem;font-weight:800}.review select,.review textarea{width:100%;margin:0}.review textarea{min-height:6rem;resize:vertical}.save-row{display:flex;align-items:center;gap:.8rem}.save-row button{margin:0}.save-state{color:var(--platinum);font-size:.78rem}
+  button:focus-visible,select:focus-visible,textarea:focus-visible{outline:.18rem solid var(--focus-color);outline-offset:.12rem}
+  .empty{padding:.8rem;border:1px dashed var(--border-color);border-radius:.5rem;color:var(--platinum)}
+  @media(max-width:56rem){.analysis,.evidence-layout,.review{grid-template-columns:1fr}.review h3,.review .notes,.save-row{grid-column:1}.original{grid-template-rows:auto auto}.original iframe{min-height:24rem}}
+  @media(forced-colors:active){.lede,.section,.evidence,.original iframe,.review{border-color:CanvasText}}
+</style>
+
+<section class="shell" data-shell>
+  <header class="lede"><div class="badges" data-badges></div><h3 data-title>Investigative lead</h3><p data-assessment></p></header>
+  <div class="analysis">
+    <section class="section"><h3>What would need to be established</h3><ul data-elements></ul></section>
+    <section class="section"><h3>How the sources fit</h3><p data-application></p></section>
+    <section class="section"><h3>Present limitations and contrary evidence</h3><ul data-limitations></ul></section>
+    <section class="section"><h3>Recommended verification</h3><ul data-next-steps></ul></section>
+  </div>
+  <section class="section"><h3>Evidence in support</h3><div class="evidence-layout"><div class="evidence-list" data-evidence></div><div class="original"><p data-original-label>Select a cited excerpt to inspect the original source page.</p><iframe data-original title="Original cited source" hidden></iframe></div></div></section>
+  <form class="review" data-review>
+    <h3>Investigator decision</h3>
+    <label>Alleged actor<select data-actor></select></label>
+    <label>Disposition<select data-disposition></select></label>
+    <label>Confidence<select data-confidence></select></label>
+    <label class="notes">Notes, contrary facts, and follow-up<textarea data-notes maxlength="10000"></textarea></label>
+    <div class="save-row"><button type="submit">Save decision</button><span class="save-state" data-save-state aria-live="polite"></span></div>
+  </form>
+</section>
+
+<script type="module">
+  const host=this; const root=host.shadowRoot;
+  const title=root.querySelector('[data-title]'); const assessment=root.querySelector('[data-assessment]'); const badges=root.querySelector('[data-badges]');
+  const elements=root.querySelector('[data-elements]'); const application=root.querySelector('[data-application]'); const limitations=root.querySelector('[data-limitations]'); const nextSteps=root.querySelector('[data-next-steps]');
+  const evidenceList=root.querySelector('[data-evidence]'); const original=root.querySelector('[data-original]'); const originalLabel=root.querySelector('[data-original-label]');
+  const reviewForm=root.querySelector('[data-review]'); const actor=root.querySelector('[data-actor]'); const disposition=root.querySelector('[data-disposition]'); const confidence=root.querySelector('[data-confidence]'); const notes=root.querySelector('[data-notes]'); const saveState=root.querySelector('[data-save-state]');
+  let finding=null; let sources=[];
+
+  host.showFinding=showFinding;
+  host.populate=(value={},options={})=>showFinding(value,options);
+  host.markSaved=message=>{saveState.textContent=String(message||'Saved.');};
+
+  reviewForm.addEventListener('submit',event=>{
+    event.preventDefault(); if(!finding) return;
+    saveState.textContent='Saving…';
+    host.dispatchEvent(new CustomEvent('source-explanation-save',{bubbles:true,composed:true,detail:{recordId:finding.id,classification:actor.value,status:disposition.value,attributes:{confidence:confidence.value},notes:notes.value}}));
+  });
+
+  function options(select,values=[]){
+    select.replaceChildren(...values.map(value=>{const item=document.createElement('option'); item.value=String(value.value); item.textContent=String(value.label); return item;}));
+  }
+  function list(target,values=[],emptyLabel){
+    target.replaceChildren();
+    for(const value of Array.isArray(values)?values:[]){const item=document.createElement('li'); item.textContent=String(value); target.append(item);}
+    if(!target.children.length){const item=document.createElement('li'); item.textContent=emptyLabel; target.append(item);}
+  }
+  function sameOrigin(value=''){
+    const url=new URL(String(value),document.baseURI); if(url.origin!==location.origin) throw new TypeError('Original sources must use the current application origin.'); return url;
+  }
+
+  function showFinding(value={},config={}){
+    finding=value&&typeof value==='object'?value:null; if(!finding) throw new TypeError('A finding is required.');
+    sources=(Array.isArray(finding.sources)?finding.sources:[]).slice(0,40);
+    title.textContent=String(finding.label||'Investigative lead'); assessment.textContent=String(finding.assessment||finding.conclusion||'Human review is required before reliance.');
+    badges.replaceChildren();
+    for(const value of [finding.allegedActorLabel?`Alleged actor: ${finding.allegedActorLabel}`:'Actor not assigned',finding.kind||'Investigative lead',finding.confidence?`${finding.confidence} confidence`:'Confidence not assigned']){const badge=document.createElement('span'); badge.className='badge'; badge.textContent=value; badges.append(badge);}
+    list(elements,finding.elementsToVerify,'No element checklist has been assigned.'); application.textContent=String(finding.application||'The cited passages require investigator comparison to the original sources.');
+    list(limitations,finding.limitations,'No contrary evidence has been recorded yet; this does not mean none exists.'); list(nextSteps,finding.nextSteps,'Compare the cited excerpt with the complete original and record contrary facts.');
+    evidenceList.replaceChildren();
+    for(const [index,source] of sources.entries()){
+      const card=document.createElement('article'); card.className='evidence'; const header=document.createElement('header'); const name=document.createElement('strong'); const cite=document.createElement('span');
+      name.textContent=String(source.filename||source.title||source.recordId||'Source'); cite.textContent=[source.page?`PDF p. ${source.page}`:'',source.lineStart?`MD lines ${source.lineStart}–${source.lineEnd||source.lineStart}`:''].filter(Boolean).join(' · '); header.append(name,cite);
+      const quote=document.createElement('blockquote'); quote.textContent=String(source.excerpt||source.quote||'No excerpt supplied.'); card.append(header,quote);
+      if(source.pdfUrl){const button=document.createElement('button'); button.type='button'; button.className='show-source'; button.dataset.sourceIndex=String(index); button.textContent='Show original cited page'; button.addEventListener('click',()=>showSource(index)); card.append(button);}
+      evidenceList.append(card);
+    }
+    if(!sources.length){const empty=document.createElement('p'); empty.className='empty'; empty.textContent='No source excerpt is attached. Do not rely on this lead until a source is added.'; evidenceList.append(empty);}
+    original.hidden=true; original.removeAttribute('src'); originalLabel.textContent='Select a cited excerpt to inspect the original source page.';
+    options(actor,config.actorOptions||[]); options(disposition,config.dispositionOptions||[]); options(confidence,config.confidenceOptions||[]);
+    const review=finding.review&&typeof finding.review==='object'?finding.review:{};
+    actor.value=String(review.classification||finding.allegedActor||'unassigned'); disposition.value=String(review.status||'unassessed'); confidence.value=String(review.attributes?.confidence||finding.confidence||'unassigned'); notes.value=String(review.notes||''); saveState.textContent='';
+    if(!actor.value&&actor.options.length) actor.selectedIndex=0; if(!disposition.value&&disposition.options.length) disposition.selectedIndex=0; if(!confidence.value&&confidence.options.length) confidence.selectedIndex=0;
+    return {...finding};
+  }
+
+  function showSource(index=0){
+    const source=sources[index]; if(!source?.pdfUrl) return;
+    try{
+      const url=sameOrigin(source.pdfUrl); if(source.page) url.hash=`page=${Number(source.page)}`;
+      original.src=url.href; original.title=`Original cited source: ${source.filename||source.recordId||'document'}${source.page?`, page ${source.page}`:''}`; original.hidden=false;
+      originalLabel.textContent=`Original source${source.page?` at PDF page ${source.page}`:''}. Compare the full page before relying on the extracted text.`;
+      host.dispatchEvent(new CustomEvent('source-explanation-source-selected',{bubbles:true,composed:true,detail:{index,source:{...source}}}));
+    }catch(error){original.hidden=true; originalLabel.textContent=error.message;}
+  }
+
+  host.dispatchEvent(new CustomEvent('source-explanation-ready',{bubbles:true,composed:true}));
+</script>

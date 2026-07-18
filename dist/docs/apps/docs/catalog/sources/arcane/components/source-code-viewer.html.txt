@@ -1,0 +1,441 @@
+<link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+<link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+<link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+
+<style>
+    :host{
+        color:var(--text-color);
+        display:block;
+        min-width:0;
+    }
+
+    [hidden]{
+        display:none !important;
+    }
+
+    .source-viewer{
+        min-width:0;
+    }
+
+    .source-state{
+        background:var(--secondary-color);
+        border:1px solid var(--border-color);
+        border-radius:.5rem;
+        color:var(--muted-text-color);
+        margin:0;
+        padding:1rem;
+    }
+
+    .source-state[data-state="error"]{
+        border-inline-start:.3rem solid var(--danger-color);
+        color:var(--text-color);
+    }
+
+    .source-header{
+        align-items:flex-start;
+        border-block-end:1px solid var(--border-color);
+        display:flex;
+        flex-wrap:wrap;
+        gap:1rem;
+        justify-content:space-between;
+        margin-block-end:1rem;
+        padding-block-end:1rem;
+    }
+
+    .source-title{
+        font-size:clamp(1.1rem,2vw,1.45rem);
+        margin:.15rem 0 0;
+        overflow-wrap:anywhere;
+    }
+
+    .source-path,
+    .source-language{
+        color:var(--muted-text-color);
+        font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size:.82rem;
+        margin:0;
+        overflow-wrap:anywhere;
+    }
+
+    .source-language{
+        margin-block-start:.35rem;
+    }
+
+    .repository-link{
+        color:var(--focus-color);
+        flex:none;
+        text-underline-offset:.15em;
+    }
+
+    .repository-link:focus-visible{
+        border-radius:.2rem;
+        outline:3px solid var(--focus-color);
+        outline-offset:.2rem;
+    }
+
+    .source-scroll{
+        background:var(--secondary-color);
+        border:1px solid var(--border-color);
+        border-radius:.5rem;
+        max-block-size:min(72vh,60rem);
+        overflow:auto;
+        overscroll-behavior:contain;
+    }
+
+    .source-lines{
+        counter-reset:source-line;
+        font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size:.88rem;
+        line-height:1.55;
+        list-style:none;
+        margin:0;
+        min-inline-size:max-content;
+        padding:.75rem 0;
+    }
+
+    .source-line{
+        counter-increment:source-line;
+        display:grid;
+        grid-template-columns:minmax(3.5rem,auto) 1fr;
+        min-block-size:1.55em;
+        scroll-margin-block:4rem;
+    }
+
+    .source-line::before{
+        border-inline-end:1px solid var(--border-color);
+        color:var(--muted-text-color);
+        content:counter(source-line);
+        padding-inline:.75rem;
+        text-align:end;
+        user-select:none;
+    }
+
+    .source-line code{
+        color:var(--text-color);
+        padding-inline:1rem;
+        white-space:pre;
+    }
+
+    .source-line:focus{
+        background:var(--modal-background);
+        outline:3px solid var(--focus-color);
+        outline-offset:-3px;
+    }
+
+    @media (forced-colors:active){
+        .source-state,
+        .source-header,
+        .source-scroll,
+        .source-line::before{
+            border-color:CanvasText;
+        }
+
+        .repository-link:focus-visible,
+        .source-line:focus{
+            outline-color:Highlight;
+        }
+    }
+
+    @media (max-width:38rem){
+        .source-header{
+            align-items:stretch;
+            flex-direction:column;
+        }
+    }
+</style>
+
+<section id="viewer" class="source-viewer" part="container" aria-busy="false">
+    <p
+        id="status"
+        class="source-state"
+        part="status"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        tabindex="-1"
+    ></p>
+
+    <header id="sourceHeader" class="source-header" part="header" hidden>
+        <div>
+            <p id="sourcePath" class="source-path"></p>
+            <h2 id="sourceTitle" class="source-title"></h2>
+            <p id="sourceLanguage" class="source-language"></p>
+        </div>
+        <a
+            id="repositoryLink"
+            class="repository-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            referrerpolicy="no-referrer"
+            hidden
+        >View repository source</a>
+    </header>
+
+    <div id="sourceScroll" class="source-scroll" part="source-scroll" hidden>
+        <ol id="sourceLines" class="source-lines" part="source-lines"></ol>
+    </div>
+</section>
+
+<script type="module">
+    const host=this;
+    host.ready=false;
+
+    const viewer=host.shadowRoot.querySelector('#viewer');
+    const status=host.shadowRoot.querySelector('#status');
+    const sourceHeader=host.shadowRoot.querySelector('#sourceHeader');
+    const sourcePathElement=host.shadowRoot.querySelector('#sourcePath');
+    const sourceTitle=host.shadowRoot.querySelector('#sourceTitle');
+    const sourceLanguage=host.shadowRoot.querySelector('#sourceLanguage');
+    const repositoryLink=host.shadowRoot.querySelector('#repositoryLink');
+    const sourceScroll=host.shadowRoot.querySelector('#sourceScroll');
+    const sourceLines=host.shadowRoot.querySelector('#sourceLines');
+
+    const MAXIMUM_CHARACTERS=1048576;
+    const MAXIMUM_LINES=20000;
+    const defaultOptions=Object.freeze({
+        labels:Object.freeze({
+            content:'Source code',
+            empty:'Choose a source file from the catalog.',
+            error:'This source file could not be displayed.',
+            loading:'Loading and verifying source code…',
+            repository:'View repository source'
+        })
+    });
+
+    let current=Object.freeze({
+        language:'text',
+        lineCount:0,
+        repositoryURL:'',
+        sourcePath:'',
+        text:'',
+        title:''
+    });
+    let loadSequence=0;
+    let options=normalizeOptions({},defaultOptions);
+    let state='empty';
+
+    host.clear=clear;
+    host.configure=configure;
+    host.fail=fail;
+    host.focus=focusSource;
+    host.focusLine=focusLine;
+    host.load=load;
+    host.render=render;
+
+    Object.defineProperties(host,{
+        lineCount:{get:()=>current.lineCount},
+        sourcePath:{get:()=>current.sourcePath},
+        state:{get:()=>state},
+        value:{get:()=>current.text,set:value=>render(value)}
+    });
+
+    function boundedText(value,label,maximum,{optional=false}={}){
+        if(optional&&(value===undefined||value===null||value===''))return '';
+        if(typeof value!=='string'||!value.trim()||value.length>maximum||/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(value)){
+            throw new TypeError(`${label} must be bounded text.`);
+        }
+        return value.trim();
+    }
+
+    function safeRepositoryURL(value=''){
+        if(value===undefined||value===null||value==='')return '';
+        const input=boundedText(value,'Source repositoryURL',2048);
+        try{
+            const url=new URL(input,document.baseURI);
+            if(!['http:','https:'].includes(url.protocol)||url.username||url.password){
+                throw new TypeError('Source repositoryURL must use HTTP(S) without credentials.');
+            }
+            return url.href;
+        }catch(error){
+            if(error instanceof TypeError&&/repositoryURL/.test(error.message))throw error;
+            throw new TypeError('Source repositoryURL must be a valid HTTP(S) URL.');
+        }
+    }
+
+    function normalizeOptions(input={},previous=defaultOptions){
+        if(!input||typeof input!=='object'||Array.isArray(input)){
+            throw new TypeError('Source viewer options must be an object.');
+        }
+        const labelInput=input.labels===undefined?{}:input.labels;
+        if(!labelInput||typeof labelInput!=='object'||Array.isArray(labelInput)){
+            throw new TypeError('Source viewer labels must be an object.');
+        }
+        const labels={...previous.labels};
+        for(const name of ['content','empty','error','loading','repository']){
+            if(labelInput[name]!==undefined){
+                labels[name]=boundedText(labelInput[name],`Source viewer labels.${name}`,160);
+            }
+        }
+        return Object.freeze({labels:Object.freeze(labels)});
+    }
+
+    function normalizeRenderOptions(input={}){
+        if(!input||typeof input!=='object'||Array.isArray(input)){
+            throw new TypeError('Source render options must be an object.');
+        }
+        return Object.freeze({
+            language:boundedText(input.language||'text','Source language',64).toLowerCase(),
+            repositoryURL:safeRepositoryURL(input.repositoryURL),
+            sourcePath:boundedText(input.sourcePath||'Source file','Source path',1024),
+            title:boundedText(input.title||input.sourcePath||'Source file','Source title',256)
+        });
+    }
+
+    function configure(input={}){
+        options=normalizeOptions(input,options);
+        repositoryLink.textContent=options.labels.repository;
+        updateStateDOM();
+        return {labels:{...options.labels}};
+    }
+
+    async function load(source='',renderOptions={}){
+        const sequence=++loadSequence;
+        transition('loading');
+        try{
+            const pending=typeof source==='function'?source():source;
+            const result=await pending;
+            if(sequence!==loadSequence)return false;
+            if(result&&typeof result==='object'&&!Array.isArray(result)){
+                return renderSource(result.text??result.value??'',{
+                    ...renderOptions,
+                    ...result
+                });
+            }
+            return renderSource(result??'',renderOptions);
+        }catch(error){
+            if(sequence===loadSequence)showError(error);
+            return false;
+        }
+    }
+
+    function render(text='',renderOptions={}){
+        ++loadSequence;
+        try{
+            return renderSource(text,renderOptions);
+        }catch(error){
+            showError(error);
+            return false;
+        }
+    }
+
+    function renderSource(text='',renderOptions={}){
+        if(typeof text!=='string')throw new TypeError('Source content must be a string.');
+        if(text.length>MAXIMUM_CHARACTERS)throw new RangeError('Source content exceeds the viewer character limit.');
+        const metadata=normalizeRenderOptions(renderOptions);
+        const lines=text.replace(/\r\n?/g,'\n').split('\n');
+        if(lines.length>MAXIMUM_LINES)throw new RangeError('Source content exceeds the viewer line limit.');
+
+        sourceLines.replaceChildren();
+        if(!text){
+            current=Object.freeze({...metadata,lineCount:0,text:''});
+            transition('empty');
+            return true;
+        }
+
+        const fragment=document.createDocumentFragment();
+        lines.forEach((line,index)=>{
+            const item=document.createElement('li');
+            const code=document.createElement('code');
+            const lineNumber=index+1;
+            item.className='source-line';
+            item.id=`L${lineNumber}`;
+            item.tabIndex=-1;
+            item.dataset.line=String(lineNumber);
+            code.textContent=line||' ';
+            item.append(code);
+            fragment.append(item);
+        });
+        sourceLines.replaceChildren(fragment);
+        current=Object.freeze({...metadata,lineCount:lines.length,text});
+        transition('ready');
+        return true;
+    }
+
+    function clear(){
+        ++loadSequence;
+        sourceLines.replaceChildren();
+        current=Object.freeze({
+            language:'text',
+            lineCount:0,
+            repositoryURL:'',
+            sourcePath:'',
+            text:'',
+            title:''
+        });
+        transition('empty');
+        return true;
+    }
+
+    function fail(error){
+        ++loadSequence;
+        showError(error);
+        return false;
+    }
+
+    function showError(error){
+        sourceLines.replaceChildren();
+        transition('error',error);
+    }
+
+    function focusSource(){
+        const target=state==='ready'?sourceLines.querySelector('.source-line'):status;
+        target?.focus({preventScroll:true});
+        return Boolean(target);
+    }
+
+    function focusLine(value){
+        const line=Number(value);
+        if(!Number.isInteger(line)||line<1||line>current.lineCount)return false;
+        const target=sourceLines.querySelector(`[data-line="${line}"]`);
+        if(!target)return false;
+        target.focus({preventScroll:true});
+        target.scrollIntoView({block:'center',inline:'nearest'});
+        return true;
+    }
+
+    function transition(next,error=null){
+        state=next;
+        updateStateDOM();
+        const detail={
+            characters:current.text.length,
+            language:current.language,
+            lines:current.lineCount,
+            sourcePath:current.sourcePath,
+            state
+        };
+        if(error)detail.message=String(error?.message||'Source rendering failed.').slice(0,512);
+        host.dispatchEvent(new CustomEvent('source-code-viewer-state',{bubbles:true,composed:true,detail}));
+        host.dispatchEvent(new CustomEvent(`source-code-viewer-${state}`,{bubbles:true,composed:true,detail}));
+    }
+
+    function updateStateDOM(){
+        const visible=state!=='ready';
+        viewer.setAttribute('aria-busy',state==='loading'?'true':'false');
+        status.hidden=!visible;
+        status.dataset.state=state;
+        status.textContent={
+            empty:options.labels.empty,
+            error:options.labels.error,
+            loading:options.labels.loading
+        }[state]||'';
+        sourceHeader.hidden=state!=='ready';
+        sourceScroll.hidden=state!=='ready';
+        sourceScroll.setAttribute('aria-label',`${options.labels.content}: ${current.sourcePath||current.title}`);
+        sourcePathElement.textContent=current.sourcePath;
+        sourceTitle.textContent=current.title;
+        sourceLanguage.textContent=current.language?`Language: ${current.language}`:'';
+        repositoryLink.textContent=options.labels.repository;
+        repositoryLink.hidden=!current.repositoryURL;
+        if(current.repositoryURL)repositoryLink.href=current.repositoryURL;
+        else repositoryLink.removeAttribute('href');
+    }
+
+    repositoryLink.textContent=options.labels.repository;
+    transition('empty');
+    host.ready=true;
+    host.dispatchEvent(new CustomEvent('source-code-viewer-ready',{
+        bubbles:true,
+        composed:true,
+        detail:{component:host,state}
+    }));
+</script>

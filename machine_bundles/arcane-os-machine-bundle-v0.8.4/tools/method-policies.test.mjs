@@ -245,7 +245,8 @@ test(
         assert.match(generated, /EXTERNAL_OPEN_CAPABILITY = "external\.open"/);
         assert.match(generated, /NETWORK_STATUS_METHOD = "network\.status"/);
         assert.match(generated, /NETWORK_STATUS_CAPABILITY = "network\.status\.read"/);
-        assert.match(generated, /methods = listOf\(APP_CURRENT_METHOD, EXTERNAL_OPEN_METHOD, NETWORK_STATUS_METHOD, PLATFORM_STATUS_METHOD, SYSTEM_PING_METHOD, USER_CURRENT_METHOD, VERSION_CURRENT_METHOD\)/);
+        assert.match(generated, /methods = listOf\(APP_CURRENT_METHOD, APPS_LAUNCH_METHOD, APPS_LIST_METHOD, EXTERNAL_OPEN_METHOD, NETWORK_STATUS_METHOD, PLATFORM_STATUS_METHOD, SYSTEM_PING_METHOD, USER_CURRENT_METHOD, VERSION_CURRENT_METHOD\)/);
+        assert.match(generated, /if \(method == APPS_LAUNCH_METHOD\) return applicationId in setOf\("shell", "terminal"\)/);
     }
 );
 
@@ -276,7 +277,7 @@ test(
         assert.match(generated, /VERSION_CURRENT_METHOD = "version\.current"/);
         assert.doesNotMatch(generated, /VERSION_CURRENT_CAPABILITY/);
         assert.match(generated, /if \(method == APPEARANCE_CURRENT_METHOD\) return APPEARANCE_CURRENT_CAPABILITY/);
-        assert.match(generated, /methods = listOf\(APP_CURRENT_METHOD, APPEARANCE_CURRENT_METHOD, EXTERNAL_OPEN_METHOD, NETWORK_STATUS_METHOD, PLATFORM_STATUS_METHOD, SYSTEM_PING_METHOD, USER_CURRENT_METHOD, VERSION_CURRENT_METHOD\)/);
+        assert.match(generated, /methods = listOf\(APP_CURRENT_METHOD, APPEARANCE_CURRENT_METHOD, APPS_LAUNCH_METHOD, APPS_LIST_METHOD, EXTERNAL_OPEN_METHOD, NETWORK_STATUS_METHOD, PLATFORM_STATUS_METHOD, SYSTEM_PING_METHOD, USER_CURRENT_METHOD, VERSION_CURRENT_METHOD\)/);
         const applicationRegistry = renderAndroidApplicationRegistry(bundleManifest, policies);
         assert.match(applicationRegistry, /GeneratedAndroidCapabilityRegistry\.APPEARANCE_CURRENT_CAPABILITY/);
         assert.doesNotMatch(applicationRegistry, /VERSION_CURRENT_CAPABILITY/);

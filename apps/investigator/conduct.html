@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="arcane-app-id" content="investigator"><base href="../../">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Filing-level alleged conduct and source-cited cross-record comparisons for case 24FL001068.">
+  <meta name="referrer" content="no-referrer"><title>Conduct Review | Arcane Investigator</title>
+  <link rel="manifest" href="./apps/investigator/manifest.json">
+  <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+  <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+  <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+  <link rel="stylesheet" href="./apps/investigator/investigator.css?v=12">
+  <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+  <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">AI</span><div><strong>Arcane Investigator</strong><small>Evidence to prosecutable theory</small></div></div>
+    <nav class="app-nav" aria-label="Investigator pages"><a href="./apps/investigator/index.html">Overview</a><a href="./apps/investigator/brief.html">Police / DA brief</a><a href="./apps/investigator/data.html">Documents</a><a aria-current="page" href="./apps/investigator/conduct.html">Conduct</a><a href="./apps/investigator/timeline.html">Timeline</a><a href="./apps/investigator/motives.html">Motives</a><a href="./apps/investigator/case-map.html">Case map</a></nav>
+    <div class="case-tag"><span>ACTIVE CASE</span><strong>24FL001068</strong></div>
+  </header>
+  <main class="analysis-page">
+    <section class="analysis-hero" aria-labelledby="pageTitle">
+      <div><span class="eyebrow">Filing-by-filing conduct audit</span><h1 id="pageTitle">Alleged conduct, admissions, and contradictions</h1><p>Every filing is represented. Each promoted lead identifies the alleged actor, exact PDF page and Markdown lines, proof questions, and human review status. A contradiction is not automatically a crime.</p></div>
+      <div class="analysis-coverage" id="coveragePanel" aria-label="Analysis coverage"></div>
+    </section>
+    <section class="analysis-workspace">
+      <div class="actor-summary" aria-label="Alleged actor summary">
+        <button type="button" class="actor-box petitioner" data-side-filter="petitioner"><span>Petitioner side</span><strong id="petitionerFindingCount">0</strong><small>Teruko Miller or petitioner-side counsel</small></button>
+        <button type="button" class="actor-box respondent" data-side-filter="respondent"><span>Respondent side</span><strong id="respondentFindingCount">0</strong><small>Brandon Miller</small></button>
+        <button type="button" class="actor-box neutral" data-side-filter="unassigned"><span>Unassigned / third party</span><strong id="otherFindingCount">0</strong><small>Actor requires precision</small></button>
+      </div>
+      <section class="cross-review" aria-labelledby="crossHeading">
+        <div class="section-head"><div><span class="eyebrow">Cross-filing comparison</span><h2 id="crossHeading">Atomic statements compared to later records</h2></div><p>Each card preserves both accounts and an innocent explanation. It does not choose a winner.</p></div>
+        <div id="crossReferenceList" class="cross-reference-list"></div>
+      </section>
+      <section class="filing-conduct" aria-labelledby="filingHeading">
+        <div class="library-toolbar"><div><span class="eyebrow">All 262 filing pairs</span><h2 id="filingHeading">Per-document lead list</h2></div><label class="library-search">Search filings and leads<input id="conductSearch" type="search" placeholder="Filing, actor, theory, excerpt…"></label></div>
+        <div class="analysis-filters"><label>Lead type<select id="categoryFilter"><option value="">All lead types</option></select></label><button type="button" id="clearConductFilters">Clear filters</button></div>
+        <p id="conductSummary" class="library-summary" aria-live="polite"></p>
+        <div id="conductList" class="conduct-list"></div>
+      </section>
+    </section>
+  </main>
+  <html-import id="findingDialog" class="document-modal" data-label="Investigative lead explanation" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="findingDialogContent"><section class="filing-dialog-shell"><header class="filing-dialog-header"><span class="eyebrow">Source-cited analysis</span><h2 data-dialog-title>Investigative lead</h2><p data-dialog-subtitle></p></header><html-import data-source-explanation href="./arcane/components/source-explanation.html?v=9"></html-import></section></template>
+  <div id="appStatus" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="./apps/investigator/modules/InvestigatorConductApp.js?v=2"></script>
+</body>
+</html>

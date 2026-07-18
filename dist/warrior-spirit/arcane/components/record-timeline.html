@@ -1,0 +1,105 @@
+<style>
+  :host{display:block;color:var(--text-color);font-family:Inter,Segoe UI,sans-serif}
+  *{box-sizing:border-box}
+  .timeline{display:grid;gap:.7rem;margin:0;padding:0;list-style:none}
+  .event{display:grid;grid-template-columns:minmax(8.5rem,10rem) minmax(0,1fr);gap:1rem;position:relative;padding:0 0 1rem}
+  .event::before{content:'';position:absolute;left:9.45rem;top:2rem;bottom:-.15rem;width:.12rem;background:var(--border-color)}
+  .event:last-child::before{display:none}
+  .date{display:grid;align-content:start;gap:.2rem;padding:.65rem .7rem;border:1px solid var(--border-color);border-radius:.55rem;background:var(--modal-background);font-weight:800;text-align:right}
+  .date small{color:var(--platinum);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .open{display:grid;gap:.45rem;width:100%;margin:0;padding:.8rem 1rem;border:1px solid var(--border-color);border-left:.35rem solid var(--accent-color);border-radius:.55rem;background:var(--modal-background);box-shadow:none;color:var(--text-color);text-align:left}
+  .open:hover,.open:focus-visible{background:var(--secondary-color);color:var(--text-color);box-shadow:none}
+  .open:focus-visible{outline:.18rem solid var(--focus-color);outline-offset:.12rem}
+  .heading{display:flex;align-items:start;justify-content:space-between;gap:.7rem}
+  .heading strong{font-size:.94rem;line-height:1.35}
+  .category{flex:0 0 auto;padding:.2rem .45rem;border:1px solid var(--border-color);border-radius:99rem;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+  .summary{color:var(--platinum);font-size:.78rem;line-height:1.45}
+  .meta{display:flex;gap:.45rem;flex-wrap:wrap;color:var(--platinum);font-size:.68rem}
+  .meta span+span::before{content:'·';margin-right:.45rem}
+  .empty{padding:1.2rem;border:1px dashed var(--border-color);border-radius:.55rem;color:var(--platinum);text-align:center}
+  @media(max-width:42rem){.event{grid-template-columns:1fr;gap:.45rem}.event::before{display:none}.date{text-align:left}.heading{display:grid}.category{justify-self:start}}
+  @media(forced-colors:active){.open{border-color:CanvasText}.category{border-color:CanvasText}}
+</style>
+
+<ol class="timeline" aria-label="Chronology" data-list></ol>
+<p class="empty" data-empty>No dated events match this view.</p>
+
+<script type="module">
+  const host=this;
+  const list=host.shadowRoot.querySelector('[data-list]');
+  const empty=host.shadowRoot.querySelector('[data-empty]');
+  let items=[];
+  let options={emptyLabel:'No dated events match this view.'};
+
+  host.setItems=setItems;
+  host.populate=(value,input={})=>setItems(value,input);
+
+  list.addEventListener('click',event=>{
+    const trigger=event.target.closest('[data-event-id]');
+    if(!trigger) return;
+    const item=items.find(candidate=>candidate.id===trigger.dataset.eventId);
+    if(!item) return;
+    host.dispatchEvent(new CustomEvent('record-timeline-open',{bubbles:true,composed:true,detail:{id:item.id,item:{...item}}}));
+  });
+
+  function normalizeItem(item,index){
+    const source=item&&typeof item==='object'?item:{};
+    const date=String(source.date||source.isoDate||'').slice(0,32);
+    if(!source.id||!date) return null;
+    return {
+      ...source,
+      id:String(source.id).slice(0,180),
+      date,
+      title:String(source.title||'Dated event').slice(0,500),
+      summary:String(source.summary||'').slice(0,2400),
+      category:String(source.category||source.kind||'Event').slice(0,100),
+      actor:String(source.actor||'Actor not assigned').slice(0,180),
+      sourceLabel:String(source.sourceLabel||'').slice(0,240),
+      status:String(source.status||'').slice(0,120),
+      factualPosture:String(source.factualPosture||'').slice(0,160),
+      sourceCount:Math.max(0,Math.min(9999,Number(source.sourceCount)||0)),
+      order:index
+    };
+  }
+
+  function setItems(value=[],input={}){
+    options={...options,...(input&&typeof input==='object'?input:{})};
+    items=(Array.isArray(value)?value:[]).slice(0,5000).map(normalizeItem).filter(Boolean)
+      .sort((left,right)=>left.date.localeCompare(right.date)||left.order-right.order);
+    render();
+    return items.map(item=>({...item}));
+  }
+
+  function displayDate(value=''){
+    const parsed=new Date(`${value.slice(0,10)}T00:00:00Z`);
+    return Number.isFinite(parsed.getTime())
+      ?new Intl.DateTimeFormat(undefined,{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'}).format(parsed)
+      :value;
+  }
+
+  function render(){
+    list.replaceChildren();
+    empty.textContent=String(options.emptyLabel||'No dated events match this view.');
+    empty.hidden=Boolean(items.length);
+    for(const item of items){
+      const row=document.createElement('li'); row.className='event';
+      const time=document.createElement('time'); time.className='date'; time.dateTime=item.date; time.textContent=displayDate(item.date);
+      if(item.datePrecision&&item.datePrecision!=='day'){
+        const precision=document.createElement('small'); precision.textContent=String(item.datePrecision); time.append(precision);
+      }
+      const button=document.createElement('button'); button.type='button'; button.className='open'; button.dataset.eventId=item.id;
+      const heading=document.createElement('span'); heading.className='heading';
+      const title=document.createElement('strong'); title.textContent=item.title;
+      const category=document.createElement('span'); category.className='category'; category.textContent=item.category;
+      heading.append(title,category); button.append(heading);
+      if(item.summary){const summary=document.createElement('span'); summary.className='summary'; summary.textContent=item.summary; button.append(summary);}
+      const meta=document.createElement('span'); meta.className='meta';
+      for(const value of [item.actor,item.status,item.factualPosture,item.sourceLabel,item.sourceCount?`${item.sourceCount} source${item.sourceCount===1?'':'s'}`:'']){
+        if(!value) continue; const part=document.createElement('span'); part.textContent=value; meta.append(part);
+      }
+      button.append(meta); row.append(time,button); list.append(row);
+    }
+  }
+
+  host.dispatchEvent(new CustomEvent('record-timeline-ready',{bubbles:true,composed:true}));
+</script>

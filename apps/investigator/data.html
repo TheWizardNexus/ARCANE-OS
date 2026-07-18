@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="arcane-app-id" content="investigator"><base href="../../">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Search and review every filing and separated evidence record for case 24FL001068.">
+  <meta name="referrer" content="no-referrer"><title>Case Data | Arcane Investigator</title>
+  <link rel="manifest" href="./apps/investigator/manifest.json">
+  <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+  <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+  <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+  <link rel="stylesheet" href="./apps/investigator/investigator.css?v=12">
+  <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+  <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">AI</span><div><strong>Arcane Investigator</strong><small>Evidence to prosecutable theory</small></div></div>
+    <nav class="app-nav" aria-label="Investigator pages"><a href="./apps/investigator/index.html">Overview</a><a href="./apps/investigator/brief.html">Police / DA brief</a><a aria-current="page" href="./apps/investigator/data.html">Documents</a><a href="./apps/investigator/conduct.html">Conduct</a><a href="./apps/investigator/timeline.html">Timeline</a><a href="./apps/investigator/motives.html">Motives</a><a href="./apps/investigator/case-map.html">Case map</a></nav>
+    <div class="case-tag"><span>ACTIVE CASE</span><strong>24FL001068</strong></div>
+  </header>
+  <main class="data-page">
+    <section class="data-hero" aria-labelledby="pageTitle">
+      <div><span class="eyebrow">Complete source library</span><h1 id="pageTitle">Filings and evidence</h1><p>Open the original filing PDF beside its Markdown, search document text, inspect separated exhibits, and save investigative review without leaving this app.</p></div>
+      <div class="data-totals" aria-label="Library totals"><div><strong id="filingTotal">0</strong><span>filing pairs</span></div><div><strong id="evidenceTotal">0</strong><span>evidence records</span></div></div>
+    </section>
+    <section class="data-library" aria-labelledby="libraryHeading">
+      <div class="library-toolbar">
+        <div><span class="eyebrow">Case 24FL001068</span><h2 id="libraryHeading">Document library</h2></div>
+        <label class="library-search">Search current view<input id="librarySearch" type="search" placeholder="ID, date, filer, title, exhibit…"></label>
+      </div>
+      <div class="library-tabs" role="group" aria-label="Record type">
+        <button type="button" aria-pressed="true" data-library-view="filings">Filings <b id="filingTabCount">0</b></button>
+        <button type="button" aria-pressed="false" data-library-view="evidence">Evidence <b id="evidenceTabCount">0</b></button>
+      </div>
+      <p id="librarySummary" class="library-summary" aria-live="polite"></p>
+      <div id="libraryList" class="library-list" aria-live="polite"></div>
+    </section>
+  </main>
+  <html-import id="recordDialog" class="document-modal" data-label="Case record review" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="recordDialogContent">
+    <section class="filing-dialog-shell">
+      <header class="filing-dialog-header"><span class="eyebrow">Case record review</span><h2 data-dialog-title>Record</h2><p data-dialog-subtitle></p></header>
+      <html-import data-document-inspector href="./arcane/components/document-inspector.html?v=5"></html-import>
+    </section>
+  </template>
+  <html-import id="findingDialog" class="document-modal" data-label="Investigative lead explanation" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="findingDialogContent"><section class="filing-dialog-shell"><header class="filing-dialog-header"><span class="eyebrow">Source-cited analysis</span><h2 data-dialog-title>Investigative lead</h2><p data-dialog-subtitle></p></header><html-import data-source-explanation href="./arcane/components/source-explanation.html?v=9"></html-import></section></template>
+  <div id="appStatus" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="./apps/investigator/modules/InvestigatorDataApp.js?v=4"></script>
+</body>
+</html>

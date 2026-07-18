@@ -1,0 +1,85 @@
+{
+	email {$ARCANE_ACME_EMAIL}
+}
+
+(arcane_security) {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+}
+
+(arcane_static) {
+	reverse_proxy 127.0.0.1:8080 {
+		header_up Host {host}
+		header_up -Authorization
+		header_up -Cookie
+		transport http {
+			dial_timeout 2s
+			keepalive 4s
+			response_header_timeout 30s
+		}
+	}
+}
+
+www.precrisis.ai {
+	import arcane_security
+	redir https://precrisis.ai{uri} permanent
+}
+
+# PreCrisis mail is available only behind real user authentication. Replace
+# basic_auth with the deployment's forward_auth/SSO policy when one exists.
+app.precrisis.ai {
+	import arcane_security
+	basic_auth {
+		{$ARCANE_WEB_USER} {$ARCANE_WEB_PASSWORD_HASH}
+	}
+
+	@arcane_mail path /v1/mail
+	handle @arcane_mail {
+		reverse_proxy 127.0.0.1:8025 {
+			# These assignments overwrite untrusted browser-supplied values.
+			header_up -Authorization
+			header_up -Cookie
+			header_up X-Mail-App precrisis
+			header_up X-Mail-Key {$ARCANE_MAIL_PRECRISIS_KEY}
+			transport http {
+				dial_timeout 2s
+				keepalive 4s
+				response_header_timeout 450s
+			}
+		}
+	}
+
+	handle {
+		import arcane_static
+	}
+}
+
+warrior-spirit.precrisis.ai {
+	import arcane_security
+	basic_auth {
+		{$ARCANE_WEB_USER} {$ARCANE_WEB_PASSWORD_HASH}
+	}
+
+	@arcane_mail path /v1/mail
+	handle @arcane_mail {
+		reverse_proxy 127.0.0.1:8025 {
+			header_up -Authorization
+			header_up -Cookie
+			header_up X-Mail-App warrior-spirit
+			header_up X-Mail-Key {$ARCANE_MAIL_WARRIOR_SPIRIT_KEY}
+			transport http {
+				dial_timeout 2s
+				keepalive 4s
+				response_header_timeout 450s
+			}
+		}
+	}
+
+	handle {
+		import arcane_static
+	}
+}
+
+precrisis.ai, browser.precrisis.ai, calculator.precrisis.ai, capture.precrisis.ai, developer.precrisis.ai, files.precrisis.ai, mail.precrisis.ai, markdown.precrisis.ai, messages.precrisis.ai, scamurai.precrisis.ai, settings.precrisis.ai, terminal.precrisis.ai, weather.precrisis.ai, youtube.precrisis.ai, youtube-music.precrisis.ai {
+	import arcane_security
+	import arcane_static
+}

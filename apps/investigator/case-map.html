@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="arcane-app-id" content="investigator"><base href="../../"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Accessible relationship board for case 24FL001068."><meta name="referrer" content="no-referrer"><title>Case Map | Arcane Investigator</title>
+  <link rel="manifest" href="./apps/investigator/manifest.json"><link rel="stylesheet" href="./arcane/css/layout.css?v=3"><link rel="stylesheet" href="./arcane/css/theme.css?v=1"><link rel="stylesheet" href="./arcane/css/primitives.css?v=1"><link rel="stylesheet" href="./apps/investigator/investigator.css?v=12"><script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script><script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+  <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">AI</span><div><strong>Arcane Investigator</strong><small>Evidence to prosecutable theory</small></div></div><nav class="app-nav" aria-label="Investigator pages"><a href="./apps/investigator/index.html">Overview</a><a href="./apps/investigator/brief.html">Police / DA brief</a><a href="./apps/investigator/data.html">Documents</a><a href="./apps/investigator/conduct.html">Conduct</a><a href="./apps/investigator/timeline.html">Timeline</a><a href="./apps/investigator/motives.html">Motives</a><a aria-current="page" href="./apps/investigator/case-map.html">Case map</a></nav><div class="case-tag"><span>ACTIVE CASE</span><strong>24FL001068</strong></div></header>
+  <main class="analysis-page">
+    <section class="analysis-hero" aria-labelledby="pageTitle"><div><span class="eyebrow">Officer and DA orientation board</span><h1 id="pageTitle">See the case as a small set of connected questions</h1><p>Select one card to expose only its immediate relationships. The board separates people, statement conflicts, evidence/orders, and motive hypotheses so complexity does not obscure source provenance.</p></div><div class="map-legend" aria-label="Party color legend"><span class="legend petitioner">Petitioner side</span><span class="legend respondent">Respondent side</span><span class="legend neutral">Neutral / unresolved</span></div></section>
+    <section class="map-workspace"><div class="map-toolbar"><p id="mapStatus" aria-live="polite">Choose a card to inspect its connections.</p><button id="openMapItem" type="button" disabled>Open selected analysis</button></div><html-import id="caseBoard" href="./arcane/components/relationship-board.html?v=1"></html-import></section>
+  </main>
+  <html-import id="findingDialog" class="document-modal" data-label="Case map analysis explanation" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="findingDialogContent"><section class="filing-dialog-shell"><header class="filing-dialog-header"><span class="eyebrow">Connected case analysis</span><h2 data-dialog-title>Case map item</h2><p data-dialog-subtitle></p></header><html-import data-source-explanation href="./arcane/components/source-explanation.html?v=9"></html-import></section></template>
+  <div id="appStatus" class="sr-only" aria-live="polite"></div><script type="module" src="./apps/investigator/modules/InvestigatorCaseMapApp.js?v=1"></script>
+</body></html>

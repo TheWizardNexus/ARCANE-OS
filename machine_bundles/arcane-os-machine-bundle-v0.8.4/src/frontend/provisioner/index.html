@@ -907,7 +907,7 @@ function finishOperationNotice(failed) {
   if (!failed) showOperationNotice.timer = setTimeout(() => notice.classList.remove('visible'), 5000);
 }
 
-Arcane.events.on('core.ready', (event) => appendOutput(`Arcane Core ${event.version} connected through native IPC.`, 'info', { platform: event.platform && event.platform.displayName, elevated: event.elevated }));
+Arcane.events.when('core.ready', (event) => appendOutput(`Arcane Core ${event.version} connected through native IPC.`, 'info', { platform: event.platform && event.platform.displayName, elevated: event.elevated }));
 Arcane.events.on('operation.started', (event) => { showOperationNotice(event); appendOutput(`Started ${event.operationType}.`, 'step'); });
 Arcane.events.on('operation.progress', (event) => {
   $('#progressBar').style.width = `${Math.max(0, Math.min(100, Number(event.progress || 0)))}%`;

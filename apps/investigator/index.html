@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="arcane-app-id" content="investigator"><base href="../../">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Police investigation workspace for source-grounded case review and DA-ready evidence reports.">
+  <meta name="referrer" content="no-referrer"><title>Investigator | Arcane OS</title>
+  <link rel="manifest" href="./apps/investigator/manifest.json">
+  <link rel="stylesheet" href="./arcane/css/layout.css?v=3">
+  <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
+  <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
+  <link rel="stylesheet" href="./apps/investigator/investigator.css?v=12">
+  <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
+  <script type="module" src="./arcane/modules/HTMLImport.js?v=6"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">AI</span><div><strong>Arcane Investigator</strong><small>Evidence to prosecutable theory</small></div></div>
+    <nav class="app-nav" aria-label="Investigator pages"><a aria-current="page" href="./apps/investigator/index.html">Overview</a><a href="./apps/investigator/brief.html">Police / DA brief</a><a href="./apps/investigator/data.html">Documents</a><a href="./apps/investigator/conduct.html">Conduct</a><a href="./apps/investigator/timeline.html">Timeline</a><a href="./apps/investigator/motives.html">Motives</a><a href="./apps/investigator/case-map.html">Case map</a></nav>
+    <div class="case-tag"><span>ACTIVE CASE</span><strong>24FL001068</strong></div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="pageTitle">
+      <div><span class="eyebrow">Investigative review</span><h1 id="pageTitle">Find the conduct. Prove the elements.</h1><p>Review every filing, isolate source evidence, test contradictions, and assemble a traceable referral for police and District Attorney review.</p></div>
+      <div id="integrityBadge" class="integrity"><span class="pulse"></span><div><strong>Loading case integrity</strong><small>Verifying filing/Markdown pairs</small></div></div>
+    </section>
+    <section id="metrics" class="metrics" aria-label="Case metrics"></section>
+    <div class="workspace">
+      <aside class="filters" aria-label="Review filters">
+        <h2>Review queue</h2>
+        <button class="filter active" data-filter="all"><span>All filings</span><b id="allCount">0</b></button>
+        <button class="filter" data-filter="flagged"><span>Crime signals</span><b id="flaggedCount">0</b></button>
+        <button class="filter" data-filter="exhibits"><span>Has exhibits</span><b id="exhibitFilingCount">0</b></button>
+        <button class="filter" data-filter="unreviewed"><span>Not reviewed</span><b id="unreviewedCount">0</b></button>
+        <div class="policy"><strong>Evidence rule</strong><p>Allegations are leads, not facts. Every conclusion must cite the original source and preserve contrary evidence.</p></div>
+      </aside>
+      <section class="docket" aria-labelledby="docketHeading">
+        <div class="section-head"><div><span class="eyebrow">Filing-by-filing audit</span><h2 id="docketHeading">Source record</h2></div><label>Search record<input id="search" type="search" placeholder="Filename, signal, exhibit…"></label></div>
+        <section class="activity-section" aria-labelledby="activityHeading">
+          <div class="activity-heading"><div><span class="eyebrow">Provisional case picture</span><h3 id="activityHeading">Alleged activity by side</h3></div><small>Automated attribution is pre-applied from source context and remains editable by an investigator.</small></div>
+          <div class="activity-grid">
+            <button class="actor-box petitioner" type="button" data-actor-filter="petitioner"><span>Petitioner</span><strong id="petitionerActivityCount">0</strong><small>Teruko Miller</small></button>
+            <button class="actor-box respondent" type="button" data-actor-filter="respondent"><span>Respondent</span><strong id="respondentActivityCount">0</strong><small>Brandon Miller</small></button>
+          </div>
+          <button class="unassigned-activity" type="button" data-actor-filter="unassigned"><strong id="unassignedActivityCount">0</strong> signal-bearing filings still need actor attribution</button>
+        </section>
+        <div id="filingList" class="filing-list" aria-live="polite"></div>
+      </section>
+      <aside class="caseboard" aria-labelledby="boardHeading">
+        <span class="eyebrow">Case-building board</span><h2 id="boardHeading">DA readiness</h2>
+        <div class="readiness"><div><span>Machine-scanned</span><strong id="coverage">—</strong></div><div><span>Human-reviewed</span><strong id="reviewedPercent">0 / 0</strong></div><div><span>Evidence exhibits</span><strong id="evidenceCount">—</strong></div><div><span>Cross-record links</span><strong id="connectionCount">0</strong></div></div>
+        <h3>Required proof checks</h3>
+        <ul class="checklist"><li>Identify a specific act and date</li><li>Map each possible statutory element</li><li>Separate direct proof from inference</li><li>Locate oath, order, or duty source</li><li>Test intent and materiality evidence</li><li>Record contradictions and defenses</li><li>Request originals and metadata</li></ul>
+        <div class="report-folder"><span>REPORT DESTINATION</span><strong>Reports / Police</strong><small>Work product—never evidence</small></div>
+      </aside>
+    </div>
+  </main>
+  <html-import id="filingDialog" class="document-modal" data-label="Filing review" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="filingDialogContent">
+    <section class="filing-dialog-shell">
+      <header class="filing-dialog-header"><span class="eyebrow">Filing review</span><h2 data-dialog-title>Filing</h2><p data-dialog-subtitle></p></header>
+      <html-import data-document-inspector href="./arcane/components/document-inspector.html?v=5"></html-import>
+    </section>
+  </template>
+  <html-import id="findingDialog" class="document-modal" data-label="Investigative lead explanation" href="./arcane/components/modal.html?v=13"></html-import>
+  <template id="findingDialogContent"><section class="filing-dialog-shell"><header class="filing-dialog-header"><span class="eyebrow">Source-cited analysis</span><h2 data-dialog-title>Investigative lead</h2><p data-dialog-subtitle></p></header><html-import data-source-explanation href="./arcane/components/source-explanation.html?v=9"></html-import></section></template>
+  <div id="appStatus" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="./apps/investigator/modules/InvestigatorApp.js?v=7"></script>
+</body></html>

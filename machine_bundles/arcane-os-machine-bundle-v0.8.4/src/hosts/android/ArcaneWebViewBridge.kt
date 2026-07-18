@@ -19,6 +19,24 @@ object ArcaneWebViewBridge {
         val version: String
     )
 
+    data class ApplicationCatalogRecord(
+        val id: String,
+        val displayName: String,
+        val description: String,
+        val iconUrl: String,
+        val version: String,
+        val order: Int,
+        val verified: Boolean
+    )
+
+    data class ApplicationCatalog(
+        val verified: Boolean,
+        val securityMode: String,
+        val publisherTrustSource: String?,
+        val revocationStatus: String?,
+        val applications: List<ApplicationCatalogRecord>
+    )
+
     data class PlatformStatus(
         val release: String,
         val architecture: String,
@@ -48,12 +66,20 @@ object ArcaneWebViewBridge {
         fun currentApplicationIdentity(): ApplicationDescriptor
     }
 
+    fun interface ApplicationCatalogProvider {
+        fun currentApplicationCatalog(): ApplicationCatalog
+    }
+
     fun interface UserIdentityProvider {
         fun currentUserIdentity(): UserIdentity
     }
 
     fun interface CapabilityGrantProvider {
         fun isGranted(capability: String): Boolean
+    }
+
+    fun interface ApplicationLaunchProvider {
+        fun launchApplication(id: String): Boolean
     }
 
     fun interface ExternalOpenProvider {
@@ -64,13 +90,17 @@ object ArcaneWebViewBridge {
         fun currentNetworkStatus(): NetworkStatus
     }
 
+    @Suppress("DEPRECATION")
     fun install(
         webView: WebView,
+        expectedOrigin: String,
         expectedApplicationEntry: String,
         applicationIdentityProvider: ApplicationIdentityProvider,
+        applicationCatalogProvider: ApplicationCatalogProvider,
         userIdentityProvider: UserIdentityProvider,
         capabilityGrantProvider: CapabilityGrantProvider,
         platformStatusProvider: PlatformStatusProvider,
+        applicationLaunchProvider: ApplicationLaunchProvider,
         externalOpenProvider: ExternalOpenProvider,
         networkStatusProvider: NetworkStatusProvider
     ): Boolean {
@@ -83,6 +113,7 @@ object ArcaneWebViewBridge {
             return false
         }
 
+        val trustedOrigin = validatedTrustedOrigin(expectedOrigin) ?: return false
         val applicationIdentity = try {
             applicationIdentityProvider.currentApplicationIdentity().copy()
         } catch (_: Exception) {
@@ -110,17 +141,20 @@ object ArcaneWebViewBridge {
 
         val listener = Listener(
             expectedApplicationEntry,
+            trustedOrigin,
             applicationIdentity,
             userIdentity,
+            applicationCatalogProvider,
             capabilityGrantProvider,
             platformStatusProvider,
+            applicationLaunchProvider,
             externalOpenProvider,
             networkStatusProvider
         )
         WebViewCompat.addWebMessageListener(
             webView,
             BRIDGE_NAME,
-            setOf(TRUSTED_ORIGIN),
+            setOf(expectedOrigin),
             listener
         )
         return true
@@ -128,10 +162,13 @@ object ArcaneWebViewBridge {
 
     private class Listener(
         private val expectedApplicationEntry: String,
+        private val trustedOrigin: Uri,
         private val applicationIdentity: ApplicationDescriptor,
         private val userIdentity: UserIdentity,
+        private val applicationCatalogProvider: ApplicationCatalogProvider,
         private val capabilityGrantProvider: CapabilityGrantProvider,
         private val platformStatusProvider: PlatformStatusProvider,
+        private val applicationLaunchProvider: ApplicationLaunchProvider,
         private val externalOpenProvider: ExternalOpenProvider,
         private val networkStatusProvider: NetworkStatusProvider
     ) : WebViewCompat.WebMessageListener {
@@ -149,7 +186,7 @@ object ArcaneWebViewBridge {
             isMainFrame: Boolean,
             replyProxy: JavaScriptReplyProxy
         ) {
-            if (!isMainFrame || !isTrustedOrigin(sourceOrigin)) {
+            if (!isMainFrame || !isTrustedOrigin(sourceOrigin, trustedOrigin)) {
                 replyProxy.postMessage(AndroidBridgeProtocol.errorResponse("", "ANDROID_BRIDGE_UNTRUSTED_SOURCE", "Arcane rejected an untrusted Android WebView message."))
                 return
             }
@@ -207,6 +244,34 @@ object ArcaneWebViewBridge {
             }
             if (request.method == GeneratedAndroidCapabilityRegistry.USER_CURRENT_METHOD) {
                 replyProxy.postMessage(AndroidBridgeProtocol.userCurrentResponse(request, userIdentity))
+                return
+            }
+            if (request.method == GeneratedAndroidCapabilityRegistry.APPS_LIST_METHOD) {
+                val catalog = try {
+                    applicationCatalogProvider.currentApplicationCatalog()
+                } catch (_: Exception) {
+                    replyProxy.postMessage(AndroidBridgeProtocol.errorResponse(request.id, "APPLICATION_CATALOG_UNAVAILABLE", "Arcane could not read the packaged Android application catalog."))
+                    return
+                }
+                replyProxy.postMessage(AndroidBridgeProtocol.applicationCatalogResponse(request, catalog))
+                return
+            }
+            if (request.method == GeneratedAndroidCapabilityRegistry.APPS_LAUNCH_METHOD) {
+                val applicationId = request.applicationId
+                if (applicationId == null) {
+                    replyProxy.postMessage(AndroidBridgeProtocol.errorResponse(request.id, "ANDROID_BRIDGE_INVALID_REQUEST", "Arcane rejected an invalid Android application launch request."))
+                    return
+                }
+                val accepted = try {
+                    applicationLaunchProvider.launchApplication(applicationId)
+                } catch (_: Exception) {
+                    false
+                }
+                if (!accepted) {
+                    replyProxy.postMessage(AndroidBridgeProtocol.errorResponse(request.id, "APPLICATION_LAUNCH_FAILED", "Android could not launch that Arcane application."))
+                    return
+                }
+                replyProxy.postMessage(AndroidBridgeProtocol.applicationLaunchResponse(request, applicationId))
                 return
             }
             val status = try {
@@ -294,6 +359,13 @@ object ArcaneWebViewBridge {
             val grants = mutableListOf<String>()
             val methods = mutableListOf<String>()
             for (method in GeneratedAndroidCapabilityRegistry.methods) {
+                if (!GeneratedAndroidCapabilityRegistry.isAllowedForApplication(
+                        method,
+                        applicationIdentity.id,
+                        applicationIdentity.type
+                    )) {
+                    continue
+                }
                 val methodCapability = GeneratedAndroidCapabilityRegistry.capabilityFor(method)
                 if (methodCapability == null) {
                     methods.add(method)
@@ -315,10 +387,25 @@ object ArcaneWebViewBridge {
         }
     }
 
-    private fun isTrustedOrigin(origin: Uri): Boolean {
-        return origin.scheme == "https"
-            && origin.host == "appassets.androidplatform.net"
-            && origin.port == -1
+    private fun validatedTrustedOrigin(value: String): Uri? {
+        val origin = Uri.parse(value)
+        if (origin.scheme != "https"
+            || origin.host == null
+            || origin.port != -1
+            || origin.userInfo != null
+            || origin.path?.isNotEmpty() == true
+            || origin.query != null
+            || origin.fragment != null
+            || origin.toString() != value) {
+            return null
+        }
+        return origin
+    }
+
+    private fun isTrustedOrigin(origin: Uri, expected: Uri): Boolean {
+        return origin.scheme == expected.scheme
+            && origin.host == expected.host
+            && origin.port == expected.port
             && origin.userInfo == null
     }
 

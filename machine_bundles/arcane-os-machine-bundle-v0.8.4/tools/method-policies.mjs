@@ -134,6 +134,14 @@ export function renderAndroidCapabilityRegistry(policies) {
         const prefix = androidConstantPrefix(method);
         return `        if (method == ${prefix}_METHOD) return ${prefix}_CAPABILITY`;
     }
+    function applicationPolicyMapping([method, policy]) {
+        const prefix = androidConstantPrefix(method);
+        const checks = [];
+        if (policy.appIds) checks.push(`applicationId in setOf(${policy.appIds.map((value) => JSON.stringify(value)).join(', ')})`);
+        if (policy.appTypes) checks.push(`applicationType in setOf(${policy.appTypes.map((value) => JSON.stringify(value)).join(', ')})`);
+        if (!checks.length) return null;
+        return `        if (method == ${prefix}_METHOD) return ${checks.join(' && ')}`;
+    }
     const entries = Object.entries(policies)
         .filter(androidPolicyEntry)
         .sort(sortAndroidPolicyEntries);
@@ -148,7 +156,8 @@ export function renderAndroidCapabilityRegistry(policies) {
     const grants = capabilityEntries.map(capabilityConstant);
     const methods = entries.map(methodConstant);
     const mappings = capabilityEntries.map(capabilityMapping);
-    return `package os.arcane.host.android\n\ninternal object GeneratedAndroidCapabilityRegistry {\n${constants.join('\n')}\n    internal val grants = listOf(${grants.join(', ')})\n    internal val methods = listOf(${methods.join(', ')})\n\n    internal fun isSupported(method: String): Boolean {\n        return methods.contains(method)\n    }\n\n    internal fun capabilityFor(method: String): String? {\n${mappings.join('\n')}\n        return null\n    }\n}\n`;
+    const applicationMappings = entries.map(applicationPolicyMapping).filter(Boolean);
+    return `package os.arcane.host.android\n\ninternal object GeneratedAndroidCapabilityRegistry {\n${constants.join('\n')}\n    internal val grants = listOf(${grants.join(', ')})\n    internal val methods = listOf(${methods.join(', ')})\n\n    internal fun isSupported(method: String): Boolean {\n        return methods.contains(method)\n    }\n\n    internal fun capabilityFor(method: String): String? {\n${mappings.join('\n')}\n        return null\n    }\n\n    internal fun isAllowedForApplication(method: String, applicationId: String, applicationType: String): Boolean {\n${applicationMappings.join('\n')}\n        return isSupported(method)\n    }\n}\n`;
 }
 
 export function renderAndroidApplicationRegistry(bundleManifest, policies) {
