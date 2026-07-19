@@ -117,7 +117,7 @@ The canonical semantic definitions for the currently shared Core/Android methods
 
 | Method | Parameters | Return | Description |
 |---|---|---|---|
-| `Arcane.session.logout()` | None | `Promise<result>` | Logs out of the Arcane session. |
+| `Arcane.session.logout()` | None | `Promise<result>` | Requests logout of the current host operating-system session. This is not an Arcane-only application exit. |
 | `Arcane.provisioning.plan(usernames)` | Username or array | `Promise<plan>` | Creates a provisioning plan without applying it. |
 | `Arcane.diagnostics.recentErrors()` | None | `Promise<diagnostic[]>` | Lists recent structured errors. |
 | `Arcane.diagnostics.get(diagnosticId)` | Diagnostic ID | `Promise<diagnostic>` | Gets one diagnostic record. |

@@ -326,6 +326,25 @@ html-import[data-component-state="error"]::part(error){
     overflow:hidden;
 }
 
+.document-panel[data-state="error"]{
+    min-height:auto;
+}
+
+.catalog-failure{
+    align-content:start;
+    display:grid;
+    gap:var(--arcane-space-4);
+}
+
+.catalog-failure[hidden]{
+    display:none;
+}
+
+.catalog-failure p,
+.catalog-failure h2{
+    margin:0;
+}
+
 #documentViewer,
 #sourceViewer,
 #markdownSpecimen{

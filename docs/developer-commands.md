@@ -107,8 +107,8 @@ Run these from `machine_bundles/arcane-os-machine-bundle-v0.8.4`, or add `npm --
 | `build-windows.bat` | Legacy/direct Windows production-policy bundle build; ordinary developers should use the root unified setup or development build instead. |
 | `build-linux.sh` | Builds the Linux bundle. |
 | `start-provisioner.bat` / `start-provisioner.sh` | Starts the native provisioner. |
+| `start-shell.bat` / `start-shell.sh` | Opens the native Arcane Shell inside the current Microsoft NT or Linux desktop session for development, demonstrations, and screenshots; no host logout or login is required. |
 | `start-provisioner-debug.bat` | Starts the Windows provisioner with debugging enabled. |
-| `start-shell.bat` / `start-shell.sh` | Starts the native Arcane shell. |
 
 ## Maintenance rule
 

@@ -22,7 +22,7 @@
     <link rel="manifest" href="./apps/docs/manifest.json">
     <link rel="stylesheet" href="./arcane/css/theme.css?v=1">
     <link rel="stylesheet" href="./arcane/css/primitives.css?v=1">
-    <link rel="stylesheet" href="./apps/docs/docs.css?v=1">
+    <link rel="stylesheet" href="./apps/docs/docs.css?v=0.3.0">
     <script type="module" src="./arcane/modules/ThemeBootstrap.js?v=1"></script>
     <script type="module" src="./arcane/modules/Errors.js?v=2"></script>
     <script type="module" src="./arcane/modules/HTMLImport.js?v=7"></script>
@@ -66,7 +66,7 @@
                         <span class="arcane-badge" data-status="review">Pre-RC</span>
                     </div>
                     <div class="arcane-card__body">
-                        <p>Arcane has substantial Microsoft NT runtime and packaging foundations. This site distinguishes implemented, experimental, partial, and release-candidate work.</p>
+                        <p>Arcane has substantial Microsoft NT runtime and packaging foundations plus an experimental native GTK/WebKitGTK host on Linux. This site distinguishes implemented, experimental, partial, and release-candidate work.</p>
                         <p class="arcane-help">The site is static: it cannot provision users, run shell commands, read your checkout, or hold provider secrets.</p>
                     </div>
                 </aside>
@@ -108,6 +108,15 @@
                     <article class="journey-card arcane-card">
                         <div class="journey-card__number" aria-hidden="true">03</div>
                         <div class="arcane-card__body">
+                            <p class="eyebrow">Linux contributor</p>
+                            <h3>Open the native Linux Shell</h3>
+                            <p>Install GTK/WebKitGTK prerequisites, build the bundle, launch the Shell inside the current desktop session, and understand what remains experimental.</p>
+                            <a href="./apps/docs/index.html#/docs/linux-host">Open Linux host guide <span aria-hidden="true">→</span></a>
+                        </div>
+                    </article>
+                    <article class="journey-card arcane-card">
+                        <div class="journey-card__number" aria-hidden="true">04</div>
+                        <div class="arcane-card__body">
                             <p class="eyebrow">Builder</p>
                             <h3>Learn the shared runtime</h3>
                             <p>Inspect components running against the same Arcane theme and browser modules shipped in packaged applications.</p>
@@ -115,7 +124,7 @@
                         </div>
                     </article>
                     <article class="journey-card arcane-card">
-                        <div class="journey-card__number" aria-hidden="true">04</div>
+                        <div class="journey-card__number" aria-hidden="true">05</div>
                         <div class="arcane-card__body">
                             <p class="eyebrow">Explorer</p>
                             <h3>Browse reviewed source</h3>
@@ -180,6 +189,17 @@
                         id="documentViewer"
                         href="./arcane/components/markdown-document.html?v=1">
                     </html-import>
+                    <div id="catalogFailureHelp" class="catalog-failure arcane-card__body" hidden>
+                        <p class="eyebrow">Deployment recovery</p>
+                        <h2 class="arcane-section-heading">The verified catalog is missing from this deployment.</h2>
+                        <p id="catalogFailureMessage">The documentation catalog could not be loaded.</p>
+                        <p>You can still open the reviewed source guides while the generated Pages artifact is repaired.</p>
+                        <ul class="arcane-list">
+                            <li><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/apps/docs/guides/provision-user.md" target="_blank" rel="noopener noreferrer">Provision an Arcane OS user</a></li>
+                            <li><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/apps/docs/guides/developer-setup.md" target="_blank" rel="noopener noreferrer">Set up a developer checkout</a></li>
+                            <li><a href="https://github.com/TheWizardNexus/ARCANE-OS/blob/main/apps/docs/guides/linux-host.md" target="_blank" rel="noopener noreferrer">Run the Linux developer host</a></li>
+                        </ul>
+                    </div>
                 </article>
             </div>
         </section>
@@ -218,6 +238,13 @@
                         id="sourceViewer"
                         href="./arcane/components/source-code-viewer.html?v=1">
                     </html-import>
+                    <div id="sourceFailureHelp" class="catalog-failure arcane-card__body" hidden>
+                        <p class="eyebrow">Deployment recovery</p>
+                        <h2 class="arcane-section-heading">The reviewed source catalog is missing from this deployment.</h2>
+                        <p id="sourceFailureMessage">The reviewed source catalog could not be loaded.</p>
+                        <p>Browse the public repository while the generated Pages artifact is repaired.</p>
+                        <a class="arcane-button arcane-button--secondary" href="https://github.com/TheWizardNexus/ARCANE-OS" target="_blank" rel="noopener noreferrer">Browse Arcane OS source</a>
+                    </div>
                 </article>
             </div>
         </section>
@@ -368,6 +395,6 @@
         <p>Arcane OS Docs · Generated from positive documentation, source, and screenshot allowlists · <a href="https://github.com/TheWizardNexus/ARCANE-OS" target="_blank" rel="noopener noreferrer">Source on GitHub</a></p>
     </footer>
 
-    <script type="module" src="./apps/docs/modules/DocsApp.js?v=1"></script>
+    <script type="module" src="./apps/docs/modules/DocsApp.js?v=0.3.0"></script>
 </body>
 </html>

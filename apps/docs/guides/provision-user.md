@@ -23,6 +23,20 @@ Arcane user provisioning is an administrator journey for the supported Microsoft
 7. Sign out of the administrator session and let the new user sign in with the temporary password. Microsoft NT requires the password to be changed at first sign-in.
 8. Confirm that the verified Arcane Shell opens and that the user can reach Settings, logout, and the documented recovery path.
 
+## Open the Shell without changing sessions
+
+Arcane Shell can also open directly inside an existing Microsoft NT or Linux desktop session for development, demonstrations, and screenshots. No host logout or login is required for that direct launch. The Shell does not authenticate a separate Arcane identity: `Arcane.user.current()` reports the current host operating-system account.
+
+On Microsoft NT, after creating a development-signed build, run this from the repository root:
+
+```powershell
+.\machine_bundles\arcane-os-machine-bundle-v0.8.4\start-shell.bat
+```
+
+On Linux, build the machine bundle and run `./start-shell.sh` from its directory. Wait for the identity, operating-system, host, and application states to finish loading before capturing the screen. Close the Shell window afterward; do not press **Log out**, because that requests an actual logout from the host operating system.
+
+A direct launch is a valid Shell demonstration, but it does not replace the sign-out, first-login, mandatory-password-change, and automatic-Shell-assignment checks required for Microsoft NT provisioning acceptance. Arcane OS 0.8.4 does not yet provision Linux accounts or register a display-manager-safe Arcane session.
+
 ## Existing accounts
 
 When the account already exists, Arcane preserves its password and memberships while recording and replacing only its supported shell assignment. If the password is unknown, use **Set temporary password** only after the account is an active, verified Arcane user:

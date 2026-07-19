@@ -296,9 +296,17 @@
       "id": "developer-setup",
       "source": "apps/docs/guides/developer-setup.md",
       "title": "Developer setup",
-      "summary": "Prepare a checkout, run the gates, package apps, and use the installed Developer workspace.",
+      "summary": "Prepare a Microsoft NT or Linux checkout, run the gates, package apps, and open the native developer hosts.",
       "category": "Get started",
-      "tags": ["developer", "setup", "build", "test"]
+      "tags": ["developer", "setup", "build", "test", "linux", "microsoft-nt"]
+    },
+    {
+      "id": "linux-host",
+      "source": "apps/docs/guides/linux-host.md",
+      "title": "Linux developer host",
+      "summary": "Build and open the native GTK/WebKitGTK Shell, capture it safely, and understand the current Linux capability boundary.",
+      "category": "Get started",
+      "tags": ["linux", "gtk", "webkitgtk", "shell", "developer", "screenshots"]
     },
     {
       "id": "app-building",

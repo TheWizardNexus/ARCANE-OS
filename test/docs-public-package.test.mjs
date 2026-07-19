@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {mkdtemp, mkdir, readFile, rm} from 'node:fs/promises';
+import {once} from 'node:events';
+import {mkdtemp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {createServer} from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -15,6 +17,62 @@ const DOCS_ROOT = path.join(TEST_ROOT, 'apps', 'docs');
 
 async function removeDirectory(directory) {
     await rm(directory, {force: true, recursive: true});
+}
+
+async function startPagesFixtureServer(outputRoot) {
+    const projectPrefix = '/ARCANE-OS/';
+    const root = path.resolve(outputRoot);
+    const server = createServer(
+        async function servePagesArtifact(request, response) {
+            try {
+                const url = new URL(request.url, 'http://127.0.0.1');
+                if (!url.pathname.startsWith(projectPrefix)) {
+                    response.writeHead(404).end();
+                    return;
+                }
+
+                let relative = decodeURIComponent(
+                    url.pathname.slice(projectPrefix.length)
+                );
+                if (!relative || relative.endsWith('/')) {
+                    relative += 'index.html';
+                }
+
+                const candidate = path.resolve(root, ...relative.split('/'));
+                const contained = path.relative(root, candidate);
+                if (
+                    !contained
+                    || contained.startsWith('..')
+                    || path.isAbsolute(contained)
+                ) {
+                    response.writeHead(404).end();
+                    return;
+                }
+
+                const body = await readFile(candidate);
+                response.writeHead(200, {
+                    'content-type': relative.endsWith('.json')
+                        ? 'application/json; charset=utf-8'
+                        : 'text/html; charset=utf-8'
+                });
+                response.end(body);
+            } catch {
+                response.writeHead(404).end();
+            }
+        }
+    );
+
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    return {
+        baseURL: `http://127.0.0.1:${address.port}${projectPrefix}`,
+        close: async function closeServer() {
+            const closed = once(server, 'close');
+            server.close();
+            await closed;
+        }
+    };
 }
 
 test(
@@ -36,6 +94,20 @@ test(
             await mkdir(
                 path.join(requestedRoot, 'apps', 'docs'),
                 {recursive: true}
+            );
+            await writeFile(
+                path.join(requestedRoot, 'index.html'),
+                '<!doctype html>\n<meta charset="utf-8">\n'
+                + '<meta http-equiv="refresh" '
+                + 'content="0; url=./apps/docs/index.html">\n'
+                + '<title>Arcane OS Docs</title>\n'
+                + '<a href="./apps/docs/index.html">Open Arcane OS Docs</a>\n',
+                'utf8'
+            );
+            await writeFile(
+                path.join(requestedRoot, 'apps', 'docs', 'index.html'),
+                await readFile(path.join(DOCS_ROOT, 'index.html'), 'utf8'),
+                'utf8'
             );
         }
 
@@ -88,6 +160,33 @@ test(
             policy.documents.length+policy.sources.length
         );
         assert.equal((await readFile(path.join(outputRoot, '.nojekyll'))).length, 0);
+
+        const pagesServer = await startPagesFixtureServer(outputRoot);
+        try {
+            const rootResponse = await fetch(pagesServer.baseURL);
+            assert.equal(rootResponse.status, 200);
+            assert.match(
+                await rootResponse.text(),
+                /url=\.\/apps\/docs\/index\.html/
+            );
+
+            const appResponse = await fetch(
+                new URL('apps/docs/index.html', pagesServer.baseURL)
+            );
+            assert.equal(appResponse.status, 200);
+            assert.match(await appResponse.text(), /<base href="\.\.\/\.\.\/">/);
+
+            const catalogResponse = await fetch(
+                new URL(
+                    'apps/docs/catalog/document-catalog.json',
+                    pagesServer.baseURL
+                )
+            );
+            assert.equal(catalogResponse.status, 200);
+            assert.deepEqual(await catalogResponse.json(), manifest);
+        } finally {
+            await pagesServer.close();
+        }
 
         const htmlSource=policy.sources.find(item=>item.source.endsWith('.html'));
         const htmlRecord=manifest.documents.find(item=>item.id===htmlSource.id);
