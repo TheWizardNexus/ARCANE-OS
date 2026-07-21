@@ -117,7 +117,7 @@ Run these from `machine_bundles/arcane-os-machine-bundle-v0.8.4`, or add `npm --
 | `tools/build-linux-webkitgtk.sh --unsigned-local-test` | Low-level Linux publisher used by `build:distribution:linux:unsigned-local-test`; it refuses calls without that exact flavor argument. |
 | `start-provisioner.bat` / `start-provisioner.sh` | Starts the native provisioner. |
 | `start-provisioner-debug.bat` | Starts the Microsoft NT provisioner with debugging enabled. |
-| `start-shell.bat` / `start-shell.sh` | Starts the native Arcane shell. |
+| `start-shell.bat` / `start-shell.sh` | Opens the native Arcane Shell inside the current Microsoft NT or Linux desktop session for development, demonstrations, and screenshots; no host logout or login is required. |
 
 ## Maintenance rule
 

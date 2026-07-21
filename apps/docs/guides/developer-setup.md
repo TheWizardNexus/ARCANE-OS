@@ -1,6 +1,6 @@
 # Set up an Arcane OS development checkout
 
-Arcane OS development uses a normal Git checkout, locked public dependencies, the shared browser runtime, focused Node.js tests, and platform-specific build gates. The supported first-release native host is Microsoft NT.
+Arcane OS development uses a normal Git checkout, locked public dependencies, the shared browser runtime, focused Node.js tests, and platform-specific build gates. Microsoft NT is the supported first-release native host. Linux is an experimental unsigned-local developer host with GTK 4 and WebKitGTK 6.0 Provisioner and Shell binaries, root-authorized standard-account provisioning, and a guarded X11 graphical-session policy.
 
 ## Fast path on Microsoft NT
 
@@ -25,13 +25,40 @@ Arcane OS development uses a normal Git checkout, locked public dependencies, th
    .\setup-developer.bat -SkipPrerequisiteInstall
    ```
 
-4. Open the development-signed Provisioner from `dist\nt\bin\ArcaneProvisioner.exe`. Local development trust belongs only to the Microsoft NT user who created it and is never a production signing claim.
+4. Open the development-signed Provisioner with `.\machine_bundles\arcane-os-machine-bundle-v0.8.4\start-provisioner.bat`. The binary is under `machine_bundles\arcane-os-machine-bundle-v0.8.4\dist\nt\bin\ArcaneProvisioner.exe`. Local development trust belongs only to the Microsoft NT user who created it and is never a production signing claim.
+
+5. To open the native Shell inside the current Microsoft NT desktop session, without signing out or provisioning another account, run:
+
+   ```powershell
+   .\machine_bundles\arcane-os-machine-bundle-v0.8.4\start-shell.bat
+   ```
+
+   The direct Shell reports the current operating-system account. It is suitable for development and screenshots, but it is not first-login acceptance evidence for a provisioned Arcane user. Close the Shell window when finished; its **Log out** action ends the current host operating-system session.
+
+## Fast path on Linux
+
+Install Node.js 22 or newer plus the GTK/WebKitGTK build prerequisites, verify the public dependency sources, and build and verify the unsigned-local machine bundle:
+
+```bash
+sudo apt install build-essential libgtk-4-dev libwebkitgtk-6.0-dev
+npm run verify:package-locks
+npm ci
+npm run hooks:install
+cd machine_bundles/arcane-os-machine-bundle-v0.8.4
+npm run build:distribution:linux:unsigned-local-test
+npm run verify:distribution:linux:unsigned-local-test
+./build-linux.sh
+./start-shell.sh
+```
+
+No host logout or login is required for this direct Shell launch. Installation and account changes require the exact verified Provisioner in a separately authorized root graphical session; Arcane does not invoke `sudo` or PolicyKit itself. On supported native Linux, a fresh installation registers the guarded Arcane OS X11 session and changes only the next-boot default to `graphical.target`; WSLg stays in manual-launch mode and receives no boot-target mutation. Linux publisher signing, automatic privilege brokerage, and disposable-host acceptance remain incomplete. Read the [Linux developer host guide](./linux-host.md) for the host boundary and the [Linux provisioning walkthrough](./provision-user-linux.md) for the account and sign-in transaction.
 
 ## Manual, browser-runtime-only setup
 
 For documentation, shared JavaScript, and portable app work that does not need a native build:
 
 ```powershell
+npm run verify:package-locks
 npm ci
 npm run hooks:install
 npm test
@@ -49,7 +76,7 @@ npm run app:package -- docs
 npm run app:check -- docs
 ```
 
-The verified output is written under `dist\docs`. GitHub Pages deploys that output, not the repository root or the working `docs` directory.
+The verified output is written under `dist/docs`. GitHub Pages deploys that output, not the repository root or the working `docs` directory.
 
 Run the complete portable repository gate before requesting review:
 

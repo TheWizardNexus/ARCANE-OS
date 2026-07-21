@@ -237,7 +237,9 @@ describe('BOSS Libraries chat integration',()=>{
         assert.match(htmlImport,/document\.createElement\('script'\)/);
         assert.match(htmlImport,/document\.head\.appendChild\(executable\)/);
         assert.match(htmlImport,/arcaneHostToken/);
-        assert.match(htmlImport,/htmlImportHostRegistry\.set\(hostToken,this\)/);
+        assert.match(htmlImport,/const binding=\{host:this,promise:null\}/);
+        assert.match(htmlImport,/htmlImportHostRegistry\.set\(hostToken,binding\)/);
+        assert.match(htmlImport,/await binding\.promise/);
         assert.doesNotMatch(htmlImport,/\beval\s*\(|new AsyncFunction/);
     });
 

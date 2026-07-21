@@ -46,6 +46,7 @@ Dependencies flow from `apps/docs` to `arcane/` and `tools/`. Shared code does n
 ## Public content and deployment boundary
 
 - The repository root is never a web root. The only deployable unit is the packager-verified `dist/docs` directory.
+- Git attributes pin every Docs and shared browser-runtime text extension to LF, so Microsoft NT and Linux checkouts feed the packager the same canonical source bytes. Dependency bytes still come from the public lockfile and the immutable registry package.
 - The app policy explicitly selects documentation, shared runtime source, synthetic examples, and reviewed screenshots. It excludes local data, case material, BOSS working documents, machine build output, credentials, caches, repository metadata, and untracked files.
 - The generated catalog records normalized published and original paths, kind, language, media type, title, summary, tags, bounded code search terms, byte size, SHA-256, headings, and optional example/screenshot relationships. Reviewed source is copied beneath `catalog/sources` with an added `.txt` suffix, so HTML source is served as inert text rather than executable page content.
 - GitHub Pages is treated as static hosting. All asset and content URLs are project-path safe, routing uses the URL hash, and the artifact contains `.nojekyll` plus a root entry document.

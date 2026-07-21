@@ -5,7 +5,7 @@ import ScopedOPFSCache from '../../../arcane/modules/ScopedOPFSCache.js';
 import StaticDocumentCatalog from '../../../arcane/modules/StaticDocumentCatalog.js';
 import waitForComponent from '../../../arcane/modules/WaitForComponent.js';
 
-const CATALOG_URL='./apps/docs/catalog/document-catalog.json';
+const CATALOG_URL='./apps/docs/catalog/document-catalog.json?v=0.3.0';
 const CATALOG_BASE_URL='./apps/docs/catalog/';
 const APP_ENTRY_URL='./apps/docs/index.html';
 const REPOSITORY_FILE_URL='https://github.com/TheWizardNexus/ARCANE-OS/blob/main/';
@@ -41,6 +41,8 @@ const elements={
     assistantMessages:document.querySelector('#assistantMessages'),
     assistantProvider:document.querySelector('#assistantProvider'),
     calculatorSpecimen:document.querySelector('#calculatorSpecimen'),
+    catalogFailureHelp:document.querySelector('#catalogFailureHelp'),
+    catalogFailureMessage:document.querySelector('#catalogFailureMessage'),
     catalogStatus:document.querySelector('#catalogStatus'),
     catalogSummary:document.querySelector('#catalogSummary'),
     documentResults:document.querySelector('#documentResults'),
@@ -49,6 +51,7 @@ const elements={
     documentViewer:document.querySelector('#documentViewer'),
     homeSearchForm:document.querySelector('#homeSearchForm'),
     homeSearchInput:document.querySelector('#homeSearchInput'),
+    homeSearchSubmit:document.querySelector('#homeSearchForm button[type="submit"]'),
     markdownSpecimen:document.querySelector('#markdownSpecimen'),
     mainContent:document.querySelector('#mainContent'),
     progressSpecimen:document.querySelector('#progressSpecimen'),
@@ -58,6 +61,8 @@ const elements={
     runTests:document.querySelector('#runTests'),
     screenshotGallery:document.querySelector('#screenshotGallery'),
     sourceCatalogStatus:document.querySelector('#sourceCatalogStatus'),
+    sourceFailureHelp:document.querySelector('#sourceFailureHelp'),
+    sourceFailureMessage:document.querySelector('#sourceFailureMessage'),
     sourceResults:document.querySelector('#sourceResults'),
     sourceResultCount:document.querySelector('#sourceResultCount'),
     sourceSearchForm:document.querySelector('#sourceSearchForm'),
@@ -100,6 +105,7 @@ async function initialize(){
 
     if(catalogResult.status==='fulfilled'){
         catalog=catalogResult.value;
+        setCatalogFailureState(false);
         renderCatalog('');
         renderSourceCatalog('');
         renderCatalogSummary();
@@ -110,6 +116,7 @@ async function initialize(){
         scheduleCatalogCache();
     }else{
         const message=errorMessage(catalogResult.reason,'The public document catalog could not be loaded.');
+        setCatalogFailureState(true,message);
         elements.catalogStatus.textContent=message;
         elements.sourceCatalogStatus.textContent=message;
         elements.documentViewer.fail?.(catalogResult.reason);
@@ -118,6 +125,28 @@ async function initialize(){
         configureAssistant();
         renderCatalogSummary();
         route();
+    }
+}
+
+function setCatalogFailureState(failed,message=''){
+    elements.documentSearchInput.disabled=failed;
+    elements.homeSearchInput.disabled=failed;
+    elements.homeSearchSubmit.disabled=failed;
+    elements.sourceSearchInput.disabled=failed;
+    elements.runTests.disabled=failed;
+    for(const [viewer,help,messageElement] of [
+        [elements.documentViewer,elements.catalogFailureHelp,elements.catalogFailureMessage],
+        [elements.sourceViewer,elements.sourceFailureHelp,elements.sourceFailureMessage]
+    ]){
+        viewer.hidden=failed;
+        help.hidden=!failed;
+        viewer.closest('.document-panel')?.setAttribute('data-state',failed?'error':'ready');
+        if(failed&&messageElement)messageElement.textContent=message;
+    }
+    if(failed){
+        elements.testRunStatus.textContent='Catalog unavailable';
+        elements.testRunStatus.dataset.status='error';
+        elements.testResults.replaceChildren(stateItem('Browser checks require the verified generated catalog. Use the Docs recovery links while this deployment is repaired.','error'));
     }
 }
 
@@ -275,6 +304,7 @@ async function initializeCatalog(){
     return new StaticDocumentCatalog(manifest,{
         baseURL:new URL(CATALOG_BASE_URL,document.baseURI).href,
         cache,
+        fetchImpl:catalogFetchForVersion(manifest.version),
         maxResults:MAX_SEARCH_RESULTS,
         maxContextDocuments:7,
         maxContextCharacters:28000,
@@ -284,6 +314,15 @@ async function initializeCatalog(){
             renderCatalogSummary();
         }
     });
+}
+
+function catalogFetchForVersion(version){
+    const cacheKey=String(version);
+    return (url,request)=>{
+        const target=new URL(url);
+        target.searchParams.set('catalog',cacheKey);
+        return fetch(target.href,{...request,cache:'no-store'});
+    };
 }
 
 function renderCatalog(query=''){
@@ -638,18 +677,26 @@ async function prewarmCatalog(){
 
 function createBrowserTests(){
     return new BrowserTestSuite({
-        timeoutMs:10000,
+        timeoutMs:20000,
         tests:[
             {
                 id:'catalog-integrity',
                 name:'Catalog documentation verifies before rendering',
-                async run({assert}){
-                    assert(documentRecords().length>=12,'The public catalog should contain the initial documentation set.');
-                    const [overview,windows,linux]=await Promise.all([
-                        catalog.hydrate('provision-user',{bypassCache:true}),
-                        catalog.hydrate('provision-user-windows',{bypassCache:true}),
-                        catalog.hydrate('provision-user-linux',{bypassCache:true})
+                async run({assert,signal}){
+                    const records=documentRecords();
+                    assert(records.length>=15,'The public catalog should contain the current documentation set.');
+                    const requiredIds=new Set(['provision-user','provision-user-windows','provision-user-linux']);
+                    const [overview,windows,linux,...remaining]=await Promise.all([
+                        catalog.hydrate('provision-user',{bypassCache:true,signal}),
+                        catalog.hydrate('provision-user-windows',{bypassCache:true,signal}),
+                        catalog.hydrate('provision-user-linux',{bypassCache:true,signal}),
+                        ...records
+                            .filter(record=>!requiredIds.has(record.id))
+                            .map(record=>catalog.hydrate(record.id,{bypassCache:true,signal}))
                     ]);
+                    const hydrated=[overview,windows,linux,...remaining];
+                    assert(hydrated.length===records.length,'The browser check did not hydrate every public document.');
+                    assert(hydrated.every(item=>item.text.trim().length>0),'At least one public document hydrated as empty text.');
                     assert(overview.text.includes('provision-user-windows.md'),'The first-user overview did not link to the Microsoft NT walkthrough.');
                     assert(overview.text.includes('provision-user-linux.md'),'The first-user overview did not link to the Linux walkthrough.');
                     assert(windows.text.includes('Activate this account'),'The Microsoft NT walkthrough did not contain its separate activation step.');
@@ -657,18 +704,20 @@ function createBrowserTests(){
                     assert(linux.text.includes('separately authorized root session'),'The Linux walkthrough did not explain its already-root authorization boundary.');
                     assert(linux.text.includes('Activate this account'),'The Linux walkthrough did not contain its separate activation step.');
                     assert(linux.text.includes('./start-shell.sh'),'The Linux walkthrough did not distinguish its WSLg manual-launch step.');
-                    return {status:'pass',message:'Verified the first-user overview and both platform walkthroughs.'};
+                    return {status:'pass',message:`Verified all ${hydrated.length} public documents from the generated catalog.`};
                 }
             },
             {
                 id:'source-integrity',
                 name:'Reviewed source verifies before retrieval',
-                async run({assert}){
-                    assert(sourceRecords().length>=12,'The reviewed source catalog should contain the initial implementation set.');
-                    const hydrated=await catalog.hydrate('source-static-document-catalog',{bypassCache:true});
-                    assert(hydrated.text.includes('StaticDocumentCatalog'),'The reviewed source snapshot did not contain the catalog implementation.');
-                    assert(hydrated.record.mediaType==='text/plain','Source was not published with an inert text media type.');
-                    return {status:'pass',message:`Verified ${hydrated.record.sourcePath} as inert text.`};
+                async run({assert,signal}){
+                    const records=sourceRecords();
+                    assert(records.length>=35,'The reviewed source catalog should contain the current implementation set.');
+                    const hydrated=await Promise.all(records.map(record=>catalog.hydrate(record.id,{bypassCache:true,signal})));
+                    assert(hydrated.every(item=>item.text.trim().length>0),'At least one reviewed source file hydrated as empty text.');
+                    assert(hydrated.every(item=>item.record.mediaType==='text/plain'),'At least one source record was not published with an inert text media type.');
+                    assert(hydrated.find(item=>item.record.id==='source-static-document-catalog')?.text.includes('StaticDocumentCatalog'),'The reviewed source snapshot did not contain the catalog implementation.');
+                    return {status:'pass',message:`Verified all ${hydrated.length} reviewed source files as inert text.`};
                 }
             },
             {

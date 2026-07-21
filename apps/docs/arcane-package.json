@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "docs",
   "displayName": "Arcane OS Docs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "entry": "index.html",
   "strategy": "adapter",
   "include": [

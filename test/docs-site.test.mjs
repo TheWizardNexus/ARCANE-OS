@@ -80,6 +80,7 @@ const [
     windowsProvisionGuide,
     linuxProvisionGuide,
     developerGuide,
+    linuxGuide,
     prompt,
     scopedCache,
     appBarSource,
@@ -95,6 +96,7 @@ const [
     read('apps/docs/guides/provision-user-windows.md'),
     read('apps/docs/guides/provision-user-linux.md'),
     read('apps/docs/guides/developer-setup.md'),
+    read('apps/docs/guides/linux-host.md'),
     read('apps/docs/prompts/system.md'),
     read('arcane/modules/ScopedOPFSCache.js'),
     read('arcane/components/app-bar.html'),
@@ -122,6 +124,8 @@ test('Arcane Docs loads the shared theme, saved appearance, primitives, then app
     assert(theme>=0&&primitives>theme&&appCSS>primitives);
     assert.match(index,/arcane\/modules\/ThemeBootstrap\.js/);
     assert.match(index,/arcane\/modules\/HTMLImport\.js/);
+    assert.match(index,/apps\/docs\/docs\.css\?v=0\.3\.0/);
+    assert.match(index,/apps\/docs\/modules\/DocsApp\.js\?v=0\.3\.0/);
     assert.match(app,/import runAsyncBoundary from '\.\.\/\.\.\/\.\.\/arcane\/modules\/AsyncBoundary\.js'/);
     assert.match(index,/<meta name="arcane-app-id" content="docs">/);
     assert.doesNotMatch(index,/<base\s+href="\/"/i);
@@ -152,7 +156,8 @@ test('Arcane Docs exposes the six semantic product views and onboarding journeys
     assert.match(app,/parsed\.documentId\|\|selectedDocumentId\|\|'provision-user'/);
     assert.match(app,/catalog\.hydrate\('provision-user-windows'/);
     assert.match(app,/catalog\.hydrate\('provision-user-linux'/);
-    assert.match(app,/Verified the first-user overview and both platform walkthroughs/);
+    assert.match(app,/Verified all \$\{hydrated\.length\} public documents from the generated catalog/);
+    assert.match(index,/href="\.\/apps\/docs\/index\.html#\/docs\/linux-host"/);
     assert.match(index,/id="documentSearchForm"[^>]*role="search"/);
     assert.match(index,/id="testResults"[^>]*aria-live="polite"/);
     assert.match(index,/<a class="skip-link" href="\.\/apps\/docs\/index\.html#mainContent">/);
@@ -165,7 +170,7 @@ test('Arcane Docs exposes the six semantic product views and onboarding journeys
 test('the public content policy is a positive, unique, existing source inventory',async()=>{
     assert.equal(publication.schemaVersion,2);
     assert.equal(publication.audience,'public');
-    assert(publication.documents.length>=12);
+    assert(publication.documents.length>=15);
     assert(publication.sources.length>=30);
     const ids=new Set();
     const sources=new Set();
@@ -183,6 +188,7 @@ test('the public content policy is a positive, unique, existing source inventory
     assert(ids.has('provision-user-windows'));
     assert(ids.has('provision-user-linux'));
     assert(ids.has('developer-setup'));
+    assert(ids.has('linux-host'));
 
     for(const source of publication.sources){
         assert.match(source.id,/^[a-z0-9][a-z0-9-]*$/);
@@ -312,6 +318,9 @@ test('first-user chooser and platform walkthroughs preserve provisioning boundar
 
 test('developer setup uses locked dependencies and the supported package gates',()=>{
     assert.match(developerGuide,/\.\\setup-developer\.bat/);
+    assert.match(developerGuide,/start-provisioner\.bat/);
+    assert.match(developerGuide,/dist\\nt\\bin\\ArcaneProvisioner\.exe/);
+    assert.match(developerGuide,/npm run verify:package-locks/);
     assert.match(developerGuide,/npm ci/);
     assert.match(developerGuide,/npm run hooks:install/);
     assert.match(developerGuide,/npm run app:package -- docs/);
@@ -319,6 +328,25 @@ test('developer setup uses locked dependencies and the supported package gates',
     assert.match(developerGuide,/npm run release:check/);
     assert.match(developerGuide,/does not turn a local build into a release candidate/i);
     assert.match(developerGuide,/docs\/app-building\.md/);
+    assert.match(developerGuide,/libgtk-4-dev libwebkitgtk-6\.0-dev/);
+    assert.match(developerGuide,/\.\/build-linux\.sh/);
+    assert.match(developerGuide,/npm run build:distribution:linux:unsigned-local-test/);
+    assert.match(developerGuide,/npm run verify:distribution:linux:unsigned-local-test/);
+    assert.match(developerGuide,/\.\/start-shell\.sh/);
+    assert.match(developerGuide,/No host logout or login is required/i);
+});
+
+test('Linux host guide states the runnable path and the unsupported release boundary',()=>{
+    assert.match(linuxGuide,/experimental developer host/i);
+    assert.match(linuxGuide,/Node\.js 22 or newer/);
+    assert.match(linuxGuide,/npm run verify:package-locks/);
+    assert.match(linuxGuide,/\.\/build-linux\.sh/);
+    assert.match(linuxGuide,/\.\/start-shell\.sh/);
+    assert.match(linuxGuide,/\/opt\/arcane-os\/bin\/arcane-shell --shell/);
+    assert.match(linuxGuide,/do not need to log out of Linux and sign back in/i);
+    assert.match(linuxGuide,/direct launch demonstrates the native Shell experience/i);
+    assert.match(linuxGuide,/XDG_CONFIG_HOME/);
+    assert.match(linuxGuide,/does not yet repair permissions on a pre-existing token file/i);
 });
 
 test('assistant is profile-bound, context-bounded, consent-aware, and fail-closed on Pages',()=>{
@@ -361,6 +389,9 @@ test('startup network and host profile waits are finite and abort-aware',()=>{
     assert.match(app,/headers:\{Accept:'application\/json'\},[\s\S]*?signal/);
     assert.match(app,/ASYNC_BOUNDARY_TIMEOUT/);
     assert.match(app,/public document catalog request timed out/);
+    assert.match(app,/fetchImpl:catalogFetchForVersion\(manifest\.version\)/);
+    assert.match(app,/target\.searchParams\.set\('catalog',cacheKey\)/);
+    assert.match(app,/fetch\(target\.href,\{\.\.\.request,cache:'no-store'\}\)/);
 });
 
 test('hash routing preserves skip-link focus and cross-document fragments',()=>{
@@ -401,6 +432,7 @@ test('non-catalog Markdown links have an explicit repository fallback',()=>{
 test('route anchors remain inside the deployed app under a Pages project path',()=>{
     const deployedEntry=new URL('apps/docs/index.html','https://example.test/ARCANE-OS/');
     const baseURL=new URL('../../',deployedEntry);
+    const catalogPath=app.match(/const CATALOG_URL='([^']+)'/)?.[1];
     const hrefs=Array.from(index.matchAll(/(?:href|data-brand-href)="([^"]+)"/g),match=>match[1])
         .filter(href=>href.includes('#/'));
     assert(hrefs.length>=6);
@@ -408,12 +440,46 @@ test('route anchors remain inside the deployed app under a Pages project path',(
         const resolved=new URL(href,baseURL);
         assert.equal(resolved.pathname,'/ARCANE-OS/apps/docs/index.html',href);
     }
+    assert(catalogPath);
+    assert.equal(
+        new URL(catalogPath,baseURL).pathname,
+        '/ARCANE-OS/apps/docs/catalog/document-catalog.json'
+    );
+    assert.equal(new URL(catalogPath,baseURL).search,'?v=0.3.0');
     assert.match(app,/const APP_ENTRY_URL='\.\/apps\/docs\/index\.html'/);
     assert.match(app,/recordLink\(record,\{[\s\S]*?route:'docs'/);
     assert.match(
         app,
         /link\.href=`\$\{APP_ENTRY_URL\}#\/\$\{route\}\/\$\{encodeURIComponent\(record\.id\)\}`/
     );
+});
+
+test('catalog failure keeps Docs and Source useful while a Pages artifact is repaired',()=>{
+    assert.match(index,/id="catalogFailureHelp"[^>]*hidden/);
+    assert.match(index,/id="sourceFailureHelp"[^>]*hidden/);
+    assert.match(index,/The verified catalog is missing from this deployment/);
+    assert.match(index,/apps\/docs\/guides\/linux-host\.md/);
+    assert.match(app,/setCatalogFailureState\(true,message\)/);
+    assert.match(app,/viewer\.hidden=failed/);
+    assert.match(app,/help\.hidden=!failed/);
+    assert.match(app,/elements\.documentSearchInput\.disabled=failed/);
+    assert.match(app,/elements\.homeSearchInput\.disabled=failed/);
+    assert.match(app,/elements\.homeSearchSubmit\.disabled=failed/);
+    assert.match(app,/elements\.sourceSearchInput\.disabled=failed/);
+    assert.match(app,/elements\.runTests\.disabled=failed/);
+    assert.match(app,/Browser checks require the verified generated catalog/);
+    assert.match(css,/\.document-panel\[data-state="error"\]/);
+});
+
+test('browser checks hydrate every published document and reviewed source file',()=>{
+    assert.match(app,/const requiredIds=new Set\(\['provision-user','provision-user-windows','provision-user-linux'\]\)/);
+    assert.match(app,/\.\.\.records[\s\S]*?\.filter\(record=>!requiredIds\.has\(record\.id\)\)[\s\S]*?\.map\(record=>catalog\.hydrate\(record\.id,\{bypassCache:true,signal\}\)\)/);
+    assert.match(app,/hydrated\.length===records\.length/);
+    assert.equal((app.match(/async run\(\{assert,signal\}\)/g)||[]).length,2);
+    assert.match(app,/At least one public document hydrated as empty text/);
+    assert.match(app,/At least one reviewed source file hydrated as empty text/);
+    assert.match(app,/Promise\.all\(records\.map\(record=>catalog\.hydrate\(record\.id,\{bypassCache:true,signal\}\)\)\)/);
+    assert.match(app,/timeoutMs:20000/);
 });
 
 test('catalog persistence is automatic but scoped to exact keys in one docs namespace',()=>{

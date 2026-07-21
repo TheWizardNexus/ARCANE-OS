@@ -307,6 +307,253 @@
       "tags": ["html", "example", "testing", "module"]
     }
   ],
+  "sources": [
+    {
+      "id": "source-app-data-scope",
+      "source": "arcane/modules/AppDataScope.js",
+      "title": "AppDataScope.js",
+      "summary": "Canonical application identity and storage-scope validation.",
+      "tags": ["javascript", "storage", "identity", "shared-module"]
+    },
+    {
+      "id": "source-async-boundary",
+      "source": "arcane/modules/AsyncBoundary.js",
+      "title": "AsyncBoundary.js",
+      "summary": "Bounded asynchronous work with timeout, abort, and error contracts.",
+      "tags": ["javascript", "timeout", "abort", "shared-module"]
+    },
+    {
+      "id": "source-browser-test-suite",
+      "source": "arcane/modules/BrowserTestSuite.js",
+      "title": "BrowserTestSuite.js",
+      "summary": "Trusted browser-side test descriptors, execution, normalization, and summaries.",
+      "tags": ["javascript", "testing", "browser", "shared-module"]
+    },
+    {
+      "id": "source-calculator-engine",
+      "source": "arcane/modules/CalculatorEngine.js",
+      "title": "CalculatorEngine.js",
+      "summary": "Reusable calculator parsing and arithmetic behavior used by the live specimen.",
+      "tags": ["javascript", "calculator", "example", "shared-module"]
+    },
+    {
+      "id": "source-component-contracts",
+      "source": "arcane/modules/ComponentContracts.js",
+      "title": "ComponentContracts.js",
+      "summary": "Shared normalization contracts for configurable Arcane components.",
+      "tags": ["javascript", "components", "contracts", "shared-module"]
+    },
+    {
+      "id": "source-configured-ai-chat-session",
+      "source": "arcane/modules/ConfiguredAIChatSession.js",
+      "title": "ConfiguredAIChatSession.js",
+      "summary": "Provider-bound advisory chat sessions with injected context and no implicit tools.",
+      "tags": ["javascript", "ai", "provider", "shared-module"]
+    },
+    {
+      "id": "source-html-import",
+      "source": "arcane/modules/HTMLImport.js",
+      "title": "HTMLImport.js",
+      "summary": "Same-origin imported-component loading and lifecycle handling.",
+      "tags": ["javascript", "components", "loading", "shared-module"]
+    },
+    {
+      "id": "source-markdown-module",
+      "source": "arcane/modules/MD.js",
+      "title": "MD.js",
+      "summary": "Arcane Markdown wrapper around the bundled Marked parser and safe rendering pass.",
+      "tags": ["javascript", "markdown", "marked", "shared-module"]
+    },
+    {
+      "id": "source-scoped-opfs-cache",
+      "source": "arcane/modules/ScopedOPFSCache.js",
+      "title": "ScopedOPFSCache.js",
+      "summary": "Exact-key, application-scoped OPFS cache used by the public corpus.",
+      "tags": ["javascript", "opfs", "storage", "shared-module"]
+    },
+    {
+      "id": "source-static-document-catalog",
+      "source": "arcane/modules/StaticDocumentCatalog.js",
+      "title": "StaticDocumentCatalog.js",
+      "summary": "Integrity-verified static text catalog, local search, hydration, caching, and bounded retrieval.",
+      "tags": ["javascript", "catalog", "search", "retrieval", "shared-module"]
+    },
+    {
+      "id": "source-system-appearance",
+      "source": "arcane/modules/SystemAppearance.js",
+      "title": "SystemAppearance.js",
+      "summary": "System appearance preference detection used by Arcane themes.",
+      "tags": ["javascript", "theme", "appearance", "shared-module"]
+    },
+    {
+      "id": "source-theme-bootstrap",
+      "source": "arcane/modules/ThemeBootstrap.js",
+      "title": "ThemeBootstrap.js",
+      "summary": "Early shared-theme initialization for Arcane applications.",
+      "tags": ["javascript", "theme", "bootstrap", "shared-module"]
+    },
+    {
+      "id": "source-theme-manager",
+      "source": "arcane/modules/ThemeManager.js",
+      "title": "ThemeManager.js",
+      "summary": "Shared light, dark, system, and custom theme state management.",
+      "tags": ["javascript", "theme", "preferences", "shared-module"]
+    },
+    {
+      "id": "source-wait-for-component",
+      "source": "arcane/modules/WaitForComponent.js",
+      "title": "WaitForComponent.js",
+      "summary": "Finite dual-readiness helper for asynchronously imported components.",
+      "tags": ["javascript", "components", "readiness", "shared-module"]
+    },
+    {
+      "id": "source-app-bar-component",
+      "source": "arcane/components/app-bar.html",
+      "title": "app-bar.html",
+      "summary": "Responsive product navigation, active route, status, and trailing-slot component.",
+      "tags": ["html", "navigation", "accessibility", "shared-component"]
+    },
+    {
+      "id": "source-assistant-panel-component",
+      "source": "arcane/components/assistant-panel.html",
+      "title": "assistant-panel.html",
+      "summary": "Reusable assistant conversation shell with state and composition slots.",
+      "tags": ["html", "assistant", "ai", "shared-component"]
+    },
+    {
+      "id": "source-calculator-component",
+      "source": "arcane/components/calculator.html",
+      "title": "calculator.html",
+      "summary": "Keyboard-operable calculator component shown live in Arcane Docs.",
+      "tags": ["html", "calculator", "example", "shared-component"]
+    },
+    {
+      "id": "source-markdown-document-component",
+      "source": "arcane/components/markdown-document.html",
+      "title": "markdown-document.html",
+      "summary": "Source-aware Markdown renderer with a strict positive sanitization policy.",
+      "tags": ["html", "markdown", "security", "shared-component"]
+    },
+    {
+      "id": "source-modal-component",
+      "source": "arcane/components/modal.html",
+      "title": "modal.html",
+      "summary": "Shared modal mechanics, focus containment, cancellation, and restoration.",
+      "tags": ["html", "modal", "focus", "shared-component"]
+    },
+    {
+      "id": "source-source-code-viewer-component",
+      "source": "arcane/components/source-code-viewer.html",
+      "title": "source-code-viewer.html",
+      "summary": "Inert source-text viewer with bounded input, line focus, and accessible states.",
+      "tags": ["html", "source", "viewer", "shared-component"]
+    },
+    {
+      "id": "source-summary-strip-component",
+      "source": "arcane/components/summary-strip.html",
+      "title": "summary-strip.html",
+      "summary": "Reusable status-summary strip used throughout the site.",
+      "tags": ["html", "summary", "status", "shared-component"]
+    },
+    {
+      "id": "source-task-progress-component",
+      "source": "arcane/components/task-progress.html",
+      "title": "task-progress.html",
+      "summary": "Reusable progress and task-state component shown in the gallery.",
+      "tags": ["html", "progress", "tasks", "shared-component"]
+    },
+    {
+      "id": "source-theme-switcher-component",
+      "source": "arcane/components/theme-switcher.html",
+      "title": "theme-switcher.html",
+      "summary": "Shared user-theme control embedded in the Docs app bar.",
+      "tags": ["html", "theme", "preferences", "shared-component"]
+    },
+    {
+      "id": "source-theme-css",
+      "source": "arcane/css/theme.css",
+      "title": "theme.css",
+      "summary": "Canonical Arcane theme channels and appearance selectors.",
+      "tags": ["css", "theme", "tokens", "shared-style"]
+    },
+    {
+      "id": "source-primitives-css",
+      "source": "arcane/css/primitives.css",
+      "title": "primitives.css",
+      "summary": "Shared Arcane cards, controls, fields, badges, states, and layout primitives.",
+      "tags": ["css", "components", "tokens", "shared-style"]
+    },
+    {
+      "id": "source-docs-index",
+      "source": "apps/docs/index.html",
+      "title": "Arcane Docs index.html",
+      "summary": "Semantic views, live-component composition, source browser, tests, and assistant shell.",
+      "tags": ["html", "docs-app", "routes", "orchestration"]
+    },
+    {
+      "id": "source-docs-css",
+      "source": "apps/docs/docs.css",
+      "title": "Arcane Docs CSS",
+      "summary": "App-specific responsive layout layered over shared Arcane theme primitives.",
+      "tags": ["css", "docs-app", "responsive", "theme"]
+    },
+    {
+      "id": "source-docs-app",
+      "source": "apps/docs/modules/DocsApp.js",
+      "title": "DocsApp.js",
+      "summary": "Docs-specific catalog, route, component, browser-test, cache, and optional AI orchestration.",
+      "tags": ["javascript", "docs-app", "catalog", "ai", "orchestration"]
+    },
+    {
+      "id": "source-docs-package-adapter",
+      "source": "apps/docs/scripts/build_public_release.mjs",
+      "title": "Docs public-release adapter",
+      "summary": "Thin app adapter connecting the Arcane packager to verified public-corpus publication.",
+      "tags": ["javascript", "docs-app", "package", "adapter"]
+    },
+    {
+      "id": "source-publication-tool",
+      "source": "tools/document-catalog/publication.mjs",
+      "title": "Document catalog publication tool",
+      "summary": "Deterministic positive-inventory builder and verifier for documentation, source, and screenshots.",
+      "tags": ["javascript", "build", "catalog", "integrity", "tool"]
+    },
+    {
+      "id": "source-markdown-example",
+      "source": "example/component_markdown_document/index.html",
+      "title": "Markdown document example",
+      "summary": "Synthetic browser example for Markdown loading, routing, errors, and readiness.",
+      "tags": ["html", "example", "markdown", "component"]
+    },
+    {
+      "id": "source-source-viewer-example",
+      "source": "example/component_source_code_viewer/index.html",
+      "title": "Source-code viewer example",
+      "summary": "Synthetic browser example for inert source rendering, line focus, and state handling.",
+      "tags": ["html", "example", "source", "component"]
+    },
+    {
+      "id": "source-static-catalog-example",
+      "source": "example/module_StaticDocumentCatalog/index.html",
+      "title": "Static document catalog example",
+      "summary": "Synthetic browser example for verified catalog search and hydration.",
+      "tags": ["html", "example", "catalog", "module"]
+    },
+    {
+      "id": "source-scoped-opfs-example",
+      "source": "example/module_ScopedOPFSCache/example.js",
+      "title": "Scoped OPFS cache example",
+      "summary": "Synthetic module example for exact-key scoped public-data caching.",
+      "tags": ["javascript", "example", "opfs", "module"]
+    },
+    {
+      "id": "source-browser-tests-example",
+      "source": "example/module_BrowserTestSuite/index.html",
+      "title": "Browser test suite example",
+      "summary": "Synthetic browser example for trusted checks and accessible summaries.",
+      "tags": ["html", "example", "testing", "module"]
+    }
+  ],
   "documents": [
     {
       "id": "overview",
@@ -344,9 +591,17 @@
       "id": "developer-setup",
       "source": "apps/docs/guides/developer-setup.md",
       "title": "Developer setup",
-      "summary": "Prepare a checkout, run the gates, package apps, and use the installed Developer workspace.",
+      "summary": "Prepare a Microsoft NT or Linux checkout, run the gates, package apps, and open the native developer hosts.",
       "category": "Get started",
-      "tags": ["developer", "setup", "build", "test"]
+      "tags": ["developer", "setup", "build", "test", "linux", "microsoft-nt"]
+    },
+    {
+      "id": "linux-host",
+      "source": "apps/docs/guides/linux-host.md",
+      "title": "Linux developer host",
+      "summary": "Build and open the native GTK/WebKitGTK Shell, capture it safely, and understand the current Linux capability boundary.",
+      "category": "Get started",
+      "tags": ["linux", "gtk", "webkitgtk", "shell", "developer", "screenshots"]
     },
     {
       "id": "app-building",
