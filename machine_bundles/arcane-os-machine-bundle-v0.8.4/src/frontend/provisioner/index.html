@@ -7,6 +7,8 @@
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#03050a">
+  <link rel="stylesheet" href="../arcane/css/theme.css?v=1">
+  <script type="module" src="../arcane/modules/ThemeBootstrap.js?v=1"></script>
   <link rel="icon" type="image/x-icon" href="../shared/arcane-sigil.ico">
   <link rel="icon" type="image/png" sizes="512x512" href="../shared/arcane-sigil-512.png">
   <link rel="apple-touch-icon" href="../shared/arcane-sigil-512.png">
@@ -37,13 +39,13 @@
 <body>
   <div class="app" id="app">
     <header class="top">
-      <div class="brand"><div class="logo"><img src="../shared/arcane-sigil.svg" alt="Arcane"></div><div><div class="eyebrow">Machine creation and provisioning</div><h1 class="title">Arcane Provisioner</h1><div class="sub">Install Arcane OS, verify its requirements, and create standard Arcane user accounts through a guided machine setup flow.</div></div></div>
+      <div class="brand"><div class="logo"><img src="../shared/arcane-sigil.svg" alt="Arcane"></div><div><div class="eyebrow">Machine creation and provisioning</div><h1 class="title">Arcane Provisioner</h1><div class="sub">Install Arcane OS, verify its requirements, and follow the supported user setup for this operating system.</div></div></div>
       <div class="version-pill" id="versionPill">Loading…</div>
     </header>
 
     <section class="banner danger" id="downgradeBanner"><h2>Downgrade protection is active</h2><p id="downgradeText"></p></section>
     <section class="banner danger" id="securityBanner" role="status" aria-live="polite"><h2 id="securityTitle">Release trust is not production-ready</h2><p id="securityText">Arcane is checking the publisher identity of this release.</p></section>
-    <section class="banner" id="accessBanner"><h2>Administrator approval will be requested when needed</h2><p>Choose an installation or user action normally. Arcane keeps this window open and authorizes a temporary privileged worker for protected changes. The interface itself does not restart or elevate.</p></section>
+    <section class="banner" id="accessBanner" role="status" aria-live="polite" aria-atomic="true"><h2 id="accessTitle">Checking administrator access</h2><p id="accessText">Arcane is determining which protected operations this host can authorize.</p></section>
 
     <div class="summary">
       <div class="summary-card"><div class="label">Operating system</div><div class="value" id="osSummary">—</div></div>
@@ -60,6 +62,10 @@
               <div class="install-kicker">Global installation</div>
               <div class="install-title" id="installTitle">Checking Arcane OS…</div>
               <div class="install-detail" id="installDetail">Reading the global Arcane installation and machine requirements.</div>
+              <div class="user-explainer" id="linuxInstallDisclosure" role="status" aria-live="polite" aria-atomic="true" aria-labelledby="linuxInstallDisclosureTitle" hidden style="display:none;margin-top:16px">
+                <h3 id="linuxInstallDisclosureTitle">Linux installation changes</h3>
+                <p id="linuxInstallDisclosureText"></p>
+              </div>
             </div>
             <div>
               <div class="status-line" style="margin-bottom:13px"><span class="badge" id="installBadge">Checking</span><span class="busy-indicator" id="busyIndicator">Operation in progress…</span></div>
@@ -74,14 +80,19 @@
       </section>
 
       <section class="panel">
-        <div class="panel-head"><div><h2><span class="step">2</span>Add Arcane users</h2><div class="small">Adding a user creates a standard local account when necessary and assigns Arcane as that account’s shell.</div></div><button class="btn" id="addUserRow">Add another username</button></div>
+        <div class="panel-head"><div><h2><span class="step">2</span><span id="userSetupTitle">User setup</span></h2><div class="small" id="userSetupDescription">Arcane is checking this operating system before it offers account changes.</div></div><button class="btn" id="addUserRow" hidden style="display:none">Add another username</button></div>
         <div class="panel-body">
           <div class="success-panel" id="userSuccess" role="status" aria-live="polite"></div>
-          <div class="users-layout">
+          <div class="install-card" id="userProvisioningUnavailable" role="status" aria-live="polite" aria-atomic="true" hidden style="display:none">
+            <div class="install-kicker">Unsupported operating system</div>
+            <div class="install-title" id="userProvisioningUnavailableTitle">User provisioning is unavailable</div>
+            <div class="install-detail" id="userProvisioningUnavailableDetail">Arcane user provisioning is supported on Microsoft NT and Linux.</div>
+          </div>
+          <div class="users-layout" id="userProvisioningControls" hidden style="display:none">
             <div>
               <div id="userEntries"></div>
               <div class="hint" id="usernamePolicyHint">Arcane will load the account-name rules for this operating system.</div>
-              <div class="inline-error" id="userValidationHint"></div>
+              <div class="inline-error" id="userValidationHint" role="status" aria-live="polite" aria-atomic="true"></div>
               <div class="hint" id="userReadiness">Arcane OS must be installed and ready before users can be added.</div>
               <div class="hint" id="protectedUserHint">The account running this provisioner is protected and will remain untouched.</div>
               <button class="btn primary wide" id="createUsersButton">Add Arcane user</button>
@@ -96,10 +107,10 @@
               </div>
             </div>
             <aside class="user-explainer">
-              <h3>What “Add Arcane user” does</h3>
-              <p>Creates the username as a standard local user when it does not already exist.</p>
-              <p>Assigns Arcane as that user’s login shell. The provisioning administrator is always excluded.</p>
-              <p>New accounts receive a temporary password. Existing accounts keep their current password unless you explicitly issue a new temporary password below.</p>
+              <h3 id="userProvisioningActionTitle">What “Add Arcane user” does</h3>
+              <p id="userProvisioningCreateText">Creates the username as a standard local user when it does not already exist.</p>
+              <p id="userProvisioningShellText">Assigns Arcane as that user’s operating-system login shell. The provisioning administrator is always excluded.</p>
+              <p id="userProvisioningPasswordText">New accounts receive a temporary password. Existing accounts keep their current password unless you explicitly issue a new temporary password below.</p>
             </aside>
           </div>
           <div class="machine-users">
@@ -107,7 +118,7 @@
               <div><h3>Arcane users on this machine</h3><div class="small">Collected through <code>Arcane.users.list()</code>; the native adapter verifies the account and shell assignment for this operating system.</div></div>
               <button class="btn compact" id="refreshUsers">Refresh users</button>
             </div>
-            <div class="machine-users-list" id="arcaneUsersList"><div class="empty-users">Checking for Arcane users…</div></div>
+            <div class="machine-users-list" id="arcaneUsersList" aria-live="polite" aria-atomic="false" aria-busy="true"><div class="empty-users">Checking for Arcane users…</div></div>
           </div>
         </div>
       </section>
@@ -140,12 +151,14 @@
   <div class="toast" id="copyToast" role="status" aria-live="polite">Copied to clipboard</div>
 
   <script src="../shared/arcane-api.js"></script>
+  <script src="../shared/SystemPlatformPresentation.js"></script>
   <script>
 'use strict';
 const $ = (selector) => document.querySelector(selector);
 const state = {
   machine: null,
   machineLive: false,
+  platform: null,
   users: [],
   usersLive: false,
   busy: false,
@@ -350,6 +363,45 @@ function installReady() {
   return Boolean(installation.present && installation.action === 'current' && identityReady && !installation.blocked && !installation.repairRequired && !installation.payloadRepairRequired && (state.machine.requirements || []).every(requirementReady));
 }
 
+function renderSystemPresentation(system, permissions, options = {}) {
+  const presentation = ArcaneSystemPlatformPresentation.apply(system);
+  const architecture = typeof system?.architecture === 'string' && system.architecture ? ` · ${system.architecture}` : '';
+  const cached = options.cached === true;
+  const elevated = permissions.elevated === true;
+  const automaticElevationAvailable = permissions.canElevate !== false;
+  const rawMechanism = typeof permissions.mechanism === 'string' ? permissions.mechanism.trim() : '';
+  const mechanism = rawMechanism.toLowerCase() === 'uac'
+    ? 'UAC'
+    : rawMechanism || (presentation.kernelType === 'nt' ? 'UAC' : 'authorization');
+
+  $('#osSummary').textContent = `${presentation.displayName}${architecture}`;
+  $('#osSummary').classList.toggle('cached-value', cached);
+  $('#modeSummary').textContent = elevated
+    ? `${permissions.level || (presentation.kernelType === 'linux' ? 'root' : 'administrator')} scope`
+    : automaticElevationAvailable
+    ? `Standard scope · ${mechanism} on demand`
+    : 'Standard scope · no automatic elevation';
+  $('#modeSummary').className = 'value ' + (elevated ? 'ok' : 'warn');
+  $('#modeSummary').classList.toggle('cached-value', cached);
+
+  if (elevated) {
+    $('#accessTitle').textContent = `${presentation.displayName} privileged session is active`;
+    $('#accessText').textContent = 'Arcane can perform protected changes allowed by this verified session.';
+  } else if (!automaticElevationAvailable) {
+    $('#accessTitle').textContent = `Automatic administrator access is unavailable on ${presentation.displayName}`;
+    $('#accessText').textContent = presentation.kernelType === 'linux'
+      ? 'Arcane can inspect this Linux machine, but this build cannot securely start a temporary root worker. Protected changes require an explicitly accepted, integrity-verified release launched from a separately authorized root session.'
+      : `Arcane can inspect this ${presentation.displayName} machine, but this build cannot securely start a temporary privileged worker. Protected changes require a publisher-verified release and a separately authorized privileged session.`;
+  } else {
+    $('#accessTitle').textContent = 'Administrator approval will be requested when needed';
+    $('#accessText').textContent = presentation.kernelType === 'nt'
+      ? 'Choose an installation or user action normally. Arcane keeps this window open and requests Microsoft NT User Account Control (UAC) only when a protected change needs a temporary privileged worker. The interface itself does not restart or elevate.'
+      : `Choose an installation or user action normally. Arcane keeps this window open and requests ${mechanism} only when a protected change needs a temporary privileged worker. The interface itself does not restart or elevate.`;
+  }
+  setBannerVisible($('#accessBanner'), !elevated);
+  return presentation;
+}
+
 function renderMachine(machine, options) {
   if (options && typeof options.live === 'boolean') state.machineLive = options.live;
   state.machine = machine;
@@ -362,11 +414,7 @@ function renderMachine(machine, options) {
   const firstUsePinPending = securityMode === 'publisher-verified' && publisherTrustSource === 'fresh-unpinned';
   const revocationDegraded = securityMode === 'publisher-verified' && revocationStatus === 'attested-degraded';
   $('#versionPill').textContent = `Package ${machine.version}${securityMode === 'unsigned-local-test' ? ' (local test)' : firstUsePinPending ? ' (first-use pin pending)' : revocationDegraded ? ' (offline attestation)' : ''}`;
-  $('#osSummary').textContent = `${machine.os.displayName} · ${machine.os.architecture}`;
-  $('#osSummary').classList.toggle('cached-value', !state.machineLive);
-  $('#modeSummary').textContent = permissions.elevated ? `${permissions.level} scope` : `Standard scope · ${permissions.mechanism || 'authorization'} on demand`;
-  $('#modeSummary').className = 'value ' + (permissions.elevated ? 'ok' : 'warn');
-  $('#modeSummary').classList.toggle('cached-value', !state.machineLive);
+  renderSystemPresentation(machine.os, permissions, { cached: !state.machineLive });
   $('#protectedUserHint').textContent = `Protected provisioning account${machine.protectedUsernames.length > 1 ? 's' : ''}: ${machine.protectedUsernames.join(', ')}. ${machine.protectedUsernames.length > 1 ? 'These accounts' : 'This account'} will not be assigned Arcane as a shell.`;
   $('#usernamePolicyHint').textContent = machine.usernamePolicy.description;
 
@@ -387,12 +435,10 @@ function renderMachine(machine, options) {
   $('#securityText').textContent = securityMode === 'unsigned-local-test'
     ? 'This release is content-bound and intended only for controlled local acceptance testing. It is not publisher-signed and must not be treated as a production installation.'
     : firstUsePinPending
-    ? 'Windows validated this signature, but no administrator policy or prior installed signer pins its publisher. Installing requires administrator approval and will trust-on-first-use pin this exact signer for future updates.'
+    ? 'Microsoft NT validated this signature, but no administrator policy or prior installed signer pins its publisher. Installing requires administrator approval and will trust-on-first-use pin this exact signer for future updates.'
     : revocationDegraded
     ? 'Arcane started from its protected, recent installation attestation because online revocation data was unavailable. It will retry strict verification in the background and close on any revoked or invalid result.'
     : 'Arcane has not verified this release as publisher-signed. Machine-changing actions remain unavailable until release trust is restored.';
-  setBannerVisible($('#accessBanner'), !permissions.elevated);
-
   const allReady = requirements.every(requirementReady);
   const badge = $('#installBadge');
   let title;
@@ -455,58 +501,186 @@ function renderMachine(machine, options) {
   renderControls();
 }
 
+function freshLinuxInstallPresentation() {
+  const platform = state.platform;
+  const installation = state.machine && state.machine.installation;
+  if (!platform || platform.platform !== 'linux' || !installation || installation.present || installation.action !== 'install') return null;
+  if (platform.sessionType === 'wslg') {
+    return {
+      title: 'WSLg manual launch after installation',
+      description: 'Installing Arcane OS in WSL does not register a Linux login session or change the boot target. After installation, start Arcane Shell manually through WSLg with ./start-shell.sh.',
+      confirmation: 'Install Arcane OS in WSL? Arcane will not register a Linux login session or change the boot target. After installation, start Arcane Shell manually through WSLg with ./start-shell.sh. Choose OK to continue or Cancel to leave the machine unchanged.',
+    };
+  }
+  return {
+    title: 'Fresh Linux installation changes',
+    description: 'Installing Arcane OS will register an Arcane X11 login session and change the next-boot systemd default to graphical.target.',
+    confirmation: 'Install Arcane OS on Linux? This fresh installation will register an Arcane X11 login session and change the next-boot systemd default to graphical.target. Choose OK to continue or Cancel to leave the machine unchanged.',
+  };
+}
+
+function renderLinuxInstallDisclosure() {
+  const presentation = freshLinuxInstallPresentation();
+  const disclosure = $('#linuxInstallDisclosure');
+  const button = $('#installArcaneButton');
+  disclosure.hidden = !presentation;
+  disclosure.style.display = presentation ? '' : 'none';
+  if (!presentation) {
+    button.removeAttribute('aria-describedby');
+    return;
+  }
+  $('#linuxInstallDisclosureTitle').textContent = presentation.title;
+  $('#linuxInstallDisclosureText').textContent = presentation.description;
+  button.setAttribute('aria-describedby', 'linuxInstallDisclosureText');
+}
+
+function confirmFreshLinuxInstallation() {
+  const presentation = freshLinuxInstallPresentation();
+  if (!presentation) return true;
+  const confirmed = window.confirm(presentation.confirmation);
+  if (!confirmed) {
+    $('#actionStatus').textContent = 'Installation canceled. No machine changes were made.';
+    appendOutput('Installation canceled before Arcane requested any machine changes.', 'info');
+  }
+  return confirmed;
+}
+
+function userProvisioningAvailable() {
+  return Boolean(state.platform && ['windows', 'linux'].includes(state.platform.platform));
+}
+
+function userMutationAuthorized() {
+  if (!userProvisioningAvailable()) return false;
+  if (state.platform.platform !== 'linux') return true;
+  const permissions = state.platform.permissions || state.machine && state.machine.permissions || {};
+  return Boolean(permissions.elevated || permissions.level === 'root');
+}
+
+function userProvisioningPresentation() {
+  const platform = state.platform && state.platform.platform;
+  if (platform === 'linux') {
+    const wslg = state.platform.sessionType === 'wslg';
+    return {
+      description: wslg
+        ? 'Adding a user creates a standard local Linux account when necessary and assigns the installed Arcane Shell wrapper as that account’s POSIX login shell. WSLg desktop launch remains manual.'
+        : 'Adding a user creates a standard local Linux account when necessary and assigns the installed Arcane Shell wrapper as that account’s POSIX login shell.',
+      shellText: wslg
+        ? 'Assigns the installed Arcane Shell wrapper as that user’s POSIX login shell. This does not register a WSL desktop login session; launch the Arcane desktop manually through WSLg.'
+        : 'Assigns the installed Arcane Shell wrapper as that user’s POSIX login shell. The provisioning administrator is always excluded.',
+      readyText: wslg
+        ? 'Arcane OS is ready. Adding a Linux user will create the account when needed and assign the Arcane Shell wrapper as its POSIX login shell. Launch the desktop manually through WSLg.'
+        : 'Arcane OS is ready. Adding a Linux user will create the account when needed and assign the Arcane Shell wrapper as its POSIX login shell.',
+    };
+  }
+  return {
+    description: 'Adding a user creates a standard local Microsoft NT account when necessary and assigns Arcane as that account’s sign-in shell.',
+    shellText: 'Assigns Arcane as that user’s Microsoft NT sign-in shell. The provisioning administrator is always excluded.',
+    readyText: 'Arcane OS is ready. Adding a user will create the Microsoft NT account when needed and assign Arcane as its sign-in shell.',
+  };
+}
+
+function renderUserProvisioningAvailability() {
+  const platformKnown = Boolean(state.platform && state.platform.platform);
+  const available = userProvisioningAvailable();
+  const unavailable = platformKnown && !available;
+  const displayName = platformKnown ? state.platform.displayName : '';
+  const presentation = available ? userProvisioningPresentation() : null;
+  $('#userSetupTitle').textContent = available ? 'Add Arcane users' : unavailable ? `${displayName} user setup` : 'User setup';
+  $('#userSetupDescription').textContent = available
+    ? presentation.description
+    : unavailable
+    ? `${displayName} authenticates the current operating-system account; Arcane does not create accounts or replace native login shells on this platform.`
+    : 'Arcane is checking this operating system before it offers account changes.';
+  if (unavailable) {
+    $('#userProvisioningUnavailableTitle').textContent = `User provisioning is unavailable on ${displayName}`;
+    $('#userProvisioningUnavailableDetail').textContent = 'Arcane user provisioning is supported on Microsoft NT and Linux. No account changes are available on this operating system.';
+  }
+  if (presentation) $('#userProvisioningShellText').textContent = presentation.shellText;
+  $('#userProvisioningUnavailable').hidden = !unavailable;
+  $('#userProvisioningUnavailable').style.display = unavailable ? '' : 'none';
+  $('#userProvisioningControls').hidden = !available;
+  $('#userProvisioningControls').style.display = available ? '' : 'none';
+  $('#addUserRow').hidden = !available;
+  $('#addUserRow').style.display = available ? '' : 'none';
+}
+
 function renderControls() {
+  renderUserProvisioningAvailability();
+  renderLinuxInstallDisclosure();
   if (!state.machine) return;
   const installation = state.machine.installation;
   const ready = installReady();
   const downgradeBlocked = installation.blocked === true && (!installation.blockedReason || installation.blockedReason === 'downgrade');
   const releaseTrusted = ['publisher-verified', 'unsigned-local-test'].includes(state.machine.securityMode);
+  const provisioningAvailable = userProvisioningAvailable();
+  const mutationAuthorized = userMutationAuthorized();
   $('#installArcaneButton').disabled = state.busy || !state.machineLive || !releaseTrusted || downgradeBlocked || ready;
   $('#refreshAll').disabled = state.busy;
   $('#refreshUsers').disabled = state.busy;
-  $('#addUserRow').disabled = state.busy || !state.machineLive || !releaseTrusted || downgradeBlocked;
-  $('#createUsersButton').disabled = state.busy || !state.machineLive || !releaseTrusted || downgradeBlocked || !ready;
+  $('#addUserRow').disabled = state.busy || !state.machineLive || !releaseTrusted || downgradeBlocked || !provisioningAvailable || !mutationAuthorized;
+  $('#createUsersButton').disabled = state.busy || !state.machineLive || !releaseTrusted || downgradeBlocked || !ready || !provisioningAvailable || !mutationAuthorized;
+  $('#applyPasswordCredentials').disabled = state.busy || !state.machineLive || !releaseTrusted || downgradeBlocked || !provisioningAvailable || !mutationAuthorized;
   $('#userReadiness').textContent = !state.machineLive
     ? 'Showing cached status while Arcane verifies the live machine state.'
     : !releaseTrusted
     ? 'Arcane will not make machine changes until the active release trust is verified.'
+    : state.platform && state.platform.platform === 'linux' && !mutationAuthorized
+    ? 'Linux user provisioning is supported, but protected account changes require root authorization. Relaunch this explicitly accepted, integrity-verified Provisioner from a separately authorized root session.'
     : ready
-    ? 'Arcane OS is ready. Adding a user will create the account when needed and assign Arcane as its shell.'
+    ? userProvisioningPresentation().readyText
     : 'Arcane will verify the installation and stop before account changes if administrator-managed requirements are not ready.';
 }
 
-function addUserRow(value) {
+function addUserRow(value, options = {}) {
   const row = document.createElement('div');
   row.className = 'user-entry';
-  row.innerHTML = '<input type="text" autocomplete="off" spellcheck="false" aria-label="Arcane username"><button class="btn remove" type="button" aria-label="Remove username">×</button>';
-  row.querySelector('input').value = value || '';
-  row.querySelector('input').addEventListener('input', scheduleValidation);
+  row.innerHTML = '<input type="text" autocomplete="off" spellcheck="false" aria-label="Arcane username" aria-describedby="usernamePolicyHint userValidationHint userReadiness protectedUserHint" aria-invalid="false"><button class="btn remove" type="button" aria-label="Remove username">×</button>';
+  const input = row.querySelector('input');
+  input.value = value || '';
+  input.addEventListener('input', scheduleValidation);
   row.querySelector('.remove').addEventListener('click', () => {
-    if ($('#userEntries').children.length === 1) row.querySelector('input').value = '';
-    else row.remove();
+    const entries = [...$('#userEntries').children];
+    if (entries.length === 1) {
+      input.value = '';
+      input.focus();
+    } else {
+      const index = entries.indexOf(row);
+      const focusTarget = (entries[index + 1] || entries[index - 1]).querySelector('input');
+      row.remove();
+      focusTarget.focus();
+    }
     scheduleValidation();
   });
   $('#userEntries').appendChild(row);
+  if (options.focus) input.focus();
+  return input;
 }
 
 function usernames() {
   return [...document.querySelectorAll('#userEntries input')].map((input) => input.value.trim()).filter(Boolean);
 }
 
+function showUsernameValidation(error) {
+  const hint = $('#userValidationHint');
+  const inputs = [...document.querySelectorAll('#userEntries input')];
+  const invalidValue = error && error.input !== undefined ? String(error.input).trim() : null;
+  const invalidInput = error
+    ? inputs.find((input) => invalidValue !== null && input.value.trim() === invalidValue) || inputs[0] || null
+    : null;
+  for (const input of inputs) input.setAttribute('aria-invalid', input === invalidInput ? 'true' : 'false');
+  hint.textContent = error ? `${error.message}${error.resolution ? ' ' + error.resolution : ''}` : '';
+  hint.classList.toggle('visible', Boolean(error));
+  return invalidInput;
+}
+
 function scheduleValidation() {
   clearTimeout(state.validationTimer);
   state.validationTimer = setTimeout(async () => {
     const list = usernames();
-    const hint = $('#userValidationHint');
-    if (!list.length) { hint.classList.remove('visible'); hint.textContent = ''; return; }
+    if (!list.length) { showUsernameValidation(null); return; }
     try {
       const validation = await Arcane.users.validate(list);
-      if (validation.valid) { hint.classList.remove('visible'); hint.textContent = ''; }
-      else {
-        const first = validation.errors[0];
-        hint.textContent = `${first.message}${first.resolution ? ' ' + first.resolution : ''}`;
-        hint.classList.add('visible');
-      }
+      showUsernameValidation(validation.valid ? null : validation.errors[0]);
     } catch (error) { /* validation is repeated by the final operation */ }
   }, 300);
 }
@@ -532,15 +706,31 @@ function showUserSuccess(message) {
 
 function restoreShellPresentation(user) {
   const deferredVerification = Boolean(user && user.restoreRequiresElevatedVerification);
+  const linuxUser = Boolean(
+    state.platform && state.platform.platform === 'linux'
+    || user && (user.source === 'native-linux' || user.recordedAssignmentMode === 'linux-login-shell')
+  );
+  if (linuxUser) {
+    const hasPreviousShell = Boolean(user && user.previousShellPresent && user.previousShell);
+    return {
+      deferredVerification: false,
+      buttonText: hasPreviousShell ? 'Restore previous POSIX login shell' : 'Set default POSIX login shell',
+      note: hasPreviousShell
+        ? `Sets this Linux account back to ${user.previousShell}.`
+        : 'Stops using Arcane as this Linux account’s POSIX login shell and restores the operating-system default.',
+      confirmation: 'Arcane will stop being this account’s POSIX login shell.',
+    };
+  }
   const returnsToMicrosoftShell = Boolean(user && !user.previousShellPresent && !user.previousPolicyShellPresent && !user.previousLegacyShellPresent);
   return {
     deferredVerification,
-    buttonText: returnsToMicrosoftShell ? 'Set Microsoft Windows shell' : 'Set previous Windows shell',
+    buttonText: returnsToMicrosoftShell ? 'Set Microsoft NT shell' : 'Set previous NT shell',
     note: deferredVerification
       ? 'Administrator approval is required to verify the signed-out profile before changing its shell.'
       : user && user.previousShellPresent && user.previousShell
       ? `Sets this account back to ${user.previousShell}.`
-      : 'Removes the per-user Arcane override and returns to the Microsoft Windows default shell.',
+      : 'Removes the per-user Arcane override and returns to the Microsoft NT default shell.',
+    confirmation: 'Arcane will stop being this account’s Microsoft NT sign-in shell.',
   };
 }
 
@@ -599,14 +789,14 @@ function renderUsers(payload, options) {
         const activateButton = document.createElement('button');
         activateButton.className = 'btn compact primary';
         activateButton.textContent = 'Activate this account';
-        activateButton.disabled = state.busy || !state.usersLive;
+        activateButton.disabled = state.busy || !state.usersLive || !userMutationAuthorized();
         activateButton.addEventListener('click', () => activatePendingAccounts([user.username]));
         activationButtons.append(copyButton, activateButton);
       } else {
         const reissueButton = document.createElement('button');
         reissueButton.className = 'btn compact primary';
         reissueButton.textContent = 'Issue new temporary password';
-        reissueButton.disabled = state.busy || !state.usersLive;
+        reissueButton.disabled = state.busy || !state.usersLive || !userMutationAuthorized();
         reissueButton.addEventListener('click', () => reissuePendingAccount(user.username));
         activationButtons.append(reissueButton);
       }
@@ -617,12 +807,12 @@ function renderUsers(payload, options) {
       passwordAction.className = 'machine-user-action';
       const button = document.createElement('button');
       button.className = 'btn compact';
-      button.textContent = 'Set temporary password';
+      button.textContent = 'Prepare temporary password';
       button.disabled = state.busy || !state.usersLive || !user.shellAssigned;
       button.addEventListener('click', () => resetPassword(user.username));
       const note = document.createElement('div');
       note.className = 'user-action-note';
-      note.textContent = 'Replaces the current OS password and requires a change at next sign-in.';
+      note.textContent = 'Generates a password for review; the OS password changes only after the separate apply step.';
       passwordAction.append(button, note);
       right.append(passwordAction);
     }
@@ -646,7 +836,7 @@ function renderUsers(payload, options) {
       const restoreButton = document.createElement('button');
       restoreButton.className = 'btn compact danger';
       restoreButton.textContent = restorePresentation.buttonText;
-      restoreButton.disabled = state.busy || !state.usersLive;
+      restoreButton.disabled = state.busy || !state.usersLive || !userMutationAuthorized();
       restoreButton.addEventListener('click', () => restoreShell(user.username));
       const restoreNote = document.createElement('div');
       restoreNote.className = 'user-action-note';
@@ -668,13 +858,11 @@ async function refreshUsers() {
 }
 
 function renderPlatformStatus(platform) {
+  state.platform = platform;
   const permissions = platform.permissions || {};
   $('#versionPill').textContent = `Package ${platform.version}`;
-  $('#osSummary').textContent = `${platform.displayName} · ${platform.architecture}`;
-  $('#osSummary').classList.remove('cached-value');
-  $('#modeSummary').textContent = permissions.elevated ? `${permissions.level} scope` : `Standard scope · ${permissions.mechanism || 'authorization'} on demand`;
-  $('#modeSummary').className = 'value ' + (permissions.elevated ? 'ok' : 'warn');
-  setBannerVisible($('#accessBanner'), !permissions.elevated);
+  renderSystemPresentation(platform, permissions);
+  renderControls();
 }
 
 async function refreshPlatform() {
@@ -700,11 +888,12 @@ async function refreshAll() {
 }
 
 async function installArcane() {
+  if (!confirmFreshLinuxInstallation()) return;
   hideError();
   renderCredentials([]);
   showUserSuccess('');
   setBusy(true, 'Installing Arcane OS and checking requirements…');
-  appendOutput('Starting Arcane installation. The window will remain open; a temporary privileged worker will be authorized only if required.', 'step');
+  appendOutput('Starting Arcane installation. The window will remain open while Arcane verifies and performs the authorized protected operation.', 'step');
   try {
     await Arcane.installation.ensure();
     const machine = await refreshAll();
@@ -727,7 +916,13 @@ async function installArcane() {
 
 async function addUsers() {
   const list = usernames();
-  if (!list.length) { await showError('Username required', Object.assign(new Error('Enter at least one local username.'), { code: 'USERNAME_REQUIRED', resolution: 'Use the username field in step 2.' })); return; }
+  if (!list.length) {
+    const error = Object.assign(new Error('Enter at least one local username.'), { code: 'USERNAME_REQUIRED', resolution: 'Use the username field in step 2.' });
+    const input = showUsernameValidation(error);
+    await showError('Username required', error);
+    if (input) input.focus();
+    return;
+  }
   hideError();
   renderCredentials([]);
   showUserSuccess('');
@@ -736,8 +931,11 @@ async function addUsers() {
     const validation = await Arcane.users.validate(list);
     if (!validation.valid) {
       const first = validation.errors[0];
+      const input = showUsernameValidation(first);
+      if (input) input.focus();
       throw Object.assign(new Error(first.message), first);
     }
+    showUsernameValidation(null);
     const result = await Arcane.users.add(validation.users.map((item) => item.username));
     renderCredentials(result.credentials || []);
     const created = (result.users || []).filter((user) => user.created).map((user) => user.username);
@@ -803,13 +1001,13 @@ async function resetPassword(username) {
   hideError();
   renderCredentials([]);
   showUserSuccess('');
-  setBusy(true, `Setting a temporary password for ${username}…`);
+  setBusy(true, `Preparing a temporary password for ${username}…`);
   try {
     const result = await Arcane.users.resetPassword(username);
     renderCredentials(result.credentials || []);
     showUserSuccess(`A temporary password was generated for ${username}, but the operating-system password has not changed yet. Save it, then explicitly apply it below.`);
     await refreshUsers();
-  } catch (error) { await showError(`Unable to set a temporary password for ${username}`, error); }
+  } catch (error) { await showError(`Unable to prepare a temporary password for ${username}`, error); }
   finally { setBusy(false, 'Ready. Choose the next action above.'); }
 }
 
@@ -844,7 +1042,7 @@ async function applyPendingPasswords() {
 async function restoreShell(username) {
   const user = state.users.find((item) => String(item.username).toLowerCase() === String(username).toLowerCase()) || null;
   const presentation = restoreShellPresentation(user);
-  if (!window.confirm(`${presentation.buttonText} for ${username}? Arcane will stop being this account's default shell.`)) return;
+  if (!window.confirm(`${presentation.buttonText} for ${username}? ${presentation.confirmation}`)) return;
   hideError();
   renderCredentials([]);
   showUserSuccess('');
@@ -918,7 +1116,7 @@ Arcane.events.on('operation.log', (event) => appendOutput(event.message, event.l
 Arcane.events.on('operation.completed', () => { $('#progressBar').style.width = '100%'; finishOperationNotice(false); });
 Arcane.events.on('operation.failed', (event) => { finishOperationNotice(true); appendOutput(event.error && event.error.message || 'Operation failed.', 'error', event.error); });
 
-$('#addUserRow').addEventListener('click', () => addUserRow(''));
+$('#addUserRow').addEventListener('click', () => addUserRow('', { focus: true }));
 $('#refreshAll').addEventListener('click', async () => { try { await refreshAll(); showToast('Machine status refreshed'); } catch (error) { await showError('Unable to refresh machine status', error); } });
 $('#refreshUsers').addEventListener('click', async () => { try { await refreshUsers(); showToast('Arcane user list refreshed'); } catch (error) { await showError('Unable to refresh Arcane users', error); } });
 $('#installArcaneButton').addEventListener('click', installArcane);

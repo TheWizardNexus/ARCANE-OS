@@ -3,7 +3,8 @@
 Arcane 0.8.4 uses native application windows and private process IPC instead of a browser-and-localhost production architecture.
 
 - **Microsoft NT:** `ArcaneProvisioner.exe` and `ArcaneShell.exe` own native WinForms windows and embed Microsoft Edge WebView2.
-- **Linux:** `ArcaneProvisioner` and `ArcaneShell` own GTK 4 windows and embed WebKitGTK 6.0. Real account/shell provisioning is disabled until Arcane has a display-manager-safe Linux session integration.
+- **Linux:** `ArcaneProvisioner` and `ArcaneShell` own GTK 4 windows and embed WebKitGTK 6.0. A verified global install registers an X11 display-manager session. A separately authorized root Provisioner can stage standard local accounts and their Arcane shell assignment; automatic administrator brokering remains disabled.
+- **Android (debug local test):** `ArcaneLauncher-debug.apk` is the HOME-eligible Shell, and each of the 17 registered applications is an independently installed APK with its own Android UID and storage. Network permission is added only when the app registry declares connect, frame, or media origins. Terminal runs `/system/bin/sh` only inside its ordinary application sandbox.
 - **Shared backend:** `ArcaneCore` is the packaged Node runtime that normalizes machine operations through Microsoft NT and Linux adapters.
 - **Frontend contract:** both SPAs import the same external `arcane-api.js` and only use `window.Arcane`.
 - **Per-application policy:** each packaged application has a type and an explicit capability allowlist. Arcane Core rejects methods that the active application was not granted, including after privilege elevation.
@@ -111,7 +112,15 @@ is one request from the UI. On Microsoft NT, Arcane Core determines whether elev
 
 There is no elevated provisioner window, no second Install click, and no GUI handoff.
 
-Linux 0.8.4 deliberately fails automatic privileged requests with `PRIVILEGE_PEER_VERIFICATION_UNAVAILABLE`. It does not invoke PolicyKit or sudo because the JavaScript Unix-socket broker does not yet enforce an `SO_PEERCRED`-equivalent worker identity.
+Linux 0.8.4 deliberately fails automatic privileged requests with `PRIVILEGE_PEER_VERIFICATION_UNAVAILABLE`. It does not invoke PolicyKit or sudo because the JavaScript Unix-socket broker does not yet enforce an `SO_PEERCRED`-equivalent worker identity. The Linux graphical-session installation policy is reachable only from an already-root, separately authorized installation process after release verification; that process invokes the absolute `systemctl` executable directly and never nests `sudo`.
+
+## One checkout, two deployment targets
+
+Keep one Git checkout as the source of truth. On a Microsoft NT machine with WSL, Ubuntu can build the same files through `/mnt/c/...`; it does not need a second clone or a `git pull` from the Microsoft NT checkout. A directory such as `~/arcane-os-linux-final` is a runnable deployment copy, not the canonical source tree.
+
+For another developer or machine, check out the same commit, enter `machine_bundles/arcane-os-machine-bundle-v0.8.4`, run the platform build documented below, and launch that platform's Provisioner. Do not copy `node_modules` between operating systems. Build output contains the shared `SystemPlatformPresentation.js`, so the native Shell and Provisioner consistently expose `arcane-kernel-nt` or `arcane-kernel-linux` on the document root.
+
+The current Linux build is suitable for development and controlled acceptance testing, not production distribution: Linux publisher signing and kernel-verified automatic privilege brokerage are not implemented. The already-root installer uses a private identity-bound stage, fresh manifest-directed byte copies, and exact root-owned modes before activation, while unsupported privilege paths remain fail-closed. A production distributor must still complete Linux publisher signing, clean-machine protected-installation acceptance, and the privilege-broker work described in the security and release documentation.
 
 ## 0.8.2 Microsoft NT bridge correction
 
@@ -140,14 +149,14 @@ build-windows.bat
 The build:
 
 1. Generates the shared Arcane Core and local app payload.
-2. Packages Arcane Core as `dist\windows\bin\ArcaneCore.exe`.
+2. Packages Arcane Core as `dist\nt\bin\ArcaneCore.exe`.
 3. Acquires the exact pinned Microsoft WebView2 SDK from NuGet when it is not already cached and verifies its configured SHA-256 before use.
 4. Compiles icon-bearing native GUI applications:
-   - `dist\windows\bin\ArcaneProvisioner.exe`
-   - `dist\windows\bin\ArcaneShell.exe`
-5. Compiles `dist\windows\bin\ArcanePipeGuard.exe` and runs a real named-pipe adversarial test proving that a client which merely claims the expected PID is rejected while the kernel-matched client is relayed.
+   - `dist\nt\bin\ArcaneProvisioner.exe`
+   - `dist\nt\bin\ArcaneShell.exe`
+5. Compiles `dist\nt\bin\ArcanePipeGuard.exe` and runs a real named-pipe adversarial test proving that a client which merely claims the expected PID is rejected while the kernel-matched client is relayed.
 6. Copies the WebView2 loader and managed assemblies.
-7. Writes `dist\windows\arcane-release.json` with the exact release inventory, byte sizes, and SHA-256 hashes for every executable, library, manifest, and application asset.
+7. Writes `dist\nt\arcane-release.json` with the exact release inventory, byte sizes, and SHA-256 hashes for every executable, library, manifest, and application asset.
 
 Start the provisioner:
 
@@ -159,18 +168,18 @@ For fast local work on the Provisioner, shared Core, native host, or built-in Sh
 
 ```bat
 npm run build:windows:iteration
-dist\windows-iteration\bin\ArcaneProvisioner.exe --allow-unsigned-local-release
+dist\nt-iteration\bin\ArcaneProvisioner.exe --allow-unsigned-local-release
 ```
 
-This regenerates the Core and built-in frontend payload, packages `ArcaneCore.exe`, and rebuilds only `ArcanePipeGuard.exe`, `ArcaneProvisioner.exe`, and `ArcaneShell.exe`. It reuses the existing `dist\apps` projection only after its native app packages and catalog pass their exact verification, and publishes the newly bound result atomically under `dist\windows-iteration`. It never writes over `dist\windows` and never invokes the target-app builders. Close a running iteration Provisioner or Shell before rebuilding.
+This regenerates the Core and built-in frontend payload, packages `ArcaneCore.exe`, and rebuilds only `ArcanePipeGuard.exe`, `ArcaneProvisioner.exe`, and `ArcaneShell.exe`. It reuses the existing `dist\apps` projection only after its native app packages and catalog pass their exact verification, and publishes the newly bound result atomically under `dist\nt-iteration`. It never writes over `dist\nt` and never invokes the target-app builders. Close a running iteration Provisioner or Shell before rebuilding.
 
 The iteration command is an unsigned controlled-test shortcut, not a distribution or release gate. A first checkout needs one successful `npm run build:distribution:windows:unsigned-local-test` to create the reusable Microsoft NT app projection. Changes to BOSS, PreCrisis, their app descriptors, or target-host packaging require the full Microsoft NT build. `npm run prepush` remains the authoritative complete gate and still rebuilds and verifies every native target app and the canonical Microsoft NT release.
 
-Runtime prerequisites are machine-scoped and reported explicitly. The packaged Core does not require a separately installed Node.js, so Node remains nonblocking. WebView2 and native session control are administrator-managed. Provisioned Arcane users require a global Ollama runtime: on Microsoft NT, the Provisioner can download the official archive only when its published SHA-256 digest verifies, install it under Program Files, and configure the automatic `ArcaneOllama` machine service. A user-only Ollama copy is detected but never treated as globally ready or executed for version discovery.
+Runtime prerequisites are machine-scoped and reported explicitly. The packaged Core does not require a separately installed Node.js, so Node remains nonblocking. WebView2 and native session control are administrator-managed. Provisioned Arcane users require a global Ollama runtime: on Microsoft NT, the Provisioner can download the official archive only when its published SHA-256 digest verifies, install it under Program Files, and configure the automatic `ArcaneOllama` machine service. A user-only Ollama copy is detected but never treated as globally ready or executed for version discovery. On Linux and WSL, missing or unhealthy Ollama is reported as a nonblocking local-AI prerequisite: base Arcane OS installation may complete first, but a machine-wide Ollama service must be installed and enabled before using the local provider.
 
 ### Double-clickable local development builds
 
-Each Windows developer can create a private, per-user development signing identity and produce builds that Arcane accepts without `--allow-unsigned-local-release`. The private key is generated as non-exportable in that developer's `CurrentUser\My` certificate store. The explicit one-time bootstrap directly trusts only that non-CA public leaf certificate in the same user's `CurrentUser\Root` and `CurrentUser\TrustedPublisher` stores. Ordinary development builds verify that setup and never add certificate trust themselves.
+Each Microsoft NT developer can create a private, per-user development signing identity and produce builds that Arcane accepts without `--allow-unsigned-local-release`. The private key is generated as non-exportable in that developer's `CurrentUser\My` certificate store. The explicit one-time bootstrap directly trusts only that non-CA public leaf certificate in the same user's `CurrentUser\Root` and `CurrentUser\TrustedPublisher` stores. Ordinary development builds verify that setup and never add certificate trust themselves.
 
 The first command is an explicit, one-time trust bootstrap: it creates or reuses the certificate, adds only its non-CA public certificate to the current user's trust stores, and verifies the signing prerequisites without building. Run it before the build commands; ordinary builds do not change certificate trust:
 
@@ -181,13 +190,13 @@ npm run build:dev:apps:windows
 npm run build:dev:app:windows -- -AppId boss
 ```
 
-After `build:dev:windows`, double-click `dist\windows\bin\ArcaneProvisioner.exe` or start it normally with no unsigned argument. After an app build, double-click its `dist\targets\<app-id>\ArcaneApp-<app-id>.exe`. Microsoft Defender SmartScreen may still show an unfamiliar-file or reputation warning; the developer may use its normal review-and-proceed action. Arcane itself still requires a valid signature, a trusted chain, one exact publisher, an RFC 3161 timestamp, and exact content manifests before opening.
+After `build:dev:windows`, double-click `dist\nt\bin\ArcaneProvisioner.exe` or start it normally with no unsigned argument. After an app build, double-click its `dist\targets\<app-id>\ArcaneApp-<app-id>.exe`. Microsoft Defender SmartScreen may still show an unfamiliar-file or reputation warning; the developer may use its normal review-and-proceed action. Arcane itself still requires a valid signature, a trusted chain, one exact publisher, an RFC 3161 timestamp, and exact content manifests before opening.
 
-This trust is deliberately local to the Windows user who built the files. A coworker's build is not trusted automatically, provisioned Arcane accounts do not inherit it, and installing or updating a canonical Arcane machine with different developers' certificates will trigger publisher-continuity protections. Local development-signed output is classified as publisher-verified by the runtime but must never be published as an Arcane production release. Shared-company artifacts and machine-wide trust can be added later with a centralized development signer without changing the production certificate path.
+This trust is deliberately local to the Microsoft NT user who built the files. A coworker's build is not trusted automatically, provisioned Arcane accounts do not inherit it, and installing or updating a canonical Arcane machine with different developers' certificates will trigger publisher-continuity protections. Local development-signed output is classified as publisher-verified by the runtime but must never be published as an Arcane production release. Shared-company artifacts and machine-wide trust can be added later with a centralized development signer without changing the production certificate path.
 
 ### Signed Microsoft NT builds
 
-Install an eligible code-signing certificate and private key in `Cert:\CurrentUser\My` or `Cert:\LocalMachine\My`. For Windows to display **The Wizard Nexus** as the verified publisher, the certificate authority must issue the certificate to that validated legal entity or accepted trade name; the build cannot substitute a publisher label that is absent from the certificate. Hardware-backed and cloud-key-provider certificates work when their provider exposes the certificate through one of those stores. Keep the private key and any token PIN in that provider—never in this repository, an environment variable, or a build argument.
+Install an eligible code-signing certificate and private key in `Cert:\CurrentUser\My` or `Cert:\LocalMachine\My`. For Microsoft NT to display **The Wizard Nexus** as the verified publisher, the certificate authority must issue the certificate to that validated legal entity or accepted trade name; the build cannot substitute a publisher label that is absent from the certificate. Hardware-backed and cloud-key-provider certificates work when their provider exposes the certificate through one of those stores. Keep the private key and any token PIN in that provider—never in this repository, an environment variable, or a build argument.
 
 Configure only the public certificate thumbprint and the RFC 3161 timestamp endpoint for the current terminal, then run the lightweight preflight before starting a build:
 
@@ -207,7 +216,7 @@ npm run build:signed:app:windows -- -AppId boss
 
 `build:signed:windows` invokes the canonical distribution build once; that build already builds and signs every application package. It signs each executable with SHA-256 and RFC 3161 timestamping before Arcane writes the final package inventories, then recursively requires one publisher and a timestamp across every executable. The release directory and its manifests bind those signed bytes; a later ZIP archive is a transport container, not an Authenticode-signed executable.
 
-The wrapper also accepts public values directly as `-CertificateThumbprint`, `-TimestampServer`, and `-SignToolPath`, but does not accept a PFX, password, PIN, or private-key path. Production builds require the signing thumbprint, timestamp server, and Microsoft SignTool. SignTool uses `/fd SHA256 /tr <server> /td SHA256`; the build fails unless every executable is signed by the same publisher and timestamped. Before starting the pipe guard, Arcane requires `ArcaneCore.exe` and `ArcanePipeGuard.exe` to have valid signatures from that same runtime-pinned signer. Unsigned artifacts are suitable only for controlled local testing and privileged operations refuse them by default; use `npm run build:distribution:windows:unsigned-local-test`, then explicitly launch `dist\windows\bin\ArcaneProvisioner.exe --allow-unsigned-local-release`. That switch accepts only PE files proven to have no certificate table whose sibling files still match the exact schema-2 release manifest. It cannot replace an existing signed or administrator-pinned installation. Never distribute a build using this override.
+The wrapper also accepts public values directly as `-CertificateThumbprint`, `-TimestampServer`, and `-SignToolPath`, but does not accept a PFX, password, PIN, or private-key path. Production builds require the signing thumbprint, timestamp server, and Microsoft SignTool. SignTool uses `/fd SHA256 /tr <server> /td SHA256`; the build fails unless every executable is signed by the same publisher and timestamped. Before starting the pipe guard, Arcane requires `ArcaneCore.exe` and `ArcanePipeGuard.exe` to have valid signatures from that same runtime-pinned signer. Unsigned artifacts are suitable only for controlled local testing and privileged operations refuse them by default; use `npm run build:distribution:windows:unsigned-local-test`, then explicitly launch `dist\nt\bin\ArcaneProvisioner.exe --allow-unsigned-local-release`. That switch accepts only PE files proven to have no certificate table whose sibling files still match the exact schema-2 release manifest. It cannot replace an existing signed or administrator-pinned installation. Never distribute a build using this override.
 
 `ARCANE_EXPECTED_PUBLISHER_THUMBPRINT` is a build-time consistency check only: because the builder controls both environment values, it is not an immutable runtime vendor anchor. Runtime continuity comes from the protected installed attestation or an administrator policy at `HKLM\SOFTWARE\Arcane OS\Security`. The native host reads that policy from the 64-bit registry view, accepts only the documented values and types, requires policy version `1`, and rejects unsafe ownership or mutation rights. `PublisherThumbprint` can pre-provision the accepted signer before first install. Without that policy or a prior signed installation, Arcane labels the release `fresh-unpinned`, shows a warning, and only an administrator-approved install may establish a `uac-approved-tofu` trust-on-first-use pin. Future updates must match the protected installed signer. An explicit rotation policy sets `PublisherPolicyVersion=1`, the new `PublisherThumbprint`, and `PreviousPublisherThumbprint` exactly equal to the installed pin; arbitrary policy/install mismatches fail closed.
 
@@ -228,13 +237,31 @@ sudo apt install build-essential libgtk-4-dev libwebkitgtk-6.0-dev
 Then:
 
 ```bash
-./build-linux.sh
-./start-provisioner.sh
+npm run build:distribution:linux:unsigned-local-test
+npm run verify:distribution:linux:unsigned-local-test
+./start-provisioner.sh --allow-unsigned-local-release
 ```
+
+The current Linux publisher accepts only the explicit `unsigned-local-test` flavor. `build:linux` and `verify:distribution:linux` are convenience aliases for the two explicit commands above; the longer names make the trust mode visible in build and acceptance records. The native host also requires the exact launch flag shown above before it forwards an unsigned-local security claim to Arcane Core. This mode verifies the schema-2 release inventory and protected installed-tree bytes, but it does not claim publisher trust or create publisher-attestation metadata, and it cannot replace a signed, attested, malformed, or mode-less integrity-era installation.
+
+The inventory-verified Linux release is published atomically under `dist/linux/`. Other target outputs may coexist under `dist/` without entering the Linux inventory. The explicit verification command rechecks the exact schema-2 release manifest before copying or archiving that directory. Starting the Provisioner as a regular user is suitable for UI inspection; protected installation changes require a separately authorized, already-root process because automatic Linux PolicyKit/sudo brokerage remains fail-closed. That root process verifies bounded manifest and payload reads through retained no-follow directory descriptors, compares device and inode identities without JavaScript number rounding, keeps the stage mode `0700`, copies only manifest-listed bytes through exclusive no-follow file descriptors, generates launchers inside the private tree, rejects unexpected topology/links/special files, proves the verified stage identity again after activation, and exposes exact root-owned `0755` directories and six programs plus `0644` data files only after verification.
 
 The Linux host uses GTK 4 and WebKitGTK 6.0. Its non-privileged status, renderer, shell, and session-control paths remain available. Automatic machine-changing requests fail closed in 0.8.4 instead of invoking PolicyKit or sudo because the Unix-socket worker has no enforced kernel peer-credential check yet.
 
-Linux requirements are administrator-managed; Arcane does not run a package manager or remote installer at runtime. Install GTK/WebKitGTK and a machine-wide Ollama runtime from the distribution or a verified official package. Real account creation and login-shell replacement are intentionally unavailable on Linux in 0.8.4; use the supported Microsoft NT provisioner for machine accounts.
+Linux requirements are administrator-managed; Arcane does not run a package manager or remote installer at runtime. Install GTK/WebKitGTK before launching Arcane. A machine-wide Ollama runtime from the distribution or a verified official package is optional for base Arcane OS installation, but it must be installed and enabled before using local AI. A regular Linux session may inspect and validate the user-provisioning plan, but account, password, and shell mutations require launching the exact verified Provisioner from a separately authorized root session. Arcane does not invoke `sudo` or PolicyKit itself.
+
+Linux account provisioning accepts only standard local accounts. It rejects the active provisioning identities, UID 0, distribution service/system UIDs, and accounts in configured privileged administrator groups. A new account is created locked and expired, its exact UID and recovery state are durably recorded, and its temporary credential is returned before the separate activation request may unlock it. Existing passwords and group memberships are preserved. The installed Arcane login-shell shim starts the graphical Shell only when a display is available and otherwise delegates to `/bin/bash` or `/bin/sh`, preserving terminal, SSH, and recovery access. WSLg still launches the graphical desktop manually; its account transaction and shell verification remain available from an already-root Provisioner.
+
+On a fresh supported Linux installation, Arcane's release policy registers `/usr/share/xsessions/arcane-os.desktop` with a fixed root-owned session wrapper. Only after verifying systemd as PID 1, a loaded `graphical.target`, an installed and enabled display manager, and the protected Arcane X11 session does the already-root installer run the equivalent of:
+
+```bash
+systemctl set-default graphical.target
+systemctl get-default
+```
+
+The installer records the prior target, verifies the exact postcondition, restores the prior target on a failed installation transaction, and does not reset an administrator's choice during updates or repairs. The target controls the next boot; it does not switch the current machine live. An administrator performing the prerequisite manually runs `sudo systemctl set-default graphical.target`, then verifies `systemctl get-default` reports `graphical.target`.
+
+WSL is intentionally different. WSLg launches individual Linux GUI applications without a Linux display manager, so Arcane records `manual-wslg` mode and does not mutate WSL's default target. Launch `./start-shell.sh` from the Ubuntu terminal. A real Linux display-manager login is the target-only acceptance path for selecting **Arcane OS** as the X11 session; no Wayland session is registered because Arcane Shell is a client, not a compositor.
 
 ## Development browser fallback
 
@@ -262,17 +289,17 @@ OpenAI is an alternate provider. Settings stores the selected model identifier i
 - Blocks downgrade attempts when the globally installed Arcane version is newer than the package.
 - Installs Arcane when absent.
 - Updates an older Arcane installation.
-- Verifies the native renderer and session control, reports optional Node.js without blocking, and requires a healthy global Ollama service before Arcane-user provisioning.
+- Verifies the native renderer and session control and reports optional Node.js without blocking. Microsoft NT continues to require a healthy global Ollama service before Arcane-user provisioning; Linux and WSL report missing or unhealthy Ollama without blocking base installation and require it before local-AI use.
 - On Microsoft NT, installs or repairs Ollama globally only from the official archive after verifying its published SHA-256 digest; unsupported platform prerequisites retain manual remediation guidance.
 - Rejects any release whose exact file inventory, size, or SHA-256 does not match `arcane-release.json`.
 - Stages and verifies native executables and all app assets before activation, then swaps the installation atomically and restores the previous installation if activation fails.
 - Removes a failed stage only while its captured filesystem identity still matches the exact cryptographically named directory Arcane created; replacement and uncertain recovery trees are preserved for administrator review.
 - Records an exact installed-tree integrity inventory and performs a verified same-version repair when files are missing, changed, or unexpected.
 
-**Create Arcane user** is supported for real accounts on Microsoft NT and intentionally uses a two-step credential-delivery and activation flow:
+**Create Arcane user** is implemented for Microsoft NT and Linux and intentionally uses a two-step credential-delivery and activation flow:
 
 - Ensures Arcane and its requirements are ready.
-- Creates each missing account as a disabled standard user and records its exact Microsoft NT SID.
+- Creates each missing account as a disabled standard user and records its exact platform identity: SID on Microsoft NT or UID on Linux.
 - Preserves existing account passwords and memberships.
 - Captures the account's prior shell state before assigning Arcane.
 - Assigns Arcane as the selected account's shell.
@@ -282,13 +309,13 @@ OpenAI is an alternate provider. Settings stores the selected model identifier i
 - Offers **Restore previous shell** for Arcane-managed accounts and verifies the restored state.
 - Keeps a **Verify and restore previous shell** action available when a signed-out profile is visible only through the protected recovery journal; administrator approval reloads the profile and rechecks both exact Microsoft NT shell bindings before restoring either one.
 - Journals preparation, shell assignment, account staging, activation, and rollback so interrupted work can be recovered or failed closed.
-- Before credential delivery, rolls back a newly created account only when its exact recorded SID still matches. A crash before the SID is durably known leaves the account disabled and requires administrator review rather than deleting by username.
+- Before credential delivery, rolls back a newly created account only when its exact recorded SID or UID still matches. A crash before that stable identity is durably known leaves the account disabled and requires administrator review rather than deleting by username.
 - After credential delivery, activation failures retain a retryable staged record; repeated `users.activate` reconciles whether Microsoft NT enabled the account before the interruption.
 - Refreshes the Arcane user list after completion.
 
 For an active Arcane account whose password is unknown, use **Set temporary password** in the Arcane users list. This first `users.resetPassword` request only generates and displays a credential; it does not change the operating-system password. Save the credential, then explicitly select **Apply saved password**, which makes the separate privileged `users.applyPassword` request and requires the password to be changed at next sign-in. A failure before that second request leaves the existing password untouched; if the apply request is interrupted after Microsoft NT changes the password, the operator already has the credential needed to recover.
 
-For pre-existing accounts, rollback is intentionally scoped to the shell assignment and does not reverse a separately requested password reset. Arcane also refuses to overwrite a shell changed outside Arcane after provisioning. Linux exposes no real `users.add` or `users.activate` account workflow in this release.
+For pre-existing accounts, rollback is intentionally scoped to the shell assignment and does not reverse a separately requested password reset. Arcane also refuses to overwrite a shell changed outside Arcane after provisioning. Microsoft NT verifies both per-user shell bindings; Linux verifies the exact protected Arcane shell shim and the account's POSIX shell record. Automatic Linux elevation remains unavailable, so real Linux mutations require a separately authorized root launch.
 
 ## Targeted application packages
 

@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ArcaneAndroidLauncher"
 include(":app")
+include(":apphost")

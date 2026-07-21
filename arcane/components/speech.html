@@ -47,10 +47,10 @@
 </style>
 
 <p class="hidden">Will auto send after X seconds of silence set in code.</p>
-<button id="recordButton">Push To Talk</button>
-<button id="stopButton" class='hidden' disabled>Send</button>
-<button id="endButton" class="end">Complete</button>
-<button id="muteButton" class="mute">Mute</button>
+<button id="recordButton" type="button">Push To Talk</button>
+<button id="stopButton" type="button" class='hidden' disabled>Send</button>
+<button id="endButton" type="button" class="end">Complete</button>
+<button id="muteButton" type="button" class="mute" aria-pressed="true" aria-label="Unmute AI voice">Unmute</button>
 
 <script type="module">
     import('../modules/DBLS.js');
@@ -71,7 +71,21 @@
     let isSpeaking = false;
     let silenceTimer;
     
-    host.muted=false;
+    /**
+     * Configure the initial AI speech state. The default remains muted for
+     * compatibility with existing consumers. Apps own preference persistence.
+     */
+    host.initialMuted=typeof host.initialMuted==='boolean'?host.initialMuted:true;
+    host.muted=host.initialMuted;
+    host.configure=configure;
+    host.setMuted=setMuted;
+    setMuted(host.initialMuted);
+    host.componentReady=true;
+    host.dispatchEvent(new CustomEvent('speech-ready',{
+        bubbles:true,
+        composed:true,
+        detail:{speech:host}
+    }));
 
     recordButton.addEventListener(
         'mousedown', 
@@ -119,24 +133,50 @@
     window.addEventListener(
         'ai-ready',
         function aiReadyHandler(){
-            muteButton.click();
+            setMuted(host.muted);
         }
     );
 
     if(window.ai?.ready){
-        muteButton.click();
+        setMuted(host.muted);
     }
 
-    async function muteToggle(e){
-        if(!host.muted){
-            e.target.innerText='UnMute';
-            ai.muted=host.muted=true;
-            ai.stopAudio();
-            return
+    function configure(options={}){
+        if(Object.prototype.hasOwnProperty.call(options,'initialMuted')){
+            if(typeof options.initialMuted!=='boolean'){
+                throw new TypeError('initialMuted must be boolean');
+            }
+
+            host.initialMuted=options.initialMuted;
+            setMuted(host.initialMuted);
         }
 
-        e.target.innerText='Mute';
-        ai.muted=host.muted=false;    
+        return host;
+    }
+
+    function setMuted(muted){
+        if(typeof muted!=='boolean'){
+            throw new TypeError('muted must be boolean');
+        }
+
+        host.muted=muted;
+        muteButton.textContent=muted?'Unmute':'Mute';
+        muteButton.setAttribute('aria-pressed',String(muted));
+        muteButton.setAttribute('aria-label',muted?'Unmute AI voice':'Mute AI voice');
+
+        if(window.ai){
+            window.ai.muted=muted;
+
+            if(muted&&typeof window.ai.stopAudio==='function'){
+                window.ai.stopAudio();
+            }
+        }
+
+        return host;
+    }
+
+    function muteToggle(){
+        setMuted(!host.muted);
     }
 
     async function transcribe(transcription=''){

@@ -28,6 +28,12 @@ test(
                 'network.status',
                 'platform.status',
                 'system.ping',
+                'terminal.close',
+                'terminal.list',
+                'terminal.resize',
+                'terminal.signal',
+                'terminal.start',
+                'terminal.write',
                 'user.current',
                 'version.current'
             ]
@@ -112,6 +118,13 @@ test(
                 policies
             ),
             /VERSION_CURRENT_OUTPUT_MAX_LENGTH = 64/
+        );
+        assert.match(
+            renderAndroidMethodContracts(
+                contracts,
+                policies
+            ),
+            /TERMINAL_START_INPUT_MAX_CWD_LENGTH = 4096/
         );
     }
 );
@@ -240,6 +253,9 @@ test(
         assert.match(core, /validateApplicationCatalogV1\(result,contract\.output\)/);
         assert.match(core, /validateApplicationLaunchV1\(parameters,contract\.input\)/);
         assert.match(core, /validateApplicationLaunchResultV1\(result,contract\.output\)/);
+        assert.match(core, /validateTerminalStartV1\(parameters,contract\.input\)/);
+        assert.match(core, /validateTerminalSessionV1\(result,contract\.output\)/);
+        assert.match(core, /validateTerminalListV1\(result,contract\.output\)/);
         assert.match(core, /canonicalContractMailto\(value,METHOD_CONTRACTS\['external\.open'\]\.input\)/);
     }
 );

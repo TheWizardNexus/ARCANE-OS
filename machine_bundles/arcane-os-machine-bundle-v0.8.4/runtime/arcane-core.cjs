@@ -62,9 +62,9 @@ $effective=if($scheme -eq 'dark'){'dark'}elseif($scheme -eq 'light'){'light'}els
     const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
       encoding:'utf8', windowsHide:true, timeout:10000, env:safeApplicationEnvironment(),
     });
-    if (!result || result.status !== 0) throw new Error('Windows could not read the current Arcane appearance.');
+    if (!result || result.status !== 0) throw new Error('Microsoft NT could not read the current Arcane appearance.');
     try { return JSON.parse(String(result.stdout || '').trim()); }
-    catch (_) { throw new Error('Windows returned an invalid Arcane appearance response.'); }
+    catch (_) { throw new Error('Microsoft NT returned an invalid Arcane appearance response.'); }
   }
 
   async function applyAppearance(input) {
@@ -163,7 +163,7 @@ $response|ConvertTo-Json -Compress`;
     } catch (error) {
       throw ctx.arcaneError(
         'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
-        'Windows could not open the Arcane folder selector.',
+        'Microsoft NT could not open the Arcane folder selector.',
         'Close any other open system dialogs, then choose the folder again.',
         500,
         { technicalMessage:String(error && error.message || error).slice(0,1024) }
@@ -175,7 +175,7 @@ $response|ConvertTo-Json -Compress`;
     catch (_) {
       throw ctx.arcaneError(
         'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
-        'Windows returned an invalid folder-selection result.',
+        'Microsoft NT returned an invalid folder-selection result.',
         'Close Arcane, reopen the application, and choose the folder again.',
         500
       );
@@ -188,7 +188,7 @@ $response|ConvertTo-Json -Compress`;
       || (response.cancelled ? response.path !== null : typeof response.path !== 'string' || !response.path)) {
       throw ctx.arcaneError(
         'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
-        'Windows returned an invalid folder-selection result.',
+        'Microsoft NT returned an invalid folder-selection result.',
         'Close Arcane, reopen the application, and choose the folder again.',
         500
       );
@@ -238,7 +238,7 @@ $response|ConvertTo-Json -Compress`;
       & ${ctx.psQuote(regExe)} unload "HKU\\$hive" | Out-Null
       if($LASTEXITCODE -eq 0){$arcaneHiveReleased=$true;break}
     }
-    if(-not $arcaneHiveReleased){throw "Windows could not release the temporary Arcane registry hive after ${context}. The profile remains locked and requires administrator recovery."}`;
+    if(-not $arcaneHiveReleased){throw "Microsoft NT could not release the temporary Arcane registry hive after ${context}. The profile remains locked and requires administrator recovery."}`;
   }
   const paths = Object.freeze({
     installRoot: !ctx.production && env.ARCANE_INSTALL_ROOT || ctx.path.join(programFiles, 'Arcane OS'),
@@ -443,7 +443,7 @@ $response|ConvertTo-Json -Compress`;
       if (!segment || segment === '.' || segment === '..' || segment.endsWith('.') || segment.endsWith(' ') || segment.includes(':')) {
         throw new Error(`${label || 'path'} contains an unsafe segment.`);
       }
-      if (WINDOWS_RESERVED_NAME.test(segment)) throw new Error(`${label || 'path'} contains a Windows reserved segment.`);
+      if (WINDOWS_RESERVED_NAME.test(segment)) throw new Error(`${label || 'path'} contains a Microsoft NT-reserved segment.`);
     }
     return value;
   }
@@ -545,9 +545,9 @@ $response|ConvertTo-Json -Compress`;
     const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
       encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
     });
-    if (!result || result.status !== 0) throw new Error('Windows could not verify the installed tree for reparse points.');
+    if (!result || result.status !== 0) throw new Error('Microsoft NT could not verify the installed tree for reparse points.');
     let entries;
-    try { entries = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid reparse-point verification result.'); }
+    try { entries = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Microsoft NT returned an invalid reparse-point verification result.'); }
     if (!Array.isArray(entries)) entries = [entries];
     if (entries.length) throw new Error(`Installed tree contains a reparse point: ${entries[0]}.`);
   }
@@ -707,7 +707,10 @@ $response|ConvertTo-Json -Compress`;
       'bin/ArcaneShell.exe', 'bin/ArcaneProvisioner.exe', 'bin/ArcaneCore.exe', 'bin/ArcaneOllamaService.exe', 'bin/ArcanePipeGuard.exe',
       'bin/Microsoft.Web.WebView2.Core.dll', 'bin/Microsoft.Web.WebView2.WinForms.dll', 'bin/WebView2Loader.dll',
       'arcane-bundle.json', 'arcane-machine-content.json', 'apps/catalog.json',
-      'app/shared/arcane-api.js', 'app/provisioner/index.html', 'app/shell/index.html',
+      'app/arcane/css/theme.css', 'app/arcane/entities/Preference.js', 'app/arcane/entities/Theme.js',
+      'app/arcane/modules/AppDataScope.js', 'app/arcane/modules/AppearancePreferences.js', 'app/arcane/modules/PreferenceStore.js',
+      'app/arcane/modules/SystemAppearance.js', 'app/arcane/modules/ThemeBootstrap.js', 'app/arcane/modules/ThemeManager.js',
+      'app/shared/arcane-api.js', 'app/shared/SystemPlatformPresentation.js', 'app/provisioner/index.html', 'app/shell/index.html',
     ]) if (!releaseFiles.some((entry) => entry.path === required)) throw new Error(`Arcane release omits required file ${required}.`);
 
     let installManifest = null;
@@ -911,9 +914,9 @@ $response|ConvertTo-Json -Compress`;
     const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
       encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024, env: safeApplicationEnvironment(),
     });
-    if (!result || result.status !== 0) throw new Error('Windows could not inspect Arcane Authenticode signatures.');
+    if (!result || result.status !== 0) throw new Error('Microsoft NT could not inspect Arcane Authenticode signatures.');
     let records;
-    try { records = JSON.parse(String(result.stdout || '').trim()); } catch (_) { throw new Error('Windows returned invalid Arcane signature records.'); }
+    try { records = JSON.parse(String(result.stdout || '').trim()); } catch (_) { throw new Error('Microsoft NT returned invalid Arcane signature records.'); }
     return Array.isArray(records) ? records : [records];
   }
 
@@ -1039,7 +1042,7 @@ $response|ConvertTo-Json -Compress`;
     if (!executables.length) refuseUnsignedPublisherDowngrade('The existing installation has no verifiable executable set.');
     const records = inspectAuthenticode(executables);
     if (!Array.isArray(records) || records.length !== executables.length) {
-      refuseUnsignedPublisherDowngrade('Windows returned incomplete signature evidence for the existing installation.');
+      refuseUnsignedPublisherDowngrade('Microsoft NT returned incomplete signature evidence for the existing installation.');
     }
     const byPath = new Map(records.map((record) => [String(record && record.path || '').toLowerCase(), record]));
     for (const executable of executables) {
@@ -1269,7 +1272,7 @@ $response|ConvertTo-Json -Compress`;
       encoding: 'utf8', windowsHide: true, timeout: 10000, env: safeApplicationEnvironment(),
     });
     if (!result || result.status !== 0 || String(result.stdout || '').trim() !== 'protected') {
-      throw new Error('Windows could not prove that the Arcane installation lease is protected.');
+      throw new Error('Microsoft NT could not prove that the Arcane installation lease is protected.');
     }
   }
 
@@ -1469,13 +1472,13 @@ $response|ConvertTo-Json -Compress`;
       const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
         encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
       });
-      if (!result || result.status !== 0) throw new Error('Windows could not determine whether installed Arcane processes are running.');
-      try { records = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid running-process result.'); }
+      if (!result || result.status !== 0) throw new Error('Microsoft NT could not determine whether installed Arcane processes are running.');
+      try { records = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Microsoft NT returned an invalid running-process result.'); }
     }
     if (!Array.isArray(records)) records = [records];
     return records.map((record) => {
       assertExactKeys(record, new Set(['processId', 'relativePath']), 'running Arcane process');
-      if (!Number.isSafeInteger(record.processId) || record.processId < 1) throw new Error('Windows returned an invalid Arcane process id.');
+      if (!Number.isSafeInteger(record.processId) || record.processId < 1) throw new Error('Microsoft NT returned an invalid Arcane process id.');
       return {
         processId: record.processId,
         relativePath: normalizeInstalledPath(record.relativePath, 'running Arcane process path'),
@@ -1569,7 +1572,7 @@ $response|ConvertTo-Json -Compress`;
     return {
       platform: 'windows',
       rawPlatform: 'win32',
-      displayName: 'Windows',
+      displayName: 'Microsoft NT',
       architecture: process.arch,
       hostname: ctx.os.hostname(),
       release: ctx.os.release(),
@@ -1696,7 +1699,7 @@ $bytes=[Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[Securi
     const script="$v=@((Get-ItemProperty -LiteralPath 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\ArcaneOllama' -Name Environment -ErrorAction SilentlyContinue).Environment);$v|ConvertTo-Json -Compress";
     const result=ctx.spawnSync(powershellExe,['-NoProfile','-NonInteractive','-Command',script],{encoding:'utf8',windowsHide:true,timeout:5000,env:safeApplicationEnvironment()});
     if(result.status!==0)return { ...defaults,supported:false,error:'Arcane could not read the service environment.' };
-    let entries=[];try{const parsed=JSON.parse(String(result.stdout||'[]').trim()||'[]');entries=Array.isArray(parsed)?parsed:[parsed];}catch(_){return { ...defaults,supported:false,error:'Windows returned invalid service settings.' };}
+    let entries=[];try{const parsed=JSON.parse(String(result.stdout||'[]').trim()||'[]');entries=Array.isArray(parsed)?parsed:[parsed];}catch(_){return { ...defaults,supported:false,error:'Microsoft NT returned invalid service settings.' };}
     const values=Object.fromEntries(entries.map(value=>String(value)).filter(value=>value.includes('=')).map(value=>{const at=value.indexOf('=');return [value.slice(0,at),value.slice(at+1)];}));
     return { ...defaults,contextLength:Number(values.OLLAMA_CONTEXT_LENGTH||0)||0,keepAlive:values.OLLAMA_KEEP_ALIVE||'5m',maxLoadedModels:Number(values.OLLAMA_MAX_LOADED_MODELS||0)||0,numParallel:Number(values.OLLAMA_NUM_PARALLEL||1)||1,maxQueue:Number(values.OLLAMA_MAX_QUEUE||512)||512,flashAttention:values.OLLAMA_FLASH_ATTENTION==='1',kvCacheType:values.OLLAMA_KV_CACHE_TYPE||'f16',noCloud:values.OLLAMA_NO_CLOUD!=='0' };
   }
@@ -1736,7 +1739,7 @@ $bytes=[Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[Securi
     const result = ctx.spawnSync(powershellExe, ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
     let devices = [];
     if (result.status === 0 && String(result.stdout || '').trim()) {
-      try { const parsed = JSON.parse(result.stdout); devices = (Array.isArray(parsed) ? parsed : [parsed]).map((device) => ({ name: String(device && device.name || 'Windows display adapter').slice(0, 256), memoryBytes: null })); } catch (_) {}
+      try { const parsed = JSON.parse(result.stdout); devices = (Array.isArray(parsed) ? parsed : [parsed]).map((device) => ({ name: String(device && device.name || 'Microsoft NT display adapter').slice(0, 256), memoryBytes: null })); } catch (_) {}
     }
     return { devices, totalMemoryBytes: null, memoryReliable: false, source: 'windows-cim' };
   }
@@ -1888,7 +1891,7 @@ $bytes=[Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[Securi
     throw ctx.arcaneError(
       'OLLAMA_SERVICE_TIMEOUT',
       `ArcaneOllama did not become ${expectedState} in time.`,
-      `Review the Windows service state and retry.${userHint}`,
+        `Review the Microsoft NT service state and retry.${userHint}`,
       500,
       { expectedState, observed, userExecutable }
     );
@@ -1937,7 +1940,7 @@ $subject=if($signature.SignerCertificate){$signature.SignerCertificate.Subject}e
     if (!signature || signature.status !== 'Valid' || !/\bMicrosoft Corporation\b/i.test(String(signature.subject || ''))) {
       throw ctx.arcaneError(
         'UNTRUSTED_INSTALLER_SIGNATURE',
-        'Windows could not verify this installer as a valid Microsoft-signed file.',
+        'Microsoft NT could not verify this installer as a valid Microsoft-signed file.',
         'The installer was not executed. Install the Microsoft Edge WebView2 Evergreen Runtime manually from Microsoft.',
         409,
         { signature }
@@ -1952,7 +1955,7 @@ $subject=if($signature.SignerCertificate){$signature.SignerCertificate.Subject}e
       if (!ctx.path.isAbsolute(file) || !ctx.fs.existsSync(file) || !ctx.fs.statSync(file).isFile()) {
         throw ctx.arcaneError(
           'PRIVILEGE_PIPE_GUARD_TRUST_FAILED',
-          'Arcane could not verify its Windows privilege boundary executables.',
+          'Arcane could not verify its Microsoft NT privilege boundary executables.',
           'Repair or reinstall Arcane OS from a verified signed release.'
         );
       }
@@ -1980,7 +1983,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
     if (!Array.isArray(signatures) || signatures.length !== 2) {
       throw ctx.arcaneError(
         'PRIVILEGE_PIPE_GUARD_TRUST_FAILED',
-        'Windows did not return valid signature records for the Arcane privilege boundary.',
+        'Microsoft NT did not return valid signature records for the Arcane privilege boundary.',
         'Repair or reinstall Arcane OS from a verified signed release.'
       );
     }
@@ -2010,7 +2013,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
     }
     throw ctx.arcaneError(
       'PRIVILEGE_PIPE_GUARD_TRUST_FAILED',
-      'Arcane refused to start its Windows privilege pipe guard because its Authenticode signer does not match Arcane Core.',
+      'Arcane refused to start its Microsoft NT privilege pipe guard because its Authenticode signer does not match Arcane Core.',
       'Install a distribution-signed Arcane release. For controlled local testing only, launch the unsigned local build with --allow-unsigned-local-release.',
       409,
       {
@@ -2030,7 +2033,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
     await verifyMicrosoftSignature(setup, action);
     await ctx.run(setup, ['/silent', '/install'], { action, displayCommand: '$ MicrosoftEdgeWebview2Setup.exe /silent /install' });
     const status = rendererStatus();
-    if (!status.available) throw ctx.arcaneError('WEBVIEW2_INSTALL_FAILED', 'Microsoft Edge WebView2 Runtime did not become available after installation.', 'Restart Windows and try again, or install the Evergreen WebView2 Runtime manually from Microsoft.');
+    if (!status.available) throw ctx.arcaneError('WEBVIEW2_INSTALL_FAILED', 'Microsoft Edge WebView2 Runtime did not become available after installation.', 'Restart Microsoft NT and try again, or install the Evergreen WebView2 Runtime manually from Microsoft.');
     ctx.actionLog(action, 'info', `Microsoft Edge WebView2 Runtime ${status.version || ''} is ready.`);
   }
 
@@ -2110,7 +2113,7 @@ $owner=(New-Object Security.Principal.NTAccount($verified.Owner)).Translate([Sec
 if($owner -ne 'S-1-5-32-544' -or -not $verified.AreAccessRulesProtected){throw 'Arcane Ollama cache ACL is not protected.'}
 [Console]::Out.Write('protected')`;
     const result = await ctx.powershell(script, { action, purpose: 'protect-ollama-cache' });
-    if (!result || String(result.stdout || '').trim() !== 'protected') throw new Error('Windows could not protect the verified Ollama archive cache.');
+    if (!result || String(result.stdout || '').trim() !== 'protected') throw new Error('Microsoft NT could not protect the verified Ollama archive cache.');
   }
 
   async function protectOllamaRuntime(action, executable) {
@@ -2181,7 +2184,7 @@ $proof=[ordered]@{
     let proof = null;
     try { proof = JSON.parse(String(result && result.stdout || '').trim()); } catch (_) {}
     if (!proof || proof.status !== 'protected' || proof.localServiceSid !== 'S-1-5-19' || !proof.serviceSid) {
-      throw new Error('Windows could not prove the protected Ollama runtime and service-host ACLs.');
+      throw new Error('Microsoft NT could not prove the protected Ollama runtime and service-host ACLs.');
     }
     return proof;
   }
@@ -2262,14 +2265,14 @@ $proof=[ordered]@{
 
   async function installOllama(action) {
     if (ctx.simulate) {
-      ctx.actionLog(action, 'info', 'Simulation: would install the latest official Ollama Windows package and service.');
+      ctx.actionLog(action, 'info', 'Simulation: would install the latest official Ollama package and service for Microsoft NT.');
       return;
     }
     const release = await ctx.latestOllamaRelease();
     const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
     let asset = release.assets.find((item) => item.name === `ollama-windows-${arch}.zip`);
     if (!asset && arch === 'arm64') asset = release.assets.find((item) => item.name === 'ollama-windows-amd64.zip');
-    if (!asset) throw ctx.arcaneError('OLLAMA_PACKAGE_NOT_FOUND', 'Arcane could not find a compatible official Ollama Windows package.', 'Check the internet connection or install Ollama manually, then choose Check again.');
+    if (!asset) throw ctx.arcaneError('OLLAMA_PACKAGE_NOT_FOUND', 'Arcane could not find a compatible official Ollama package for Microsoft NT.', 'Check the internet connection or install Ollama manually, then choose Check again.');
 
     const digestMatch = /^sha256:([a-f0-9]{64})$/i.exec(String(asset.digest || ''));
     if (!digestMatch) {
@@ -2311,7 +2314,7 @@ $proof=[ordered]@{
       || !Number.isSafeInteger(serviceIntegrity.size) || !SHA256_PATTERN.test(String(serviceIntegrity.sha256 || ''))) {
       throw ctx.arcaneError(
         'OLLAMA_SERVICE_HOST_MISSING',
-        'This Arcane release does not contain an integrity-bound Ollama Windows service host.',
+        'This Arcane release does not contain an integrity-bound Ollama service host for Microsoft NT.',
         'Repair Arcane OS from a complete verified release, then retry the global Ollama installation.',
         409
       );
@@ -2457,7 +2460,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
         throw ctx.arcaneError(
           'OLLAMA_GLOBAL_SERVICE_START_FAILED',
           'Arcane installed Ollama globally, but its managed service did not become healthy.',
-          'The failed service and runtime were preserved. Start ArcaneOllama directly and inspect its Windows service and application events before retrying installation.',
+          'The failed service and runtime were preserved. Start ArcaneOllama directly and inspect its Microsoft NT service and application events before retrying installation.',
           409,
           { diagnosticDetails }
         );
@@ -2530,7 +2533,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
 
   function readInstallPayload(root) {
     const sourceIsInstalled = ctx.path.resolve(root).toLowerCase() === ctx.path.resolve(paths.installRoot).toLowerCase();
-    const candidates = [root, ctx.path.join(root, 'dist', 'windows'), ctx.path.join(root, 'dist')];
+    const candidates = [root, ctx.path.join(root, 'dist', 'nt')];
     const dist = candidates.find((candidate) => (
       ctx.fs.existsSync(ctx.path.join(candidate, 'arcane-release.json'))
       && ctx.fs.existsSync(ctx.path.join(candidate, 'arcane-machine-content.json'))
@@ -2551,7 +2554,17 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
       'arcane-machine-content.json',
       'arcane-release.json',
       'apps/catalog.json',
+      'app/arcane/css/theme.css',
+      'app/arcane/entities/Preference.js',
+      'app/arcane/entities/Theme.js',
+      'app/arcane/modules/AppDataScope.js',
+      'app/arcane/modules/AppearancePreferences.js',
+      'app/arcane/modules/PreferenceStore.js',
+      'app/arcane/modules/SystemAppearance.js',
+      'app/arcane/modules/ThemeBootstrap.js',
+      'app/arcane/modules/ThemeManager.js',
       'app/shared/arcane-api.js',
+      'app/shared/SystemPlatformPresentation.js',
       'app/shared/arcane-sigil.svg',
       'app/shared/arcane-sigil-512.png',
       'app/shared/arcane-sigil.ico',
@@ -2591,7 +2604,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
           sourceManifest: releaseManifestPath,
           files: integrityFiles,
         },
-        description: 'Verified Windows WebView2 hosts, machine content, and installed application catalog are ready for installation.',
+        description: 'Verified Microsoft NT WebView2 hosts, machine content, and installed application catalog are ready for installation.',
         files: integrityFiles.map((entry) => ({
           source: ctx.path.join(dist, ...entry.installPath.split('/')),
           installPath: entry.installPath,
@@ -2606,7 +2619,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
       selfHosted: sourceIsInstalled,
       releaseReady: false,
       verified: false,
-      description: releaseProblem || 'The source Arcane Core is available, but a verified Windows WebView2 release has not been built.',
+      description: releaseProblem || 'The source Arcane Core is available, but a verified Microsoft NT WebView2 release has not been built.',
       files: ctx.fs.existsSync(sourceCore) ? [{ source: sourceCore, installPath: 'bin/arcane-core.cjs', destinationName: 'arcane-core.cjs' }] : [],
       directories: [],
       missingRelease: [...new Set(missingRelease)],
@@ -2699,7 +2712,7 @@ foreach($item in $targets){
 [Console]::Out.Write('protected')`;
       const result = await ctx.powershell(script, { action, purpose: 'protect-arcane-installation' });
       if (!result || String(result.stdout || '').trim() !== 'protected') {
-        throw new Error('Windows could not prove that the Arcane installation and publisher attestation are administrator-protected.');
+        throw new Error('Microsoft NT could not prove that the Arcane installation and publisher attestation are administrator-protected.');
       }
     }
     await addMachinePath(ctx.path.join(paths.installRoot, 'bin'), action);
@@ -2897,13 +2910,13 @@ foreach($target in $targets){
       throw error;
     };
     if (!value) fail('Enter a username for the Arcane account.', `Example: ${policy.example}.`, 'empty');
-    if (/\s/.test(value)) fail(`“${value}” cannot be used because local Windows usernames cannot contain spaces.`, `Try “${value.replace(/\s+/g, '-').replace(/[^A-Za-z0-9._-]/g, '') || policy.example}”. ${policy.description}`, 'contains-spaces');
-    if (value.length > policy.maximumLength) fail(`“${value}” is ${value.length} characters long; Windows local usernames can be at most ${policy.maximumLength} characters.`, `Shorten the name. Example: ${policy.example}.`, 'too-long');
-    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) fail(`“${value}” contains a character that Windows cannot use in this local username.`, policy.description, 'invalid-characters');
+    if (/\s/.test(value)) fail(`“${value}” cannot be used because local Microsoft NT usernames cannot contain spaces.`, `Try “${value.replace(/\s+/g, '-').replace(/[^A-Za-z0-9._-]/g, '') || policy.example}”. ${policy.description}`, 'contains-spaces');
+    if (value.length > policy.maximumLength) fail(`“${value}” is ${value.length} characters long; Microsoft NT local usernames can be at most ${policy.maximumLength} characters.`, `Shorten the name. Example: ${policy.example}.`, 'too-long');
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) fail(`“${value}” contains a character that Microsoft NT cannot use in this local username.`, policy.description, 'invalid-characters');
     if (/[.]$/.test(value)) fail(`“${value}” cannot end with a period.`, `Remove the final period. Example: ${policy.example}.`, 'invalid-ending');
     const reserved = ['administrator', 'guest', 'defaultaccount', 'wdagutilityaccount'];
     if (reserved.includes(value.toLowerCase())) {
-      const error = ctx.arcaneError('RESERVED_USERNAME', `“${value}” is a Windows-reserved account name.`, `Choose another name, such as ${policy.example}.`, 409);
+      const error = ctx.arcaneError('RESERVED_USERNAME', `“${value}” is a Microsoft NT-reserved account name.`, `Choose another name, such as ${policy.example}.`, 409);
       error.field = 'username';
       error.input = value;
       error.policy = policy;
@@ -3036,8 +3049,8 @@ foreach($user in (Get-LocalUser -ErrorAction Stop)){
       };
       throw ctx.arcaneError(
         'USER_DISCOVERY_FAILED',
-        'Arcane could not read the current Windows local-user list.',
-        'Retry the user refresh. Arcane will not substitute cached recovery names for live Windows accounts.',
+        'Arcane could not read the current Microsoft NT local-user list.',
+        'Retry the user refresh. Arcane will not substitute cached recovery names for live Microsoft NT accounts.',
         503,
         { diagnosticDetails: { cause } }
       );
@@ -3085,12 +3098,12 @@ $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $temporary=$false
 $hive=$sid
 if(-not $loaded){
-  if(-not $profile){throw "Windows could not locate the user profile for '$name' to back up both shell bindings."}
+  if(-not $profile){throw "Microsoft NT could not locate the user profile for '$name' to back up both shell bindings."}
   $ntUser=Join-Path $profile 'NTUSER.DAT'
-  if(-not (Test-Path -LiteralPath $ntUser)){throw "Windows could not locate NTUSER.DAT for '$name' to back up both shell bindings."}
+  if(-not (Test-Path -LiteralPath $ntUser)){throw "Microsoft NT could not locate NTUSER.DAT for '$name' to back up both shell bindings."}
   $hive='ARCANE_PREPARE_'+($sid -replace '-','_')
   & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-  if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name' to back up its shell." }
+  if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name' to back up its shell." }
   $temporary=$true
 }
 try {
@@ -3112,7 +3125,7 @@ try {
     } catch (error) {
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_SHELL_BACKUP_FAILED' : error.code;
-      error.userMessage = `Windows could not capture the current login shell for “${username}”.`;
+      error.userMessage = `Microsoft NT could not capture the current login shell for “${username}”.`;
       error.resolution = readable
         ? `${readable} No shell change was made.`
         : 'Confirm the account is signed out and retry from an administrator session. No shell change was made.';
@@ -3127,8 +3140,8 @@ try {
     if (!recovery.dual) {
       throw ctx.arcaneError(
         'INVALID_SHELL_BACKUP',
-        'Arcane refused to change a Windows shell without a complete dual-binding recovery record.',
-        'Refresh the account state and retry so Arcane can capture both Windows shell bindings.',
+        'Arcane refused to change a Microsoft NT shell without a complete dual-binding recovery record.',
+        'Refresh the account state and retry so Arcane can capture both Microsoft NT shell bindings.',
         409
       );
     }
@@ -3141,7 +3154,7 @@ try {
       const expectedPolicy = { present: recovery.previousPolicyShellPresent, value: recovery.previousPolicyShell };
       const expectedLegacy = { present: recovery.previousLegacyShellPresent, value: recovery.previousLegacyShell };
       if (created !== !shellBackup.accountExisted || !sameShellValue(currentPolicy, expectedPolicy) || !sameShellValue(currentLegacy, expectedLegacy)) {
-        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `The Windows account or one of its shell bindings changed after Arcane saved its recovery record.`, 'No shell change was made. Refresh the account list and try again.', 409);
+        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `The Microsoft NT account or one of its shell bindings changed after Arcane saved its recovery record.`, 'No shell change was made. Refresh the account list and try again.', 409);
       }
       simulatedAccounts.add(key);
       try {
@@ -3150,7 +3163,7 @@ try {
         if (ctx.simulatedUserFailure === 'crash-after-policy-shell-write' && !ctx.simulatedUserFailureTriggered) {
           ctx.simulatedUserFailureTriggered = true;
           simulatedUsers.set(key, existingBinding);
-          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing the Windows policy shell binding.', 'The next retry must recover the original durable dual-binding baseline.', 500);
+          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing the Microsoft NT policy shell binding.', 'The next retry must recover the original durable dual-binding baseline.', 500);
           error.simulatedCrash = true;
           throw error;
         }
@@ -3160,7 +3173,7 @@ try {
         if (ctx.simulatedUserFailure === 'crash-after-legacy-shell-write' && !ctx.simulatedUserFailureTriggered) {
           ctx.simulatedUserFailureTriggered = true;
           simulatedUsers.set(key, existingBinding);
-          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing both Windows shell bindings.', 'The next retry must recover the original durable dual-binding baseline.', 500);
+          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing both Microsoft NT shell bindings.', 'The next retry must recover the original durable dual-binding baseline.', 500);
           error.simulatedCrash = true;
           throw error;
         }
@@ -3292,8 +3305,8 @@ public static class ArcaneProfile {
   if($result -ne 0 -and $result -ne 183 -and $result -ne $alreadyExistsHresult){
     $hex=('0x{0:X8}' -f ($result -band 0xffffffffL))
     $nativeError=[Runtime.InteropServices.Marshal]::GetExceptionForHR($result)
-    $nativeMessage=if($nativeError){$nativeError.Message}else{'Unknown Windows profile error'}
-    throw "Windows could not initialize the profile for '$name' ($hex): $nativeMessage"
+    $nativeMessage=if($nativeError){$nativeError.Message}else{'Unknown Microsoft NT profile error'}
+    throw "Microsoft NT could not initialize the profile for '$name' ($hex): $nativeMessage"
   }
   $profilePath=$buffer.ToString()
   if(-not $profilePath){
@@ -3301,7 +3314,7 @@ public static class ArcaneProfile {
   }
 }
 if(-not $profilePath -or -not (Test-Path -LiteralPath $profilePath)){
-  throw "Windows created the account '$name', but its profile directory was not available."
+  throw "Microsoft NT created the account '$name', but its profile directory was not available."
 }
 if($created){
   $adsi=[ADSI]("WinNT://./"+$name+",user")
@@ -3313,14 +3326,14 @@ for($attempt=0;$attempt -lt 20 -and -not (Test-Path -LiteralPath $ntUser);$attem
   Start-Sleep -Milliseconds 250
 }
 if(-not (Test-Path -LiteralPath $ntUser)){
-  throw "Windows created the profile directory for '$name', but NTUSER.DAT was not created after waiting five seconds."
+  throw "Microsoft NT created the profile directory for '$name', but NTUSER.DAT was not created after waiting five seconds."
 }
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $hive=$sid
 if(-not $loaded){
   $hive='ARCANE_'+($sid -replace '-','_')
   & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-  if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
+  if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name'." }
 }
 try {
   function Get-ArcaneShellValue([string]$Path){
@@ -3345,14 +3358,14 @@ try {
   $previousPolicy=Get-ArcaneShellValue $policyKey
   $previousLegacy=Get-ArcaneShellValue $legacyKey
   if(-not (Test-ArcaneShellValue $policyKey $expectedPolicyPresent $expectedPolicy) -or -not (Test-ArcaneShellValue $legacyKey $expectedLegacyPresent $expectedLegacy)){
-    throw "A Windows shell binding for '$name' changed after Arcane saved its recovery record. No shell change was made."
+    throw "A Microsoft NT shell binding for '$name' changed after Arcane saved its recovery record. No shell change was made."
   }
   $assignmentError=$null
   try {
     Set-ArcaneShellValue $policyKey $true $shell
-    if(-not (Test-ArcaneShellValue $policyKey $true $shell)){throw "Windows did not retain the Arcane policy shell assignment for '$name'."}
+    if(-not (Test-ArcaneShellValue $policyKey $true $shell)){throw "Microsoft NT did not retain the Arcane policy shell assignment for '$name'."}
     Set-ArcaneShellValue $legacyKey $true $shell
-    if(-not (Test-ArcaneShellValue $legacyKey $true $shell)){throw "Windows did not retain the Arcane legacy shell assignment for '$name'."}
+    if(-not (Test-ArcaneShellValue $legacyKey $true $shell)){throw "Microsoft NT did not retain the Arcane legacy shell assignment for '$name'."}
   } catch {
     $assignmentError=$_
     $rollbackErrors=@()
@@ -3361,7 +3374,7 @@ try {
     if(-not (Test-ArcaneShellValue $policyKey ([bool]$previousPolicy.Present) ([string]$previousPolicy.Value))){$rollbackErrors+='policy verification failed'}
     if(-not (Test-ArcaneShellValue $legacyKey ([bool]$previousLegacy.Present) ([string]$previousLegacy.Value))){$rollbackErrors+='legacy verification failed'}
     if($rollbackErrors.Count){
-      throw ("Arcane could not compensate both Windows shell bindings after assignment failed. Original error: "+$assignmentError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))
+      throw ("Arcane could not compensate both Microsoft NT shell bindings after assignment failed. Original error: "+$assignmentError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))
     }
     throw $assignmentError
   }
@@ -3431,8 +3444,8 @@ try {
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_USER_PROVISION_FAILED' : error.code;
       error.userMessage = readable && readable.includes('profile')
-        ? `Windows created or found the account “${username}”, but could not finish initializing its user profile.`
-        : `Windows could not finish adding the Arcane user “${username}”.`;
+        ? `Microsoft NT created or found the account “${username}”, but could not finish initializing its user profile.`
+        : `Microsoft NT could not finish adding the Arcane user “${username}”.`;
       const rollbackComplete = Boolean(error.accountRollback && error.accountRollback.accountRemoved);
       error.resolution = readable
         ? `${readable} ${rollbackComplete ? 'Arcane removed the disabled account created by this failed attempt.' : 'If Arcane created an account during this attempt, it was left disabled and requires administrator recovery.'} The protected provisioning account was not changed.`
@@ -3457,7 +3470,7 @@ try {
       const policy = simulatedShellValue(assigned, 'policyShell');
       const legacy = simulatedShellValue(assigned, 'legacyShell');
       if (!policy.present || policy.value !== expectedShell || !legacy.present || legacy.value !== expectedShell) {
-        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', 'Arcane refused to activate the staged account because both Windows shell bindings were not exact.', 'Repair or retry the staged account transaction.', 409);
+        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', 'Arcane refused to activate the staged account because both Microsoft NT shell bindings were not exact.', 'Repair or retry the staged account transaction.', 409);
       }
       assigned.enabled = true;
       if (ctx.simulatedUserFailure === 'crash-during-activation' && !ctx.simulatedUserFailureTriggered) {
@@ -3500,7 +3513,7 @@ if(-not (Test-Path "Registry::HKEY_USERS\\$expectedSid")){
   if(-not $temporary){
     $hive='ARCANE_ACTIVATE_'+$suffix
     & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser|Out-Null
-    if($LASTEXITCODE -ne 0){throw "Windows could not verify the staged shell for '$name'."}
+    if($LASTEXITCODE -ne 0){throw "Microsoft NT could not verify the staged shell for '$name'."}
     $temporary=$true
   }
 }
@@ -3511,13 +3524,13 @@ try {
   $legacyProperty=Get-ItemProperty -LiteralPath $legacyKey -Name Shell -ErrorAction SilentlyContinue
   $policyMatches=[bool]($null -ne $policyProperty -and [String]::Equals([string]$policyProperty.Shell,[string]$expectedShell,[StringComparison]::Ordinal))
   $legacyMatches=[bool]($null -ne $legacyProperty -and [String]::Equals([string]$legacyProperty.Shell,[string]$expectedShell,[StringComparison]::Ordinal))
-  if(-not ($policyMatches -and $legacyMatches)){throw "Arcane refused to activate '$name' because both staged Windows shell bindings no longer match Arcane exactly."}
+  if(-not ($policyMatches -and $legacyMatches)){throw "Arcane refused to activate '$name' because both staged Microsoft NT shell bindings no longer match Arcane exactly."}
 } finally {
   if($temporary){${unloadTemporaryHiveScript('staged account activation')}}
 }
 Enable-LocalUser -Name $name -ErrorAction Stop
 $verified=Get-LocalUser -Name $name -ErrorAction Stop
-if(-not $verified.Enabled){throw "Windows did not enable the staged Arcane account '$name'."}
+if(-not $verified.Enabled){throw "Microsoft NT did not enable the staged Arcane account '$name'."}
 [pscustomobject]@{username=$name;sid=$expectedSid;enabled=$true;activated=$true}|ConvertTo-Json -Compress`;
     const result = await ctx.powershell(script, { action, purpose: 'activate-staged-arcane-user', redactArgs: true, displayCommand: '$ powershell.exe [activate staged Arcane user]' });
     return JSON.parse(String(result.stdout || '').trim().split(/\r?\n/).filter(Boolean).pop());
@@ -3580,7 +3593,7 @@ $name=${ctx.psQuote(username)}
 $password=[Console]::In.ReadLine()
 if([string]::IsNullOrEmpty($password)){ throw 'Arcane did not receive the protected temporary password.' }
 $user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
-if(-not $user){ throw "The local Windows account '$name' does not exist." }
+if(-not $user){ throw "The local Microsoft NT account '$name' does not exist." }
 $secure=ConvertTo-SecureString $password -AsPlainText -Force
 Set-LocalUser -Name $name -Password $secure -ErrorAction Stop
 $adsi=[ADSI]("WinNT://./"+$name+",user")
@@ -3604,7 +3617,7 @@ $adsi.SetInfo()
       if (error.message) error.message = String(error.message).split(password).join('[redacted]');
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_PASSWORD_RESET_FAILED' : error.code;
-      error.userMessage = `Windows could not set a temporary password for “${username}”.`;
+      error.userMessage = `Microsoft NT could not set a temporary password for “${username}”.`;
       error.resolution = readable
         ? `${readable} Confirm the account still exists and that administrator approval is active, then try again.`
         : 'Confirm the account exists, approve administrator access, and try again.';
@@ -3634,7 +3647,7 @@ $adsi.SetInfo()
         const policyAllowed = prepared ? policyArcane || sameShellValue(policy, baselinePolicy) : policyArcane;
         const legacyAllowed = prepared ? legacyArcane || sameShellValue(legacy, baselineLegacy) : legacyArcane;
         if (!policyAllowed || !legacyAllowed) {
-          throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `Arcane refused to overwrite a Windows shell binding for “${username}” because it contains an unrecognized value.`, 'Review both per-user shell registry values manually. No change was made.', 409);
+          throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `Arcane refused to overwrite a Microsoft NT shell binding for “${username}” because it contains an unrecognized value.`, 'Review both per-user shell registry values manually. No change was made.', 409);
         }
         binding.policyShell = recovery.previousPolicyShell;
         binding.policyShellPresent = recovery.previousPolicyShellPresent;
@@ -3683,12 +3696,12 @@ $previousPolicyPresent=${recovery.previousPolicyShellPresent ? '$true' : '$false
 $previousLegacy=${ctx.psQuote(recovery.previousLegacyShell === null || recovery.previousLegacyShell === undefined ? '' : recovery.previousLegacyShell)}
 $previousLegacyPresent=${recovery.previousLegacyShellPresent ? '$true' : '$false'}
 $user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
-if(-not $user){ throw "The local Windows account '$name' does not exist." }
+if(-not $user){ throw "The local Microsoft NT account '$name' does not exist." }
 $sid=$user.SID.Value
 $profile=(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue).LocalPath
-if(-not $profile){ throw "Windows could not locate the user profile for '$name'." }
+if(-not $profile){ throw "Microsoft NT could not locate the user profile for '$name'." }
 $ntUser=Join-Path $profile 'NTUSER.DAT'
-if(-not (Test-Path -LiteralPath $ntUser)){ throw "Windows could not locate NTUSER.DAT for '$name'." }
+if(-not (Test-Path -LiteralPath $ntUser)){ throw "Microsoft NT could not locate NTUSER.DAT for '$name'." }
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $hive=$sid
 $temporary=$false
@@ -3701,7 +3714,7 @@ if(-not $loaded){
   if(-not $temporary){
     $hive='ARCANE_RECOVERY_'+$suffix
     & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-    if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
+    if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name'." }
     $temporary=$true
   }
 }
@@ -3736,14 +3749,14 @@ try {
     $legacyAllowed=[bool](Test-ArcaneExpected $legacyKey)
   }
   if(-not ($policyAllowed -and $legacyAllowed)){
-    throw "Arcane refused to overwrite a Windows shell binding for '$name' because it contains a value outside the durable recovery record."
+    throw "Arcane refused to overwrite a Microsoft NT shell binding for '$name' because it contains a value outside the durable recovery record."
   }
   $restoreError=$null
   try {
     Set-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy
-    if(-not (Test-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy)){throw "Windows did not retain the restored policy shell for '$name'."}
+    if(-not (Test-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy)){throw "Microsoft NT did not retain the restored policy shell for '$name'."}
     Set-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy
-    if(-not (Test-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy)){throw "Windows did not retain the restored legacy shell for '$name'."}
+    if(-not (Test-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy)){throw "Microsoft NT did not retain the restored legacy shell for '$name'."}
   } catch {
     $restoreError=$_
     $rollbackErrors=@()
@@ -3751,7 +3764,7 @@ try {
     try{Set-ArcaneShellValue $legacyKey ([bool]$currentLegacy.Present) ([string]$currentLegacy.Value)}catch{$rollbackErrors+=('legacy write: '+$_.Exception.Message)}
     if(-not (Test-ArcaneShellValue $policyKey ([bool]$currentPolicy.Present) ([string]$currentPolicy.Value))){$rollbackErrors+='policy verification failed'}
     if(-not (Test-ArcaneShellValue $legacyKey ([bool]$currentLegacy.Present) ([string]$currentLegacy.Value))){$rollbackErrors+='legacy verification failed'}
-    if($rollbackErrors.Count){throw ("Arcane could not compensate both Windows shell bindings after restoration failed. Original error: "+$restoreError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))}
+    if($rollbackErrors.Count){throw ("Arcane could not compensate both Microsoft NT shell bindings after restoration failed. Original error: "+$restoreError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))}
     throw $restoreError
   }
 } finally {
@@ -3770,7 +3783,7 @@ $restoredShell=if($previousLegacyPresent){$previousLegacy}else{$null}
       } catch (error) {
         const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
         error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_SHELL_RESTORE_FAILED' : error.code;
-        error.userMessage = `Windows could not restore the previous login shell bindings for “${username}”.`;
+        error.userMessage = `Microsoft NT could not restore the previous login shell bindings for “${username}”.`;
         error.resolution = readable
           ? `${readable} Confirm the account profile is not in use, then retry from an administrator session.`
           : 'Confirm the account exists, sign it out, approve administrator access, and try again.';
@@ -3785,12 +3798,12 @@ $expected=${ctx.psQuote(expectedShell)}
 $previous=${ctx.psQuote(previousShell === null || previousShell === undefined ? '' : previousShell)}
 $previousPresent=${previousShellPresent ? '$true' : '$false'}
 $user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
-if(-not $user){ throw "The local Windows account '$name' does not exist." }
+if(-not $user){ throw "The local Microsoft NT account '$name' does not exist." }
 $sid=$user.SID.Value
 $profile=(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue).LocalPath
-if(-not $profile){ throw "Windows could not locate the user profile for '$name'." }
+if(-not $profile){ throw "Microsoft NT could not locate the user profile for '$name'." }
 $ntUser=Join-Path $profile 'NTUSER.DAT'
-if(-not (Test-Path -LiteralPath $ntUser)){ throw "Windows could not locate NTUSER.DAT for '$name'." }
+if(-not (Test-Path -LiteralPath $ntUser)){ throw "Microsoft NT could not locate NTUSER.DAT for '$name'." }
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $hive=$sid
 $temporary=$false
@@ -3803,7 +3816,7 @@ if(-not $loaded){
   if(-not $temporary){
     $hive='ARCANE_RECOVERY_'+$suffix
     & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-    if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
+    if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name'." }
     $temporary=$true
   }
 }
@@ -3817,11 +3830,11 @@ try {
     New-Item -Path $key -Force | Out-Null
     New-ItemProperty -Path $key -Name Shell -PropertyType String -Value $previous -Force | Out-Null
     $verified=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop).Shell
-    if(-not [String]::Equals([string]$verified,[string]$previous,[StringComparison]::Ordinal)){ throw "Windows did not retain the restored shell for '$name'." }
+    if(-not [String]::Equals([string]$verified,[string]$previous,[StringComparison]::Ordinal)){ throw "Microsoft NT did not retain the restored shell for '$name'." }
   } else {
     Remove-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop
     $remaining=Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue
-    if($null -ne $remaining){ throw "Windows did not remove the Arcane shell override for '$name'." }
+    if($null -ne $remaining){ throw "Microsoft NT did not remove the Arcane shell override for '$name'." }
   }
 } finally {
   if($temporary){
@@ -3841,7 +3854,7 @@ $restoredShell=if($previousPresent){$previous}else{$null}
     } catch (error) {
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_SHELL_RESTORE_FAILED' : error.code;
-      error.userMessage = `Windows could not restore the previous login shell for “${username}”.`;
+      error.userMessage = `Microsoft NT could not restore the previous login shell for “${username}”.`;
       error.resolution = readable
         ? `${readable} Confirm the account profile is not in use, then retry from an administrator session.`
         : 'Confirm the account exists, sign it out, approve administrator access, and try again.';
@@ -3972,11 +3985,11 @@ try {
       if (error.exitCode === 1223 || text.includes('canceled') || text.includes('cancelled')) {
         error.code = 'ELEVATION_CANCELLED';
         error.userMessage = 'Administrator approval was cancelled.';
-        error.resolution = 'No machine changes were made. Choose the action again when you are ready to approve the Windows prompt.';
+        error.resolution = 'No machine changes were made. Choose the action again when you are ready to approve the Microsoft NT prompt.';
       } else {
         error.code = error.code === 'COMMAND_FAILED' ? 'ELEVATION_LAUNCH_FAILED' : error.code;
-        error.userMessage = 'Windows could not start the elevated Arcane Provisioner host.';
-        error.resolution = 'Check whether Windows security policy blocked the request, then review the full diagnostics.';
+        error.userMessage = 'Microsoft NT could not start the elevated Arcane Provisioner host.';
+        error.resolution = 'Check whether Microsoft NT security policy blocked the request, then review the full diagnostics.';
       }
       throw error;
     }
@@ -4070,6 +4083,7 @@ function createLinuxNativeAdapter(ctx) {
     && ['has', 'get', 'set', 'delete', 'values'].every((name) => typeof ctx.simulatedShellAssignments[name] === 'function')
     ? ctx.simulatedShellAssignments
     : new Map();
+  const simulatedDisabledAccounts = new Set();
 
   const paths = Object.freeze({
     installRoot: !ctx.production&&process.env.ARCANE_INSTALL_ROOT || '/opt/arcane-os',
@@ -4078,47 +4092,216 @@ function createLinuxNativeAdapter(ctx) {
     ollamaRoot: '/usr',
     modelsRoot: '/var/lib/arcane-os/ollama-models',
   });
+  const stagedInstallIntegrityByRoot = new Map();
+  const preparedInstallStages = new Map();
+  const linuxInstalledExecutablePaths = new Set([
+    'bin/ArcaneCore',
+    'bin/ArcaneProvisioner',
+    'bin/ArcaneShell',
+    'bin/arcane-provisioner',
+    'bin/arcane-session',
+    'bin/arcane-shell',
+  ]);
+  const maxInstalledEntries = 10000;
+  const maxReleaseManifestBytes = 4 * 1024 * 1024;
+  const maxReleasePayloadBytes = 16 * 1024 ** 3;
+  const maxReleasePathDepth = 64;
+  const enforcePosixMetadata = String(ctx.hostPlatform || process.platform) === 'linux';
+  const systemCommandDirectories = Object.freeze([
+    '/usr/local/sbin',
+    '/usr/local/bin',
+    '/usr/sbin',
+    '/usr/bin',
+    '/sbin',
+    '/bin',
+  ]);
+
+  function hasExactUnsignedLocalHostClaim() {
+    return ctx.allowUnsignedLocalRelease === true
+      && ctx.releaseSecurityModeClaim === 'unsigned-local-test'
+      && !ctx.releaseContentBindingClaim
+      && !ctx.releaseSignerThumbprintClaim
+      && !ctx.releaseVerifiedAtClaim
+      && !ctx.releaseRevocationStatusClaim
+      && !ctx.releaseTrustSourceClaim
+      && ctx.releaseTimestampVerifiedClaim !== true;
+  }
+
+  function linuxLauncherFiles(payload) {
+    const executable = payload && payload.mode === 'linux-webkitgtk';
+    const unsignedArgument = payload && payload.securityMode === 'unsigned-local-test' && hasExactUnsignedLocalHostClaim()
+      ? ' --allow-unsigned-local-release'
+      : '';
+    const graphicalShell = executable
+      ? `exec "$(dirname "$0")/ArcaneShell"${unsignedArgument} "$@"`
+      : `exec node "$(dirname "$0")/arcane-shell.cjs"${unsignedArgument} "$@"`;
+    const shellLauncher = `#!/bin/sh
+if [ -n "\${DISPLAY:-}" ] || [ -n "\${WAYLAND_DISPLAY:-}" ]; then
+  ${graphicalShell}
+fi
+if [ -x /bin/bash ]; then
+  exec /bin/bash "$@"
+fi
+exec /bin/sh "$@"
+`;
+    return Object.freeze({
+      'bin/arcane-shell': shellLauncher,
+      'bin/arcane-provisioner': executable
+        ? `#!/bin/sh\nexec "$(dirname "$0")/ArcaneProvisioner"${unsignedArgument} "$@"\n`
+        : `#!/bin/sh\nexec node "$(dirname "$0")/arcane-provisioner.cjs"${unsignedArgument} "$@"\n`,
+      'bin/arcane-session': '#!/bin/sh\nexec "$(dirname "$0")/arcane-shell" --shell "$@"\n',
+    });
+  }
+
+  function launcherIntegrityEntries(payload) {
+    return Object.entries(linuxLauncherFiles(payload)).map(([installPath, contents]) => ({
+      installPath,
+      path: installPath,
+      size: Buffer.byteLength(contents, 'utf8'),
+      sha256: ctx.crypto.createHash('sha256').update(contents, 'utf8').digest('hex'),
+    }));
+  }
+
+  function systemCommandCandidates(command) {
+    const value = String(command || '');
+    if (!value || value.includes('\0')) return [];
+    if (ctx.path.isAbsolute(value)) {
+      const resolved = ctx.path.resolve(value);
+      return samePath(resolved, value) ? [resolved] : [];
+    }
+    if (value !== ctx.path.basename(value) || !/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(value)) return [];
+    return systemCommandDirectories.map((directory) => ctx.path.join(directory, value));
+  }
 
   function systemCommand(command) {
-    if(ctx.path.isAbsolute(command))return ctx.fs.existsSync(command)?command:null;
-    for(const directory of ['/usr/local/sbin','/usr/local/bin','/usr/sbin','/usr/bin','/sbin','/bin']){
-      const candidate=ctx.path.join(directory,command);
-      if(ctx.fs.existsSync(candidate))return candidate;
+    for (const candidate of systemCommandCandidates(command)) {
+      if (ctx.fs.existsSync(candidate)) return candidate;
     }
     return null;
   }
 
+  function protectedDirectoryChain(directory) {
+    const resolved = ctx.path.resolve(String(directory || ''));
+    if (!ctx.path.isAbsolute(String(directory || '')) || !samePath(resolved, directory)) return null;
+    const entries = [];
+    let current = resolved;
+    for (let depth = 0; depth < 64; depth += 1) {
+      let stat = null;
+      try { stat = ctx.fs.lstatSync(current); } catch (_) { return null; }
+      if (!stat || !stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== 0 || (stat.mode & 0o022) !== 0) return null;
+      entries.push({ path: current, dev: stat.dev, ino: stat.ino });
+      const parent = ctx.path.dirname(current);
+      if (samePath(parent, current)) return entries;
+      current = parent;
+    }
+    return null;
+  }
+
+  function protectedDirectoryChainUnchanged(entries) {
+    if (!Array.isArray(entries) || !entries.length) return false;
+    return entries.every((expected) => {
+      let stat = null;
+      try { stat = ctx.fs.lstatSync(expected.path); } catch (_) { return false; }
+      return stat && stat.isDirectory() && !stat.isSymbolicLink() && stat.uid === 0
+        && (stat.mode & 0o022) === 0 && stat.dev === expected.dev && stat.ino === expected.ino;
+    });
+  }
+
+  function protectedExecutableSelection(command) {
+    let found = false;
+    const rejected = [];
+    const inspectedCanonicalPaths = new Set();
+    for (const candidate of systemCommandCandidates(command)) {
+      if (!ctx.fs.existsSync(candidate)) continue;
+      found = true;
+      const candidateChain = protectedDirectoryChain(ctx.path.dirname(candidate));
+      if (!candidateChain) {
+        rejected.push(candidate);
+        continue;
+      }
+      let canonical = null;
+      try { canonical = ctx.fs.realpathSync(candidate); } catch (_) {}
+      if (!canonical || !ctx.path.isAbsolute(canonical) || !samePath(ctx.path.resolve(canonical), canonical)) {
+        rejected.push(candidate);
+        continue;
+      }
+      if (inspectedCanonicalPaths.has(canonical)) continue;
+      inspectedCanonicalPaths.add(canonical);
+      const canonicalChain = protectedDirectoryChain(ctx.path.dirname(canonical));
+      let stat = null;
+      try { stat = ctx.fs.lstatSync(canonical); } catch (_) {}
+      const protectedExecutable = stat && stat.isFile() && !stat.isSymbolicLink() && stat.uid === 0
+        && (stat.mode & 0o022) === 0 && (stat.mode & 0o111) !== 0;
+      if (!canonicalChain || !protectedExecutable
+        || !protectedDirectoryChainUnchanged(candidateChain)
+        || !protectedDirectoryChainUnchanged(canonicalChain)) {
+        rejected.push(canonical);
+        continue;
+      }
+      return { command: canonical, found: true, rejected };
+    }
+    return { command: null, found, rejected };
+  }
+
+  function usesProtectedExecutableResolution() {
+    return !ctx.simulate && typeof process.getuid === 'function' && process.getuid() === 0;
+  }
+
+  function executableCommand(command) {
+    return usesProtectedExecutableResolution()
+      ? protectedExecutableSelection(command).command
+      : systemCommand(command);
+  }
+
+  function requiredProtectedExecutable(command, label, missingCode, missingMessage, missingResolution) {
+    if (ctx.simulate) return command;
+    const selection = protectedExecutableSelection(command);
+    if (selection.command) return selection.command;
+    if (!selection.found) {
+      throw ctx.arcaneError(missingCode, missingMessage, missingResolution, 409);
+    }
+    const rejected = [...new Set(selection.rejected)].slice(0, 8);
+    throw ctx.arcaneError(
+      'LINUX_PROTECTED_FILE_UNSAFE',
+      `Arcane refused to use an unprotected ${label}.`,
+      `Install or restore a root-owned executable in a protected system directory that is not writable by group or other users, then retry.`,
+      409,
+      { path: rejected[0] || null, rejectedPaths: rejected }
+    );
+  }
+
   function commandExists(command) {
-    return Boolean(systemCommand(command));
+    return Boolean(executableCommand(command));
   }
 
   function candidateExecutable(candidates) {
     for (const value of candidates.filter(Boolean)) {
-      if (ctx.path.isAbsolute(value)) {
-        if (ctx.fs.existsSync(value)) return value;
-      } else {
-        const resolved=systemCommand(value);
-        if(resolved)return resolved;
-      }
+      const resolved = executableCommand(value);
+      if (resolved) return resolved;
     }
     return null;
   }
 
   function usernameFromUid(uid) {
     if (uid === undefined || uid === null || uid === '') return null;
-    const id = systemCommand('id');
+    const id = executableCommand('id');
     if (!id) return null;
-    const result = ctx.spawnSync(id, ['-nu', String(uid)], { encoding: 'utf8' });
+    const result = ctx.boundedSpawnSync(id, ['-nu', String(uid)], { timeout: 10000 });
     return result.status === 0 ? String(result.stdout || '').trim() || null : null;
   }
 
   function currentIdentity() {
-    let username = process.env.USER || 'unknown';
-    try { username = ctx.os.userInfo().username || username; } catch (_) {}
+    const simulatedUsername = ctx.simulate && !ctx.processPkg
+      ? String(process.env.ARCANE_SIMULATED_USERNAME || '').trim()
+      : '';
+    let username = simulatedUsername || process.env.USER || 'unknown';
+    if (!simulatedUsername) {
+      try { username = ctx.os.userInfo().username || username; } catch (_) {}
+    }
     return {
       username,
       accountName: username,
-      displayName: process.env.ARCANE_DISPLAY_NAME || username,
+      displayName: simulatedUsername || process.env.ARCANE_DISPLAY_NAME || username,
       computerName: ctx.os.hostname(),
       domain: null,
       source: 'linux',
@@ -4128,6 +4311,7 @@ function createLinuxNativeAdapter(ctx) {
   function protectedUsernames(elevationProtectedUsername) {
     const values = [
       elevationProtectedUsername,
+      process.env.ARCANE_PROTECTED_USERNAME,
       process.env.SUDO_USER,
       usernameFromUid(process.env.PKEXEC_UID),
       currentIdentity().username,
@@ -4144,7 +4328,7 @@ function createLinuxNativeAdapter(ctx) {
       hostname: ctx.os.hostname(),
       release: ctx.os.release(),
       desktop: process.env.XDG_CURRENT_DESKTOP || process.env.DESKTOP_SESSION || null,
-      sessionType: process.env.XDG_SESSION_TYPE || null,
+      sessionType: isWindowsSubsystemForLinux() ? 'wslg' : (process.env.XDG_SESSION_TYPE || null),
       simulated: Boolean(simulatedPlatform),
       adapter: 'linux',
     };
@@ -4194,7 +4378,7 @@ function createLinuxNativeAdapter(ctx) {
     if (ctx.simulate) return { devices: [{ name: 'Simulated GPU', memoryBytes: 16 * 1024 ** 3 }], totalMemoryBytes: 16 * 1024 ** 3, memoryReliable: true, source: 'simulation' };
     const nvidiaSmi = candidateExecutable(['/usr/bin/nvidia-smi', '/usr/local/bin/nvidia-smi']);
     if (nvidiaSmi) {
-      const result = ctx.spawnSync(nvidiaSmi, ['--query-gpu=name,memory.total', '--format=csv,noheader,nounits'], { encoding: 'utf8', timeout: 5000 });
+      const result = ctx.boundedSpawnSync(nvidiaSmi, ['--query-gpu=name,memory.total', '--format=csv,noheader,nounits'], { timeout: 5000 });
       if (result.status === 0) {
         const devices = String(result.stdout || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
           const separator = line.lastIndexOf(',');
@@ -4223,15 +4407,15 @@ function createLinuxNativeAdapter(ctx) {
     if (ctx.simulate) {
       return { name: 'ollama.service', present: true, state: 'running', startType: 'enabled', commandMatches: Boolean(executable), ready: Boolean(executable) };
     }
-    const systemctl = systemCommand('systemctl');
+    const systemctl = executableCommand('systemctl');
     if (!systemctl || !executable) {
       return { name: null, present: false, state: systemctl ? 'missing' : 'unavailable', startType: null, commandMatches: false, ready: false };
     }
     for (const name of ['arcane-ollama.service', 'ollama.service']) {
-      const result = ctx.spawnSync(systemctl, [
+      const result = ctx.boundedSpawnSync(systemctl, [
         'show', name, '--no-pager',
         '--property=LoadState', '--property=ActiveState', '--property=UnitFileState', '--property=ExecStart',
-      ], { encoding: 'utf8', timeout: 10000 });
+      ], { timeout: 10000 });
       const output = `${result && result.stdout || ''}\n${result && result.stderr || ''}`;
       const loadState = /^LoadState=(.+)$/mi.exec(output)?.[1]?.trim() || 'not-found';
       if (!result || result.status !== 0 || loadState !== 'loaded') continue;
@@ -4267,7 +4451,7 @@ function createLinuxNativeAdapter(ctx) {
 
   function browserCandidates() {
     return ['microsoft-edge', 'google-chrome', 'chromium', 'chromium-browser', 'firefox']
-      .map(systemCommand)
+      .map(executableCommand)
       .filter(Boolean);
   }
 
@@ -4277,9 +4461,9 @@ function createLinuxNativeAdapter(ctx) {
 
   function rendererStatus() {
     if (ctx.simulate) return { id: 'webkitgtk', available: true, executable: 'webkitgtk-6.0', version: 'simulated', adapter: 'linux-webkitgtk' };
-    const pkgConfig = systemCommand('pkg-config');
+    const pkgConfig = executableCommand('pkg-config');
     if (!pkgConfig) return { id: 'webkitgtk', available: false, executable: null, version: null, adapter: 'linux-webkitgtk' };
-    const result = ctx.spawnSync(pkgConfig, ['--modversion', 'webkitgtk-6.0'], { encoding: 'utf8', timeout: 10000 });
+    const result = ctx.boundedSpawnSync(pkgConfig, ['--modversion', 'webkitgtk-6.0'], { timeout: 10000 });
     const version = result.status === 0 ? String(result.stdout || '').trim() : null;
     return { id: 'webkitgtk', available: Boolean(version), executable: version ? 'webkitgtk-6.0' : null, version, adapter: 'linux-webkitgtk' };
   }
@@ -4301,13 +4485,13 @@ function createLinuxNativeAdapter(ctx) {
   function sessionControlExecutable() {
     if (ctx.simulate) return 'loginctl';
     const candidate = logoutCandidates().find(([command]) => commandExists(command));
-    return candidate ? systemCommand(candidate[0]) : null;
+    return candidate ? executableCommand(candidate[0]) : null;
   }
 
   function logoutSpec() {
     if (ctx.simulate) return ['loginctl', ['terminate-user', currentIdentity().username]];
     const candidate = logoutCandidates().find(([command]) => commandExists(command));
-    return candidate ? [systemCommand(candidate[0]), candidate[1]] : null;
+    return candidate ? [executableCommand(candidate[0]), candidate[1]] : null;
   }
 
   function lockSpec() {
@@ -4317,7 +4501,7 @@ function createLinuxNativeAdapter(ctx) {
       ['gnome-screensaver-command', ['-l']],
       ['xdg-screensaver', ['lock']],
     ].find(([command]) => commandExists(command));
-    return candidate ? [systemCommand(candidate[0]), candidate[1]] : null;
+    return candidate ? [executableCommand(candidate[0]), candidate[1]] : null;
   }
 
   function provisionerCandidates(base, installRoot) {
@@ -4336,7 +4520,14 @@ function createLinuxNativeAdapter(ctx) {
   async function installNodePackage(packageFile, release, action) {
     const destination = ctx.path.join(paths.nodeRoot, release.version);
     await ctx.ensureDir(paths.nodeRoot);
-    await ctx.run('tar', ['-xJf', packageFile, '-C', paths.nodeRoot], { action });
+    const tar = requiredProtectedExecutable(
+      'tar',
+      'Linux tar archive tool',
+      'LINUX_ARCHIVE_TOOL_REQUIRED',
+      'Arcane could not find the Linux tar archive tool.',
+      'Install the distribution tar package, then retry.'
+    );
+    await ctx.run(tar, ['-xJf', packageFile, '-C', paths.nodeRoot], { action });
     const extracted = ctx.path.join(paths.nodeRoot, `node-${release.version}-linux-${process.arch === 'arm64' ? 'arm64' : 'x64'}`);
     if (extracted !== destination) {
       await ctx.fsp.rm(destination, { recursive: true, force: true });
@@ -4365,7 +4556,7 @@ function createLinuxNativeAdapter(ctx) {
 
   async function detectPackageManager() {
     for (const name of ['apt-get', 'dnf', 'yum', 'zypper', 'pacman']) {
-      const executable = systemCommand(name);
+      const executable = executableCommand(name);
       if (executable) return executable;
     }
     return null;
@@ -4424,16 +4615,316 @@ function createLinuxNativeAdapter(ctx) {
     }
   }
 
+  function canonicalFilesystemIdentity(stat) {
+    if (!stat || typeof stat.dev !== 'bigint' || stat.dev < 0n
+      || typeof stat.ino !== 'bigint' || stat.ino <= 0n) return null;
+    return Object.freeze({ device: stat.dev.toString(10), inode: stat.ino.toString(10) });
+  }
+
+  function sameCanonicalFilesystemIdentity(left, right) {
+    return Boolean(left && right && left.device === right.device && left.inode === right.inode);
+  }
+
+  function sameFilesystemIdentity(left, right) {
+    return sameCanonicalFilesystemIdentity(canonicalFilesystemIdentity(left), canonicalFilesystemIdentity(right));
+  }
+
+  function statIntegerEquals(value, expected) {
+    if (!Number.isSafeInteger(expected) || expected < 0) return false;
+    if (typeof value === 'bigint') return value === BigInt(expected);
+    return Number.isSafeInteger(value) && value === expected;
+  }
+
+  function statIntegerToSafeNumber(value, maximum = Number.MAX_SAFE_INTEGER) {
+    if (!Number.isSafeInteger(maximum) || maximum < 0) return null;
+    if (typeof value === 'bigint') {
+      if (value < 0n || value > BigInt(maximum)) return null;
+      return Number(value);
+    }
+    return Number.isSafeInteger(value) && value >= 0 && value <= maximum ? value : null;
+  }
+
+  function sameReleaseFileState(left, right) {
+    return sameFilesystemIdentity(left, right)
+      && typeof left.size === 'bigint' && left.size === right.size
+      && typeof left.mtimeNs === 'bigint' && left.mtimeNs === right.mtimeNs
+      && typeof left.ctimeNs === 'bigint' && left.ctimeNs === right.ctimeNs;
+  }
+
+  function linuxReleaseOpenFlags(directory) {
+    const constants = ctx.fs.constants || {};
+    if (!Number.isInteger(constants.O_NOFOLLOW)
+      || (directory && !Number.isInteger(constants.O_DIRECTORY))) {
+      throw new Error('Arcane requires O_NOFOLLOW and O_DIRECTORY for Linux release verification.');
+    }
+    return constants.O_RDONLY | constants.O_NOFOLLOW
+      | (directory ? constants.O_DIRECTORY : (constants.O_NONBLOCK || 0));
+  }
+
+  function releaseDescriptorPath(fd, childName = '') {
+    const base = `/proc/self/fd/${fd}`;
+    return childName ? `${base}/${childName}` : base;
+  }
+
+  function assertLinuxReleaseDirectory(entryPath, descriptorStat, rootDevice) {
+    const pathStat = ctx.fs.lstatSync(entryPath, { bigint: true });
+    const descriptorIdentity = canonicalFilesystemIdentity(descriptorStat);
+    if (!descriptorStat.isDirectory() || !pathStat.isDirectory() || pathStat.isSymbolicLink()
+      || !descriptorIdentity || descriptorIdentity.device !== rootDevice || !sameFilesystemIdentity(descriptorStat, pathStat)) {
+      throw new Error(`A Linux release directory changed during verification: ${entryPath}.`);
+    }
+  }
+
+  function recheckLinuxReleaseDirectoryChain(session, chain, relativePath) {
+    for (const entry of chain) {
+      const descriptorStat = ctx.fs.fstatSync(entry.fd, { bigint: true });
+      if (!sameFilesystemIdentity(descriptorStat, entry.stat)) {
+        throw new Error(`A Linux release directory changed while reading ${relativePath}.`);
+      }
+      assertLinuxReleaseDirectory(entry.path, descriptorStat, session.rootIdentity.device);
+    }
+  }
+
+  function closeLinuxReleaseDirectoryChain(chain) {
+    for (let index = chain.length - 1; index > 0; index -= 1) {
+      try { ctx.fs.closeSync(chain[index].fd); } catch (_) {}
+    }
+  }
+
+  function openLinuxReleaseDirectoryChain(session, relativeDirectory, relativePath) {
+    const parts = relativeDirectory ? installedRelativePath(relativeDirectory).split('/') : [];
+    if (parts.length > maxReleasePathDepth) throw new Error(`The Linux release path is too deep: ${relativePath}.`);
+    const chain = [{ fd: session.rootFd, path: session.root, stat: session.rootStat }];
+    let currentPath = session.root;
+    try {
+      recheckLinuxReleaseDirectoryChain(session, chain, relativePath);
+      for (const part of parts) {
+        const parent = chain[chain.length - 1];
+        const fd = ctx.fs.openSync(releaseDescriptorPath(parent.fd, part), linuxReleaseOpenFlags(true));
+        currentPath = ctx.path.join(currentPath, part);
+        const stat = ctx.fs.fstatSync(fd, { bigint: true });
+        chain.push({ fd, path: currentPath, stat });
+        recheckLinuxReleaseDirectoryChain(session, chain, relativePath);
+      }
+      return chain;
+    } catch (error) {
+      closeLinuxReleaseDirectoryChain(chain);
+      throw error;
+    }
+  }
+
+  function readLinuxReleaseFile(session, relativePath, { maxBytes, expectedSize = null, collect = false } = {}) {
+    const safePath = installedRelativePath(relativePath);
+    const parts = safePath.split('/');
+    const directory = parts.slice(0, -1).join('/');
+    const chain = openLinuxReleaseDirectoryChain(session, directory, safePath);
+    let fd = null;
+    try {
+      const leaf = parts[parts.length - 1];
+      fd = ctx.fs.openSync(releaseDescriptorPath(chain[chain.length - 1].fd, leaf), linuxReleaseOpenFlags(false));
+      const before = ctx.fs.fstatSync(fd, { bigint: true });
+      const pathStat = ctx.fs.lstatSync(ctx.path.join(session.root, ...parts), { bigint: true });
+      const beforeIdentity = canonicalFilesystemIdentity(before);
+      const beforeSize = statIntegerToSafeNumber(before.size, maxBytes);
+      if (!before.isFile() || !pathStat.isFile() || pathStat.isSymbolicLink()
+        || !beforeIdentity || beforeIdentity.device !== session.rootIdentity.device || !sameFilesystemIdentity(before, pathStat)) {
+        throw new Error(`The Linux release file changed before it could be read: ${safePath}.`);
+      }
+      if (beforeSize === null || (expectedSize !== null && beforeSize !== expectedSize)) {
+        throw new Error(`${safePath} does not match the release manifest size.`);
+      }
+      recheckLinuxReleaseDirectoryChain(session, chain, safePath);
+      const hash = ctx.crypto.createHash('sha256');
+      const chunks = [];
+      const buffer = Buffer.allocUnsafe(64 * 1024);
+      let total = 0;
+      while (true) {
+        const readLength = Math.min(buffer.length, maxBytes - total + 1);
+        if (readLength <= 0) throw new Error(`The Linux release file exceeds its verification limit: ${safePath}.`);
+        const bytesRead = ctx.fs.readSync(fd, buffer, 0, readLength, null);
+        if (bytesRead === 0) break;
+        total += bytesRead;
+        if (total > maxBytes || (expectedSize !== null && total > expectedSize)) {
+          throw new Error(`The Linux release file exceeds its verification limit: ${safePath}.`);
+        }
+        const chunk = buffer.subarray(0, bytesRead);
+        hash.update(chunk);
+        if (collect) chunks.push(Buffer.from(chunk));
+      }
+      const after = ctx.fs.fstatSync(fd, { bigint: true });
+      const finalPathStat = ctx.fs.lstatSync(ctx.path.join(session.root, ...parts), { bigint: true });
+      if (total !== beforeSize || !sameReleaseFileState(before, after)
+        || !sameReleaseFileState(before, finalPathStat)) {
+        throw new Error(`The Linux release file changed while it was being read: ${safePath}.`);
+      }
+      recheckLinuxReleaseDirectoryChain(session, chain, safePath);
+      return {
+        bytes: collect ? Buffer.concat(chunks, total) : null,
+        size: total,
+        sha256: hash.digest('hex'),
+      };
+    } finally {
+      if (fd !== null) try { ctx.fs.closeSync(fd); } catch (_) {}
+      closeLinuxReleaseDirectoryChain(chain);
+    }
+  }
+
+  function collectLinuxReleaseFiles(session) {
+    const actualPaths = [];
+    let entryCount = 0;
+    let totalBytes = 0;
+    const visit = (chain, relativeDirectory) => {
+      recheckLinuxReleaseDirectoryChain(session, chain, relativeDirectory || '(release root)');
+      const directoryBefore = ctx.fs.fstatSync(chain[chain.length - 1].fd, { bigint: true });
+      const directory = ctx.fs.opendirSync(releaseDescriptorPath(chain[chain.length - 1].fd), { bufferSize: 32 });
+      try {
+        let entry = null;
+        while ((entry = directory.readSync()) !== null) {
+          if (!relativeDirectory && (entry.name === 'arcane-release.json' || entry.name === '.gitkeep')) continue;
+          if (!entry.name || entry.name === '.' || entry.name === '..' || entry.name.includes('/') || entry.name.includes('\0')) {
+            throw new Error('The Linux release contains an unsafe directory entry.');
+          }
+          entryCount += 1;
+          if (entryCount > maxInstalledEntries) throw new Error('The Linux release contains too many entries.');
+          const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+          installedRelativePath(relativePath);
+          let childFd = null;
+          try {
+            childFd = ctx.fs.openSync(releaseDescriptorPath(chain[chain.length - 1].fd, entry.name), linuxReleaseOpenFlags(true));
+          } catch (_) {}
+          if (childFd !== null) {
+            const childPath = ctx.path.join(session.root, ...relativePath.split('/'));
+            const childStat = ctx.fs.fstatSync(childFd, { bigint: true });
+            const childChain = [...chain, { fd: childFd, path: childPath, stat: childStat }];
+            try {
+              if (!relativeDirectory && entry.name !== 'app') throw new Error(`The release contains an unexpected directory: ${entry.name}.`);
+              if (childChain.length > maxReleasePathDepth + 1) throw new Error(`The Linux release path is too deep: ${relativePath}.`);
+              recheckLinuxReleaseDirectoryChain(session, childChain, relativePath);
+              visit(childChain, relativePath);
+            } finally {
+              try { ctx.fs.closeSync(childFd); } catch (_) {}
+            }
+            continue;
+          }
+          let fileFd = null;
+          try {
+            fileFd = ctx.fs.openSync(releaseDescriptorPath(chain[chain.length - 1].fd, entry.name), linuxReleaseOpenFlags(false));
+            const fileStat = ctx.fs.fstatSync(fileFd, { bigint: true });
+            const filePath = ctx.path.join(session.root, ...relativePath.split('/'));
+            const pathStat = ctx.fs.lstatSync(filePath, { bigint: true });
+            const fileIdentity = canonicalFilesystemIdentity(fileStat);
+            const fileSize = statIntegerToSafeNumber(fileStat.size, maxReleasePayloadBytes);
+            if (!fileStat.isFile() || !pathStat.isFile() || pathStat.isSymbolicLink()
+              || !fileIdentity || fileIdentity.device !== session.rootIdentity.device || !sameFilesystemIdentity(fileStat, pathStat)
+              || fileSize === null) {
+              throw new Error(`The release contains an unsupported entry: ${relativePath}.`);
+            }
+            totalBytes += fileSize;
+            if (!Number.isSafeInteger(totalBytes) || totalBytes > maxReleasePayloadBytes) {
+              throw new Error('The Linux release payload exceeds its verification limit.');
+            }
+            actualPaths.push(relativePath);
+          } finally {
+            if (fileFd !== null) try { ctx.fs.closeSync(fileFd); } catch (_) {}
+          }
+        }
+      } finally {
+        try { directory.closeSync(); } catch (_) {}
+      }
+      const directoryAfter = ctx.fs.fstatSync(chain[chain.length - 1].fd, { bigint: true });
+      if (!sameReleaseFileState(directoryBefore, directoryAfter)) {
+        throw new Error(`A Linux release directory changed while its inventory was being read: ${relativeDirectory || '(release root)'}.`);
+      }
+      recheckLinuxReleaseDirectoryChain(session, chain, relativeDirectory || '(release root)');
+    };
+    visit([{ fd: session.rootFd, path: session.root, stat: session.rootStat }], '');
+    return actualPaths.sort();
+  }
+
+  function verifyLinuxReleaseWithDescriptors(dist, requiredReleaseFiles) {
+    const root = ctx.path.resolve(String(dist || ''));
+    if (!ctx.path.isAbsolute(String(dist || '')) || !samePath(root, dist)) {
+      throw new Error('Arcane rejected a non-canonical Linux release root.');
+    }
+    let rootFd = null;
+    try {
+      rootFd = ctx.fs.openSync(root, linuxReleaseOpenFlags(true));
+      const rootStat = ctx.fs.fstatSync(rootFd, { bigint: true });
+      const rootIdentity = canonicalFilesystemIdentity(rootStat);
+      if (!rootIdentity) throw new Error('Arcane could not obtain a precise Linux release-root filesystem identity.');
+      assertLinuxReleaseDirectory(root, rootStat, rootIdentity.device);
+      if (!samePath(ctx.fs.realpathSync(root), root)) throw new Error('Arcane rejected a symlinked Linux release root.');
+      const session = { root, rootFd, rootStat, rootIdentity };
+      recheckLinuxReleaseDirectoryChain(session, [{ fd: rootFd, path: root, stat: rootStat }], '(release root)');
+      const manifestRead = readLinuxReleaseFile(session, 'arcane-release.json', {
+        maxBytes: maxReleaseManifestBytes,
+        collect: true,
+      });
+      const releaseManifest = JSON.parse(manifestRead.bytes.toString('utf8'));
+      if (releaseManifest.schemaVersion !== 2) throw new Error('The release manifest must use integrity schema 2.');
+      if (releaseManifest.hashAlgorithm !== 'sha256') throw new Error('The release manifest must use SHA-256.');
+      if (releaseManifest.version !== ctx.bundleVersion) throw new Error(`The verified release is ${releaseManifest.version || 'unknown'}, not ${ctx.bundleVersion}.`);
+      if (releaseManifest.platform !== 'linux') throw new Error(`The release manifest targets ${releaseManifest.platform || 'an unknown platform'}, not Linux.`);
+      const actualPaths = collectLinuxReleaseFiles(session);
+      const entries = new Map();
+      let declaredBytes = 0;
+      for (const entry of Array.isArray(releaseManifest.files) ? releaseManifest.files : []) {
+        const releasePath = entry && entry.path;
+        const parts = typeof releasePath === 'string' ? releasePath.split('/') : [];
+        if (!parts.length || parts.length > maxReleasePathDepth
+          || parts.some((part) => !part || part === '.' || part === '..') || releasePath.includes('\\') || releasePath.includes(':')) {
+          throw new Error(`The release manifest contains an unsafe path: ${String(releasePath)}.`);
+        }
+        if (entries.has(releasePath)) throw new Error(`The release manifest contains a duplicate path: ${releasePath}.`);
+        if (!Number.isSafeInteger(entry.size) || entry.size < 0) throw new Error(`The release manifest contains an invalid size for ${releasePath}.`);
+        declaredBytes += entry.size;
+        if (!Number.isSafeInteger(declaredBytes) || declaredBytes > maxReleasePayloadBytes) throw new Error('The Linux release payload exceeds its verification limit.');
+        if (!/^[a-f0-9]{64}$/i.test(String(entry.sha256 || ''))) throw new Error(`The release manifest contains an invalid SHA-256 for ${releasePath}.`);
+        entries.set(releasePath, entry);
+      }
+      if (entries.size > maxInstalledEntries || entries.size !== actualPaths.length
+        || actualPaths.some((releasePath) => !entries.has(releasePath))) {
+        throw new Error('The release manifest file inventory does not exactly match the dist payload.');
+      }
+      for (const name of requiredReleaseFiles) {
+        if (!entries.has(name)) throw new Error(`The release manifest does not verify ${name}.`);
+      }
+      for (const releasePath of actualPaths) {
+        const entry = entries.get(releasePath);
+        const read = readLinuxReleaseFile(session, releasePath, { maxBytes: entry.size, expectedSize: entry.size });
+        if (read.sha256.toLowerCase() !== String(entry.sha256).toLowerCase()) {
+          throw new Error(`${releasePath} does not match the release manifest SHA-256.`);
+        }
+      }
+      recheckLinuxReleaseDirectoryChain(session, [{ fd: rootFd, path: root, stat: rootStat }], '(release root)');
+      return { releaseManifest, verifiedEntries: actualPaths.map((releasePath) => ({ ...entries.get(releasePath) })) };
+    } finally {
+      if (rootFd !== null) try { ctx.fs.closeSync(rootFd); } catch (_) {}
+    }
+  }
+
   function installPayload(root) {
     const dist = ctx.fs.existsSync(ctx.path.join(root, 'arcane-release.json')) && ctx.fs.existsSync(ctx.path.join(root, 'app'))
       ? root
+      : ctx.fs.existsSync(ctx.path.join(root, 'dist', 'linux', 'arcane-release.json')) && ctx.fs.existsSync(ctx.path.join(root, 'dist', 'linux', 'app'))
+      ? ctx.path.join(root, 'dist', 'linux')
       : ctx.path.join(root, 'dist');
     const requiredReleaseFiles = [
       'ArcaneShell',
       'ArcaneProvisioner',
       'ArcaneCore',
       'arcane-bundle.json',
+      'app/arcane/css/theme.css',
+      'app/arcane/entities/Preference.js',
+      'app/arcane/entities/Theme.js',
+      'app/arcane/modules/AppDataScope.js',
+      'app/arcane/modules/AppearancePreferences.js',
+      'app/arcane/modules/PreferenceStore.js',
+      'app/arcane/modules/SystemAppearance.js',
+      'app/arcane/modules/ThemeBootstrap.js',
+      'app/arcane/modules/ThemeManager.js',
       'app/shared/arcane-api.js',
+      'app/shared/SystemPlatformPresentation.js',
       'app/shared/arcane-sigil.svg',
       'app/shared/arcane-sigil-512.png',
       'app/shared/arcane-sigil.ico',
@@ -4452,6 +4943,15 @@ function createLinuxNativeAdapter(ctx) {
     let verifiedEntries = [];
     if (!missingRelease.length) {
       try {
+        if (enforcePosixMetadata) {
+          const verified = verifyLinuxReleaseWithDescriptors(dist, requiredReleaseFiles);
+          releaseManifest = verified.releaseManifest;
+          verifiedEntries = verified.verifiedEntries;
+        } else {
+        const releaseRootStat = ctx.fs.lstatSync(dist);
+        const releaseManifestStat = ctx.fs.lstatSync(releaseManifestPath);
+        if (!releaseRootStat.isDirectory() || releaseRootStat.isSymbolicLink()) throw new Error('The Linux release root is not a regular directory.');
+        if (!releaseManifestStat.isFile() || releaseManifestStat.isSymbolicLink()) throw new Error('The Linux release manifest is not a regular file.');
         releaseManifest = JSON.parse(ctx.fs.readFileSync(releaseManifestPath, 'utf8'));
         if (releaseManifest.schemaVersion !== 2) releaseProblem = 'The release manifest must use integrity schema 2.';
         else if (releaseManifest.hashAlgorithm !== 'sha256') releaseProblem = 'The release manifest must use SHA-256.';
@@ -4503,24 +5003,28 @@ function createLinuxNativeAdapter(ctx) {
           }
           verifiedEntries = actualPaths.map((releasePath) => ({ ...entries.get(releasePath) }));
         }
+        }
       } catch (error) { releaseProblem = `The release manifest could not be read: ${error.message}`; }
     }
     if (!missingRelease.length && !releaseProblem) {
       const topLevelFiles = verifiedEntries.filter((entry) => !entry.path.includes('/') && entry.path !== 'arcane-bundle.json');
-      const integrityFiles = verifiedEntries.map((entry) => ({
+      const releaseIntegrityFiles = verifiedEntries.map((entry) => ({
         ...entry,
         installPath: entry.path === 'arcane-bundle.json' || entry.path.startsWith('app/') ? entry.path : `bin/${entry.path}`,
+        source: ctx.path.join(dist, ...entry.path.split('/')),
       }));
-      return {
+      const payload = {
         mode: 'linux-webkitgtk',
         releaseReady: true,
         verified: true,
+        securityMode: 'unsigned-local-test',
+        releaseRoot: dist,
         releaseManifest,
         integrity: {
           schemaVersion: releaseManifest.schemaVersion,
           hashAlgorithm: releaseManifest.hashAlgorithm,
           sourceManifest: releaseManifestPath,
-          files: integrityFiles,
+          files: [],
         },
         bundleManifestSource: ctx.path.join(dist, 'arcane-bundle.json'),
         assetFiles: ['arcane-sigil.svg', 'arcane-sigil-512.png', 'arcane-sigil.ico'].map((name) => ({
@@ -4532,6 +5036,8 @@ function createLinuxNativeAdapter(ctx) {
         directories: [{ source: appDirectory, destinationName: 'app' }],
         missingRelease: [],
       };
+      payload.integrity.files = [...releaseIntegrityFiles, ...launcherIntegrityEntries(payload)];
+      return payload;
     }
     const sourceCore = ctx.path.join(root, 'runtime', 'arcane-core.cjs');
     return {
@@ -4546,21 +5052,905 @@ function createLinuxNativeAdapter(ctx) {
     };
   }
 
+  function installedRelativePath(value) {
+    const relativePath = String(value || '');
+    const parts = relativePath.split('/');
+    if (!relativePath || relativePath.includes('\\') || relativePath.includes(':')
+      || parts.some((part) => !part || part === '.' || part === '..')) {
+      throw new Error(`Arcane rejected an unsafe installed path: ${relativePath || '(empty)'}.`);
+    }
+    return relativePath;
+  }
+
+  function permissionBits(stat) {
+    const mode = stat && stat.mode;
+    if (typeof mode === 'bigint') return Number(mode & 0o7777n);
+    return Number.isSafeInteger(mode) ? mode & 0o7777 : -1;
+  }
+
+  function samePath(left, right) {
+    const leftPath = ctx.path.resolve(String(left || ''));
+    const rightPath = ctx.path.resolve(String(right || ''));
+    return ctx.path.sep === '\\' ? leftPath.toLowerCase() === rightPath.toLowerCase() : leftPath === rightPath;
+  }
+
+  function escapeRegularExpression(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function exactOwnDataRecord(value, expectedKeys) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const ownKeys = Reflect.ownKeys(value);
+    if (ownKeys.length !== expectedKeys.length || ownKeys.some((key) => typeof key !== 'string')) return null;
+    const actualKeys = ownKeys.slice().sort();
+    const wantedKeys = expectedKeys.slice().sort();
+    if (actualKeys.some((key, index) => key !== wantedKeys[index])) return null;
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    const record = {};
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) return null;
+      record[key] = descriptor.value;
+    }
+    return record;
+  }
+
+  function expectedInstallStagePath(value) {
+    if (typeof value !== 'string' || !ctx.path.isAbsolute(value)) return null;
+    const stageRoot = ctx.path.resolve(value);
+    if (!samePath(stageRoot, value)) return null;
+    const installRoot = ctx.path.resolve(paths.installRoot);
+    const parent = ctx.path.dirname(installRoot);
+    const expectedName = new RegExp(`^${escapeRegularExpression(ctx.path.basename(installRoot))}\\.stage-${process.pid}-[a-f0-9]{48}$`);
+    if (!samePath(ctx.path.dirname(stageRoot), parent) || samePath(stageRoot, installRoot)
+      || !expectedName.test(ctx.path.basename(stageRoot))) return null;
+    return { stageRoot, installRoot, parent };
+  }
+
+  function validatedInstallStageOwnership(value) {
+    const record = exactOwnDataRecord(value, ['schemaVersion', 'platform', 'stage', 'device', 'inode']);
+    if (!record || record.schemaVersion !== 1 || record.platform !== 'linux'
+      || typeof record.device !== 'string' || !/^(?:0|[1-9][0-9]*)$/.test(record.device)
+      || typeof record.inode !== 'string' || !/^[1-9][0-9]*$/.test(record.inode)) return null;
+    const stage = expectedInstallStagePath(record.stage);
+    if (!stage) return null;
+    return Object.freeze({ ...record, stage: stage.stageRoot });
+  }
+
+  function expectedInstallTopology(entries) {
+    const files = new Map();
+    const directories = new Set();
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      const relativePath = installedRelativePath(entry && (entry.installPath || entry.path));
+      if (files.has(relativePath)) throw new Error(`Arcane rejected a duplicate installed path: ${relativePath}.`);
+      const parts = relativePath.split('/');
+      for (let index = 1; index < parts.length; index += 1) {
+        const directory = parts.slice(0, index).join('/');
+        if (files.has(directory)) throw new Error(`Arcane rejected an installed file/directory collision: ${directory}.`);
+        directories.add(directory);
+      }
+      if (directories.has(relativePath)) throw new Error(`Arcane rejected an installed file/directory collision: ${relativePath}.`);
+      files.set(relativePath, entry);
+    }
+    if (!files.size) throw new Error('Arcane rejected an empty installed integrity inventory.');
+    if (files.size + directories.size > maxInstalledEntries) throw new Error('Arcane rejected an oversized installed file inventory.');
+    return { files, directories };
+  }
+
+  function inspectInstallStageLocation(stage, expectedMode) {
+    const expected = expectedInstallStagePath(stage);
+    if (!expected) {
+      throw new Error('Arcane rejected a non-canonical Linux installation stage path.');
+    }
+    const { stageRoot, parent } = expected;
+    const parentStat = ctx.fs.lstatSync(parent, { bigint: true });
+    const parentIdentity = canonicalFilesystemIdentity(parentStat);
+    if (parentStat.isSymbolicLink() || !parentStat.isDirectory() || !parentIdentity || !statIntegerEquals(parentStat.uid, 0)
+      || (enforcePosixMetadata && !statIntegerEquals(parentStat.gid, 0)) || (permissionBits(parentStat) & 0o022) !== 0) {
+      throw new Error('Arcane rejected an unprotected Linux installation parent.');
+    }
+    if (!samePath(ctx.fs.realpathSync(parent), parent)) throw new Error('Arcane rejected a non-canonical Linux installation parent.');
+    const stageStat = ctx.fs.lstatSync(stageRoot, { bigint: true });
+    const stageIdentity = canonicalFilesystemIdentity(stageStat);
+    if (stageStat.isSymbolicLink() || !stageStat.isDirectory() || !stageIdentity || !statIntegerEquals(stageStat.uid, 0)
+      || (enforcePosixMetadata && !statIntegerEquals(stageStat.gid, 0)) || stageIdentity.device !== parentIdentity.device) {
+      throw new Error('Arcane rejected an unprotected Linux installation stage.');
+    }
+    if (!samePath(ctx.fs.realpathSync(stageRoot), stageRoot)) throw new Error('Arcane rejected a non-canonical Linux installation stage.');
+    if (expectedMode !== null && enforcePosixMetadata && permissionBits(stageStat) !== expectedMode) {
+      throw new Error(`Arcane rejected a Linux installation stage without mode ${expectedMode.toString(8)}.`);
+    }
+    return { stageRoot, parent, stat: stageStat, identity: stageIdentity };
+  }
+
+  async function prepareInstallStage(stage) {
+    const initial = inspectInstallStageLocation(stage, null);
+    await ctx.fsp.chmod(initial.stageRoot, 0o700);
+    const prepared = inspectInstallStageLocation(initial.stageRoot, 0o700);
+    preparedInstallStages.set(prepared.stageRoot, prepared.identity);
+    while (preparedInstallStages.size > 4) preparedInstallStages.delete(preparedInstallStages.keys().next().value);
+    return { prepared: true, path: prepared.stageRoot };
+  }
+
+  function preparedInstallStage(stage, expectedMode) {
+    const inspected = inspectInstallStageLocation(stage, expectedMode);
+    const prepared = preparedInstallStages.get(inspected.stageRoot);
+    if (!sameCanonicalFilesystemIdentity(prepared, inspected.identity)) {
+      throw new Error('Arcane rejected a Linux installation stage whose filesystem identity changed.');
+    }
+    return { ...inspected, identity: inspected.identity };
+  }
+
+  function captureInstallStageOwnership(stage) {
+    const inspected = preparedInstallStage(stage, 0o700);
+    return Object.freeze({
+      schemaVersion: 1,
+      platform: 'linux',
+      stage: inspected.stageRoot,
+      device: inspected.identity.device,
+      inode: inspected.identity.inode,
+    });
+  }
+
+  function installStageOwnershipStatus(ownership, target) {
+    const record = validatedInstallStageOwnership(ownership);
+    if (!record) return { state: 'uncertain', reason: 'invalid-ownership-record' };
+    const targetPath = ctx.path.resolve(String(target || ''));
+    const installRoot = ctx.path.resolve(paths.installRoot);
+    const failedName = new RegExp(`^${escapeRegularExpression(ctx.path.basename(installRoot))}\\.failed-[0-9]+$`);
+    const failedPath = samePath(ctx.path.dirname(targetPath), ctx.path.dirname(installRoot))
+      && failedName.test(ctx.path.basename(targetPath));
+    if (!samePath(targetPath, record.stage) && !samePath(targetPath, installRoot) && !failedPath) {
+      return { state: 'uncertain', reason: 'candidate-outside-owned-install-paths' };
+    }
+    let stat = null;
+    try { stat = ctx.fs.lstatSync(targetPath, { bigint: true }); }
+    catch (error) {
+      if (error && error.code === 'ENOENT') return { state: 'missing', reason: 'not-found' };
+      return { state: 'uncertain', reason: error && (error.code || error.message) || 'identity-read-failed' };
+    }
+    const identity = canonicalFilesystemIdentity(stat);
+    if (stat.isSymbolicLink() || !stat.isDirectory() || !identity
+      || identity.device !== record.device || identity.inode !== record.inode) {
+      return { state: 'foreign', reason: 'identity-mismatch' };
+    }
+    return { state: 'owned', path: targetPath, originalStage: record.stage, device: identity.device, inode: identity.inode };
+  }
+
+  async function cleanupInstallStage(ownership, target) {
+    const targetPath = ctx.path.resolve(String(target || ''));
+    const status = installStageOwnershipStatus(ownership, targetPath);
+    if (status.state !== 'owned') {
+      throw new Error('Arcane refused to clean a Linux installation tree without its captured filesystem identity.');
+    }
+    await ctx.fsp.rm(targetPath, { recursive: true, force: false });
+    preparedInstallStages.delete(status.originalStage);
+    stagedInstallIntegrityByRoot.delete(status.originalStage);
+    return { removed: true, path: targetPath };
+  }
+
+  function captureSourceDirectoryChain(releaseRoot, relativePath) {
+    const canonicalRoot = ctx.path.resolve(String(releaseRoot || ''));
+    if (!ctx.path.isAbsolute(String(releaseRoot || '')) || !samePath(canonicalRoot, releaseRoot)) {
+      throw new Error('Arcane rejected a non-canonical Linux release root.');
+    }
+    if (!samePath(ctx.fs.realpathSync(canonicalRoot), canonicalRoot)) throw new Error('Arcane rejected a symlinked Linux release root.');
+    const rootStat = ctx.fs.lstatSync(canonicalRoot, { bigint: true });
+    const rootIdentity = canonicalFilesystemIdentity(rootStat);
+    if (rootStat.isSymbolicLink() || !rootStat.isDirectory() || !rootIdentity) throw new Error('Arcane rejected an unsafe Linux release root.');
+    const parts = installedRelativePath(relativePath).split('/');
+    const chain = [{ path: canonicalRoot, ...rootIdentity }];
+    let current = canonicalRoot;
+    for (const part of parts.slice(0, -1)) {
+      current = ctx.path.join(current, part);
+      const stat = ctx.fs.lstatSync(current, { bigint: true });
+      const identity = canonicalFilesystemIdentity(stat);
+      if (stat.isSymbolicLink() || !stat.isDirectory() || !identity || identity.device !== rootIdentity.device) {
+        throw new Error(`Arcane rejected an unsafe Linux release directory for ${relativePath}.`);
+      }
+      chain.push({ path: current, ...identity });
+    }
+    const source = ctx.path.resolve(canonicalRoot, ...parts);
+    const rootPrefix = `${canonicalRoot}${ctx.path.sep}`;
+    if (!source.startsWith(rootPrefix)) throw new Error(`Arcane rejected a Linux release path outside its root: ${relativePath}.`);
+    return { source, rootIdentity, chain };
+  }
+
+  function recheckSourceDirectoryChain(captured, relativePath) {
+    for (const expected of captured.chain) {
+      const stat = ctx.fs.lstatSync(expected.path, { bigint: true });
+      const identity = canonicalFilesystemIdentity(stat);
+      if (stat.isSymbolicLink() || !stat.isDirectory() || !identity
+        || identity.device !== expected.device || identity.inode !== expected.inode) {
+        throw new Error(`Arcane rejected a Linux release directory that changed while copying ${relativePath}.`);
+      }
+    }
+  }
+
+  function assertPrivateStageDirectory(entryPath, stat, device) {
+    const identity = canonicalFilesystemIdentity(stat);
+    if (!stat || stat.isSymbolicLink() || !stat.isDirectory() || !identity
+      || !statIntegerEquals(stat.uid, 0) || !statIntegerEquals(stat.gid, 0)
+      || identity.device !== device || permissionBits(stat) !== 0o700) {
+      throw new Error(`Arcane rejected an unprotected private installation directory: ${entryPath}.`);
+    }
+  }
+
+  async function ensurePrivateStageDirectory(stageInfo, relativeDirectory) {
+    let current = stageInfo.stageRoot;
+    for (const part of relativeDirectory ? relativeDirectory.split('/') : []) {
+      current = ctx.path.join(current, part);
+      try {
+        await ctx.fsp.mkdir(current, { recursive: false, mode: 0o700 });
+        await ctx.fsp.chmod(current, 0o700);
+      } catch (error) {
+        if (!error || error.code !== 'EEXIST') throw error;
+      }
+      assertPrivateStageDirectory(current, ctx.fs.lstatSync(current, { bigint: true }), stageInfo.identity.device);
+    }
+    return current;
+  }
+
+  function freshFileFlags(readOnly) {
+    const constants = ctx.fs.constants || {};
+    if (!Number.isInteger(constants.O_NOFOLLOW)) throw new Error('Arcane requires O_NOFOLLOW for Linux installation staging.');
+    if (readOnly) return constants.O_RDONLY | constants.O_NOFOLLOW | (constants.O_NONBLOCK || 0);
+    return constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW;
+  }
+
+  async function writeAll(handle, buffer, length) {
+    let offset = 0;
+    while (offset < length) {
+      const result = await handle.write(buffer, offset, length - offset, null);
+      if (!result || result.bytesWritten <= 0) throw new Error('Arcane could not complete a protected installation write.');
+      offset += result.bytesWritten;
+    }
+  }
+
+  async function verifyFreshStageFile(handle, relativePath, expectedMode, expectedSize) {
+    await handle.chown(0, 0);
+    await handle.chmod(expectedMode);
+    await handle.sync();
+    const stat = await handle.stat();
+    if (!stat.isFile() || stat.uid !== 0 || stat.gid !== 0 || stat.nlink !== 1
+      || permissionBits(stat) !== expectedMode || stat.size !== expectedSize) {
+      throw new Error(`Arcane rejected a non-canonical staged file: ${relativePath}.`);
+    }
+  }
+
+  async function copyReleaseFileToStage(stageInfo, payload, relativePath, entry) {
+    const sourcePath = installedRelativePath(entry.path);
+    const captured = captureSourceDirectoryChain(payload.releaseRoot, sourcePath);
+    if (entry.source && !samePath(entry.source, captured.source)) throw new Error(`Arcane rejected an inconsistent Linux release source for ${relativePath}.`);
+    if (!Number.isSafeInteger(entry.size) || entry.size < 0 || !/^[a-f0-9]{64}$/i.test(String(entry.sha256 || ''))) {
+      throw new Error(`Arcane rejected invalid integrity metadata for ${relativePath}.`);
+    }
+    const destination = ctx.path.join(stageInfo.stageRoot, ...relativePath.split('/'));
+    await ensurePrivateStageDirectory(stageInfo, relativePath.split('/').slice(0, -1).join('/'));
+    let sourceHandle = null;
+    let destinationHandle = null;
+    try {
+      sourceHandle = await ctx.fsp.open(captured.source, freshFileFlags(true));
+      const sourceStat = await sourceHandle.stat({ bigint: true });
+      const sourceIdentity = canonicalFilesystemIdentity(sourceStat);
+      if (!sourceStat.isFile() || !sourceIdentity || sourceIdentity.device !== captured.rootIdentity.device
+        || !statIntegerEquals(sourceStat.size, entry.size)) {
+        throw new Error(`Arcane rejected an unsafe or changed Linux release file: ${sourcePath}.`);
+      }
+      destinationHandle = await ctx.fsp.open(destination, freshFileFlags(false), 0o600);
+      const hash = ctx.crypto.createHash('sha256');
+      const buffer = Buffer.allocUnsafe(64 * 1024);
+      let copied = 0;
+      while (true) {
+        const result = await sourceHandle.read(buffer, 0, buffer.length, null);
+        if (!result || result.bytesRead === 0) break;
+        copied += result.bytesRead;
+        if (copied > entry.size) throw new Error(`Arcane rejected a Linux release file that grew while copying: ${sourcePath}.`);
+        hash.update(buffer.subarray(0, result.bytesRead));
+        await writeAll(destinationHandle, buffer, result.bytesRead);
+      }
+      if (copied !== entry.size || hash.digest('hex').toLowerCase() !== String(entry.sha256).toLowerCase()) {
+        throw new Error(`Arcane rejected modified Linux release content: ${sourcePath}.`);
+      }
+      const expectedMode = linuxInstalledExecutablePaths.has(relativePath) ? 0o755 : 0o644;
+      await verifyFreshStageFile(destinationHandle, relativePath, expectedMode, copied);
+    } finally {
+      if (destinationHandle) await destinationHandle.close().catch(() => {});
+      if (sourceHandle) await sourceHandle.close().catch(() => {});
+    }
+    recheckSourceDirectoryChain(captured, sourcePath);
+  }
+
+  async function writeGeneratedStageFile(stageInfo, relativePath, contents, entry) {
+    const buffer = Buffer.from(contents, 'utf8');
+    if (!entry || entry.size !== buffer.length
+      || ctx.crypto.createHash('sha256').update(buffer).digest('hex').toLowerCase() !== String(entry.sha256 || '').toLowerCase()) {
+      throw new Error(`Arcane rejected inconsistent generated launcher integrity for ${relativePath}.`);
+    }
+    if (!enforcePosixMetadata) {
+      await ctx.writeFile(ctx.path.join(stageInfo.stageRoot, ...relativePath.split('/')), contents, 0o755);
+      return;
+    }
+    await ensurePrivateStageDirectory(stageInfo, relativePath.split('/').slice(0, -1).join('/'));
+    const destination = ctx.path.join(stageInfo.stageRoot, ...relativePath.split('/'));
+    let handle = null;
+    try {
+      handle = await ctx.fsp.open(destination, freshFileFlags(false), 0o600);
+      await writeAll(handle, buffer, buffer.length);
+      await verifyFreshStageFile(handle, relativePath, 0o755, buffer.length);
+    } finally {
+      if (handle) await handle.close().catch(() => {});
+    }
+  }
+
+  async function materializeInstallStage(stage, payload) {
+    const stageInfo = preparedInstallStage(stage, 0o700);
+    const topology = expectedInstallTopology(payload && payload.integrity && payload.integrity.files);
+    for (const [relativePath, entry] of [...topology.files].sort(([left], [right]) => left.localeCompare(right, 'en'))) {
+      if (!entry.source) {
+        if (!linuxInstalledExecutablePaths.has(relativePath) || !relativePath.startsWith('bin/arcane-')) {
+          throw new Error(`Arcane rejected an installation entry without a verified release source: ${relativePath}.`);
+        }
+        continue;
+      }
+      await copyReleaseFileToStage(stageInfo, payload, relativePath, entry);
+    }
+    return { materialized: true, files: topology.files.size };
+  }
+
   async function writeLaunchers(stage, payload) {
-    const executable = payload && payload.mode === 'linux-webkitgtk';
-    const shellLauncher = executable
-      ? '#!/bin/sh\nexec "$(dirname "$0")/ArcaneShell" "$@"\n'
-      : '#!/bin/sh\nexec node "$(dirname "$0")/arcane-shell.cjs" "$@"\n';
-    const provisionerLauncher = executable
-      ? '#!/bin/sh\nexec "$(dirname "$0")/ArcaneProvisioner" "$@"\n'
-      : '#!/bin/sh\nexec node "$(dirname "$0")/arcane-provisioner.cjs" "$@"\n';
-    await ctx.writeFile(ctx.path.join(stage, 'bin', 'arcane-shell'), shellLauncher, 0o755);
-    await ctx.writeFile(ctx.path.join(stage, 'bin', 'arcane-provisioner'), provisionerLauncher, 0o755);
+    const stageRoot = ctx.path.resolve(stage);
+    if (ctx.simulate) {
+      for (const [installPath, contents] of Object.entries(linuxLauncherFiles(payload))) {
+        await ctx.writeFile(ctx.path.join(stageRoot, ...installPath.split('/')), contents, 0o755);
+      }
+      return;
+    }
+    const stageInfo = preparedInstallStage(stageRoot, 0o700);
+    const integrityEntries = payload && payload.integrity && Array.isArray(payload.integrity.files)
+      ? payload.integrity.files
+      : launcherIntegrityEntries(payload);
+    const expected = expectedInstallTopology(integrityEntries).files;
+    try {
+      for (const [installPath, contents] of Object.entries(linuxLauncherFiles(payload))) {
+        await writeGeneratedStageFile(stageInfo, installPath, contents, expected.get(installPath));
+      }
+      stagedInstallIntegrityByRoot.set(stageRoot, integrityEntries.map((entry) => ({ ...entry })));
+      while (stagedInstallIntegrityByRoot.size > 4) stagedInstallIntegrityByRoot.delete(stagedInstallIntegrityByRoot.keys().next().value);
+    } catch (error) {
+      stagedInstallIntegrityByRoot.delete(stageRoot);
+      throw error;
+    }
+  }
+
+  function inspectExactStageTree(stage, entries, rootMode, directoryMode) {
+    const stageInfo = preparedInstallStage(stage, rootMode);
+    const topology = expectedInstallTopology(entries);
+    const actualFiles = new Set();
+    const actualDirectories = new Map();
+    let count = 0;
+    const visit = (directory, relativeDirectory) => {
+      for (const entry of ctx.fs.readdirSync(directory, { withFileTypes: true })) {
+        count += 1;
+        if (count > maxInstalledEntries) throw new Error('Arcane rejected an oversized installed file inventory.');
+        const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+        const target = ctx.path.resolve(directory, entry.name);
+        const stagePrefix = `${stageInfo.stageRoot}${ctx.path.sep}`;
+        if (!target.startsWith(stagePrefix)) throw new Error(`Arcane rejected a staged path outside its root: ${relativePath}.`);
+        const stat = ctx.fs.lstatSync(target, { bigint: true });
+        const identity = canonicalFilesystemIdentity(stat);
+        if (stat.isSymbolicLink() || !identity || identity.device !== stageInfo.identity.device
+          || !statIntegerEquals(stat.uid, 0) || !statIntegerEquals(stat.gid, 0)) {
+          throw new Error(`Arcane rejected an unprotected staged entry: ${relativePath}.`);
+        }
+        if (stat.isDirectory()) {
+          if (permissionBits(stat) !== directoryMode) throw new Error(`Arcane rejected a staged directory with non-canonical permissions: ${relativePath}.`);
+          actualDirectories.set(relativePath, { path: target, stat });
+          visit(target, relativePath);
+        } else if (stat.isFile()) {
+          const expectedMode = linuxInstalledExecutablePaths.has(relativePath) ? 0o755 : 0o644;
+          if (!statIntegerEquals(stat.nlink, 1) || permissionBits(stat) !== expectedMode) {
+            throw new Error(`Arcane rejected a staged file with non-canonical metadata: ${relativePath}.`);
+          }
+          actualFiles.add(relativePath);
+        } else {
+          throw new Error(`Arcane rejected an unsupported staged entry: ${relativePath}.`);
+        }
+      }
+    };
+    visit(stageInfo.stageRoot, '');
+    if (actualFiles.size !== topology.files.size || [...actualFiles].some((value) => !topology.files.has(value))) {
+      throw new Error('Arcane rejected a staged file inventory that does not exactly match its integrity metadata.');
+    }
+    if (actualDirectories.size !== topology.directories.size || [...actualDirectories.keys()].some((value) => !topology.directories.has(value))) {
+      throw new Error('Arcane rejected a staged directory inventory that does not exactly match its integrity metadata.');
+    }
+    return { stageInfo, topology, directories: actualDirectories };
+  }
+
+  async function canonicalizeStageDirectory(entryPath, expectedStat, mode) {
+    const constants = ctx.fs.constants || {};
+    if (!Number.isInteger(constants.O_NOFOLLOW) || !Number.isInteger(constants.O_DIRECTORY)) {
+      throw new Error('Arcane requires O_NOFOLLOW and O_DIRECTORY for Linux installation staging.');
+    }
+    let handle = null;
+    try {
+      handle = await ctx.fsp.open(entryPath, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY);
+      const before = await handle.stat({ bigint: true });
+      if (!before.isDirectory() || !sameFilesystemIdentity(before, expectedStat)) {
+        throw new Error(`Arcane rejected a staged directory whose identity changed: ${entryPath}.`);
+      }
+      await handle.chown(0, 0);
+      await handle.chmod(mode);
+      const after = await handle.stat({ bigint: true });
+      if (!statIntegerEquals(after.uid, 0) || !statIntegerEquals(after.gid, 0)
+        || permissionBits(after) !== mode || !sameFilesystemIdentity(after, before)) {
+        throw new Error(`Arcane could not canonicalize a staged directory: ${entryPath}.`);
+      }
+    } finally {
+      if (handle) await handle.close().catch(() => {});
+    }
+  }
+
+  async function finalizeInstallStage(stage, payload) {
+    const stageRoot = ctx.path.resolve(stage);
+    try {
+      const inspected = inspectExactStageTree(stageRoot, payload.integrity.files, 0o700, 0o700);
+      const directories = [...inspected.directories.values()].sort((left, right) => right.path.length - left.path.length);
+      for (const directory of directories) await canonicalizeStageDirectory(directory.path, directory.stat, 0o755);
+      await canonicalizeStageDirectory(inspected.stageInfo.stageRoot, inspected.stageInfo.stat, 0o755);
+      inspectExactStageTree(stageRoot, payload.integrity.files, 0o755, 0o755);
+      return { finalized: true, files: inspected.topology.files.size, directories: inspected.topology.directories.size };
+    } catch (error) {
+      stagedInstallIntegrityByRoot.delete(stageRoot);
+      throw error;
+    }
+  }
+
+  function assertProtectedLinuxEntry(entryPath, stat, expectedType, expectedMode, expectedDevice) {
+    const identity = canonicalFilesystemIdentity(stat);
+    const isExpectedType = expectedType === 'directory' ? stat && stat.isDirectory() : stat && stat.isFile();
+    const rootOwned = stat && statIntegerEquals(stat.uid, 0) && (!enforcePosixMetadata || statIntegerEquals(stat.gid, 0));
+    const exactMode = stat && (enforcePosixMetadata
+      ? permissionBits(stat) === expectedMode
+      : (permissionBits(stat) & 0o022) === 0 && (expectedMode !== 0o755 || (permissionBits(stat) & 0o111) !== 0));
+    const exactDevice = identity && (expectedDevice === undefined || identity.device === expectedDevice);
+    const singleLink = expectedType === 'directory' || stat && statIntegerEquals(stat.nlink, 1);
+    if (!stat || !identity || stat.isSymbolicLink() || !isExpectedType || !rootOwned || !exactMode || !exactDevice || !singleLink) {
+      throw new Error(`Arcane rejected an unprotected installed ${expectedType}: ${entryPath}.`);
+    }
+  }
+
+  function collectProtectedInstalledFiles(root) {
+    const resolvedRoot = ctx.path.resolve(root);
+    const rootStat = ctx.fs.lstatSync(resolvedRoot, { bigint: true });
+    assertProtectedLinuxEntry(resolvedRoot, rootStat, 'directory', 0o755);
+    const rootIdentity = canonicalFilesystemIdentity(rootStat);
+    const files = [];
+    const directories = [];
+    let count = 0;
+    const visit = (directory, relativeDirectory) => {
+      const entries = ctx.fs.readdirSync(directory, { withFileTypes: true });
+      for (const entry of entries) {
+        count += 1;
+        if (count > maxInstalledEntries) throw new Error('Arcane rejected an oversized installed file inventory.');
+        const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+        const target = ctx.path.join(directory, entry.name);
+        const stat = ctx.fs.lstatSync(target, { bigint: true });
+        if (entry.isDirectory()) {
+          assertProtectedLinuxEntry(target, stat, 'directory', 0o755, rootIdentity.device);
+          directories.push(installedRelativePath(relativePath));
+          visit(target, relativePath);
+        } else if (entry.isFile()) {
+          const expectedMode = linuxInstalledExecutablePaths.has(relativePath) ? 0o755 : 0o644;
+          assertProtectedLinuxEntry(target, stat, 'file', expectedMode, rootIdentity.device);
+          if (relativePath !== 'arcane-install.json') files.push(installedRelativePath(relativePath));
+        } else {
+          throw new Error(`Arcane rejected an unsupported installed entry: ${relativePath}.`);
+        }
+      }
+    };
+    visit(resolvedRoot, '');
+    return { files: files.sort(), directories: directories.sort() };
+  }
+
+  function verifyProtectedInstalledInventory(root, entries) {
+    const expected = new Map();
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      const relativePath = installedRelativePath(entry && (entry.installPath || entry.path));
+      if (expected.has(relativePath)) throw new Error(`Arcane rejected a duplicate installed path: ${relativePath}.`);
+      if (!Number.isSafeInteger(entry.size) || entry.size < 0 || !/^[a-f0-9]{64}$/i.test(String(entry.sha256 || ''))) {
+        throw new Error(`Arcane rejected invalid integrity metadata for ${relativePath}.`);
+      }
+      expected.set(relativePath, entry);
+    }
+    const topology = expectedInstallTopology([...expected.values()]);
+    const actual = collectProtectedInstalledFiles(root);
+    if (actual.files.length !== expected.size || actual.files.some((relativePath) => !expected.has(relativePath))) {
+      throw new Error('Arcane rejected an installed file inventory that does not exactly match its integrity metadata.');
+    }
+    if (actual.directories.length !== topology.directories.size || actual.directories.some((relativePath) => !topology.directories.has(relativePath))) {
+      throw new Error('Arcane rejected an installed directory inventory that does not exactly match its integrity metadata.');
+    }
+    for (const [relativePath, entry] of expected) {
+      const target = ctx.path.resolve(root, ...relativePath.split('/'));
+      const rootPrefix = `${ctx.path.resolve(root)}${ctx.path.sep}`;
+      if (!target.startsWith(rootPrefix)) throw new Error(`Arcane rejected an installed path outside its root: ${relativePath}.`);
+      const contents = ctx.fs.readFileSync(target);
+      if (contents.length !== entry.size
+        || ctx.crypto.createHash('sha256').update(contents).digest('hex').toLowerCase() !== String(entry.sha256).toLowerCase()) {
+        throw new Error(`Arcane rejected modified installed content: ${relativePath}.`);
+      }
+    }
+    return { checkedFiles: expected.size };
+  }
+
+  function readInstalledManifest(root) {
+    const manifestPath = ctx.path.join(root, 'arcane-install.json');
+    const rootStat = ctx.fs.lstatSync(ctx.path.resolve(root), { bigint: true });
+    assertProtectedLinuxEntry(ctx.path.resolve(root), rootStat, 'directory', 0o755);
+    const rootIdentity = canonicalFilesystemIdentity(rootStat);
+    const stat = ctx.fs.lstatSync(manifestPath, { bigint: true });
+    assertProtectedLinuxEntry(manifestPath, stat, 'file', 0o644, rootIdentity.device);
+    if (statIntegerToSafeNumber(stat.size, 16 * 1024 * 1024) === null) throw new Error('Arcane rejected an oversized installed manifest.');
+    const manifest = JSON.parse(ctx.fs.readFileSync(manifestPath, 'utf8'));
+    if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) throw new Error('Arcane rejected a malformed installed manifest.');
+    return manifest;
+  }
+
+  function verifyUnsignedInstalledRelease(root) {
+    if (!hasExactUnsignedLocalHostClaim()) {
+      throw new Error('The Linux release requires explicit --allow-unsigned-local-release consent.');
+    }
+    const manifest = readInstalledManifest(root);
+    if (manifest.version !== ctx.bundleVersion || manifest.nativeAdapter !== 'linux'
+      || manifest.payloadMode !== 'linux-webkitgtk' || manifest.securityMode !== 'unsigned-local-test'
+      || Object.prototype.hasOwnProperty.call(manifest, 'publisherAttestation')) {
+      throw new Error('Arcane rejected inconsistent Linux unsigned-local installation metadata.');
+    }
+    const integrity = manifest.integrity;
+    if (!integrity || integrity.schemaVersion !== 2 || integrity.hashAlgorithm !== 'sha256'
+      || integrity.scope !== 'installed-tree') {
+      throw new Error('Arcane rejected missing or obsolete Linux installed integrity metadata.');
+    }
+    verifyProtectedInstalledInventory(root, integrity.files);
+    return manifest;
+  }
+
+  function verifyStagedInstallation(root, includeManifest) {
+    const stageRoot = ctx.path.resolve(root);
+    if (includeManifest) {
+      try {
+        verifyUnsignedInstalledRelease(stageRoot);
+        return { verified: true, securityMode: 'unsigned-local-test' };
+      } finally {
+        stagedInstallIntegrityByRoot.delete(stageRoot);
+      }
+    }
+    if (!hasExactUnsignedLocalHostClaim()) {
+      throw new Error('The Linux release requires explicit --allow-unsigned-local-release consent before installation.');
+    }
+    const stagedInstallIntegrity = stagedInstallIntegrityByRoot.get(stageRoot);
+    if (!stagedInstallIntegrity) throw new Error('Arcane cannot bind this Linux stage to a verified release inventory.');
+    try {
+      const result = verifyProtectedInstalledInventory(stageRoot, stagedInstallIntegrity);
+      return { verified: true, securityMode: 'unsigned-local-test', ...result };
+    } catch (error) {
+      stagedInstallIntegrityByRoot.delete(stageRoot);
+      throw error;
+    }
+  }
+
+  function createPublisherAttestation(root) {
+    try {
+      verifyStagedInstallation(root, false);
+      if (ctx.fs.existsSync(paths.installRoot)) {
+        try { verifyUnsignedInstalledRelease(paths.installRoot); }
+        catch (_) {
+          throw new Error('Arcane refused to replace an installation that is not the same explicitly allowed unsigned-local security mode.');
+        }
+      }
+      return null;
+    } finally {
+      stagedInstallIntegrityByRoot.delete(ctx.path.resolve(root));
+    }
+  }
+
+  function activeUnsignedHostReleaseVerified() {
+    if (!hasExactUnsignedLocalHostClaim()) return false;
+    if (ctx.simulate && !ctx.processPkg) return true;
+    const executable = String(process.execPath || '');
+    if (!ctx.path.isAbsolute(executable)) return false;
+    const executableDirectory = ctx.path.dirname(executable);
+    const releaseManifest = ctx.path.join(executableDirectory, 'arcane-release.json');
+    if (ctx.fs.existsSync(releaseManifest)) {
+      try {
+        const payload = installPayload(executableDirectory);
+        return payload.releaseReady === true && payload.verified === true && payload.securityMode === 'unsigned-local-test';
+      } catch (_) {
+        return false;
+      }
+    }
+    const installedRoot = ctx.path.dirname(executableDirectory);
+    try {
+      verifyUnsignedInstalledRelease(installedRoot);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function hostReleaseSecurityMode() {
+    return activeUnsignedHostReleaseVerified() ? 'unsigned-local-test' : 'unverified';
+  }
+
+  function hostReleaseSecurityEvidence() {
+    return {
+      securityMode: hostReleaseSecurityMode(),
+      publisherTrustSource: null,
+      revocationStatus: null,
+    };
+  }
+
+  async function listInstalledApplications() {
+    const securityMode = ctx.simulate ? hostReleaseSecurityMode() : releaseSecurityMode();
+    if (securityMode !== 'unsigned-local-test') {
+      throw ctx.arcaneError(
+        'APPLICATION_CATALOG_UNVERIFIED',
+        'Arcane could not verify the installed Linux application catalog.',
+        'Repair or reinstall Arcane OS from the explicitly authorized Linux release, then retry.',
+        409
+      );
+    }
+    return {
+      verified: true,
+      securityMode,
+      publisherTrustSource: null,
+      revocationStatus: null,
+      applications: [],
+    };
+  }
+
+  function releaseSecurityMode() {
+    verifyUnsignedInstalledRelease(paths.installRoot);
+    return 'unsigned-local-test';
+  }
+
+  function linuxSessionEntry() {
+    return `[Desktop Entry]
+Type=Application
+Name=Arcane OS
+Comment=Start Arcane Shell as the authenticated Linux desktop session
+Exec=${ctx.path.join(paths.installRoot, 'bin', 'arcane-session')}
+TryExec=${ctx.path.join(paths.installRoot, 'bin', 'arcane-session')}
+DesktopNames=Arcane;
+`;
+  }
+
+  function readSystemdDefaultTarget(systemctl) {
+    const result = ctx.boundedSpawnSync(systemctl, ['get-default'], { timeout: 10000 });
+    const target = String(result && result.stdout || '').trim();
+    if (!result || result.status !== 0 || !/^[A-Za-z0-9_.@-]+\.target$/.test(target)) {
+      throw ctx.arcaneError(
+        'LINUX_SYSTEMD_DEFAULT_TARGET_UNAVAILABLE',
+        'Arcane could not verify the Linux systemd default target.',
+        'Confirm that systemd is the active service manager, then run systemctl get-default as an administrator.',
+        409,
+        { status: result && Number.isInteger(result.status) ? result.status : null }
+      );
+    }
+    return target;
+  }
+
+  function isWindowsSubsystemForLinux() {
+    return ['/proc/sys/kernel/osrelease', '/proc/version'].some((marker) => {
+      try { return /(?:microsoft|wsl)/i.test(ctx.fs.readFileSync(marker, 'utf8')); }
+      catch (_) { return false; }
+    });
+  }
+
+  function systemdUnitProperty(systemctl, unit, property) {
+    const result = ctx.boundedSpawnSync(systemctl, ['show', `--property=${property}`, '--value', unit], { timeout: 10000 });
+    return {
+      status: result && Number.isInteger(result.status) ? result.status : null,
+      value: String(result && result.stdout || '').trim(),
+    };
+  }
+
+  function assertInstalledLinuxSession() {
+    const expected = [
+      { path: ctx.path.join(paths.installRoot, 'bin', 'arcane-session'), contents: null, executable: true },
+      { path: '/usr/share/xsessions/arcane-os.desktop', contents: linuxSessionEntry(), executable: false },
+    ];
+    for (const item of expected) {
+      let stat = null;
+      try { stat = ctx.fs.lstatSync(item.path); } catch (_) {}
+      const contentsMatch = item.contents === null || (stat && ctx.fs.readFileSync(item.path, 'utf8') === item.contents);
+      const rootOwned = stat && (typeof stat.uid !== 'number' || stat.uid === 0);
+      const protectedMode = stat && (stat.mode & 0o022) === 0;
+      const executable = stat && (!item.executable || (stat.mode & 0o111) !== 0);
+      if (!stat || !stat.isFile() || stat.isSymbolicLink() || !contentsMatch || !rootOwned || !protectedMode || !executable) {
+        throw ctx.arcaneError(
+          'LINUX_DESKTOP_SESSION_UNVERIFIED',
+          'Arcane refused to change the Linux boot target because its display-manager session is not securely installed.',
+          'Repair the verified Arcane installation and its /usr/share/xsessions/arcane-os.desktop entry, then retry.',
+          409,
+          { path: item.path }
+        );
+      }
+    }
+  }
+
+  async function configureGraphicalTarget(action, policy) {
+    const target = 'graphical.target';
+    if (!policy || policy.defaultTarget !== target || policy.sessionType !== 'x11') {
+      throw ctx.arcaneError(
+        'LINUX_GRAPHICAL_POLICY_INVALID',
+        'The Arcane release does not contain the expected Linux graphical-session policy.',
+        'Use a complete publisher-verified Arcane release and retry.',
+        409
+      );
+    }
+    if (ctx.simulate) {
+      ctx.actionLog(action, 'info', `Simulation: would set the Linux systemd default target to ${target}.`);
+      return { policyVersion: 1, target, previousTarget: null, changed: false, applicable: true, sessionType: 'x11', verification: 'simulated' };
+    }
+    if (!isElevated()) {
+      throw ctx.arcaneError(
+        'ROOT_REQUIRED',
+        'Arcane must be running in a separately authorized root session to configure the Linux boot target.',
+        'Restart the verified Arcane Provisioner from an administrator-authorized root session.',
+        403
+      );
+    }
+    if (isWindowsSubsystemForLinux()) {
+      ctx.actionLog(action, 'info', 'WSLg launches graphical applications without a Linux display manager; Arcane left the WSL boot target unchanged.');
+      return {
+        policyVersion: 1,
+        target: null,
+        previousTarget: null,
+        changed: false,
+        applicable: false,
+        reason: 'wsl',
+        sessionType: 'manual-wslg',
+        verification: 'not-applicable',
+      };
+    }
+    let initProcess = null;
+    try { initProcess = String(ctx.fs.readFileSync('/proc/1/comm', 'utf8')).trim(); } catch (_) {}
+    if (initProcess !== 'systemd') {
+      throw ctx.arcaneError(
+        'SYSTEMD_NOT_ACTIVE',
+        'Arcane found that systemd is not the active Linux service manager.',
+        'Boot this Linux installation with systemd as PID 1 before enabling Arcane as a graphical session.',
+        409,
+        { initProcess }
+      );
+    }
+    const systemctl = requiredProtectedExecutable(
+      'systemctl',
+      'Linux systemctl executable',
+      'SYSTEMD_REQUIRED',
+      'Arcane could not find systemctl on this Linux machine.',
+      'Install and enable systemd before installing Arcane as the graphical operating environment.'
+    );
+    const targetLoadState = systemdUnitProperty(systemctl, target, 'LoadState');
+    if (targetLoadState.status !== 0 || targetLoadState.value !== 'loaded') {
+      throw ctx.arcaneError(
+        'LINUX_GRAPHICAL_TARGET_UNAVAILABLE',
+        'This systemd installation does not provide a loaded graphical.target.',
+        'Install the distribution\u2019s graphical-session packages, then retry.',
+        409,
+        { loadState: targetLoadState.value, status: targetLoadState.status }
+      );
+    }
+    const displayManagerLoadState = systemdUnitProperty(systemctl, 'display-manager.service', 'LoadState');
+    const displayManagerEnabled = ctx.boundedSpawnSync(systemctl, ['is-enabled', 'display-manager.service'], { timeout: 10000 });
+    const displayManagerEnablement = String(displayManagerEnabled && displayManagerEnabled.stdout || '').trim();
+    if (
+      displayManagerLoadState.status !== 0
+      || displayManagerLoadState.value !== 'loaded'
+      || !displayManagerEnabled
+      || displayManagerEnabled.status !== 0
+      || !/^(?:enabled|static|alias|indirect|generated)$/.test(displayManagerEnablement)
+    ) {
+      throw ctx.arcaneError(
+        'LINUX_DISPLAY_MANAGER_REQUIRED',
+        'Arcane could not verify an installed and enabled Linux display manager.',
+        'Install and enable the distribution\u2019s display manager before selecting Arcane OS as a login session.',
+        409,
+        { loadState: displayManagerLoadState.value, enablement: displayManagerEnablement }
+      );
+    }
+    assertInstalledLinuxSession();
+    const previousTarget = readSystemdDefaultTarget(systemctl);
+    try {
+      await ctx.run(systemctl, ['set-default', target], { action });
+      const verifiedTarget = readSystemdDefaultTarget(systemctl);
+      if (verifiedTarget !== target) {
+        throw ctx.arcaneError(
+          'LINUX_GRAPHICAL_TARGET_VERIFY_FAILED',
+          `Linux reported ${verifiedTarget} after Arcane requested ${target}.`,
+          `Restore the previous target with systemctl set-default ${previousTarget}, then inspect the systemd configuration.`,
+          409,
+          { previousTarget, target, verifiedTarget }
+        );
+      }
+      ctx.actionLog(action, 'info', `Linux systemd will use ${target} as its default boot target.`, {
+        previousTarget,
+        changed: previousTarget !== target,
+      });
+      return {
+        policyVersion: 1,
+        target,
+        previousTarget,
+        changed: previousTarget !== target,
+        applicable: true,
+        sessionType: 'x11',
+        mechanism: systemctl,
+        verification: 'verified',
+      };
+    } catch (error) {
+      let restored = false;
+      try {
+        await ctx.run(systemctl, ['set-default', previousTarget], { action });
+        restored = readSystemdDefaultTarget(systemctl) === previousTarget;
+      } catch (_) {}
+      if (error && error.code === 'LINUX_GRAPHICAL_TARGET_VERIFY_FAILED') {
+        error.restoredPreviousTarget = restored;
+        throw error;
+      }
+      throw ctx.arcaneError(
+        'LINUX_GRAPHICAL_TARGET_SET_FAILED',
+        'Linux did not accept Arcane\u2019s requested graphical systemd target.',
+        `The prior ${previousTarget} target ${restored ? 'was restored' : 'could not be verified as restored'}. Review systemd as an administrator before retrying.`,
+        409,
+        { previousTarget, target, restoredPreviousTarget: restored, causeCode: error && error.code || null }
+      );
+    }
+  }
+
+  async function rollbackGraphicalTarget(configuration, action) {
+    if (!configuration || !configuration.changed) return { restored: false, reason: 'unchanged' };
+    const previousTarget = String(configuration.previousTarget || '');
+    if (!/^[A-Za-z0-9_.@-]+\.target$/.test(previousTarget)) {
+      throw ctx.arcaneError('LINUX_GRAPHICAL_ROLLBACK_INVALID', 'Arcane cannot validate the recorded prior Linux boot target.', 'Restore the prior systemd target manually as an administrator.', 409);
+    }
+    if (!isElevated()) {
+      throw ctx.arcaneError('LINUX_GRAPHICAL_ROLLBACK_UNAVAILABLE', 'Arcane cannot restore the prior Linux boot target from this process.', `Run systemctl set-default ${previousTarget} from a root session.`, 409);
+    }
+    const systemctl = requiredProtectedExecutable(
+      'systemctl',
+      'Linux systemctl executable',
+      'LINUX_GRAPHICAL_ROLLBACK_UNAVAILABLE',
+      'Arcane cannot find systemctl to restore the prior Linux boot target.',
+      `Install systemd or run systemctl set-default ${previousTarget} manually from a verified root session.`
+    );
+    await ctx.run(systemctl, ['set-default', previousTarget], { action });
+    const restored = readSystemdDefaultTarget(systemctl) === previousTarget;
+    if (!restored) throw ctx.arcaneError('LINUX_GRAPHICAL_ROLLBACK_FAILED', 'Linux did not restore the prior systemd target.', `Run systemctl set-default ${previousTarget} from a root session.`, 409);
+    return { restored: true, target: previousTarget };
+  }
+
+  function preservePlatformConfiguration(configuration) {
+    const linux = configuration && configuration.linux;
+    if (!linux || linux.policyVersion !== 1 || typeof linux.applicable !== 'boolean') return null;
+    if (linux.applicable) {
+      if (
+        linux.target !== 'graphical.target'
+        || linux.sessionType !== 'x11'
+        || !/^[A-Za-z0-9_.@-]+\.target$/.test(String(linux.previousTarget || ''))
+        || typeof linux.changed !== 'boolean'
+        || linux.verification !== 'verified'
+      ) return null;
+    } else if (linux.reason !== 'wsl' || linux.sessionType !== 'manual-wslg' || linux.verification !== 'not-applicable') {
+      return null;
+    }
+    return { linux: { ...linux } };
   }
 
   async function applyInstallPermissions(action) {
-    await ctx.run('chown', ['-R', 'root:root', paths.installRoot], { action });
-    await ctx.run('chmod', ['-R', 'a+rX,u+w', paths.installRoot], { action });
+    let sessionEntryCreated = false;
     await addMachinePath();
     if (!ctx.simulate) {
       const iconSource = ctx.path.join(paths.installRoot, 'assets', 'arcane-sigil-512.png');
@@ -4588,22 +5978,374 @@ Categories=System;Settings;
 `;
       await ctx.writeFile('/usr/share/applications/arcane-shell.desktop', shellDesktop, 0o644);
       await ctx.writeFile('/usr/share/applications/arcane-provisioner.desktop', provisionerDesktop, 0o644);
-      if (commandExists('update-desktop-database')) await ctx.run('update-desktop-database', ['/usr/share/applications'], { action, allowFailure: true });
+      const desktopDatabaseUpdater = executableCommand('update-desktop-database');
+      if (desktopDatabaseUpdater) await ctx.run(desktopDatabaseUpdater, ['/usr/share/applications'], { action, allowFailure: true });
+      if (!isWindowsSubsystemForLinux()) {
+        const sessionEntryPath = '/usr/share/xsessions/arcane-os.desktop';
+        const expectedSessionEntry = linuxSessionEntry();
+        await ctx.ensureDir('/usr/share/xsessions');
+        if (ctx.fs.existsSync(sessionEntryPath)) {
+          if (ctx.fs.readFileSync(sessionEntryPath, 'utf8') !== expectedSessionEntry) {
+            throw ctx.arcaneError(
+              'LINUX_SESSION_ENTRY_CONFLICT',
+              'Arcane found a different Linux display-manager session registered under its name.',
+              'Review /usr/share/xsessions/arcane-os.desktop as an administrator before retrying.',
+              409
+            );
+          }
+        } else {
+          await ctx.writeFile(sessionEntryPath, expectedSessionEntry, 0o644);
+          sessionEntryCreated = true;
+        }
+        assertInstalledLinuxSession();
+      }
+    }
+    return { sessionEntryCreated };
+  }
+
+  async function rollbackInstallIntegration(integration) {
+    if (!integration || !integration.sessionEntryCreated || ctx.simulate) return;
+    const sessionEntryPath = '/usr/share/xsessions/arcane-os.desktop';
+    try {
+      if (ctx.fs.readFileSync(sessionEntryPath, 'utf8') === linuxSessionEntry()) await ctx.fsp.rm(sessionEntryPath, { force: true });
+    } catch (_) {}
+  }
+
+  function assertProtectedStateEntry(file, expectedType) {
+    let stat = null;
+    try { stat = ctx.fs.lstatSync(file); } catch (_) {}
+    const expected = expectedType === 'directory'
+      ? stat && stat.isDirectory()
+      : stat && stat.isFile() && stat.nlink === 1;
+    if (!stat || !expected || stat.isSymbolicLink() || stat.uid !== 0 || (stat.mode & 0o022) !== 0) {
+      const directory = expectedType === 'directory';
+      throw ctx.arcaneError(
+        directory ? 'LINUX_STATE_ROOT_UNSAFE' : 'LINUX_STATE_FILE_UNSAFE',
+        `Arcane refused to use an unprotected Linux provisioning-state ${expectedType}.`,
+        directory
+          ? `Restore ${file} as a root-owned directory that is not writable by group or other users, then retry.`
+          : `Restore ${file} as one root-owned regular file, then retry.`,
+        409,
+        { path: file }
+      );
+    }
+    return stat;
+  }
+
+  async function chmodProtectedStateEntry(file, expectedType, expectedStat, mode) {
+    const constants = ctx.fs.constants || {};
+    if (!Number.isInteger(constants.O_RDONLY) || !Number.isInteger(constants.O_NOFOLLOW)
+      || (expectedType === 'directory' && !Number.isInteger(constants.O_DIRECTORY))) {
+      throw ctx.arcaneError(
+        'LINUX_STATE_PERMISSION_GUARD_UNAVAILABLE',
+        'Arcane cannot safely change Linux provisioning-state permissions on this host.',
+        'Use a Linux filesystem and Node.js runtime that support O_NOFOLLOW and O_DIRECTORY, then retry.',
+        409,
+        { path: file }
+      );
+    }
+    const parentChain = protectedDirectoryChain(ctx.path.dirname(file));
+    if (!parentChain) {
+      throw ctx.arcaneError(
+        'LINUX_STATE_PARENT_UNSAFE',
+        'Arcane refused a Linux provisioning-state path with an unprotected parent directory.',
+        `Restore the root-owned parent directories for ${file}, then retry.`,
+        409,
+        { path: file }
+      );
+    }
+    let handle = null;
+    try {
+      const flags = constants.O_RDONLY | constants.O_NOFOLLOW
+        | (expectedType === 'directory' ? constants.O_DIRECTORY : (constants.O_NONBLOCK || 0))
+        | (constants.O_CLOEXEC || 0);
+      handle = await ctx.fsp.open(file, flags);
+      const before = await handle.stat();
+      const sameIdentity = before.dev === expectedStat.dev && before.ino === expectedStat.ino;
+      const expected = expectedType === 'directory'
+        ? before.isDirectory()
+        : before.isFile() && before.nlink === 1;
+      if (!sameIdentity || !expected || before.uid !== 0 || (before.mode & 0o022) !== 0
+        || !protectedDirectoryChainUnchanged(parentChain)) {
+        throw ctx.arcaneError(
+          'LINUX_STATE_ENTRY_CHANGED',
+          'The Linux provisioning-state path changed while Arcane was securing it.',
+          `Review ${file} as an administrator, then retry. Arcane made no further state change.`,
+          409,
+          { path: file }
+        );
+      }
+      await handle.chmod(mode);
+      const after = await handle.stat();
+      if (after.dev !== before.dev || after.ino !== before.ino || after.uid !== 0
+        || (after.mode & 0o7777) !== mode
+        || (expectedType === 'directory' ? !after.isDirectory() : !after.isFile() || after.nlink !== 1)) {
+        throw ctx.arcaneError(
+          'LINUX_STATE_PERMISSION_VERIFY_FAILED',
+          'Linux did not retain the protected Arcane provisioning-state permissions.',
+          `Review ${file} as an administrator before retrying.`,
+          409,
+          { path: file, expectedMode: mode.toString(8) }
+        );
+      }
+    } finally {
+      if (handle) await handle.close().catch(() => {});
+    }
+    if (!protectedDirectoryChainUnchanged(parentChain)) {
+      throw ctx.arcaneError(
+        'LINUX_STATE_PARENT_CHANGED',
+        'A Linux provisioning-state parent directory changed while Arcane was securing state.',
+        `Review the root-owned parent directories for ${file}, then retry.`,
+        409,
+        { path: file }
+      );
     }
   }
 
   async function applyStatePermissions(action) {
-    await ctx.ensureDir(paths.stateRoot);
-    await ctx.run('chown', ['-R', 'root:root', paths.stateRoot], { action });
-    await ctx.run('chmod', ['0755', paths.stateRoot], { action });
+    requireRootUserMutation();
+    if (ctx.simulate) return;
+    const stateParent = ctx.path.dirname(paths.stateRoot);
+    const stateParentChain = protectedDirectoryChain(stateParent);
+    if (!stateParentChain) {
+      throw ctx.arcaneError(
+        'LINUX_STATE_PARENT_UNSAFE',
+        'Arcane refused to use an unprotected Linux provisioning-state parent directory.',
+        `Restore ${stateParent} and its parent directories as root-owned directories that are not writable by group or other users, then retry.`,
+        409,
+        { path: stateParent }
+      );
+    }
+    if (!ctx.fs.existsSync(paths.stateRoot)) {
+      try { await ctx.fsp.mkdir(paths.stateRoot, { recursive: false, mode: 0o755 }); }
+      catch (error) { if (!error || error.code !== 'EEXIST') throw error; }
+    }
+    if (!protectedDirectoryChainUnchanged(stateParentChain)) {
+      throw ctx.arcaneError(
+        'LINUX_STATE_PARENT_CHANGED',
+        'The Linux provisioning-state parent directory changed while Arcane was preparing state.',
+        `Review ${stateParent} as an administrator, then retry.`,
+        409,
+        { path: stateParent }
+      );
+    }
+    const rootStat = assertProtectedStateEntry(paths.stateRoot, 'directory');
+    await chmodProtectedStateEntry(paths.stateRoot, 'directory', rootStat, 0o755);
     for (const name of ['users.json', 'users.json.previous', 'install.json']) {
       const file = ctx.path.join(paths.stateRoot, name);
-      if (ctx.fs.existsSync(file)) await ctx.run('chmod', ['0600', file], { action });
+      if (!ctx.fs.existsSync(file)) continue;
+      const stat = assertProtectedStateEntry(file, 'file');
+      await chmodProtectedStateEntry(file, 'file', stat, 0o600);
     }
   }
 
   function shellCommand() {
-    return ctx.path.join(paths.installRoot, 'bin', 'arcane-shell');
+    const logicalPath = ctx.simulate && ctx.hostPlatform !== 'linux' && ctx.path.posix
+      ? ctx.path.posix
+      : ctx.path;
+    return logicalPath.join(paths.installRoot.replaceAll('\\', '/'), 'bin', 'arcane-shell');
+  }
+
+  function requireRootUserMutation() {
+    if (ctx.simulate) return;
+    if (typeof process.getuid !== 'function' || process.getuid() !== 0) {
+      throw ctx.arcaneError(
+        'ROOT_REQUIRED',
+        'Arcane must be running in a separately authorized root session to change Linux accounts.',
+        'Restart the verified Arcane Provisioner from an administrator-authorized root session.',
+        403
+      );
+    }
+  }
+
+  function assertProtectedRegularFile(file, label) {
+    let stat = null;
+    try { stat = ctx.fs.lstatSync(file); } catch (_) {}
+    if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.uid !== 0 || stat.nlink !== 1 || (stat.mode & 0o022) !== 0) {
+      throw ctx.arcaneError(
+        'LINUX_PROTECTED_FILE_UNSAFE',
+        `Arcane refused to use an unprotected ${label}.`,
+        `Restore ${file} as one root-owned regular file that is not writable by group or other users, then retry.`,
+        409,
+        { path: file }
+      );
+    }
+    return stat;
+  }
+
+  function requiredAccountCommand(name) {
+    return requiredProtectedExecutable(
+      name,
+      `Linux ${name} account tool`,
+      'LINUX_ACCOUNT_TOOL_REQUIRED',
+      `Arcane could not find the Linux ${name} account tool.`,
+      'Install the distribution account-management utilities, then retry.'
+    );
+  }
+
+  function readProtectedTextFile(file, label, maximumBytes) {
+    const stat = assertProtectedRegularFile(file, label);
+    if (stat.size > maximumBytes) {
+      throw ctx.arcaneError('LINUX_PROTECTED_FILE_TOO_LARGE', `Arcane refused an oversized ${label}.`, `Review ${file} as an administrator, then retry.`, 409, { path: file });
+    }
+    return ctx.fs.readFileSync(file, 'utf8');
+  }
+
+  function localPasswdRecords() {
+    if (ctx.simulate) return [];
+    const records = [];
+    const passwd = readProtectedTextFile('/etc/passwd', 'Linux account database', 4 * 1024 * 1024);
+    for (const line of passwd.split(/\r?\n/)) {
+      if (!line) continue;
+      const fields = line.split(':');
+      if (fields.length < 7) continue;
+      const uid = Number(fields[2]);
+      if (!Number.isSafeInteger(uid) || uid < 0) continue;
+      records.push({ username: fields[0], uid, gid: Number(fields[3]), profile: fields[5] || null, shell: fields[6] || null });
+    }
+    return records;
+  }
+
+  function regularUidRange() {
+    let minimum = 1000;
+    let maximum = 60000;
+    if (!ctx.simulate && ctx.fs.existsSync('/etc/login.defs')) {
+      const contents = readProtectedTextFile('/etc/login.defs', 'Linux login policy', 1024 * 1024);
+      const minimumMatch = /^\s*UID_MIN\s+(\d+)\s*(?:#.*)?$/m.exec(contents);
+      const maximumMatch = /^\s*UID_MAX\s+(\d+)\s*(?:#.*)?$/m.exec(contents);
+      if (minimumMatch) minimum = Number(minimumMatch[1]);
+      if (maximumMatch) maximum = Number(maximumMatch[1]);
+    }
+    if (!Number.isSafeInteger(minimum) || !Number.isSafeInteger(maximum) || minimum < 1 || maximum < minimum) {
+      throw ctx.arcaneError('LINUX_UID_POLICY_INVALID', 'Arcane could not validate the Linux regular-user UID range.', 'Repair /etc/login.defs before provisioning Arcane users.', 409);
+    }
+    return { minimum, maximum };
+  }
+
+  function administrativeGroups(username) {
+    if (ctx.simulate) return [];
+    const id = requiredProtectedExecutable(
+      'id',
+      'Linux identity tool',
+      'LINUX_IDENTITY_TOOL_REQUIRED',
+      'Arcane could not find the Linux identity tool.',
+      'Install the distribution account-management utilities, then retry.'
+    );
+    const result = ctx.boundedSpawnSync(id, ['-nG', username], { timeout: 10000 });
+    if (!result || result.status !== 0) throw ctx.arcaneError('LINUX_IDENTITY_UNAVAILABLE', `Arcane could not verify the Linux groups for “${username}”.`, 'Confirm that this is a local standard account, then retry.', 409);
+    const privileged = new Set(['root', 'sudo', 'wheel', 'admin']);
+    return String(result.stdout || '').trim().split(/\s+/).filter((group) => privileged.has(group));
+  }
+
+  function validateLocalHome(record) {
+    const home = String(record && record.profile || '');
+    if (!home || !ctx.path.posix.isAbsolute(home) || ctx.path.posix.normalize(home) !== home || home === '/' || home.includes('\0')) {
+      throw ctx.arcaneError('LINUX_USER_HOME_UNSAFE', `Arcane refused the unsafe home directory recorded for “${record.username}”.`, 'Assign the account one absolute, normalized local home directory before retrying.', 409);
+    }
+    let stat = null;
+    try { stat = ctx.fs.lstatSync(home); } catch (_) {}
+    if (!stat || !stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== record.uid) {
+      throw ctx.arcaneError('LINUX_USER_HOME_UNSAFE', `Arcane could not verify the local home directory for “${record.username}”.`, 'Create a real directory owned by that exact account UID, then retry.', 409, { profile: home, uid: record.uid });
+    }
+  }
+
+  function assertStandardLocalAccount(username, options) {
+    const opts = options || {};
+    const record = passwdRecord(username);
+    if (!record) throw ctx.arcaneError('USER_NOT_FOUND', `The local Linux account “${username}” does not exist.`, 'Create the local account or let Arcane create it, then retry.', 404);
+    if (Number.isSafeInteger(opts.expectedUid) && record.uid !== opts.expectedUid) {
+      throw ctx.arcaneError('LINUX_ACCOUNT_IDENTITY_CHANGED', `Arcane refused to change “${username}” because its UID changed.`, 'Review the account manually. Arcane made no further account change.', 409, { expectedUid: opts.expectedUid, actualUid: record.uid });
+    }
+    const duplicates = localPasswdRecords().filter((item) => item.uid === record.uid);
+    if (duplicates.length !== 1 || duplicates[0].username !== username) {
+      throw ctx.arcaneError('LINUX_ACCOUNT_IDENTITY_AMBIGUOUS', `Arcane found an ambiguous UID for “${username}”.`, 'Give every local account a unique UID before retrying.', 409, { uid: record.uid });
+    }
+    const range = regularUidRange();
+    if (record.uid < range.minimum || record.uid > range.maximum) {
+      throw ctx.arcaneError('LINUX_STANDARD_USER_REQUIRED', `“${username}” is a Linux system or service identity, not a standard local user.`, `Choose a local account with a UID from ${range.minimum} through ${range.maximum}.`, 409, { uid: record.uid, uidRange: range });
+    }
+    const protectedMatch = protectedUsernames().find((item) => item.toLowerCase() === username.toLowerCase());
+    if (protectedMatch && !opts.allowProtected) {
+      throw ctx.arcaneError('CURRENT_USER_PROTECTED', `The provisioning account “${protectedMatch}” is protected.`, 'Choose a different standard local account.', 409);
+    }
+    const shell = String(record.shell || '');
+    const disabledShell = shell === '/usr/sbin/nologin' || shell === '/sbin/nologin' || shell === '/bin/false';
+    if (!ctx.path.posix.isAbsolute(shell) || shell.includes('\0') || (disabledShell && !opts.allowDisabledShell)) {
+      throw ctx.arcaneError('LINUX_STANDARD_USER_REQUIRED', `“${username}” does not have a usable standard Linux login shell.`, 'Assign a normal local shell before retrying.', 409, { shell });
+    }
+    const adminGroups = administrativeGroups(username);
+    if (adminGroups.length && !opts.allowPrivilegedGroups) {
+      throw ctx.arcaneError('ADMIN_USER_PROTECTED', `Arcane will not replace the login shell of privileged Linux account “${username}”.`, 'Choose a standard account that is not in root, sudo, wheel, or admin.', 409, { groups: adminGroups });
+    }
+    validateLocalHome(record);
+    return record;
+  }
+
+  function shadowRecord(username) {
+    requireRootUserMutation();
+    if (ctx.simulate) return null;
+    const shadow = readProtectedTextFile('/etc/shadow', 'Linux password database', 4 * 1024 * 1024);
+    const matches = shadow.split(/\r?\n/).filter((line) => line.split(':', 1)[0] === username);
+    if (matches.length !== 1) throw ctx.arcaneError('LINUX_PASSWORD_STATE_UNAVAILABLE', `Arcane could not verify the password state for “${username}”.`, 'Repair the local account database before retrying.', 409);
+    const fields = matches[0].split(':');
+    return {
+      password: fields[1] || '',
+      lastChangedDay: fields[2] === '' ? null : Number(fields[2]),
+      expiresDay: fields[7] === '' ? null : Number(fields[7]),
+    };
+  }
+
+  function shadowState(username) {
+    const record = shadowRecord(username);
+    const today = Math.floor(Date.now() / 86400000);
+    const locked = !record.password || /^[!*]/.test(record.password);
+    const expired = Number.isSafeInteger(record.expiresDay) && record.expiresDay <= today;
+    return { ...record, locked, expired, enabled: !locked && !expired };
+  }
+
+  function assertInstalledUserShell() {
+    if (ctx.simulate) return shellCommand();
+    const shell = shellCommand();
+    const stat = assertProtectedRegularFile(shell, 'installed Arcane login-shell launcher');
+    if ((stat.mode & 0o111) === 0) {
+      throw ctx.arcaneError('ARCANE_SHELL_MISSING', 'The installed Arcane login-shell launcher is not executable.', 'Repair the verified Arcane installation, then retry.', 409);
+    }
+    verifyUnsignedInstalledRelease(paths.installRoot);
+    return shell;
+  }
+
+  async function ensureShellRegistered(shell) {
+    if (ctx.simulate) return { registered: true, changed: false };
+    requireRootUserMutation();
+    const shellsPath = '/etc/shells';
+    const originalStat = assertProtectedRegularFile(shellsPath, 'Linux login-shell registry');
+    if (originalStat.size > 1024 * 1024) throw ctx.arcaneError('LINUX_SHELL_REGISTRY_INVALID', 'Arcane refused an oversized Linux login-shell registry.', 'Review /etc/shells as an administrator, then retry.', 409);
+    const original = ctx.fs.readFileSync(shellsPath, 'utf8');
+    if (original.includes('\0')) throw ctx.arcaneError('LINUX_SHELL_REGISTRY_INVALID', 'Arcane found invalid data in the Linux login-shell registry.', 'Repair /etc/shells before retrying.', 409);
+    if (original.split(/\r?\n/).includes(shell)) return { registered: true, changed: false };
+    const prefix = original.length && !/\r?\n$/.test(original) ? '\n' : '';
+    let handle = null;
+    try {
+      const flags = ctx.fs.constants.O_WRONLY
+        | ctx.fs.constants.O_APPEND
+        | ctx.fs.constants.O_NOFOLLOW
+        | (ctx.fs.constants.O_CLOEXEC || 0);
+      handle = await ctx.fsp.open(shellsPath, flags);
+      const openedStat = await handle.stat();
+      if (!openedStat.isFile() || openedStat.uid !== 0 || openedStat.nlink !== 1 || (openedStat.mode & 0o022) !== 0
+        || openedStat.dev !== originalStat.dev || openedStat.ino !== originalStat.ino) {
+        throw ctx.arcaneError('LINUX_SHELL_REGISTRY_CHANGED', 'The Linux login-shell registry changed during Arcane provisioning.', 'Review /etc/shells and retry. Arcane made no shell-registry change.', 409);
+      }
+      await handle.writeFile(`${prefix}${shell}\n`, 'utf8');
+      await handle.sync();
+      await handle.close();
+      handle = null;
+      const installed = readProtectedTextFile(shellsPath, 'Linux login-shell registry', 1024 * 1024);
+      if (!installed.split(/\r?\n/).includes(shell)) throw new Error('Linux did not retain the Arcane shell registration.');
+      return { registered: true, changed: true };
+    } finally {
+      if (handle) await handle.close().catch(() => {});
+    }
   }
 
   function usernamePolicy() {
@@ -4631,7 +6373,7 @@ Categories=System;Settings;
     if (/\s/.test(value)) fail(`“${value}” cannot be used because Linux usernames cannot contain spaces.`, `Try “${value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '') || policy.example}”. ${policy.description}`, 'contains-spaces');
     if (value.length > policy.maximumLength) fail(`“${value}” is ${value.length} characters long; this Linux account name can be at most ${policy.maximumLength} characters.`, `Shorten the name. Example: ${policy.example}.`, 'too-long');
     if (!/^[a-z_][a-z0-9_-]*$/.test(value)) fail(`“${value}” is not a valid Linux account name.`, policy.description, 'invalid-characters');
-    const reserved = ['root', 'daemon', 'nobody'];
+    const reserved = ['root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy', 'www-data', 'backup', 'list', 'irc', '_apt', 'nobody'];
     if (reserved.includes(value)) {
       const error = ctx.arcaneError('RESERVED_USERNAME', `“${value}” is a protected Linux account name.`, `Choose another name, such as ${policy.example}.`, 409);
       error.field = 'username';
@@ -4644,8 +6386,7 @@ Categories=System;Settings;
 
   function userExists(username) {
     if (ctx.simulate) return simulatedAccounts.has(String(username).toLowerCase());
-    const id = systemCommand('id');
-    return Boolean(id && ctx.spawnSync(id, ['-u', username], { stdio: 'ignore' }).status === 0);
+    return Boolean(passwdRecord(username));
   }
 
   function passwdRecord(username) {
@@ -4659,14 +6400,9 @@ Categories=System;Settings;
         shell: simulatedShellAssignments.has(key) ? shellCommand() : defaultLoginShell(),
       };
     }
-    const passwd = ctx.fs.readFileSync('/etc/passwd', 'utf8');
-    for (const line of passwd.split(/\r?\n/)) {
-      const fields = line.split(':');
-      if (fields.length >= 7 && fields[0] === username) {
-        return { username, uid: Number(fields[2]), profile: fields[5] || null, shell: fields[6] || null };
-      }
-    }
-    return null;
+    const matches = localPasswdRecords().filter((record) => record.username === username);
+    if (matches.length > 1) throw ctx.arcaneError('LINUX_ACCOUNT_IDENTITY_AMBIGUOUS', `Arcane found duplicate local account records for “${username}”.`, 'Repair /etc/passwd before retrying.', 409);
+    return matches[0] || null;
   }
 
   function defaultLoginShell() {
@@ -4682,25 +6418,25 @@ Categories=System;Settings;
         username,
         shell: simulatedShellAssignments.has(username.toLowerCase()) ? expectedShell : defaultLoginShell(),
         shellAssigned: simulatedShellAssignments.has(username.toLowerCase()),
-        enabled: true,
+        enabled: !simulatedDisabledAccounts.has(username.toLowerCase()),
         profile: `/home/${username}`,
         verification: 'simulated',
         source: 'native-linux',
       }));
     }
-    const passwd = await ctx.fsp.readFile('/etc/passwd', 'utf8').catch(() => '');
     const users = [];
-    for (const line of passwd.split(/\r?\n/)) {
-      if (!line) continue;
-      const fields = line.split(':');
-      if (fields.length < 7) continue;
-      const [username, , uidText, , , home, shell] = fields;
+    for (const record of localPasswdRecords()) {
+      const { username, uid, profile: home, shell } = record;
       const assigned = shell === expectedShell;
       if (!assigned && !recorded.has(username)) continue;
+      let enabled = null;
+      if (isElevated()) {
+        try { enabled = shadowState(username).enabled; } catch (_) { enabled = null; }
+      }
       users.push({
         username,
-        uid: Number(uidText),
-        enabled: shell !== '/usr/sbin/nologin' && shell !== '/bin/false',
+        uid,
+        enabled,
         profile: home || null,
         shell: shell || null,
         shellAssigned: assigned,
@@ -4718,6 +6454,7 @@ Categories=System;Settings;
 
   async function prepareUserShellBackup(username) {
     const existing = passwdRecord(username);
+    if (existing && !ctx.simulate) assertStandardLocalAccount(username);
     return {
       username,
       accountExisted: Boolean(existing),
@@ -4736,7 +6473,8 @@ Categories=System;Settings;
     const existing = passwdRecord(username);
     const exists = Boolean(existing);
     const previousShell = existing && existing.shell || defaultLoginShell();
-    if (!shellBackup || Boolean(shellBackup.accountExisted) !== exists || !shellBackup.previousShellPresent || shellBackup.previousShell !== previousShell) {
+    if (!shellBackup || Boolean(shellBackup.accountExisted) !== exists || !shellBackup.previousShellPresent || shellBackup.previousShell !== previousShell
+      || (exists && shellBackup.uid !== existing.uid) || (exists && shellBackup.profile !== existing.profile)) {
       throw ctx.arcaneError(
         'SHELL_CHANGED_EXTERNALLY',
         `The Linux account or login shell for “${username}” changed after Arcane saved its recovery record.`,
@@ -4748,96 +6486,231 @@ Categories=System;Settings;
       const key = username.toLowerCase();
       simulatedAccounts.add(key);
       simulatedShellAssignments.set(key, { username, shell });
-      return { username, created: !exists, uid: 1000, profile: `/home/${username}`, shell, previousShell, previousShellPresent: true, shellBindingVersion: 1, assignmentMode: 'linux-login-shell' };
+      if (!exists) simulatedDisabledAccounts.add(key);
+      return { username, created: !exists, uid: 1000, profile: `/home/${username}`, shell, enabled: exists, activationPending: !exists, previousShell, previousShellPresent: true, shellBindingVersion: 1, assignmentMode: 'linux-login-shell' };
     }
-    throw ctx.arcaneError(
-      'LINUX_DESKTOP_SESSION_REQUIRED',
-      'Arcane will not replace a Linux account’s POSIX login shell with a graphical application.',
-      'Install an Arcane desktop-session entry or launch Arcane manually. User provisioning remains disabled until a display-manager-safe session wrapper is installed.',
-      409
-    );
-    /* istanbul ignore next -- retained as the future desktop-session implementation boundary. */
-    if (!ctx.fs.existsSync(shell)) {
-      throw ctx.arcaneError(
-        'ARCANE_SHELL_MISSING',
-        'Arcane will not change a user shell because the Arcane shell launcher is missing.',
-        'Repair the global Arcane installation, verify the release, and try again.'
-      );
+    requireRootUserMutation();
+    assertInstalledUserShell();
+    await ensureShellRegistered(shell);
+    let created = false;
+    let createdUid = null;
+    let shellChanged = false;
+    try {
+      let account = existing;
+      if (exists) {
+        account = assertStandardLocalAccount(username, { expectedUid: existing.uid });
+        const status = shadowState(username);
+        if (!status.enabled) {
+          throw ctx.arcaneError('LINUX_ACTIVE_USER_REQUIRED', `“${username}” is locked or expired.`, 'Activate the existing standard account before assigning Arcane as its login shell.', 409);
+        }
+      } else {
+        const nologin = ['/usr/sbin/nologin', '/sbin/nologin', '/bin/false'].find((candidate) => ctx.fs.existsSync(candidate));
+        if (!nologin) throw ctx.arcaneError('LINUX_NOLOGIN_REQUIRED', 'Arcane could not find a disabled login shell for staging a new account.', 'Install the distribution account-management utilities, then retry.', 409);
+        await ctx.run(requiredAccountCommand('useradd'), ['-m', '-e', '1970-01-02', '-s', nologin, username], { action });
+        created = true;
+        const stagedRecord = passwdRecord(username);
+        createdUid = stagedRecord && stagedRecord.uid;
+        account = assertStandardLocalAccount(username, { allowDisabledShell: true });
+        await ctx.run(requiredAccountCommand('chpasswd'), [], {
+          action,
+          input: `${username}:${password}\n`,
+          displayCommand: '$ chpasswd [protected Arcane staged-account credential]',
+          suppressRawStdout: true,
+          suppressRawStderr: true,
+        });
+        await ctx.run(requiredAccountCommand('usermod'), ['-L', username], { action });
+        await ctx.run(requiredAccountCommand('chage'), ['-d', '0', username], { action });
+        const stagedState = shadowState(username);
+        if (!stagedState.locked || !stagedState.expired || stagedState.lastChangedDay !== 0) {
+          throw ctx.arcaneError('LINUX_STAGED_ACCOUNT_UNSAFE', `Linux did not retain the locked and expired state for “${username}”.`, 'Arcane will remove or disable this incomplete account. Review the diagnostics before retrying.', 409);
+        }
+      }
+      await ctx.run(requiredAccountCommand('usermod'), ['-s', shell, username], { action });
+      shellChanged = true;
+      const verified = assertStandardLocalAccount(username, { expectedUid: account.uid });
+      if (verified.shell !== shell) {
+        throw ctx.arcaneError(
+          'LINUX_SHELL_ASSIGNMENT_FAILED',
+          `Linux did not retain the Arcane shell assignment for “${username}”.`,
+          'Confirm the account is signed out and Arcane has root authorization, then retry.'
+        );
+      }
+      if (created) {
+        const stagedState = shadowState(username);
+        if (!stagedState.locked || !stagedState.expired) throw ctx.arcaneError('LINUX_STAGED_ACCOUNT_UNSAFE', `The staged Linux account “${username}” became active before credential delivery.`, 'Arcane will disable or remove the incomplete account.', 409);
+      }
+      return {
+        username,
+        created,
+        uid: verified.uid,
+        profile: verified.profile,
+        shell,
+        enabled: !created,
+        activationPending: created,
+        previousShell,
+        previousShellPresent: true,
+        shellBindingVersion: 1,
+        assignmentMode: 'linux-login-shell',
+      };
+    } catch (error) {
+      if (created) {
+        try {
+          error.accountRollback = await rollbackCreatedUser(username, { username, created: true, uid: createdUid, shell }, action);
+          error.accountRollback.createdByThisAttempt = true;
+        } catch (rollbackError) {
+          error.accountRollback = {
+            createdByThisAttempt: true,
+            uid: createdUid,
+            accountDisabled: false,
+            accountRemoved: false,
+            cleanupErrors: [String(rollbackError && rollbackError.message || rollbackError)],
+          };
+        }
+      } else if (shellChanged) {
+        try {
+          const current = passwdRecord(username);
+          if (!current || current.uid !== existing.uid || current.shell !== shell) throw new Error('The account identity or assigned shell changed before rollback.');
+          await ctx.run(requiredAccountCommand('usermod'), ['-s', previousShell, username], { action });
+          const restored = passwdRecord(username);
+          if (!restored || restored.uid !== existing.uid || restored.shell !== previousShell) throw new Error('Linux did not retain the previous shell during rollback.');
+          error.shellRollback = { restored: true, uid: existing.uid, shell: previousShell };
+        } catch (rollbackError) {
+          error.shellRollback = { restored: false, uid: existing.uid, error: String(rollbackError && rollbackError.message || rollbackError) };
+        }
+      }
+      for (const key of ['message', 'stdout', 'stderr']) {
+        if (error && error[key]) error[key] = String(error[key]).split(password).join('[redacted]');
+      }
+      if (error && error.code === 'COMMAND_FAILED') error.code = 'LINUX_USER_PROVISION_FAILED';
+      if (error && !error.userMessage) error.userMessage = `Linux could not finish adding the Arcane user “${username}”.`;
+      if (error && !error.resolution) error.resolution = error.accountRollback && error.accountRollback.accountRemoved
+        ? 'Arcane removed the incomplete staged account. Correct the reported issue and retry.'
+        : 'Review the protected transaction diagnostics and recover any recorded partial account before retrying.';
+      throw error;
     }
-    const shells = await ctx.fsp.readFile('/etc/shells', 'utf8').catch(() => '');
-    if (!shells.split(/\r?\n/).includes(shell)) await ctx.fsp.appendFile('/etc/shells', `\n${shell}\n`);
-    if (!exists) {
-      await ctx.run('useradd', ['-m', '-s', previousShell, username], { action });
-      await ctx.run('chpasswd', [], { action, input: `${username}:${password}\n` });
-      await ctx.run('chage', ['-d', '0', username], { action });
-    }
-    await ctx.run('usermod', ['-s', shell, username], { action });
-    const verified = passwdRecord(username);
-    if (!verified || verified.shell !== shell) {
-      throw ctx.arcaneError(
-        'LINUX_SHELL_ASSIGNMENT_FAILED',
-        `Linux did not retain the Arcane shell assignment for “${username}”.`,
-        'Confirm the account is signed out and Arcane has root authorization, then retry.'
-      );
-    }
-    return {
-      username,
-      created: !exists,
-      uid: verified.uid,
-      profile: verified.profile,
-      shell,
-      previousShell,
-      previousShellPresent: true,
-      shellBindingVersion: 1,
-      assignmentMode: 'linux-login-shell',
-    };
   }
 
-  async function activateProvisionedUser(username, staged) {
-    if (!staged || !staged.created) {
+  async function activateProvisionedUser(username, staged, action) {
+    if (!staged || !staged.created || !Number.isSafeInteger(staged.uid)) {
       throw ctx.arcaneError('INVALID_STAGED_ACCOUNT', 'Arcane cannot activate an account without its staged creation record.', 'Retry the complete Add Arcane user operation.', 409);
     }
-    if (ctx.simulate) return { username, uid: staged.uid, enabled: true, activated: true };
-    throw ctx.arcaneError(
-      'LINUX_DESKTOP_SESSION_REQUIRED',
-      'Linux account activation remains disabled until Arcane uses a display-manager-safe desktop session.',
-      'Use the supported Windows provisioner or launch Arcane manually on Linux.',
-      409
-    );
+    if (ctx.simulate) {
+      const key = username.toLowerCase();
+      if (!simulatedAccounts.has(key) || !simulatedShellAssignments.has(key)) throw ctx.arcaneError('USER_NOT_FOUND', `The staged Linux account “${username}” is missing.`, 'Retry the complete Add Arcane user operation.', 404);
+      simulatedDisabledAccounts.delete(key);
+      return { username, uid: staged.uid, enabled: true, activated: true };
+    }
+    requireRootUserMutation();
+    const shell = assertInstalledUserShell();
+    const account = assertStandardLocalAccount(username, { expectedUid: staged.uid });
+    if (account.shell !== shell) {
+      throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `Arcane refused to activate “${username}” because its login shell changed.`, 'Restore the exact installed Arcane shell assignment or remove the staged account manually.', 409);
+    }
+    const before = shadowState(username);
+    if (before.enabled) return { username, uid: account.uid, enabled: true, activated: true, reconciled: true };
+    if (!before.locked) {
+      throw ctx.arcaneError('LINUX_STAGED_ACCOUNT_UNSAFE', `Arcane refused to activate “${username}” because its staged password is no longer locked.`, 'Review the staged account manually. Arcane made no activation change.', 409);
+    }
+    try {
+      await ctx.run(requiredAccountCommand('chage'), ['-d', '0', username], { action });
+      await ctx.run(requiredAccountCommand('usermod'), ['-e', '', username], { action });
+      const stillLocked = shadowState(username);
+      if (!stillLocked.locked || stillLocked.expired || stillLocked.lastChangedDay !== 0) {
+        throw ctx.arcaneError('LINUX_ACTIVATION_PRECONDITION_FAILED', `Linux did not retain the protected pre-activation state for “${username}”.`, 'Arcane will re-lock and expire the account before returning.', 409);
+      }
+      await ctx.run(requiredAccountCommand('usermod'), ['-U', username], { action });
+      const verifiedAccount = assertStandardLocalAccount(username, { expectedUid: staged.uid });
+      const verifiedState = shadowState(username);
+      if (verifiedAccount.shell !== shell || !verifiedState.enabled || verifiedState.lastChangedDay !== 0) {
+        throw ctx.arcaneError('LINUX_ACCOUNT_ACTIVATION_FAILED', `Linux did not retain the active Arcane account state for “${username}”.`, 'Arcane will re-lock and expire the account before returning.', 409);
+      }
+      return { username, uid: verifiedAccount.uid, profile: verifiedAccount.profile, shell, enabled: true, activated: true };
+    } catch (error) {
+      try {
+        const current = passwdRecord(username);
+        if (!current || current.uid !== staged.uid) throw new Error('The staged UID changed before fail-closed recovery.');
+        await ctx.run(requiredAccountCommand('usermod'), ['-L', username], { action });
+        await ctx.run(requiredAccountCommand('usermod'), ['-e', '1970-01-02', username], { action });
+        const recovered = shadowState(username);
+        error.activationRollback = { locked: recovered.locked, expired: recovered.expired, uid: current.uid };
+      } catch (rollbackError) {
+        error.activationRollback = { locked: false, expired: false, uid: staged.uid, error: String(rollbackError && rollbackError.message || rollbackError) };
+      }
+      throw error;
+    }
   }
 
-  async function rollbackCreatedUser(username, staged) {
-    if (!staged || !staged.created) {
+  async function rollbackCreatedUser(username, staged, action) {
+    if (!staged || !staged.created || !Number.isSafeInteger(staged.uid)) {
       throw ctx.arcaneError('INVALID_STAGED_ACCOUNT', 'Arcane refused to remove an account without its staged creation record.', 'Recover the account manually as an administrator.', 409);
     }
     if (ctx.simulate) {
       const key = username.toLowerCase();
       simulatedShellAssignments.delete(key);
+      simulatedDisabledAccounts.delete(key);
       simulatedAccounts.delete(key);
       return { username, uid: staged.uid, accountDisabled: true, accountRemoved: true, cleanupErrors: [] };
     }
-    throw ctx.arcaneError(
-      'LINUX_DESKTOP_SESSION_REQUIRED',
-      'Linux account rollback is unavailable because real Linux account provisioning is disabled.',
-      'No Linux account should have been created by this build.',
-      409
-    );
+    requireRootUserMutation();
+    const cleanupErrors = [];
+    const initial = passwdRecord(username);
+    if (!initial) return { username, uid: staged.uid, accountDisabled: true, accountRemoved: true, cleanupErrors };
+    if (initial.uid !== staged.uid) {
+      throw ctx.arcaneError('LINUX_ACCOUNT_IDENTITY_CHANGED', `Arcane refused to remove “${username}” because its UID changed.`, 'Review the account manually. Arcane made no deletion.', 409, { expectedUid: staged.uid, actualUid: initial.uid });
+    }
+    let accountDisabled = false;
+    try {
+      await ctx.run(requiredAccountCommand('usermod'), ['-L', username], { action });
+      await ctx.run(requiredAccountCommand('usermod'), ['-e', '1970-01-02', username], { action });
+      const locked = shadowState(username);
+      const checked = passwdRecord(username);
+      accountDisabled = Boolean(checked && checked.uid === staged.uid && locked.locked && locked.expired);
+      if (!accountDisabled) throw new Error('Linux did not retain the locked and expired rollback state.');
+    } catch (error) {
+      cleanupErrors.push(`disable: ${String(error && error.message || error)}`);
+    }
+    if (!accountDisabled) return { username, uid: staged.uid, accountDisabled: false, accountRemoved: false, cleanupErrors };
+    try {
+      const checked = passwdRecord(username);
+      if (!checked || checked.uid !== staged.uid) throw new Error('The staged UID changed immediately before account removal.');
+      await ctx.run(requiredAccountCommand('userdel'), ['-r', username], { action });
+    } catch (error) {
+      cleanupErrors.push(`remove: ${String(error && error.message || error)}`);
+    }
+    const remaining = passwdRecord(username);
+    const accountRemoved = !remaining;
+    if (remaining && remaining.uid !== staged.uid) cleanupErrors.push('identity: the username now belongs to a different UID and was not removed');
+    return { username, uid: staged.uid, accountDisabled, accountRemoved, cleanupErrors };
   }
 
   async function resetUserPassword(username, password, action) {
     if (ctx.simulate) return { username, passwordReset: true, mustChangeAtNextSignIn: true };
+    requireRootUserMutation();
     if (!userExists(username)) {
       throw ctx.arcaneError('USER_NOT_FOUND', `The Linux account “${username}” does not exist.`, 'Add the Arcane user first, then set its temporary password.', 404);
     }
+    const shell = assertInstalledUserShell();
+    const account = assertStandardLocalAccount(username);
+    if (account.shell !== shell || !shadowState(username).enabled) {
+      throw ctx.arcaneError('NOT_ARCANE_USER', `“${username}” is not an active verified Arcane user.`, 'Activate or add the account as an Arcane user before resetting its password.', 409);
+    }
     try {
-      await ctx.run('chpasswd', [], {
+      await ctx.run(requiredAccountCommand('chpasswd'), [], {
         action,
         input: `${username}:${password}\n`,
         displayCommand: '$ chpasswd [protected Arcane password reset]',
+        suppressRawStdout: true,
+        suppressRawStderr: true,
       });
-      await ctx.run('chage', ['-d', '0', username], { action });
-      return { username, passwordReset: true, mustChangeAtNextSignIn: true };
+      await ctx.run(requiredAccountCommand('chage'), ['-d', '0', username], { action });
+      const verified = assertStandardLocalAccount(username, { expectedUid: account.uid });
+      const passwordState = shadowState(username);
+      if (verified.shell !== shell || !passwordState.enabled || passwordState.lastChangedDay !== 0) throw new Error('Linux did not retain the active temporary-password state.');
+      return { username, uid: verified.uid, passwordReset: true, mustChangeAtNextSignIn: true };
     } catch (error) {
+      for (const key of ['message', 'stdout', 'stderr']) {
+        if (error && error[key]) error[key] = String(error[key]).split(password).join('[redacted]');
+      }
       error.code = error.code === 'COMMAND_FAILED' ? 'LINUX_PASSWORD_RESET_FAILED' : error.code;
       error.userMessage = `Linux could not set a temporary password for “${username}”.`;
       error.resolution = 'Confirm the account exists and that Arcane has root authorization, then try again.';
@@ -4856,11 +6729,18 @@ Categories=System;Settings;
       simulatedShellAssignments.delete(username.toLowerCase());
       return { username, restored: true, shell: restoredShell, shellAssigned: false, verification: 'simulated' };
     }
-    const current = passwdRecord(username);
-    if (!current) {
-      throw ctx.arcaneError('USER_NOT_FOUND', `The Linux account “${username}” does not exist.`, 'Confirm the account name and retry.', 404);
+    requireRootUserMutation();
+    if (!Number.isSafeInteger(recoveryInput && recoveryInput.uid)) {
+      throw ctx.arcaneError('LINUX_RECOVERY_IDENTITY_MISSING', `Arcane does not have an exact UID recovery record for “${username}”.`, 'Review this legacy account manually. Arcane made no shell change.', 409);
     }
-    if (current.shell !== shellCommand()) {
+    const expectedUid = recoveryInput.uid;
+    const current = assertStandardLocalAccount(username, { expectedUid, allowProtected: true, allowPrivilegedGroups: true });
+    const assignedShell = shellCommand();
+    const prepared = structuredRecovery && recoveryInput.shellMutationPhase === 'prepared';
+    if (prepared && current.shell === restoredShell) {
+      return { username, restored: true, alreadyRestored: true, shell: restoredShell, shellAssigned: false, profile: current.profile, uid: current.uid, verification: 'verified' };
+    }
+    if (current.shell !== assignedShell) {
       throw ctx.arcaneError(
         'SHELL_CHANGED_EXTERNALLY',
         `Arcane refused to overwrite the current login shell for “${username}” because it is no longer the Arcane shell.`,
@@ -4877,9 +6757,9 @@ Categories=System;Settings;
         { previousShell: restoredShell }
       );
     }
-    await ctx.run('usermod', ['-s', restoredShell, username], { action });
-    const verified = passwdRecord(username);
-    if (!verified || verified.shell !== restoredShell) {
+    await ctx.run(requiredAccountCommand('usermod'), ['-s', restoredShell, username], { action });
+    const verified = assertStandardLocalAccount(username, { expectedUid, allowProtected: true, allowPrivilegedGroups: true });
+    if (verified.shell !== restoredShell) {
       throw ctx.arcaneError(
         'LINUX_SHELL_RESTORE_FAILED',
         `Linux did not retain the restored shell for “${username}”.`,
@@ -4910,7 +6790,7 @@ Categories=System;Settings;
           : ['--app=' + url, '--no-first-run'];
       return ctx.spawn(executable, browserArgs, { stdio: 'ignore' });
     }
-    const opener = systemCommand('xdg-open');
+    const opener = executableCommand('xdg-open');
     if (!opener) return null;
     const child = ctx.spawn(opener, [url], { detached: true, stdio: 'ignore' });
     child.unref();
@@ -4927,7 +6807,7 @@ Categories=System;Settings;
 
   function openExternalUri(uri) {
     if (ctx.simulate) throw ctx.arcaneError('EXTERNAL_OPEN_SIMULATED','Arcane simulation cannot hand a link to the operating system.','Test external link handling from a real Arcane host.',501);
-    const opener = systemCommand('xdg-open');
+    const opener = executableCommand('xdg-open');
     if (!opener) throw ctx.arcaneError('EXTERNAL_OPEN_UNSUPPORTED','Arcane cannot find an operating-system URI handler.','Install xdg-utils and try again.',501);
     const child = ctx.spawn(opener, [uri], { detached: true, stdio: 'ignore' });
     child.unref();
@@ -4957,7 +6837,7 @@ Categories=System;Settings;
     const candidates = desktop.includes('kde') ? [kdialog, zenity] : [zenity, kdialog];
     let picker = null;
     for (const candidate of candidates) {
-      const executable = systemCommand(candidate.command);
+      const executable = executableCommand(candidate.command);
       if (executable) {
         picker = { executable, arguments: candidate.arguments };
         break;
@@ -5007,7 +6887,7 @@ Categories=System;Settings;
 
   return Object.freeze({
     id: 'linux',
-    supportsUserProvisioning: false,
+    supportsUserProvisioning: true,
     paths,
     commandExists,
     currentIdentity,
@@ -5046,8 +6926,24 @@ Categories=System;Settings;
     installRenderer,
     addMachinePath,
     installPayload,
+    prepareInstallStage,
+    captureInstallStageOwnership,
+    installStageOwnershipStatus,
+    cleanupInstallStage,
+    materializeInstallStage,
     writeLaunchers,
+    finalizeInstallStage,
+    verifyStagedInstallation,
+    createPublisherAttestation,
+    hostReleaseSecurityMode,
+    hostReleaseSecurityEvidence,
+    listInstalledApplications,
+    releaseSecurityMode,
+    configureGraphicalTarget,
+    rollbackGraphicalTarget,
+    preservePlatformConfiguration,
     applyInstallPermissions,
+    rollbackInstallIntegration,
     applyStatePermissions,
     shellCommand,
     usernamePolicy,
@@ -5106,7 +7002,7 @@ function createCoreNativeAdapter(platform, context) {
 
 
 const VERSION = "0.8.4";
-const BUNDLE_MANIFEST = {"name":"Arcane OS Machine Bundle","version":"0.8.4","protocolVersion":"arcane/1","description":"Native WebView Arcane shell and machine provisioner for Windows and Linux.","build":{"webview2SdkVersion":"1.0.4078.44","webview2SdkSha256":"dc4d1d9168df26b830398303e50210b6e1729f6ce5a7ac69d2c766852f489962"},"apps":{"provisioner":{"displayName":"Arcane Provisioner","type":"provisioner","entry":"provisioner/index.html","capabilities":["system.read","identity.read","system.metrics.read","network.status.read","requirements.read","installation.read","users.manage","diagnostics.read","provisioning.manage"]},"shell":{"displayName":"Arcane Shell","type":"shell","entry":"shell/index.html","capabilities":["ai.models.read","ai.models.manage","system.read","identity.read","system.metrics.read","network.status.read","diagnostics.read","applications.read","applications.launch","session.control","storage.read","storage.write","media.microphone","preferences.read","preferences.write","appearance.read","appearance.write"]}},"requirements":{"node":{"minimumVersion":"22.0.0","installMajor":24,"installPolicy":"optional; install separately from a trusted administrator-managed package channel"},"ollama":{"minimumVersion":"0.30.0","installPolicy":"required globally for Arcane users; on Windows the Provisioner may install or repair the verified official archive as the automatic ArcaneOllama machine service; Linux remains manual"},"renderer":{"minimumVersion":null,"windows":"Microsoft Edge WebView2 Evergreen Runtime","linux":"WebKitGTK 6.0 / GTK 4 (WebKitGTK 2.40 or newer recommended)"},"session-control":{"minimumVersion":null,"installPolicy":"native Windows session control or supported Linux desktop/login manager"}}};
+const BUNDLE_MANIFEST = {"name":"Arcane OS Machine Bundle","version":"0.8.4","protocolVersion":"arcane/1","description":"Native WebView Arcane shell and machine provisioner for Microsoft NT and Linux.","build":{"webview2SdkVersion":"1.0.4078.44","webview2SdkSha256":"dc4d1d9168df26b830398303e50210b6e1729f6ce5a7ac69d2c766852f489962"},"installation":{"linux":{"defaultTarget":"graphical.target","sessionType":"x11"}},"apps":{"provisioner":{"displayName":"Arcane Provisioner","type":"provisioner","entry":"provisioner/index.html","capabilities":["system.read","identity.read","system.metrics.read","network.status.read","requirements.read","installation.read","users.manage","diagnostics.read","provisioning.manage"]},"shell":{"displayName":"Arcane Shell","type":"shell","entry":"shell/index.html","capabilities":["ai.models.read","ai.models.manage","system.read","identity.read","system.metrics.read","network.status.read","diagnostics.read","applications.read","applications.launch","session.control","storage.read","storage.write","media.microphone","preferences.read","preferences.write","appearance.read","appearance.write"]}},"requirements":{"node":{"minimumVersion":"22.0.0","installMajor":24,"installPolicy":"optional; install separately from a trusted administrator-managed package channel"},"ollama":{"minimumVersion":"0.30.0","installPolicy":"required before provisioning Arcane users on Microsoft NT and before local-AI use on every platform; base Arcane OS installation and account staging on Linux or WSL do not require it; on Microsoft NT the Provisioner may install or repair the verified official archive as the automatic ArcaneOllama machine service; Linux installation remains manual"},"renderer":{"minimumVersion":null,"windows":"Microsoft Edge WebView2 Evergreen Runtime","linux":"WebKitGTK 6.0 / GTK 4 (WebKitGTK 2.40 or newer recommended)"},"session-control":{"minimumVersion":null,"installPolicy":"native Microsoft NT session control or supported Linux desktop/login manager"}}};
 const PROTOCOL = 'arcane/1';
 const argv = process.argv.slice(2);
 const args = new Set(argv);
@@ -5256,6 +7152,7 @@ function validatedHostReleaseClaims() {
   const timestampVerified = workerClaims ? timestampClaim === true : String(timestampClaim || '') === '1';
   const hasPublisherEvidence = Boolean(contentBinding || signerThumbprint || verifiedAt || revocationStatus || trustSource || timestampVerified);
   if (mode === 'publisher-verified') {
+    if (platform !== 'win32') throw new Error('Arcane Core does not accept publisher-verified claims from a host without a native platform verifier.');
     const bindingValid = /^ARCANE-(?:MACHINE|TARGET)-BINDING\|1\|[^|\r\n]{1,128}\|[a-f0-9]{64}$/.test(contentBinding);
     const time = new Date(verifiedAt);
     if (!bindingValid || !/^[A-F0-9]{40,128}$/.test(signerThumbprint)
@@ -5272,7 +7169,7 @@ function validatedHostReleaseClaims() {
     return Object.freeze({ mode, contentBinding: '', signerThumbprint: '', verifiedAt: '', revocationStatus: '', trustSource: '', timestampVerified: false });
   }
   if (hasPublisherEvidence || (productionPackaged && platform === 'win32')) {
-    throw new Error('Arcane Core requires a complete release-security claim from its native Windows host.');
+    throw new Error('Arcane Core requires a complete release-security claim from its native Microsoft NT host.');
   }
   return Object.freeze({ mode: '', contentBinding: '', signerThumbprint: '', verifiedAt: '', revocationStatus: '', trustSource: '', timestampVerified: false });
 }
@@ -5290,6 +7187,7 @@ const recentErrors = [];
 const bridgeToken = '';
 const nativeContext = {
   platform,
+  hostPlatform,
   appMode,
   simulate,
   simulatedPlatform,
@@ -5662,7 +7560,7 @@ function publicCurrentIdentity() {
     source:String(identity.source || ''),
   };
 }
-function osInfo() { return native.osInfo(simulatedPlatform); }
+function osInfo() { return native.osInfo(simulate); }
 function protectedProvisioningUsernames() { return native.protectedUsernames(elevationProtectedUsername); }
 function protectedProvisioningUsername() { return protectedProvisioningUsernames()[0] || currentIdentity().username; }
 function permissionStatus(refresh) {
@@ -5986,7 +7884,7 @@ async function durableWriteFile(file, contents, mode) {
     try {
       const directory = await fsp.open(path.dirname(file), 'r');
       try { await directory.sync(); } finally { await directory.close(); }
-    } catch (_) { /* Directory fsync is not available on every Windows filesystem. */ }
+    } catch (_) { /* Directory fsync is not available on every Microsoft NT filesystem. */ }
   } catch (error) {
     if (handle) await handle.close().catch(() => {});
     await fsp.rm(temporary, { force: true }).catch(() => {});
@@ -6212,8 +8110,16 @@ function shellRecoveryDescriptor(record, phaseOverride) {
     assignmentMode: source.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
     shellMutationPhase: phaseOverride || source.shellMutationPhase || 'assigned',
     shell: typeof source.shell === 'string' && source.shell ? source.shell : null,
+    sid: typeof source.sid === 'string' && source.sid ? source.sid : null,
+    uid: Number.isSafeInteger(source.uid) && source.uid >= 0 ? source.uid : null,
     securityMode: ['publisher-verified','unsigned-local-test'].includes(source.securityMode) ? source.securityMode : null,
   };
+}
+function hasStableAccountIdentity(record) {
+  if (!record || typeof record !== 'object') return false;
+  if (native.id === 'windows') return typeof record.sid === 'string' && Boolean(record.sid);
+  if (native.id === 'linux') return Number.isSafeInteger(record.uid) && record.uid >= 0;
+  return false;
 }
 function isCompleteWindowsDualBackup(backup) {
   return Boolean(backup && Number(backup.shellBindingVersion) === 2 && backup.assignmentMode === 'windows-dual');
@@ -6504,6 +8410,18 @@ function run(command, commandArgs, options) {
       }
       resolve({ code, stdout, stderr, command, args: diagnosticArgs });
     });
+  });
+}
+function boundedSpawnSync(command, commandArgs, options) {
+  const opts = options || {};
+  return spawnSync(command, commandArgs || [], {
+    cwd: opts.cwd || safeSubprocessCwd,
+    env: opts.env || safeSubprocessEnvironment,
+    encoding: opts.encoding || 'utf8',
+    windowsHide: opts.windowsHide !== false,
+    shell: false,
+    timeout: Math.min(30000, Math.max(1000, Number(opts.timeout || 10000))),
+    maxBuffer: Math.min(4 * 1024 * 1024, Math.max(64 * 1024, Number(opts.maxBuffer || 1024 * 1024))),
   });
 }
 function powershell(script, options) {
@@ -7364,7 +9282,7 @@ function developmentDependencyReady(root,relative){
 }
 
 function developmentSigningReady(){
-  if(platform!=='win32')return { available:false,ready:false,message:'Windows development signing is available only on Windows.' };
+  if(platform!=='win32')return { available:false,ready:false,message:'Microsoft NT development signing is available only on Microsoft NT.' };
   const script=`$subject='CN=The Wizard Nexus Development'
 $friendly='Arcane OS Local Development Code Signing'
 $minimum=(Get-Date).AddDays(30)
@@ -7425,7 +9343,7 @@ function inspectDevelopmentWorkspace(parameters){
     { id:'root-dependencies',label:'Root dependencies',available:nodeTool.available&&npmTool.available,ready:developmentDependencyReady(workspace.root,'node_modules/strong-type/package.json'),message:'Install the root lockfile with npm ci.' },
     { id:'machine-dependencies',label:'Machine bundle dependencies',available:nodeTool.available&&npmTool.available,ready:developmentDependencyReady(workspace.bundleRoot,'node_modules/@yao-pkg/pkg/package.json'),message:'Install the current machine bundle lockfile with npm ci.' },
     { id:'git-hooks',label:'Git hooks',available:nodeTool.available&&npmTool.available&&gitTool.available,ready:hooksProbe.ok&&hooksProbe.stdout.trim().replace(/\\/g,'/').replace(/^\.\//,'')==='.githooks',message:'Configure the checkout to use its versioned Git hooks.' },
-    { id:'windows-signing',label:'Windows development signing',available:signing.available&&nodeTool.available&&npmTool.available,ready:signing.ready,message:signing.message },
+    { id:'windows-signing',label:'Microsoft NT development signing',available:signing.available&&nodeTool.available&&npmTool.available,ready:signing.ready,message:signing.message },
   ];
   const applicableTasks=tasks.filter((task)=>task.id!=='windows-signing'||platform==='win32');
   return {
@@ -7554,7 +9472,7 @@ function developmentContext(parameters){
 async function installDevelopmentNode(action,parameters){
   developmentRequest(parameters,[]);
   if(platform!=='win32'){
-    throw arcaneError('DEVELOPMENT_NODE_INSTALL_UNAVAILABLE','Arcane Developer can install Node.js automatically only on Windows.','Install Node.js 22 or newer through your operating system’s trusted package channel.',409);
+    throw arcaneError('DEVELOPMENT_NODE_INSTALL_UNAVAILABLE','Arcane Developer can install Node.js automatically only on Microsoft NT.','Install Node.js 22 or newer through your operating system’s trusted package channel.',409);
   }
   actionStep(action,5,'Installing the verified Node.js runtime…');
   await installNode(action);
@@ -7573,7 +9491,7 @@ async function setupDevelopmentWorkspace(action,parameters){
     throw arcaneError('DEVELOPMENT_SETUP_TASK_INVALID','Arcane rejected an unknown development setup task.','Choose one of the setup tasks reported by Arcane.development.inspect().',400,{ allowedTaskIds:DEVELOPMENT_SETUP_TASK_IDS });
   }
   if(taskId==='windows-signing'&&platform!=='win32'){
-    throw arcaneError('DEVELOPMENT_SETUP_UNAVAILABLE','Windows development signing is available only on Windows.','Choose a setup task supported by this operating system.',409);
+    throw arcaneError('DEVELOPMENT_SETUP_UNAVAILABLE','Microsoft NT development signing is available only on Microsoft NT.','Choose a setup task supported by this operating system.',409);
   }
   const workspace=validateDevelopmentWorkspace(request.root);
   const nodeTool=developmentNodeTool();
@@ -7589,7 +9507,7 @@ async function setupDevelopmentWorkspace(action,parameters){
     'root-dependencies':{ cwd:workspace.root,args:['ci','--no-audit','--no-fund'],label:'Installing root dependencies' },
     'machine-dependencies':{ cwd:workspace.bundleRoot,args:['ci','--no-audit','--no-fund'],label:'Installing machine bundle dependencies' },
     'git-hooks':{ cwd:workspace.root,args:['run','hooks:install'],label:'Configuring repository Git hooks' },
-    'windows-signing':{ cwd:workspace.root,args:['run','signing:bootstrap:dev:windows'],label:'Initializing local Windows development signing' },
+    'windows-signing':{ cwd:workspace.root,args:['run','signing:bootstrap:dev:windows'],label:'Initializing local Microsoft NT development signing' },
   };
   const definition=definitions[taskId];
   actionStep(action,10,`${definition.label}…`);
@@ -7625,6 +9543,7 @@ Object.assign(nativeContext, {
   arcaneError,
   cleanPowerShellError,
   run,
+  boundedSpawnSync,
   powershell,
   ensureDir,
   writeFile,
@@ -7662,11 +9581,12 @@ if (selfTestOutput) {
 
 
 const REQUIREMENT_DEFINITIONS = Object.freeze([
-  { id: 'ollama', name: 'Ollama', minimumVersion: BUNDLE_MANIFEST.requirements.ollama.minimumVersion, required: true, requiredFor: ['arcane-user'], requiredScope: 'machine', installable: false, description: 'Machine-wide local model runtime and ArcaneOllama service required by provisioned Arcane users.' },
-  { id: 'renderer', name: 'Native web renderer', minimumVersion: null, required: true, installable: false, description: 'WebView2 on Windows or WebKitGTK on Linux; install it from the operating-system/vendor channel before launching Arcane.' },
+  { id: 'ollama', name: 'Ollama', minimumVersion: BUNDLE_MANIFEST.requirements.ollama.minimumVersion, required: platform === 'win32', requiredFor: ['arcane-user'], requiredScope: 'machine', installable: false, description: platform === 'win32' ? 'Machine-wide local model runtime and ArcaneOllama service required by provisioned Arcane users.' : 'Optional for base Arcane OS installation on Linux; a machine-wide Ollama service is required before using local AI.' },
+  { id: 'renderer', name: 'Native web renderer', minimumVersion: null, required: true, installable: false, description: 'WebView2 on Microsoft NT or WebKitGTK on Linux; install it from the operating-system/vendor channel before launching Arcane.' },
   { id: 'session-control', name: 'Session control', minimumVersion: null, required: true, installable: false, description: 'Native logout and lock capability.' },
 ]);
 function checkOllamaRequirement(definition) {
+  const serviceLabel = platform === 'win32' ? 'ArcaneOllama service' : 'machine-wide Ollama service';
   let detected;
   if (typeof native.ollamaStatus === 'function') {
     detected = native.ollamaStatus();
@@ -7706,23 +9626,27 @@ function checkOllamaRequirement(definition) {
   let message;
   if (!executable) {
     status = user.present ? 'global-install-required' : 'missing';
-    message = user.present
+    message = platform === 'win32' && user.present
       ? 'A user-scoped Ollama copy is present, but Arcane users require the machine-wide ArcaneOllama service. Exit the user-scoped Ollama tray application before installing globally.'
-      : 'Ollama is not installed globally. Arcane users require the machine-wide ArcaneOllama service.';
+      : platform === 'win32'
+      ? 'Ollama is not installed globally. Arcane users require the machine-wide ArcaneOllama service.'
+      : 'Ollama is not installed globally.';
   } else if (!version || compareVersions(version, definition.minimumVersion) < 0) {
     status = 'update-required';
     message = `The global Ollama version ${version || 'unknown'} is below minimum ${definition.minimumVersion}.`;
   } else if (!service.ready) {
     status = 'repair-required';
     message = service.present
-      ? `Global Ollama ${version} is installed, but the ArcaneOllama service is ${service.state || 'not ready'} or misconfigured.`
-      : `Global Ollama ${version} is installed, but the ArcaneOllama service is missing.`;
-    if (user.present && service.state !== 'running') {
+      ? `Global Ollama ${version} is installed, but the ${serviceLabel} is ${service.state || 'not ready'} or misconfigured.`
+      : `Global Ollama ${version} is installed, but the ${serviceLabel} is missing.`;
+    if (platform === 'win32' && user.present && service.state !== 'running') {
       message += ' Exit the user-scoped Ollama tray application so it releases the local Ollama port, then retry the global service repair.';
     }
   } else {
     status = 'ready';
-    message = `Globally installed Ollama ${version}; ArcaneOllama is running and available to Arcane users.`;
+    message = platform === 'win32'
+      ? `Globally installed Ollama ${version}; ArcaneOllama is running and available to Arcane users.`
+      : `Globally installed Ollama ${version}; the machine-wide Ollama service is running and available for local AI.`;
   }
 
   const ready = status === 'ready';
@@ -7743,13 +9667,16 @@ function checkOllamaRequirement(definition) {
     message += available
       ? ` A verified global ${action} action is available in Arcane Provisioner.`
       : ` ${globalInstall.reason || 'A machine administrator must install or repair Ollama globally.'}`;
+    if (!definition.required) {
+      message += ' This does not block base Arcane OS installation on Linux; complete it before using local AI.';
+    }
   }
 
   return {
     ...definition,
     installable: available,
     ready,
-    blocking: !ready,
+    blocking: Boolean(definition.required && !ready),
     status,
     version,
     executable,
@@ -7905,27 +9832,35 @@ async function installArcaneGlobally(action) {
     actionLog(action, 'info', `Installing Arcane ${VERSION} globally from ${root}.`, { payloadMode: payload.mode });
     stage = simulate ? null : `${PATHS.installRoot}.stage-${process.pid}-${crypto.randomBytes(24).toString('hex')}`;
     if (!simulate) {
-      await fsp.mkdir(stage, { recursive: false });
+      await fsp.mkdir(stage, { recursive: false, ...(platform === 'linux' ? { mode: 0o700 } : {}) });
+      if (typeof native.prepareInstallStage === 'function') await native.prepareInstallStage(stage, action);
       if (typeof native.captureInstallStageOwnership === 'function') {
         stageOwnership = native.captureInstallStageOwnership(stage);
-      } else if (platform === 'win32') {
+      } else if (platform === 'win32' || platform === 'linux') {
         throw new Error('The native adapter cannot bind an installation stage to its filesystem identity.');
       }
-      for (const file of payload.files) {
-        const installPath = normalizeIntegrityPath(file.installPath || `bin/${file.destinationName}`);
-        const sourceStat = fs.lstatSync(file.source);
-        if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) throw new Error(`Arcane refused an unsafe release source for ${installPath}.`);
-        const destination = integrityFilePath(stage, installPath);
-        await ensureDir(path.dirname(destination));
-        await fsp.copyFile(file.source, destination);
-        if (file.executable) await fsp.chmod(destination, 0o755);
-      }
-      if (payload.mode !== 'windows-webview2') {
-        for (const directory of payload.directories || []) await copyTree(directory.source, path.join(stage, directory.destinationName));
-        const bundleManifestSource = payload.bundleManifestSource || path.join(root, 'arcane-bundle.json');
-        if (fs.existsSync(bundleManifestSource)) await fsp.copyFile(bundleManifestSource, path.join(stage, 'arcane-bundle.json'));
+      if (payload.integrity && typeof native.materializeInstallStage === 'function') {
+        await native.materializeInstallStage(stage, payload, action);
+      } else {
+        for (const file of payload.files) {
+          const installPath = normalizeIntegrityPath(file.installPath || `bin/${file.destinationName}`);
+          const sourceStat = fs.lstatSync(file.source);
+          if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) throw new Error(`Arcane refused an unsafe release source for ${installPath}.`);
+          const destination = integrityFilePath(stage, installPath);
+          await ensureDir(path.dirname(destination));
+          await fsp.copyFile(file.source, destination);
+          if (file.executable) await fsp.chmod(destination, 0o755);
+        }
+        if (payload.mode !== 'windows-webview2') {
+          for (const directory of payload.directories || []) await copyTree(directory.source, path.join(stage, directory.destinationName));
+          const bundleManifestSource = payload.bundleManifestSource || path.join(root, 'arcane-bundle.json');
+          if (fs.existsSync(bundleManifestSource)) await fsp.copyFile(bundleManifestSource, path.join(stage, 'arcane-bundle.json'));
+        }
       }
       await native.writeLaunchers(stage, payload);
+      if (payload.integrity && typeof native.finalizeInstallStage === 'function') {
+        await native.finalizeInstallStage(stage, payload, action);
+      }
       if (payload.integrity) {
         verifyIntegrityEntries(stage, payload.integrity.files, true);
         if (native.verifyStagedInstallation) native.verifyStagedInstallation(stage, false);
@@ -7943,6 +9878,13 @@ async function installArcaneGlobally(action) {
     if (payload.securityMode && payload.securityMode !== installationSecurityMode) {
       throw new Error('The verified installation payload security mode does not match the active native host proof.');
     }
+    let preservedPlatformConfiguration = null;
+    if (!simulate && native.preservePlatformConfiguration && fs.existsSync(path.join(PATHS.installRoot, 'arcane-install.json'))) {
+      try {
+        const existingManifest = readJsonFile(path.join(PATHS.installRoot, 'arcane-install.json'));
+        preservedPlatformConfiguration = native.preservePlatformConfiguration(existingManifest && existingManifest.platformConfiguration);
+      } catch (_) {}
+    }
     const manifest = {
       name: 'Arcane OS',
       version: VERSION,
@@ -7954,6 +9896,7 @@ async function installArcaneGlobally(action) {
       securityMode: installationSecurityMode,
       sourceBundle: root,
       requirements: BUNDLE_MANIFEST.requirements,
+      ...(preservedPlatformConfiguration ? { platformConfiguration: preservedPlatformConfiguration } : {}),
       ...(publisherAttestation ? { publisherAttestation } : {}),
       integrity: simulate ? { schemaVersion: 2, hashAlgorithm: 'sha256', scope: 'simulation', files: [] } : createInstalledIntegrity(stage),
     };
@@ -7977,6 +9920,8 @@ async function installArcaneGlobally(action) {
         }
       }
       let activated = false;
+      let installIntegration = null;
+      let graphicalConfiguration = null;
       try {
         try {
           await fsp.rename(stage, PATHS.installRoot);
@@ -7984,7 +9929,7 @@ async function installArcaneGlobally(action) {
           const activatedOwnership = stageOwnership && typeof native.installStageOwnershipStatus === 'function'
             ? native.installStageOwnershipStatus(stageOwnership, PATHS.installRoot)
             : null;
-          if (platform === 'win32' && (!activatedOwnership || activatedOwnership.state !== 'owned')) {
+          if (stageOwnership && (!activatedOwnership || activatedOwnership.state !== 'owned')) {
             throw arcaneError(
               'INSTALL_STAGE_IDENTITY_LOST',
               'Arcane could not prove that the activated installation is the exact verified stage it created.',
@@ -8003,9 +9948,18 @@ async function installArcaneGlobally(action) {
         const installedVerification = verifyInstalledIntegrity(manifest);
         if (!installedVerification.ok) throw new Error(`Arcane rejected the activated installation: ${installedVerification.reason}`);
         if (native.verifyStagedInstallation) native.verifyStagedInstallation(PATHS.installRoot, true);
-        await native.applyInstallPermissions(action);
+        installIntegration = await native.applyInstallPermissions(action);
         await ensureDir(PATHS.stateRoot);
         if (native.applyStatePermissions) await native.applyStatePermissions(action);
+        if (!movedExisting && native.configureGraphicalTarget) {
+          const linuxPolicy = BUNDLE_MANIFEST.installation && BUNDLE_MANIFEST.installation.linux;
+          graphicalConfiguration = await native.configureGraphicalTarget(action, linuxPolicy);
+          manifest.platformConfiguration = { linux: graphicalConfiguration };
+          await durableWriteFile(path.join(PATHS.installRoot, 'arcane-install.json'), JSON.stringify(manifest, null, 2), 0o644);
+          const configuredVerification = verifyInstalledIntegrity(manifest);
+          if (!configuredVerification.ok) throw new Error(`Arcane rejected the configured installation: ${configuredVerification.reason}`);
+          if (native.verifyStagedInstallation) native.verifyStagedInstallation(PATHS.installRoot, true);
+        }
         try {
           await durableWriteFile(path.join(PATHS.stateRoot, 'install.json'), JSON.stringify(manifest, null, 2), 0o600);
           if (native.applyStatePermissions) await native.applyStatePermissions(action);
@@ -8030,6 +9984,12 @@ async function installArcaneGlobally(action) {
       } catch (error) {
         const failed = `${PATHS.installRoot}.failed-${Date.now()}`;
         try {
+          if (graphicalConfiguration && native.rollbackGraphicalTarget) {
+            await native.rollbackGraphicalTarget(graphicalConfiguration, action);
+          }
+          if (installIntegration && native.rollbackInstallIntegration) {
+            await native.rollbackInstallIntegration(installIntegration, action);
+          }
           let failedOwnershipVerified = false;
           if (activated && fs.existsSync(PATHS.installRoot)) {
             await fsp.rename(PATHS.installRoot, failed);
@@ -8114,7 +10074,17 @@ async function ensureArcaneInstallation(action) {
     actionStep(action, 72, `Arcane OS ${state.installedVersion || VERSION} is already installed.`);
     actionLog(action, 'info', `Arcane OS ${state.installedVersion || VERSION} is current; no replacement was required.`);
   }
-  const model = await ensureManagedArcaneModel(action);
+  const modelRequirement = checkRequirements(['ollama']).find((requirement) => requirement.id === 'ollama') || null;
+  let model;
+  if (modelRequirement && modelRequirement.required === false) {
+    actionLog(action, 'info', 'Deferred Arcane local-model setup so base Linux installation remains independent of Ollama.', {
+      requirementStatus: modelRequirement.status,
+      requiredBefore: 'local-ai',
+    });
+    model = Object.freeze({ status: 'deferred', reason: modelRequirement.status === 'ready' ? 'base-install-local-ai-decoupled' : 'ollama-not-ready', requiredBefore: 'local-ai', created: false });
+  } else {
+    model = await ensureManagedArcaneModel(action);
+  }
   const installation = installationState();
   const requirements = checkRequirements();
   const failedRequirements = requirements.filter((requirement) => requirement.required !== false && requirement.status !== 'ready');
@@ -8178,7 +10148,7 @@ async function provisionUsers(usernames, action) {
     throw arcaneError(
       'USER_PROVISIONING_UNAVAILABLE',
       'Arcane user-shell provisioning is not available on this platform build.',
-      'Use the supported Windows provisioner, or install a display-manager-safe Arcane desktop session before enabling Linux account integration.',
+      'Use the supported Microsoft NT provisioner, or install a display-manager-safe Arcane desktop session before enabling Linux account integration.',
       409
     );
   }
@@ -8193,10 +10163,10 @@ async function provisionUsers(usernames, action) {
   const changed = [];
   const assignedShell = native.shellCommand();
   const assignedSecurityMode = simulate ? 'simulation' : installedReleaseSecurityMode();
-  if (native.id === 'windows' && !simulate) {
-    const unsignedCommand = assignedShell.endsWith(' --allow-unsigned-local-release');
+  if (['windows','linux'].includes(native.id) && !simulate) {
+    const unsignedCommand = native.id === 'windows' && assignedShell.endsWith(' --allow-unsigned-local-release');
     if (!['publisher-verified','unsigned-local-test'].includes(assignedSecurityMode)
-      || unsignedCommand !== (assignedSecurityMode === 'unsigned-local-test')) {
+      || (native.id === 'windows' && unsignedCommand !== (assignedSecurityMode === 'unsigned-local-test'))) {
       throw arcaneError(
         'RELEASE_SECURITY_UNVERIFIED',
         'Arcane refused to assign a login shell without a verified release security mode.',
@@ -8225,7 +10195,7 @@ async function provisionUsers(usernames, action) {
       const incompleteNewAccountPhases = new Set(['prepared', 'activation-pending']);
       if (priorRecord && priorRecord.accountExistedBefore === false && incompleteNewAccountPhases.has(priorRecord.accountMutationPhase)) {
         if (native.userExists(username)) {
-          if (!priorRecord.sid) {
+          if (!hasStableAccountIdentity(priorRecord)) {
             await updateArcaneUserRecord(username, {
               createdByArcane: false,
               passwordStatus: 'unavailable-disabled',
@@ -8236,7 +10206,7 @@ async function provisionUsers(usernames, action) {
             });
             throw arcaneError(
               'PARTIAL_ACCOUNT_RECOVERY_REQUIRED',
-              `Arcane found “${username}” after an interrupted account creation, but no trusted security identifier was durably recorded.`,
+              `Arcane found “${username}” after an interrupted account creation, but no trusted operating-system identity was durably recorded.`,
               'The account was staged disabled. Verify and remove it as an administrator before trying again; Arcane will not delete an account using its name alone.',
               409,
               { username }
@@ -8247,6 +10217,7 @@ async function provisionUsers(usernames, action) {
             username,
             created: true,
             sid: priorRecord.sid,
+            uid: priorRecord.uid,
             profile: priorRecord.profile || null,
             shell: priorRecord.shell || native.shellCommand(),
           }, action);
@@ -8374,7 +10345,7 @@ async function provisionUsers(usernames, action) {
           throw arcaneError(
             'SHELL_CHANGED_EXTERNALLY',
             'Arcane refused to migrate the recorded login-shell command because the current bindings no longer match it exactly.',
-            'Review both protected per-user Windows shell bindings before retrying.',
+            'Review both protected per-user Microsoft NT shell bindings before retrying.',
             409,
             { username }
           );
@@ -8412,7 +10383,7 @@ async function provisionUsers(usernames, action) {
       if (native.id === 'windows' && !isCompleteWindowsDualBackup(backup)) {
         throw arcaneError(
           'WINDOWS_SHELL_BACKUP_INCOMPLETE',
-          `Arcane could not capture both Windows shell bindings for “${username}”.`,
+          `Arcane could not capture both Microsoft NT shell bindings for “${username}”.`,
           'No shell change was made. Sign the account out, confirm its profile is available, and retry from an administrator session.',
           409,
           { username }
@@ -8585,7 +10556,7 @@ async function activateStagedArcaneUser(username, action) {
   const normalized = validateProvisioningUsername(username);
   if (native.applyStatePermissions) await native.applyStatePermissions(action);
   const record = readArcaneUsersState().users[String(normalized).toLowerCase()] || null;
-  if (!record || record.accountExistedBefore !== false || record.accountMutationPhase !== 'activation-pending' || !record.sid) {
+  if (!record || record.accountExistedBefore !== false || record.accountMutationPhase !== 'activation-pending' || !hasStableAccountIdentity(record)) {
     throw arcaneError(
       'STAGED_ACCOUNT_NOT_FOUND',
       `Arcane has no disabled staged account ready to activate for “${normalized}”.`,
@@ -8600,6 +10571,7 @@ async function activateStagedArcaneUser(username, action) {
     username: normalized,
     created: true,
     sid: record.sid,
+    uid: record.uid,
     profile: record.profile || null,
     shell: record.shell || native.shellCommand(),
     previousShell: record.previousShell ?? null,
@@ -8671,7 +10643,7 @@ async function applyArcaneUserPassword(username, passwordInput, action) {
     nativeContext.simulatedUserFailureTriggered = true;
     const injected = arcaneError(
       'SIMULATED_USER_TRANSACTION_FAILURE',
-      'Simulated process loss after Windows accepted the saved temporary password.',
+      'Simulated process loss after the operating system accepted the saved temporary password.',
       'The operator already saved this credential; retry the same password application to reconcile Arcane state.',
       500
     );
@@ -8745,16 +10717,20 @@ async function verifyArcaneUserShell(username, action) {
   const users = await listArcaneUsers();
   const target = users.find((item) => String(item.username || '').toLowerCase() === normalized.toLowerCase());
   if (!target) {
-    throw arcaneError('USER_NOT_FOUND', `The account “${normalized}” no longer exists.`, 'Refresh the Arcane user list after confirming the Windows account was intentionally deleted.', 404, { username: normalized });
+    throw arcaneError('USER_NOT_FOUND', `The account “${normalized}” no longer exists.`, 'Refresh the Arcane user list after confirming the operating-system account was intentionally deleted.', 404, { username: normalized });
   }
   const verified = {
     ...target,
     administratorVerified: true,
     administratorVerifiedAt: stamp(),
   };
-  actionLog(action, target.shellAssigned ? 'info' : 'warn', target.shellAssigned
-    ? `Both protected Windows shell bindings for ${normalized} match the exact Arcane command.`
-    : `Administrator verification found that ${normalized} does not have both exact Arcane shell bindings.`, verified);
+  const verifiedMessage = native.id === 'windows'
+    ? `Both protected Microsoft NT shell bindings for ${normalized} match the exact Arcane command.`
+    : `The protected Linux login-shell field for ${normalized} matches the exact installed Arcane launcher.`;
+  const mismatchMessage = native.id === 'windows'
+    ? `Administrator verification found that ${normalized} does not have both exact Arcane shell bindings.`
+    : `Administrator verification found that ${normalized} does not have the exact installed Arcane login shell.`;
+  actionLog(action, target.shellAssigned ? 'info' : 'warn', target.shellAssigned ? verifiedMessage : mismatchMessage, verified);
   return verified;
 }
 function provisioningPlan(usernames) {
@@ -9038,7 +11014,7 @@ const METHOD_POLICIES = Object.freeze({
   'users.verifyShell': Object.freeze({ capability:"users.manage", appTypes:Object.freeze(["provisioner"]), privileged:true }),
   'users.restoreShell': Object.freeze({ capability:"users.manage", appTypes:Object.freeze(["provisioner"]), privileged:true, exclusiveMutation:true }),
 });
-const METHOD_CONTRACTS = Object.freeze({"app.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"application-descriptor-v1","exact":true,"maxApplicationIdLength":64,"maxDisplayNameLength":256,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64})}),"apps.launch":Object.freeze({"version":"1.0.0","effect":"application-dispatch","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","installed-application-catalog"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"application-to-host","input":Object.freeze({"kind":"application-launch-v1","exact":true,"maxApplicationIdLength":64,"idMeaning":"installed-launchable-application-id"}),"output":Object.freeze({"kind":"application-launch-result-v1","exact":true,"maxApplicationIdLength":64,"acceptedMeaning":"dispatch-request-accepted"})}),"apps.list":Object.freeze({"version":"1.0.0","effect":"observe","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-catalog-integrity","application-identity-allowlist","capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"application-catalog-v1","exact":true,"maxApplications":256,"maxApplicationIdLength":64,"maxDisplayNameLength":80,"maxDescriptionLength":240,"maxIconUrlLength":1024,"maxApplicationVersionLength":64,"maxOrder":100000,"maxSecurityEvidenceLength":256,"ordering":"ascending-order"})}),"external.open":Object.freeze({"version":"1.0.0","effect":"external-handoff","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","uri-scheme-allowlist"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"operating-system-handoff","input":Object.freeze({"kind":"external-open-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"}),"output":Object.freeze({"kind":"external-open-result-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"})}),"network.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"network-status-v1","exact":true,"onlineMeaning":"non-loopback-interface-present","maxInterfaceCount":64})}),"platform.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"platform-status-v1","exact":true,"maxStatusStringLength":256,"maxListItems":256,"maxProbeItems":64,"maxApplicationIdLength":64,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64,"maxRendererExecutableLength":4096})}),"system.ping":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"system-ping-result-v1","exact":true})}),"user.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","privacy-minimized-identity"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"user-identity-v1","exact":true,"maxUsernameLength":128,"maxAccountNameLength":256,"maxDisplayNameLength":256})}),"version.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"version-string-v1","exact":true,"maxLength":64,"meaning":"active-arcane-host-release-version"})})});
+const METHOD_CONTRACTS = Object.freeze({"app.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"application-descriptor-v1","exact":true,"maxApplicationIdLength":64,"maxDisplayNameLength":256,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64})}),"apps.launch":Object.freeze({"version":"1.0.0","effect":"application-dispatch","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","installed-application-catalog"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"application-to-host","input":Object.freeze({"kind":"application-launch-v1","exact":true,"maxApplicationIdLength":64,"idMeaning":"installed-launchable-application-id"}),"output":Object.freeze({"kind":"application-launch-result-v1","exact":true,"maxApplicationIdLength":64,"acceptedMeaning":"dispatch-request-accepted"})}),"apps.list":Object.freeze({"version":"1.0.0","effect":"observe","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-catalog-integrity","application-identity-allowlist","capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"application-catalog-v1","exact":true,"maxApplications":256,"maxApplicationIdLength":64,"maxDisplayNameLength":80,"maxDescriptionLength":240,"maxIconUrlLength":1024,"maxApplicationVersionLength":64,"maxOrder":100000,"maxSecurityEvidenceLength":256,"ordering":"ascending-order"})}),"external.open":Object.freeze({"version":"1.0.0","effect":"external-handoff","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","uri-scheme-allowlist"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"operating-system-handoff","input":Object.freeze({"kind":"external-open-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"}),"output":Object.freeze({"kind":"external-open-result-v1","exact":true,"maxUriLength":4096,"scheme":"mailto"})}),"network.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"network-status-v1","exact":true,"onlineMeaning":"non-loopback-interface-present","maxInterfaceCount":64})}),"platform.status":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"platform-status-v1","exact":true,"maxStatusStringLength":256,"maxListItems":256,"maxProbeItems":64,"maxApplicationIdLength":64,"maxApplicationEntryLength":512,"maxApplicationVersionLength":64,"maxRendererExecutableLength":4096})}),"system.ping":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"system-ping-result-v1","exact":true})}),"terminal.close":Object.freeze({"version":"1.0.0","effect":"process-control","risk":"high","audit":"metadata","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","process-sandbox"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"application-to-host","input":Object.freeze({"kind":"terminal-session-id-v1","exact":true,"maxSessionIdLength":128}),"output":Object.freeze({"kind":"terminal-close-result-v1","exact":true,"maxSessionIdLength":128,"acceptedMeaning":"close-request-accepted"})}),"terminal.list":Object.freeze({"version":"1.0.0","effect":"observe","risk":"high","audit":"metadata","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","process-sandbox"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"terminal-list-v1","exact":true,"maxSessions":8,"maxSessionIdLength":128,"maxShellLength":16,"maxCwdLength":4096,"maxTimestampLength":64})}),"terminal.resize":Object.freeze({"version":"1.0.0","effect":"process-control","risk":"high","audit":"metadata","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","process-sandbox"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"application-to-host","input":Object.freeze({"kind":"terminal-resize-v1","exact":true,"maxSessionIdLength":128,"minColumns":20,"maxColumns":500,"minRows":5,"maxRows":200}),"output":Object.freeze({"kind":"terminal-resize-result-v1","exact":true,"maxSessionIdLength":128,"minColumns":20,"maxColumns":500,"minRows":5,"maxRows":200})}),"terminal.signal":Object.freeze({"version":"1.0.0","effect":"process-control","risk":"high","audit":"metadata","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","process-sandbox"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"application-to-host","input":Object.freeze({"kind":"terminal-signal-v1","exact":true,"maxSessionIdLength":128,"signalMeaning":"interrupt-or-terminate"}),"output":Object.freeze({"kind":"terminal-signal-result-v1","exact":true,"maxSessionIdLength":128,"signalMeaning":"interrupt-or-terminate","acceptedMeaning":"signal-request-accepted"})}),"terminal.start":Object.freeze({"version":"1.0.0","effect":"process-start","risk":"high","audit":"metadata","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","process-sandbox"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"bidirectional","input":Object.freeze({"kind":"terminal-start-v1","exact":true,"maxShellLength":16,"maxCwdLength":4096,"minColumns":20,"maxColumns":500,"minRows":5,"maxRows":200}),"output":Object.freeze({"kind":"terminal-session-v1","exact":true,"maxSessionIdLength":128,"maxShellLength":16,"maxCwdLength":4096,"maxTitleLength":80,"maxTimestampLength":64})}),"terminal.write":Object.freeze({"version":"1.0.0","effect":"process-input","risk":"high","audit":"metadata","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["application-identity-allowlist","capability-grant","process-sandbox"]),"cancellation":"pre-dispatch-only","reversibility":"not-reversible","idempotency":"non-idempotent","dataMovement":"application-to-host","input":Object.freeze({"kind":"terminal-write-v1","exact":true,"maxSessionIdLength":128,"maxDataBytes":65536}),"output":Object.freeze({"kind":"terminal-write-result-v1","exact":true,"maxSessionIdLength":128,"maxDataBytes":65536})}),"user.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"moderate","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["capability-grant","privacy-minimized-identity"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"user-identity-v1","exact":true,"maxUsernameLength":128,"maxAccountNameLength":256,"maxDisplayNameLength":256})}),"version.current":Object.freeze({"version":"1.0.0","effect":"observe","risk":"low","audit":"none","network":"none","osPermissions":Object.freeze([]),"policyHooks":Object.freeze(["bound-application-session"]),"cancellation":"not-applicable","reversibility":"not-applicable","idempotency":"repeatable-read","dataMovement":"host-to-application","input":Object.freeze({"kind":"empty-object-v1","exact":true}),"output":Object.freeze({"kind":"version-string-v1","exact":true,"maxLength":64,"meaning":"active-arcane-host-release-version"})})});
 
 function contractFailure(code, message, status) {
   throw arcaneError(code,message,'Repair or reinstall Arcane OS and retry the operation.',status);
@@ -9252,6 +11228,222 @@ function validatePlatformStatusV1(result, shape) {
   return result;
 }
 
+function isTerminalContractText(value, maximumLength, allowEmpty) {
+  return typeof value==='string'
+    &&value.length<=maximumLength
+    &&(allowEmpty||value.length>0)
+    &&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value);
+}
+
+function isTerminalContractSessionId(value, shape) {
+  return typeof value==='string'&&value.length<=shape.maxSessionIdLength&&TERMINAL_ID_PATTERN.test(value);
+}
+
+function hasTerminalContractDimensions(value, shape) {
+  return Number.isSafeInteger(value.columns)
+    &&value.columns>=shape.minColumns
+    &&value.columns<=shape.maxColumns
+    &&Number.isSafeInteger(value.rows)
+    &&value.rows>=shape.minRows
+    &&value.rows<=shape.maxRows;
+}
+
+function validateTerminalStartV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','cwd','rows','shell'],[])
+    &&isTerminalContractText(parameters.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(parameters.cwd,shape.maxCwdLength,true)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSessionIdV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape) ? parameters : null;
+}
+
+function validateTerminalWriteV1(parameters, shape) {
+  return isExactDataRecord(parameters,['data','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&typeof parameters.data==='string'
+    &&Buffer.byteLength(parameters.data,'utf8')>=1
+    &&Buffer.byteLength(parameters.data,'utf8')<=shape.maxDataBytes ? parameters : null;
+}
+
+function validateTerminalResizeV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','rows','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSignalV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId','signal'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&['interrupt','terminate'].includes(parameters.signal) ? parameters : null;
+}
+
+function validateTerminalSessionV1(result, shape) {
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  return isExactDataRecord(result,['columns','createdAt','cwd','id','rows','shell','title'],[])
+    &&isTerminalContractSessionId(result.id,{maxSessionIdLength:shape.maxSessionIdLength})
+    &&isTerminalContractText(result.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(result.cwd,shape.maxCwdLength,false)
+    &&isTerminalContractText(result.title,shape.maxTitleLength,false)
+    &&isTerminalContractText(result.createdAt,shape.maxTimestampLength,false)
+    &&hasTerminalContractDimensions(result,dimensions) ? result : null;
+}
+
+function validateTerminalListV1(result, shape) {
+  if(!isExactDataRecord(result,['sessions'],[])||!Array.isArray(result.sessions)||result.sessions.length>shape.maxSessions)return null;
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  for(const session of result.sessions){
+    if(!isExactDataRecord(session,['columns','createdAt','cwd','id','rows','shell','state'],[])
+      ||!isTerminalContractSessionId(session.id,{maxSessionIdLength:shape.maxSessionIdLength})
+      ||!isTerminalContractText(session.shell,shape.maxShellLength,false)
+      ||!isTerminalContractText(session.cwd,shape.maxCwdLength,false)
+      ||!isTerminalContractText(session.createdAt,shape.maxTimestampLength,false)
+      ||!['starting','running','exited','closed'].includes(session.state)
+      ||!hasTerminalContractDimensions(session,dimensions))return null;
+  }
+  return result;
+}
+
+function validateTerminalWriteResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','bytes','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&Number.isSafeInteger(result.bytes)
+    &&result.bytes>=1
+    &&result.bytes<=shape.maxDataBytes ? result : null;
+}
+
+function validateTerminalResizeResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','columns','emulated','rows','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&result.emulated===true
+    &&hasTerminalContractDimensions(result,shape) ? result : null;
+}
+
+function validateTerminalSignalResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId','signal'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&['interrupt','terminate'].includes(result.signal)
+    &&typeof result.accepted==='boolean' ? result : null;
+}
+
+function validateTerminalCloseResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true ? result : null;
+}
+
+function isTerminalContractText(value, maximumLength, allowEmpty) {
+  return typeof value==='string'
+    &&value.length<=maximumLength
+    &&(allowEmpty||value.length>0)
+    &&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value);
+}
+
+function isTerminalContractSessionId(value, shape) {
+  return typeof value==='string'&&value.length<=shape.maxSessionIdLength&&TERMINAL_ID_PATTERN.test(value);
+}
+
+function hasTerminalContractDimensions(value, shape) {
+  return Number.isSafeInteger(value.columns)
+    &&value.columns>=shape.minColumns
+    &&value.columns<=shape.maxColumns
+    &&Number.isSafeInteger(value.rows)
+    &&value.rows>=shape.minRows
+    &&value.rows<=shape.maxRows;
+}
+
+function validateTerminalStartV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','cwd','rows','shell'],[])
+    &&isTerminalContractText(parameters.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(parameters.cwd,shape.maxCwdLength,true)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSessionIdV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape) ? parameters : null;
+}
+
+function validateTerminalWriteV1(parameters, shape) {
+  return isExactDataRecord(parameters,['data','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&typeof parameters.data==='string'
+    &&Buffer.byteLength(parameters.data,'utf8')>=1
+    &&Buffer.byteLength(parameters.data,'utf8')<=shape.maxDataBytes ? parameters : null;
+}
+
+function validateTerminalResizeV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','rows','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSignalV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId','signal'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&['interrupt','terminate'].includes(parameters.signal) ? parameters : null;
+}
+
+function validateTerminalSessionV1(result, shape) {
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  return isExactDataRecord(result,['columns','createdAt','cwd','id','rows','shell','title'],[])
+    &&isTerminalContractSessionId(result.id,{maxSessionIdLength:shape.maxSessionIdLength})
+    &&isTerminalContractText(result.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(result.cwd,shape.maxCwdLength,false)
+    &&isTerminalContractText(result.title,shape.maxTitleLength,false)
+    &&isTerminalContractText(result.createdAt,shape.maxTimestampLength,false)
+    &&hasTerminalContractDimensions(result,dimensions) ? result : null;
+}
+
+function validateTerminalListV1(result, shape) {
+  if(!isExactDataRecord(result,['sessions'],[])||!Array.isArray(result.sessions)||result.sessions.length>shape.maxSessions)return null;
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  for(const session of result.sessions){
+    if(!isExactDataRecord(session,['columns','createdAt','cwd','id','rows','shell','state'],[])
+      ||!isTerminalContractSessionId(session.id,{maxSessionIdLength:shape.maxSessionIdLength})
+      ||!isTerminalContractText(session.shell,shape.maxShellLength,false)
+      ||!isTerminalContractText(session.cwd,shape.maxCwdLength,false)
+      ||!isTerminalContractText(session.createdAt,shape.maxTimestampLength,false)
+      ||!['starting','running','exited','closed'].includes(session.state)
+      ||!hasTerminalContractDimensions(session,dimensions))return null;
+  }
+  return result;
+}
+
+function validateTerminalWriteResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','bytes','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&Number.isSafeInteger(result.bytes)
+    &&result.bytes>=1
+    &&result.bytes<=shape.maxDataBytes ? result : null;
+}
+
+function validateTerminalResizeResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','columns','emulated','rows','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&result.emulated===true
+    &&hasTerminalContractDimensions(result,shape) ? result : null;
+}
+
+function validateTerminalSignalResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId','signal'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&['interrupt','terminate'].includes(result.signal)
+    &&typeof result.accepted==='boolean' ? result : null;
+}
+
+function validateTerminalCloseResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true ? result : null;
+}
+
 function validateMethodContractInput(method, parameters) {
   const contract=METHOD_CONTRACTS[method];
   if(!contract)return parameters;
@@ -9259,6 +11451,16 @@ function validateMethodContractInput(method, parameters) {
   if(contract.input.kind==='empty-object-v1')validated=validateEmptyObjectV1(parameters);
   else if(contract.input.kind==='application-launch-v1')validated=validateApplicationLaunchV1(parameters,contract.input);
   else if(contract.input.kind==='external-open-v1')validated=validateExternalOpenV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-resize-v1')validated=validateTerminalResizeV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-session-id-v1')validated=validateTerminalSessionIdV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-signal-v1')validated=validateTerminalSignalV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-start-v1')validated=validateTerminalStartV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-write-v1')validated=validateTerminalWriteV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-resize-v1')validated=validateTerminalResizeV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-session-id-v1')validated=validateTerminalSessionIdV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-signal-v1')validated=validateTerminalSignalV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-start-v1')validated=validateTerminalStartV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-write-v1')validated=validateTerminalWriteV1(parameters,contract.input);
   else contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected an unknown method input contract.',500);
   if(!validated)contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected a request that did not match the method contract.',400);
   return validated;
@@ -9275,6 +11477,18 @@ function validateMethodContractOutput(method, result) {
   else if(contract.output.kind==='network-status-v1')validated=validateNetworkStatusV1(result,contract.output);
   else if(contract.output.kind==='platform-status-v1')validated=validatePlatformStatusV1(result,contract.output);
   else if(contract.output.kind==='system-ping-result-v1')validated=validateSystemPingResultV1(result);
+  else if(contract.output.kind==='terminal-close-result-v1')validated=validateTerminalCloseResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-list-v1')validated=validateTerminalListV1(result,contract.output);
+  else if(contract.output.kind==='terminal-resize-result-v1')validated=validateTerminalResizeResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-session-v1')validated=validateTerminalSessionV1(result,contract.output);
+  else if(contract.output.kind==='terminal-signal-result-v1')validated=validateTerminalSignalResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-write-result-v1')validated=validateTerminalWriteResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-close-result-v1')validated=validateTerminalCloseResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-list-v1')validated=validateTerminalListV1(result,contract.output);
+  else if(contract.output.kind==='terminal-resize-result-v1')validated=validateTerminalResizeResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-session-v1')validated=validateTerminalSessionV1(result,contract.output);
+  else if(contract.output.kind==='terminal-signal-result-v1')validated=validateTerminalSignalResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-write-result-v1')validated=validateTerminalWriteResultV1(result,contract.output);
   else if(contract.output.kind==='user-identity-v1')validated=validateUserIdentityV1(result,contract.output);
   else if(contract.output.kind==='version-string-v1')validated=validateVersionStringV1(result,contract.output);
   else contractFailure('METHOD_CONTRACT_OUTPUT_INVALID','Arcane rejected an unknown method output contract.',500);
@@ -9476,14 +11690,6 @@ function publicApplicationRecord(input) {
 }
 
 function assertApplicationAdapter(method) {
-  if(hostPlatform!=='win32'||platform!=='win32'){
-    throw arcaneError(
-      'APPLICATIONS_UNAVAILABLE',
-      'Installed Arcane applications are not available on this operating system.',
-      'Use a supported Windows Arcane installation.',
-      501
-    );
-  }
   if(typeof native[method]!=='function'){
     throw arcaneError(
       'APPLICATION_ADAPTER_UNAVAILABLE',
@@ -9868,10 +12074,10 @@ function terminalShellSpec(shellInput) {
     if (shell === 'auto' || shell === 'powershell') return { shell: 'powershell', executable: windowsPowerShell, args: ['-NoLogo'] };
     if (shell === 'cmd') return { shell: 'cmd', executable: path.join(windowsSystem32, 'cmd.exe'), args: ['/Q', '/D'] };
     if (shell === 'bash') return { shell: 'bash', executable: 'bash.exe', args: [] };
-    throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'The POSIX sh shell is not available on this Windows host.', 'Choose PowerShell, Command Prompt, or an installed Bash shell.', 400);
+    throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'The POSIX sh shell is not available on this Microsoft NT host.', 'Choose PowerShell, Command Prompt, or an installed Bash shell.', 400);
   }
   if (shell === 'powershell') return { shell: 'powershell', executable: 'pwsh', args: ['-NoLogo'] };
-  if (shell === 'cmd') throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'Command Prompt is available only on Windows.', 'Choose Bash, sh, or the system default shell.', 400);
+  if (shell === 'cmd') throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'Command Prompt is available only on Microsoft NT.', 'Choose Bash, sh, or the system default shell.', 400);
   if (shell === 'sh') return { shell: 'sh', executable: '/bin/sh', args: [] };
   return { shell: 'bash', executable: '/bin/bash', args: [] };
 }
@@ -10165,10 +12371,10 @@ function workerEndpoint() {
 function windowsPipeGuardName(endpoint) {
   const prefix = '\\\\.\\pipe\\';
   const value = String(endpoint || '');
-  if (!value.startsWith(prefix)) throw new Error('Arcane generated an invalid Windows privilege pipe endpoint.');
+  if (!value.startsWith(prefix)) throw new Error('Arcane generated an invalid Microsoft NT privilege pipe endpoint.');
   const name = value.slice(prefix.length);
   if (!/^arcane-privileged-[A-Za-z0-9-]{16,180}$/.test(name)) {
-    throw new Error('Arcane generated an invalid Windows privilege pipe name.');
+    throw new Error('Arcane generated an invalid Microsoft NT privilege pipe name.');
   }
   return name;
 }
@@ -10186,7 +12392,7 @@ function windowsPipeGuardExecutable() {
   }
   throw arcaneError(
     'PRIVILEGE_PIPE_GUARD_UNAVAILABLE',
-    'Arcane cannot safely request administrator access because its Windows pipe guard is missing.',
+    'Arcane cannot safely request administrator access because its Microsoft NT pipe guard is missing.',
     'Repair or reinstall Arcane OS from a verified release, then try again.',
     503
   );
@@ -10632,7 +12838,7 @@ async function runPrivilegedProxy(request) {
             if (typeof incoming.setTimeout === 'function') incoming.setTimeout(0);
             resolveAuthorized();
             if (kernelGuarded) {
-              actionLog(launchAction, 'info', 'Windows verified the privileged worker through its kernel-reported named-pipe client PID.', {
+              actionLog(launchAction, 'info', 'Microsoft NT verified the privileged worker through its kernel-reported named-pipe client PID.', {
                 verifiedPid: kernelVerifiedPid,
               });
             }
@@ -10765,7 +12971,7 @@ async function runPrivilegedProxy(request) {
       const pipeName = windowsPipeGuardName(endpoint);
       const guardExecutable = windowsPipeGuardExecutable();
       if (typeof native.verifyPrivilegePipeGuardTrust !== 'function') {
-        throw new Error('The Windows native adapter cannot verify ArcanePipeGuard trust.');
+        throw new Error('The Microsoft NT native adapter cannot verify ArcanePipeGuard trust.');
       }
       const guardTrust = await native.verifyPrivilegePipeGuardTrust(
         guardExecutable,
@@ -10832,7 +13038,7 @@ async function runPrivilegedProxy(request) {
       const bound = await boundSignal;
       const kernelPid = Number(bound.slice('ARCANE_PIPE_GUARD_BOUND '.length));
       if (!Number.isSafeInteger(kernelPid) || kernelPid !== expectedWorkerPid) {
-        throw new Error('ArcanePipeGuard authenticated a different Windows process than the UAC launch returned.');
+        throw new Error('ArcanePipeGuard authenticated a different Microsoft NT process than the UAC launch returned.');
       }
       guardTransport = Duplex.from({ readable: guardProcess.stdout, writable: guardProcess.stdin });
       acceptIncoming(guardTransport, kernelPid);

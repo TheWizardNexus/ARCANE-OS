@@ -26,8 +26,18 @@ const fixtures = JSON.parse(
     )
 );
 
-function createClient() {
+function createClient(options = {}) {
     const simulatedPlatform = process.platform === 'win32' ? 'win32' : 'linux';
+    const simulationArguments = [
+        '--simulate'
+    ];
+
+    if (options.explicitPlatform !== false) {
+        simulationArguments.push(
+            `--simulate-platform=${simulatedPlatform}`
+        );
+    }
+
     const child = spawn(
         process.execPath,
         [
@@ -37,8 +47,7 @@ function createClient() {
                 'arcane-core.cjs'
             ),
             '--app=shell',
-            '--simulate',
-            `--simulate-platform=${simulatedPlatform}`,
+            ...simulationArguments,
             '--simulate-capabilities=system.read,network.status.read,external.open,identity.read',
             `--bundle-root=${root}`,
         ],
@@ -277,6 +286,40 @@ test(
                 {
                     code: 'METHOD_CONTRACT_INPUT_INVALID'
                 }
+            );
+        } finally {
+            client.close();
+        }
+    }
+);
+
+test(
+    'Core reports simulation when no platform override is supplied',
+    async function testCurrentPlatformSimulationStatus() {
+        const client = createClient(
+            {
+                explicitPlatform: false
+            }
+        );
+
+        try {
+            const platform = await client.call(
+                'platform.status',
+                {
+                }
+            );
+
+            assert.equal(
+                platform.simulated,
+                true
+            );
+            assert.equal(
+                platform.execution.simulation,
+                true
+            );
+            assert.equal(
+                platform.execution.evidenceClass,
+                'simulation'
             );
         } finally {
             client.close();

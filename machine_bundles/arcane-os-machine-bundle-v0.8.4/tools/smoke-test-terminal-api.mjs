@@ -36,7 +36,7 @@ async function waitForOutput(sessionId,text){
 try{
   const capabilities=await call('capabilities.list');
   for(const method of ['terminal.start','terminal.list','terminal.write','terminal.resize','terminal.signal','terminal.close'])assert(capabilities.methods.includes(method));
-  await assert.rejects(call('terminal.start',{shell:'auto',cwd:'',columns:80,rows:24,executable:'untrusted'}),error=>error.code==='TERMINAL_REQUEST_INVALID');
+  await assert.rejects(call('terminal.start',{shell:'auto',cwd:'',columns:80,rows:24,executable:'untrusted'}),error=>error.code==='METHOD_CONTRACT_INPUT_INVALID');
   const session=await call('terminal.start',{shell:'auto',cwd:root,columns:80,rows:24});
   assert.match(session.id,/^term-/);assert.equal(session.cwd,root);
   const marker=`arcane-terminal-smoke-${Date.now()}`;

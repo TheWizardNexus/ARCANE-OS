@@ -83,7 +83,7 @@ function findRulePassages(text='',rules=[],{
   maximumPerRule=40,
   maximumResults=1200
 }={}){
-  const source=String(text??'');
+  const source=String(text??'').replace(/\r\n?/g,'\n');
   const lines=textLines(source);
   const offsets=lineOffsets(lines);
   const markers=pageMarkers(lines);
@@ -166,7 +166,7 @@ function extractDateMentions(text='',{
   maximumExcerptLength=900,
   maximumResults=2000
 }={}){
-  const source=String(text??'');
+  const source=String(text??'').replace(/\r\n?/g,'\n');
   const lines=textLines(source);
   const offsets=lineOffsets(lines);
   const markers=pageMarkers(lines);

@@ -4,15 +4,16 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $distRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist')).TrimEnd('\')
-$target = Join-Path $distRoot 'windows-iteration'
-$stage = Join-Path $distRoot ".windows-iteration.stage-$PID"
-$backup = Join-Path $distRoot '.windows-iteration.backup'
+$target = Join-Path $distRoot 'nt-iteration'
+$stage = Join-Path $distRoot ".nt-iteration.stage-$PID"
+$backup = Join-Path $distRoot '.nt-iteration.backup'
 $lockPath = Join-Path $distRoot '.windows-iteration.lock'
+$legacyBackup = Join-Path $distRoot '.windows-iteration.backup'
 $runtime = Join-Path $root 'runtime\arcane-core.cjs'
 $generatedApp = Join-Path $distRoot 'app'
 $generatedApps = Join-Path $distRoot 'apps'
 $generatedBundle = Join-Path $distRoot 'arcane-bundle.json'
-$pkg = Join-Path $root 'node_modules\.bin\pkg.cmd'
+$pkg = Join-Path $root 'node_modules\@yao-pkg\pkg\lib-es5\bin.js'
 
 function Assert-IterationPath([string]$Path) {
   $resolved = [IO.Path]::GetFullPath($Path)
@@ -21,7 +22,7 @@ function Assert-IterationPath([string]$Path) {
   return $resolved
 }
 
-foreach ($candidate in @($target, $stage, $backup, $lockPath)) {
+foreach ($candidate in @($target, $stage, $backup, $lockPath, $legacyBackup)) {
   [void](Assert-IterationPath $candidate)
 }
 
@@ -45,20 +46,20 @@ function Recover-IterationPublication {
     Assert-IterationRelease $backup
     Move-Item -LiteralPath $backup -Destination $target
     Assert-IterationRelease $target
-    Write-Warning 'Recovered the previous verified Windows iteration release after an interrupted publication.'
+    Write-Warning 'Recovered the previous verified Microsoft NT iteration release after an interrupted publication.'
     return
   }
   try {
     Assert-IterationRelease $target
     Remove-Item -LiteralPath $backup -Recurse -Force
-    Write-Warning 'Accepted the verified Windows iteration release and removed its stale backup.'
+    Write-Warning 'Accepted the verified Microsoft NT iteration release and removed its stale backup.'
   } catch {
     $targetFailure = $_.Exception.Message
     Assert-IterationRelease $backup
     Remove-Item -LiteralPath $target -Recurse -Force
     Move-Item -LiteralPath $backup -Destination $target
     Assert-IterationRelease $target
-    Write-Warning "Restored the previous verified Windows iteration release. Rejected target: $targetFailure"
+    Write-Warning "Restored the previous verified Microsoft NT iteration release. Rejected target: $targetFailure"
   }
 }
 
@@ -79,7 +80,15 @@ try {
   try {
     $lockStream = [IO.File]::Open($lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
   } catch [IO.IOException] {
-    throw 'Another Arcane Windows iteration build is already running.'
+    throw 'Another Arcane Microsoft NT iteration build is already running.'
+  }
+
+  $legacyIterationState = @()
+  if (Test-Path -LiteralPath $legacyBackup) { $legacyIterationState += $legacyBackup }
+  $legacyIterationState += @(Get-ChildItem -LiteralPath $distRoot -Filter '.windows-iteration.stage-*' -Force -ErrorAction Stop |
+    Select-Object -ExpandProperty FullName)
+  if ($legacyIterationState.Count) {
+    throw "Arcane found unresolved legacy Microsoft NT iteration publication state: $($legacyIterationState -join ', '). Finish recovery with the pre-cutover builder or review the preserved paths before building dist\nt-iteration."
   }
 
   [Environment]::SetEnvironmentVariable('ARCANE_REQUIRE_SIGNED_RELEASE', '0', 'Process')
@@ -90,7 +99,7 @@ try {
   Recover-IterationPublication
   if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 
-  Write-Host 'Building an isolated unsigned Windows iteration release (Core and machine hosts only).'
+  Write-Host 'Building an isolated unsigned Microsoft NT iteration release (Core and machine hosts only).'
   Invoke-NodeChecked -Arguments @((Join-Path $root 'tools\build-core.mjs')) -Failure 'Generating the Arcane Core and built-in frontend payload failed.'
   if (-not $Fast) {
     Invoke-NodeChecked -Arguments @((Join-Path $root 'tools\verify.mjs')) -Failure 'Generated Core/frontend verification failed.'
@@ -98,11 +107,11 @@ try {
 
   if (-not (Test-Path -LiteralPath $generatedApps -PathType Container) -or
       -not (Test-Path -LiteralPath (Join-Path $generatedApps 'catalog.json') -PathType Leaf)) {
-    throw 'No reusable verified Windows app projection exists. Run npm run build:distribution:windows:unsigned-local-test once.'
+    throw 'No reusable verified Microsoft NT app projection exists. Run npm run build:distribution:windows:unsigned-local-test once.'
   }
   if (-not $Fast) {
     Invoke-NodeChecked -Arguments @((Join-Path $root 'tools\verify-app-packages.mjs')) -Failure 'The reusable target app packages are not verified.'
-    Invoke-NodeChecked -Arguments @((Join-Path $root 'tools\verify-app-catalog.mjs')) -Failure 'The reusable Windows app projection is not verified.'
+    Invoke-NodeChecked -Arguments @((Join-Path $root 'tools\verify-app-catalog.mjs')) -Failure 'The reusable Microsoft NT app projection is not verified.'
   }
 
   foreach ($required in @($pkg, $runtime, $generatedApp, $generatedBundle)) {
@@ -114,11 +123,11 @@ try {
   Copy-Item -LiteralPath $generatedApps -Destination (Join-Path $stage 'apps') -Recurse
   Copy-Item -LiteralPath $generatedBundle -Destination (Join-Path $stage 'arcane-bundle.json')
 
-  & $pkg $runtime '--targets' 'node22-win-x64' '--output' (Join-Path $stage 'bin\ArcaneCore.exe')
+& node $pkg $runtime '--targets' 'node22-win-x64' '--output' (Join-Path $stage 'bin\ArcaneCore.exe')
   if ($LASTEXITCODE -ne 0) { throw "Packaging the iteration ArcaneCore.exe failed with exit code $LASTEXITCODE." }
 
   & (Join-Path $root 'tools\build-windows-webview2.ps1') -Dist $stage -SkipRuntimeVerification:$Fast
-  if ($LASTEXITCODE -ne 0) { throw "Building the iteration Windows hosts failed with exit code $LASTEXITCODE." }
+  if ($LASTEXITCODE -ne 0) { throw "Building the iteration Microsoft NT hosts failed with exit code $LASTEXITCODE." }
 
   Invoke-NodeChecked -Arguments @((Join-Path $root 'tools\write-release-manifest.mjs'), 'windows', $stage) -Failure 'Writing the iteration release manifest failed.'
   Assert-IterationRelease $stage
@@ -140,7 +149,7 @@ try {
   }
   if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
 
-  Write-Host "Windows iteration release ready: $target"
+  Write-Host "Microsoft NT iteration release ready: $target"
   Write-Host "Launch: $target\bin\ArcaneProvisioner.exe --allow-unsigned-local-release"
 } finally {
   if (Test-Path -LiteralPath $stage) {

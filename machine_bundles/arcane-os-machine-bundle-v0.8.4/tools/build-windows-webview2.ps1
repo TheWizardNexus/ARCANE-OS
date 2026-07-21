@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Import-Module (Join-Path $PSScriptRoot 'windows-signing.psm1') -Force
-if ([string]::IsNullOrWhiteSpace($Dist)) { $Dist = Join-Path $root 'dist\windows' }
+if ([string]::IsNullOrWhiteSpace($Dist)) { $Dist = Join-Path $root 'dist\nt' }
 $release = [IO.Path]::GetFullPath($Dist).TrimEnd('\')
 $bin = Join-Path $release 'bin'
 $source = Join-Path $root 'src\hosts\windows\ArcaneHost.cs'
@@ -26,7 +26,7 @@ foreach ($required in @(
   (Join-Path $release 'apps\catalog.json'),
   (Join-Path $bin 'ArcaneCore.exe')
 )) {
-  if (-not (Test-Path -LiteralPath $required)) { throw "The staged Windows release is incomplete: $required" }
+  if (-not (Test-Path -LiteralPath $required)) { throw "The staged Microsoft NT release is incomplete: $required" }
 }
 New-Item -ItemType Directory -Path $cache -Force | Out-Null
 
@@ -84,7 +84,7 @@ try {
     Select-Object -ExpandProperty FullName -First 1
   if (-not $windowsMetadata -or -not $windowsRuntime -or -not $systemRuntimeFacade) { throw 'The Windows SDK metadata and .NET Windows Runtime bridge are required to build Arcane Shell first-boot personalization.' }
   $numericVersion = "$($bundle.version).0"
-  if ($numericVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw "Arcane version $($bundle.version) cannot be embedded in a Windows assembly." }
+  if ($numericVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw "Arcane version $($bundle.version) cannot be embedded in a Microsoft NT assembly." }
   $utf8 = New-Object Text.UTF8Encoding($false)
 
   $pipeGuardTarget = Join-Path $bin 'ArcanePipeGuard.exe'
@@ -94,7 +94,7 @@ using System.Reflection;
 [assembly: AssemblyTitle("Arcane Pipe Guard")]
 [assembly: AssemblyProduct("Arcane OS")]
 [assembly: AssemblyCompany("Arcane OS")]
-[assembly: AssemblyDescription("Kernel-bound Windows named-pipe peer verifier")]
+[assembly: AssemblyDescription("Kernel-bound Microsoft NT named-pipe peer verifier")]
 [assembly: AssemblyVersion("$numericVersion")]
 [assembly: AssemblyFileVersion("$numericVersion")]
 [assembly: AssemblyInformationalVersion("$($bundle.version)")]
@@ -114,7 +114,7 @@ using System.Reflection;
 [assembly: AssemblyTitle("Arcane Ollama Service")]
 [assembly: AssemblyProduct("Arcane OS")]
 [assembly: AssemblyCompany("Arcane OS")]
-[assembly: AssemblyDescription("Least-privilege Windows service host for Ollama")]
+[assembly: AssemblyDescription("Least-privilege Microsoft NT service host for Ollama")]
 [assembly: AssemblyVersion("$numericVersion")]
 [assembly: AssemblyFileVersion("$numericVersion")]
 [assembly: AssemblyInformationalVersion("$($bundle.version)")]
@@ -189,14 +189,14 @@ using System.Reflection;
     & node (Join-Path $root 'tools\verify-windows-dpi.mjs') (Join-Path $bin 'ArcaneProvisioner.exe') (Join-Path $bin 'ArcaneShell.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Arcane GUI host DPI manifest verification failed.' }
     & (Join-Path $root 'tools\verify-windows-host-dispatch.ps1') -Dist $bin
-    if ($LASTEXITCODE -ne 0) { throw 'Arcane Windows host dispatch verification failed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Arcane Microsoft NT host dispatch verification failed.' }
     & node (Join-Path $root 'tools\smoke-test-windows-pipe-guard.mjs') $pipeGuardTarget
     if ($LASTEXITCODE -ne 0) { throw 'ArcanePipeGuard kernel peer-identity smoke test failed.' }
   } else {
-    Write-Warning 'Skipped Windows host runtime smoke programs for the fast iteration build.'
+    Write-Warning 'Skipped Microsoft NT host runtime smoke programs for the fast iteration build.'
   }
   & (Join-Path $root 'tools\verify-windows-release-security.ps1') -ReleaseRoot $release -ExpectedBinding $machineBinding -RequireSigned:$requireSignedRelease
-  Write-Host "Arcane $($bundle.version) bound Windows hosts are ready in $bin."
+  Write-Host "Arcane $($bundle.version) bound Microsoft NT hosts are ready in $bin."
 } finally {
   if (Test-Path -LiteralPath $packageRoot) { Remove-Item -LiteralPath $packageRoot -Recurse -Force }
 }

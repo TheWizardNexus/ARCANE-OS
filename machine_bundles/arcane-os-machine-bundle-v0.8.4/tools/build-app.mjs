@@ -19,14 +19,14 @@ function option(name) {
 
 const platform = option('--platform') || (process.platform === 'win32' ? 'windows' : 'portable');
 if (!['portable', 'windows'].includes(platform)) throw new Error('Supported app package platforms are portable and windows.');
-if (allowUnsignedLocalRelease && platform !== 'windows') throw new Error('Unsigned local-release permission applies only to Windows native app wrapping.');
+if (allowUnsignedLocalRelease && platform !== 'windows') throw new Error('Unsigned local-release permission applies only to Microsoft NT native app wrapping.');
 if (allowUnsignedLocalRelease && process.env.ARCANE_REQUIRE_SIGNED_RELEASE === '1') {
   throw new Error('--allow-unsigned-local-release conflicts with ARCANE_REQUIRE_SIGNED_RELEASE=1.');
 }
 
 async function buildApp(appId) {
   if (platform === 'portable') return buildTargetApp({ bundleRoot, appId });
-  if (process.platform !== 'win32') throw new Error('Windows native app wrapping must run on Windows.');
+  if (process.platform !== 'win32') throw new Error('Microsoft NT native app wrapping must run on Microsoft NT.');
   const temporaryOutput = path.join(bundleRoot, 'dist', 'targets', `.windows-source-${appId}-${process.pid}`);
   try {
     const source = await buildTargetApp({ bundleRoot, appId, outputRoot: temporaryOutput });
@@ -46,7 +46,7 @@ async function buildApp(appId) {
         ? { ...process.env, ARCANE_REQUIRE_SIGNED_RELEASE: '0' }
         : process.env,
     });
-    if (result.status !== 0) throw new Error(`Windows Arcane app wrapping failed with exit code ${result.status}.`);
+  if (result.status !== 0) throw new Error(`Microsoft NT Arcane app wrapping failed with exit code ${result.status}.`);
     return { ...source, target, platform: 'windows' };
   } finally {
     await fs.rm(temporaryOutput, { recursive: true, force: true });

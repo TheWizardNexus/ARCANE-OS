@@ -256,6 +256,52 @@ test('PreCrisis personality and prompt behavior are reused with the Warrior prof
     assert.match(chat,/AI is not configured\. Add an API key in Profile/);
 });
 
+test('PreCrisis profiles persist and apply the initial AI voice mute preference',async()=>{
+    const [userEntity,speech,sharedChat,serviceWorker,precrisisProfile,precrisisChat,warriorProfile,warriorChat]=await Promise.all([
+        read('arcane/entities/User.js'),
+        read('arcane/components/speech.html'),
+        read('arcane/components/chat.html'),
+        read('apps/precrisis/service-worker.js'),
+        read('apps/precrisis/admin.html'),
+        read('apps/precrisis/chat.html'),
+        read('apps/warrior-spirit/profile.html'),
+        read('apps/warrior-spirit/companion.html')
+    ]);
+
+    assert.match(userEntity,/#initialSpeechMuted = true/);
+    assert.match(userEntity,/'initialSpeechMuted'/);
+    assert.match(userEntity,/initialSpeechMuted must be boolean/);
+
+    assert.match(speech,/host\.configure=configure/);
+    assert.match(speech,/initialMuted must be boolean/);
+    assert.match(speech,/typeof host\.initialMuted==='boolean'\?host\.initialMuted:true/);
+    assert.match(speech,/host\.componentReady=true/);
+    assert.match(speech,/new CustomEvent\('speech-ready'/);
+    assert.match(speech,/aria-pressed="true"/);
+    assert.doesNotMatch(speech,/muteButton\.click\(\)/);
+    assert.match(sharedChat,/speech\.html\?v=2/);
+    assert.match(serviceWorker,/CACHE_PREFIX}v44/);
+    assert.match(serviceWorker,/speech\.html\?v=2/);
+
+    for(const profile of [precrisisProfile,warriorProfile]){
+        assert.match(profile,/id="initialSpeechMuted"/);
+        assert.match(profile,/aria-describedby="initialSpeechMutedHelp"/);
+        assert.match(profile,/Start conversations with AI voice muted/);
+        assert.match(profile,/initialSpeechMuted:document\.getElementById\('initialSpeechMuted'\)\.checked/);
+        assert.match(profile,/\.checked = user\.initialSpeechMuted/);
+    }
+
+    for(const chat of [precrisisChat,warriorChat]){
+        assert.match(chat,/components\/chat\.html\?v=4/);
+        assert.match(chat,/configureInitialSpeechMute\(\)/);
+        assert.match(chat,/const initialMuted=user\.initialSpeechMuted/);
+        assert.match(chat,/speech\.initialMuted=initialMuted/);
+        assert.match(chat,/if\(speech\.componentReady\)/);
+        assert.match(chat,/speech\.addEventListener\('speech-ready',configure,\{once:true\}\)/);
+    }
+    assert.match(serviceWorker,/components\/chat\.html\?v=4/);
+});
+
 test('988 actions use the official website and remain backed by visible PreCrisis crisis controls',async()=>{
     const [adapter,chat,crisis]=await Promise.all([
         read('apps/warrior-spirit/modules/PreCrisisFrame.js'),

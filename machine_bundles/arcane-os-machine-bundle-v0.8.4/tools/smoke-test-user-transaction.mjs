@@ -1,26 +1,43 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const repositoryRoot = path.resolve(root, '..', '..');
+const sourceFixture = fs.mkdtempSync(path.join(os.tmpdir(), 'arcane-user-transaction-'));
+fs.mkdirSync(path.join(sourceFixture, 'runtime'), { recursive: true });
+fs.mkdirSync(path.join(sourceFixture, 'app', 'arcane', 'models'), { recursive: true });
+fs.copyFileSync(path.join(root, 'runtime', 'arcane-core.cjs'), path.join(sourceFixture, 'runtime', 'arcane-core.cjs'));
+fs.copyFileSync(path.join(root, 'arcane-bundle.json'), path.join(sourceFixture, 'arcane-bundle.json'));
+for (const modelFile of ['Arcane-20B.Modelfile', 'Arcane-120B.Modelfile']) {
+  fs.copyFileSync(
+    path.join(repositoryRoot, 'arcane', 'models', modelFile),
+    path.join(sourceFixture, 'app', 'arcane', 'models', modelFile),
+  );
+}
+process.once('exit', () => fs.rmSync(sourceFixture, { recursive: true, force: true }));
 const phases = ['after-create', 'after-profile', 'after-shell', 'after-state'];
 
 function startCore(phase, options={}) {
   const platform=options.platform || 'win32';
   const coreArgs=[
-    path.join(root, 'runtime/arcane-core.cjs'),
+    path.join(sourceFixture, 'runtime/arcane-core.cjs'),
     '--app=provisioner',
     '--simulate',
     `--simulate-platform=${platform}`,
     `--simulate-user-failure=${phase}`,
-    `--bundle-root=${root}`,
+    `--bundle-root=${sourceFixture}`,
+    '--allow-source-install',
   ];
   if(options.existingUser)coreArgs.push(`--simulate-existing-user=${options.existingUser}`);
   if(options.legacyUser)coreArgs.push(`--simulate-legacy-arcane-user=${options.legacyUser}`);
   if(options.legacyDriftUser)coreArgs.push(`--simulate-legacy-drift-user=${options.legacyDriftUser}`);
   if(options.unsignedUser)coreArgs.push(`--simulate-unsigned-arcane-user=${options.unsignedUser}`);
+  if(options.protectedUser)coreArgs.push(`--protected-user=${options.protectedUser}`);
   const child = spawn(process.execPath, coreArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
   let buffer = Buffer.alloc(0);
   let expected = null;
@@ -112,7 +129,7 @@ function startCore(phase, options={}) {
     await assert.rejects(
       call('users.add',{usernames:[username]}),
       (error)=>error.code==='SIMULATED_USER_TRANSACTION_FAILURE',
-      'a process loss after the first Windows shell write must leave the original durable record prepared',
+  'a process loss after the first Microsoft NT shell write must leave the original durable record prepared',
     );
     const interrupted=(await call('users.list')).users.find((item)=>item.username===username);
     assert.equal(interrupted.shellMutationPhase,'prepared');
@@ -209,6 +226,51 @@ function startCore(phase, options={}) {
     assert.equal(assigned.recordedAssignmentMode,'linux-login-shell');
     const restored=await call('users.restoreShell',{username});
     assert.equal(restored.user.shellAssigned,false);
+  }finally{
+    await close();
+  }
+}
+
+{
+  const username='arcane-linux-new';
+  const {call,close}=startCore('',{platform:'linux'});
+  try{
+    await call('installation.ensure');
+    const staged=await call('users.add',{usernames:[username]});
+    assert.ok(staged.users.some((item)=>item.username===username && item.created===true && item.enabled===false && item.activationRequired),
+      'a new Linux account must remain disabled until its credential has been returned and activation is explicit');
+    assert.ok(staged.credentials.some((item)=>item.username===username && item.temporaryPassword && item.activationRequired),
+      'Linux provisioning must return the temporary credential before activation');
+    const pending=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(pending.enabled,false);
+    assert.equal(pending.recordedAssignmentMode,'linux-login-shell');
+    assert.equal(pending.activationRequired,true);
+    const activated=await call('users.activate',{username});
+    assert.equal(activated.user.enabled,true,'explicit activation must enable the exact staged Linux account');
+    const active=(await call('users.list')).users.find((item)=>item.username===username);
+    assert.equal(active.enabled,true);
+    assert.equal(active.shellAssigned,true);
+    await call('users.restoreShell',{username});
+  }finally{
+    await close();
+  }
+}
+
+{
+  const username='arcane-linux-admin';
+  const {call,close}=startCore('',{platform:'linux',existingUser:username,protectedUser:username});
+  try{
+    await call('installation.ensure');
+    await assert.rejects(
+      call('users.add',{usernames:[username]}),
+      (error)=>error.code==='CURRENT_USER_PROTECTED',
+      'Linux must exclude the protected provisioning account before any shell transaction begins',
+    );
+    await assert.rejects(
+      call('users.add',{usernames:['www-data']}),
+      (error)=>error.code==='RESERVED_USERNAME',
+      'Linux must reject well-known service-account names',
+    );
   }finally{
     await close();
   }

@@ -645,9 +645,19 @@ function createBrowserTests(){
                 name:'Catalog documentation verifies before rendering',
                 async run({assert}){
                     assert(documentRecords().length>=12,'The public catalog should contain the initial documentation set.');
-                    const hydrated=await catalog.hydrate('provision-user',{bypassCache:true});
-                    assert(hydrated.text.includes('Activate this account'),'The provisioning guide did not contain its separate activation step.');
-                    return {status:'pass',message:`Verified ${hydrated.record.title} from ${hydrated.source}.`};
+                    const [overview,windows,linux]=await Promise.all([
+                        catalog.hydrate('provision-user',{bypassCache:true}),
+                        catalog.hydrate('provision-user-windows',{bypassCache:true}),
+                        catalog.hydrate('provision-user-linux',{bypassCache:true})
+                    ]);
+                    assert(overview.text.includes('provision-user-windows.md'),'The first-user overview did not link to the Windows walkthrough.');
+                    assert(overview.text.includes('provision-user-linux.md'),'The first-user overview did not link to the Linux walkthrough.');
+                    assert(windows.text.includes('Activate this account'),'The Windows walkthrough did not contain its separate activation step.');
+                    assert(linux.text.includes('npm run verify:distribution:linux:unsigned-local-test'),'The Linux walkthrough did not contain its exact release-verification step.');
+                    assert(linux.text.includes('separately authorized root session'),'The Linux walkthrough did not explain its already-root authorization boundary.');
+                    assert(linux.text.includes('Activate this account'),'The Linux walkthrough did not contain its separate activation step.');
+                    assert(linux.text.includes('./start-shell.sh'),'The Linux walkthrough did not distinguish its WSLg manual-launch step.');
+                    return {status:'pass',message:'Verified the first-user overview and both platform walkthroughs.'};
                 }
             },
             {

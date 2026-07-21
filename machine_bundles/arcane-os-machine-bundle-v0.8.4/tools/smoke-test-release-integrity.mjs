@@ -25,6 +25,17 @@ const platformFiles = {
   ],
   linux: ['ArcaneShell', 'ArcaneProvisioner', 'ArcaneCore'],
 };
+const nativeThemeFiles = [
+  'app/arcane/css/theme.css',
+  'app/arcane/entities/Preference.js',
+  'app/arcane/entities/Theme.js',
+  'app/arcane/modules/AppDataScope.js',
+  'app/arcane/modules/AppearancePreferences.js',
+  'app/arcane/modules/PreferenceStore.js',
+  'app/arcane/modules/SystemAppearance.js',
+  'app/arcane/modules/ThemeBootstrap.js',
+  'app/arcane/modules/ThemeManager.js',
+];
 
 const canonicalJson = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
@@ -62,7 +73,7 @@ async function loadAdapter(platform, options = {}) {
   };
   sandbox.globalThis = sandbox;
   vm.runInNewContext(`${source}\nglobalThis.createAdapter=${functionName};`, sandbox, { filename: `${platform}.cjs` });
-  const allowUnsigned = platform === 'windows' && options.allowUnsigned !== false;
+  const allowUnsigned = options.allowUnsigned !== false;
   return sandbox.createAdapter({
     allowUnsignedLocalRelease: allowUnsigned,
     releaseSecurityModeClaim: allowUnsigned ? 'unsigned-local-test' : '',
@@ -180,7 +191,7 @@ async function createWindowsAppPackage(dist) {
 
 async function createFixture(platform) {
   const fixtureRoot = await fsp.mkdtemp(path.join(os.tmpdir(), `arcane-release-${platform}-`));
-  const dist = path.join(fixtureRoot, 'dist');
+  const dist = path.join(fixtureRoot, 'dist', platform === 'windows' ? 'nt' : 'linux');
   await fsp.mkdir(path.join(dist, 'app', 'shared'), { recursive: true });
   await fsp.mkdir(path.join(dist, 'app', 'provisioner'), { recursive: true });
   await fsp.mkdir(path.join(dist, 'app', 'shell'), { recursive: true });
@@ -191,7 +202,13 @@ async function createFixture(platform) {
     await fsp.writeFile(path.join(platformDirectory, name), `fixture:${platform}:${name}`);
   }
   await fsp.writeFile(path.join(dist, 'arcane-bundle.json'), canonicalJson(bundle));
+  for (const relativePath of nativeThemeFiles) {
+    const target = path.join(dist, ...relativePath.split('/'));
+    await fsp.mkdir(path.dirname(target), { recursive: true });
+    await fsp.writeFile(target, `fixture:${relativePath}\n`);
+  }
   await fsp.writeFile(path.join(dist, 'app', 'shared', 'arcane-api.js'), 'globalThis.Arcane={};');
+  await fsp.writeFile(path.join(dist, 'app', 'shared', 'SystemPlatformPresentation.js'), 'globalThis.ArcaneSystemPlatformPresentation={};');
   await fsp.writeFile(path.join(dist, 'app', 'shared', 'arcane-sigil.svg'), '<svg/>');
   await fsp.writeFile(path.join(dist, 'app', 'shared', 'arcane-sigil-512.png'), 'png');
   await fsp.writeFile(path.join(dist, 'app', 'shared', 'arcane-sigil.ico'), 'ico');
@@ -233,6 +250,8 @@ for (const platform of ['windows', 'linux']) {
     const verified = await verifyReleaseManifest({ dist, manifest, platform, version: bundle.version });
     assert.equal(verified.length, manifest.files.length);
     assert(manifest.files.some((entry) => entry.path === 'app/shared/arcane-api.js'));
+    assert(manifest.files.some((entry) => entry.path === 'app/shared/SystemPlatformPresentation.js'));
+    for (const relativePath of nativeThemeFiles) assert(manifest.files.some((entry) => entry.path === relativePath));
     assert(manifest.files.some((entry) => entry.path === 'arcane-bundle.json'));
 
     const adapter = await loadAdapter(platform);
@@ -240,8 +259,10 @@ for (const platform of ['windows', 'linux']) {
     assert.equal(payload.releaseReady, true, payload.releaseProblem || payload.description);
     assert.equal(payload.verified, true, payload.releaseProblem || payload.description);
     assert.equal(payload.integrity.schemaVersion, 2);
-    assert.equal(payload.integrity.files.length, manifest.files.length + (platform === 'windows' ? 1 : 0));
+    assert.equal(payload.integrity.files.length, manifest.files.length + (platform === 'windows' ? 1 : 3));
     assert(payload.integrity.files.some((entry) => entry.installPath === 'app/shared/arcane-api.js'));
+    assert(payload.integrity.files.some((entry) => entry.installPath === 'app/shared/SystemPlatformPresentation.js'));
+    for (const relativePath of nativeThemeFiles) assert(payload.integrity.files.some((entry) => entry.installPath === relativePath));
     assert(payload.integrity.files.some((entry) => entry.installPath === 'bin/ArcaneCore' + (platform === 'windows' ? '.exe' : '')));
     if (platform === 'windows') {
       assert(payload.integrity.files.some((entry) => entry.installPath === 'bin/ArcanePipeGuard.exe'));
@@ -253,6 +274,8 @@ for (const platform of ['windows', 'linux']) {
       assert.equal(payload.securityMode, 'unsigned-local-test');
     } else {
       assert.equal(payload.bundleManifestSource, path.join(dist, 'arcane-bundle.json'));
+      assert.equal(payload.securityMode, 'unsigned-local-test');
+      assert.equal(payload.integrity.files.filter((entry) => entry.installPath.startsWith('bin/arcane-')).length, 3);
     }
 
     if (platform === 'windows') {
@@ -271,13 +294,13 @@ for (const platform of ['windows', 'linux']) {
       await fsp.writeFile(path.join(dist, 'unexpected-root.txt'), 'unexpected');
       await assert.rejects(
         () => writeOuterRelease(dist, platform),
-        /Windows release root must contain exactly/,
+        /Microsoft NT release root must contain exactly/,
       );
       await fsp.rm(path.join(dist, 'unexpected-root.txt'));
       await fsp.writeFile(path.join(dist, 'bin', 'unexpected.dll'), 'unexpected');
       await assert.rejects(
         () => writeOuterRelease(dist, platform),
-        /Windows release bin must contain exactly/,
+        /Microsoft NT release bin must contain exactly/,
       );
       await fsp.rm(path.join(dist, 'bin', 'unexpected.dll'));
       await fsp.mkdir(path.join(dist, 'app', 'empty'));
@@ -289,7 +312,7 @@ for (const platform of ['windows', 'linux']) {
       await fsp.writeFile(path.join(dist, 'arcane-install.json'), '{}');
       await assert.rejects(
         () => writeOuterRelease(dist, platform),
-        /Windows release root must contain exactly/,
+        /Microsoft NT release root must contain exactly/,
       );
       await fsp.rm(path.join(dist, 'arcane-install.json'));
 
@@ -321,6 +344,16 @@ for (const platform of ['windows', 'linux']) {
       payload = adapter.installPayload(fixtureRoot);
       assert.equal(payload.releaseReady, true, payload.releaseProblem || payload.description);
     }
+
+    const themeBootstrap = path.join(dist, 'app', 'arcane', 'modules', 'ThemeBootstrap.js');
+    const originalThemeBootstrap = await fsp.readFile(themeBootstrap);
+    await fsp.writeFile(themeBootstrap, Buffer.alloc(originalThemeBootstrap.length, 0x78));
+    payload = adapter.installPayload(fixtureRoot);
+    assert.equal(payload.releaseReady, false, 'a changed packaged theme bootstrap must fail release verification');
+    assert.match(payload.releaseProblem, platform === 'windows'
+      ? /outer release manifest.*does not exactly match/i
+      : /does not match the release manifest SHA-256/i);
+    await fsp.writeFile(themeBootstrap, originalThemeBootstrap);
 
     const shell = path.join(dist, 'app', 'shell', 'index.html');
     const originalShell = await fsp.readFile(shell);

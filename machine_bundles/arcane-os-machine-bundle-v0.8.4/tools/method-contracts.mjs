@@ -34,10 +34,10 @@ const ENUMS = Object.freeze(
             ['not-applicable', 'pre-dispatch-only']
         ),
         dataMovement: new Set(
-            ['application-to-host', 'host-to-application', 'operating-system-handoff']
+            ['application-to-host', 'bidirectional', 'host-to-application', 'operating-system-handoff']
         ),
         effect: new Set(
-            ['application-dispatch', 'external-handoff', 'observe']
+            ['application-dispatch', 'external-handoff', 'observe', 'process-control', 'process-input', 'process-start']
         ),
         idempotency: new Set(
             ['non-idempotent', 'repeatable-read']
@@ -85,6 +85,17 @@ function validateShape(value, label) {
         'network-status-v1': ['kind', 'exact', 'onlineMeaning', 'maxInterfaceCount'],
         'platform-status-v1': ['kind', 'exact', 'maxStatusStringLength', 'maxListItems', 'maxProbeItems', 'maxApplicationIdLength', 'maxApplicationEntryLength', 'maxApplicationVersionLength', 'maxRendererExecutableLength'],
         'system-ping-result-v1': ['kind', 'exact'],
+        'terminal-close-result-v1': ['kind', 'exact', 'maxSessionIdLength', 'acceptedMeaning'],
+        'terminal-list-v1': ['kind', 'exact', 'maxSessions', 'maxSessionIdLength', 'maxShellLength', 'maxCwdLength', 'maxTimestampLength'],
+        'terminal-resize-v1': ['kind', 'exact', 'maxSessionIdLength', 'minColumns', 'maxColumns', 'minRows', 'maxRows'],
+        'terminal-resize-result-v1': ['kind', 'exact', 'maxSessionIdLength', 'minColumns', 'maxColumns', 'minRows', 'maxRows'],
+        'terminal-session-id-v1': ['kind', 'exact', 'maxSessionIdLength'],
+        'terminal-session-v1': ['kind', 'exact', 'maxSessionIdLength', 'maxShellLength', 'maxCwdLength', 'maxTitleLength', 'maxTimestampLength'],
+        'terminal-signal-v1': ['kind', 'exact', 'maxSessionIdLength', 'signalMeaning'],
+        'terminal-signal-result-v1': ['kind', 'exact', 'maxSessionIdLength', 'signalMeaning', 'acceptedMeaning'],
+        'terminal-start-v1': ['kind', 'exact', 'maxShellLength', 'maxCwdLength', 'minColumns', 'maxColumns', 'minRows', 'maxRows'],
+        'terminal-write-v1': ['kind', 'exact', 'maxSessionIdLength', 'maxDataBytes'],
+        'terminal-write-result-v1': ['kind', 'exact', 'maxSessionIdLength', 'maxDataBytes'],
         'user-identity-v1': [
             'kind',
             'exact',
@@ -97,16 +108,17 @@ function validateShape(value, label) {
     const expected = fieldsByKind[value.kind];
     const actualFields = Object.keys(value);
     if (!expected || JSON.stringify(actualFields) !== JSON.stringify(expected)) fail(`${label} contains an unknown kind or noncanonical fields.`);
-    for (const field of ['maxAccountNameLength', 'maxApplications', 'maxApplicationEntryLength', 'maxApplicationIdLength', 'maxApplicationVersionLength', 'maxDescriptionLength', 'maxDisplayNameLength', 'maxIconUrlLength', 'maxInterfaceCount', 'maxLength', 'maxListItems', 'maxOrder', 'maxProbeItems', 'maxRendererExecutableLength', 'maxSecurityEvidenceLength', 'maxStatusStringLength', 'maxUriLength', 'maxUsernameLength']) {
+    for (const field of ['maxAccountNameLength', 'maxApplications', 'maxApplicationEntryLength', 'maxApplicationIdLength', 'maxApplicationVersionLength', 'maxColumns', 'maxCwdLength', 'maxDataBytes', 'maxDescriptionLength', 'maxDisplayNameLength', 'maxIconUrlLength', 'maxInterfaceCount', 'maxLength', 'maxListItems', 'maxOrder', 'maxProbeItems', 'maxRendererExecutableLength', 'maxRows', 'maxSecurityEvidenceLength', 'maxSessionIdLength', 'maxSessions', 'maxShellLength', 'maxStatusStringLength', 'maxTimestampLength', 'maxTitleLength', 'maxUriLength', 'maxUsernameLength', 'minColumns', 'minRows']) {
         const maximum = field === 'maxOrder' ? 100000 : 65536;
         if (value[field] !== undefined && (!Number.isSafeInteger(value[field]) || value[field] < 1 || value[field] > maximum)) fail(`${label}.${field} is invalid.`);
     }
-    if (value.acceptedMeaning !== undefined && value.acceptedMeaning !== 'dispatch-request-accepted') fail(`${label}.acceptedMeaning is invalid.`);
+    if (value.acceptedMeaning !== undefined && !['close-request-accepted', 'dispatch-request-accepted', 'signal-request-accepted'].includes(value.acceptedMeaning)) fail(`${label}.acceptedMeaning is invalid.`);
     if (value.idMeaning !== undefined && value.idMeaning !== 'installed-launchable-application-id') fail(`${label}.idMeaning is invalid.`);
     if (value.scheme !== undefined && value.scheme !== 'mailto') fail(`${label}.scheme is invalid.`);
     if (value.onlineMeaning !== undefined && value.onlineMeaning !== 'non-loopback-interface-present') fail(`${label}.onlineMeaning is invalid.`);
     if (value.meaning !== undefined && value.meaning !== 'active-arcane-host-release-version') fail(`${label}.meaning is invalid.`);
     if (value.ordering !== undefined && value.ordering !== 'ascending-order') fail(`${label}.ordering is invalid.`);
+    if (value.signalMeaning !== undefined && value.signalMeaning !== 'interrupt-or-terminate') fail(`${label}.signalMeaning is invalid.`);
 }
 
 function deepFreeze(value) {
@@ -162,6 +174,10 @@ export function validateMethodContracts(value, policies) {
     if (platform.input.kind !== 'empty-object-v1' || platform.output.kind !== 'platform-status-v1' || platform.output.maxStatusStringLength !== 256 || platform.output.maxListItems !== 256 || platform.output.maxProbeItems !== 64 || platform.output.maxApplicationIdLength !== 64 || platform.output.maxApplicationEntryLength !== 512 || platform.output.maxApplicationVersionLength !== 64 || platform.output.maxRendererExecutableLength !== 4096) fail('platform.status semantics have drifted.');
     const ping = value['system.ping'];
     if (ping.input.kind !== 'empty-object-v1' || ping.output.kind !== 'system-ping-result-v1') fail('system.ping semantics have drifted.');
+    const terminalStart = value['terminal.start'];
+    if (terminalStart.input.kind !== 'terminal-start-v1' || terminalStart.input.maxColumns !== 500 || terminalStart.input.maxRows !== 200 || terminalStart.output.kind !== 'terminal-session-v1') fail('terminal.start semantics have drifted.');
+    const terminalWrite = value['terminal.write'];
+    if (terminalWrite.input.kind !== 'terminal-write-v1' || terminalWrite.input.maxDataBytes !== 65536 || terminalWrite.output.kind !== 'terminal-write-result-v1') fail('terminal.write semantics have drifted.');
     const user = value['user.current'];
     if (user.input.kind !== 'empty-object-v1' || user.output.kind !== 'user-identity-v1' || user.output.maxUsernameLength !== 128 || user.output.maxAccountNameLength !== 256 || user.output.maxDisplayNameLength !== 256) fail('user.current semantics have drifted.');
     const app = value['app.current'];

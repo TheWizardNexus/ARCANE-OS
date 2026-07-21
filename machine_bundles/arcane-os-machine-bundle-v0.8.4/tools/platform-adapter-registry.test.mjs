@@ -11,6 +11,7 @@ const bundleRoot = path.dirname(toolsRoot);
 const registryPath = path.join(bundleRoot, 'src', 'native', 'platform-adapters.cjs');
 const runtimePath = path.join(bundleRoot, 'runtime', 'arcane-core.cjs');
 const coreTemplatePath = path.join(bundleRoot, 'src', 'core', 'arcane-core.template.cjs');
+const developmentHostPath = path.join(toolsRoot, 'dev-web-host.cjs');
 
 function loadRegistry() {
     const calls = [];
@@ -291,5 +292,55 @@ test('generated Core rejects conflicting argument and environment platforms', fu
             ARCANE_SIMULATE_PLATFORM: 'linux'
         },
         'Arcane Core rejected conflicting simulated platform settings.'
+    );
+});
+
+test('development host forwards unsigned local release only inside explicit valid simulation', function testDevelopmentHostSimulationGate() {
+    const source = readFileSync(developmentHostPath, 'utf8');
+    const unsignedWithoutSimulation = spawnSync(
+        process.execPath,
+        [
+            developmentHostPath,
+            '--no-open',
+            '--allow-unsigned-local-release'
+        ],
+        {
+            cwd: bundleRoot,
+            encoding: 'utf8',
+            timeout: 10000,
+            windowsHide: true
+        }
+    );
+    const unsupportedPlatform = spawnSync(
+        process.execPath,
+        [
+            developmentHostPath,
+            '--no-open',
+            '--simulate',
+            '--simulate-platform=android'
+        ],
+        {
+            cwd: bundleRoot,
+            encoding: 'utf8',
+            timeout: 10000,
+            windowsHide: true
+        }
+    );
+
+    assert.equal(unsignedWithoutSimulation.error, undefined);
+    assert.equal(unsignedWithoutSimulation.status, 1);
+    assert.match(
+        unsignedWithoutSimulation.stderr,
+        /requires --simulate before allowing an unsigned local release/
+    );
+    assert.equal(unsupportedPlatform.error, undefined);
+    assert.equal(unsupportedPlatform.status, 1);
+    assert.match(
+        unsupportedPlatform.stderr,
+        /accepts only linux or win32 as a simulated platform/
+    );
+    assert.match(
+        source,
+        /if \(allowUnsignedLocalRelease && !simulate\) \{[\s\S]*?if \(simulate\) \{[\s\S]*?coreArgs\.push\('--allow-unsigned-local-release'\);/
     );
 });

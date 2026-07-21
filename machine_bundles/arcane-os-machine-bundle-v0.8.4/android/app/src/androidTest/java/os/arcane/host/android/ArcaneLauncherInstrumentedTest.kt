@@ -1,5 +1,6 @@
 package os.arcane.host.android
 
+import android.content.Intent
 import android.webkit.WebSettings
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +20,24 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ArcaneLauncherInstrumentedTest {
+    @Test
+    @Suppress("DEPRECATION")
+    fun launcherIsEligibleForTheAndroidHomeRole() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val matches = context.packageManager.queryIntentActivities(
+            homeIntent,
+            android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
+        )
+
+        assertTrue(
+            matches.any { candidate ->
+                candidate.activityInfo.packageName == context.packageName &&
+                    candidate.activityInfo.name == ArcaneLauncherActivity::class.java.name
+            }
+        )
+    }
+
     @Test
     fun shellLoadsThroughHardenedWebViewAndAnswersCoreBridgeCalls() {
         ActivityScenario.launch(ArcaneLauncherActivity::class.java).use { scenario ->
@@ -143,7 +162,7 @@ class ArcaneLauncherInstrumentedTest {
     @Test
     fun packagedCatalogSerializesToTheCanonicalBridgeResult() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val catalog = ArcaneAndroidApplicationCatalog(context).read()
+        val catalog = ArcaneAndroidApplicationCatalog(context).readInstalledSnapshot().publicCatalog
         val request = AndroidBridgeProtocol.Request(
             id = "catalog-direct",
             method = GeneratedAndroidCapabilityRegistry.APPS_LIST_METHOD,

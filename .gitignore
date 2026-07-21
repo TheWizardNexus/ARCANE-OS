@@ -13,6 +13,8 @@ dist/*/node_modules/*
 machine_bundles/**/dist/
 local/
 tmp/
+__pycache__/
+*.py[cod]
 apps/boss/business docs/
 *.log
 .agents/

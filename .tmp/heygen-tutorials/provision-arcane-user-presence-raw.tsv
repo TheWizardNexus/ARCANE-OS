@@ -1,0 +1,37 @@
+start	end	text
+0	3020	Here is how to provision and activate an Arcane user.
+3680	7340	Arcane, adaptive runtime for cognitive AI native environments,
+7640	10300	runs on Microsoft NT and the Linux kernel
+10300	12840	for regulated environments and personal devices.
+13320	15240	Android support is under development.
+15640	18880	This demonstration shows the Microsoft NT Provisioner.
+19300	21720	On Linux, follow host-specific instructions.
+22120	24100	Identity and privilege steps can differ.
+24700	26700	Sign in as an authorized administrator.
+26900	29680	Open the trusted provisioner, refresh status,
+29680	31360	and review its readiness checks.
+31660	33980	Complete the verified machine baseline first.
+34580	37560	Under Create Arcane Users, enter the intended account name.
+37720	40480	Do not choose the administrator account running the provisioner.
+40660	42360	Select Create Arcane User.
+42620	46440	A new Microsoft NT account is staged as a disabled standard user,
+46840	49660	assigned Arcane Shell, and given a temporary password.
+49940	53180	An existing standard account keeps its password and memberships.
+53560	56700	Save any new credential privately for the intended user.
+56700	61260	Never place it in chat, email, documentation, logs, or source control,
+61460	63100	and never show it in a recording.
+63480	67040	Once the credential is secure, select Activate this account.
+67540	69560	Activation is a separate privilege step.
+69840	72180	Creation does not silently enable the account.
+72620	74380	Sign out of the administrator's session.
+74380	78320	Let the user sign in, change the temporary password when prompted,
+78540	80600	and verify Arcane Shell opens.
+80860	84200	Check Settings, Logout, and the documented recovery path.
+84540	89460	If activation is interrupted, leave the account staged and retry in the provisioner.
+89660	91740	Follow the target host's release guidance.
+92160	94240	Provisioning and activation are complete.
+94240	99200	The new user can begin in Arcane, with a clear handoff and a recoverable path forward.
+99200	99280	The new user can begin in Arcane, with a clear handoff and a recoverable path forward.
+99280	99460	The new user can begin in Arcane, with a clear handoff and a recoverable path forward.
+99540	99660	The new user can begin in, with a clear handoff and a farewell pattern.
+99640	99640	

@@ -3,45 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val arcaneNodeExecutable = providers.gradleProperty("arcaneNodeExecutable").getOrElse("node")
-
-val buildArcaneCoreAssets by tasks.registering(Exec::class) {
-    workingDir("../..")
-    commandLine(
-        arcaneNodeExecutable,
-        "tools/build-core.mjs"
-    )
-}
-
-val buildArcanePortableApps by tasks.registering(Exec::class) {
-    outputs.upToDateWhen { false }
-    workingDir("../..")
-    commandLine(
-        arcaneNodeExecutable,
-        "tools/build-app.mjs",
-        "--all",
-        "--platform=portable"
-    )
-}
-
-val buildArcaneAndroidAppProjection by tasks.registering(Exec::class) {
-    dependsOn(buildArcanePortableApps)
-    outputs.upToDateWhen { false }
-    workingDir("../..")
-    commandLine(
-        arcaneNodeExecutable,
-        "tools/build-android-app-projection.mjs"
-    )
-}
-
 val stageArcaneAndroidAssets by tasks.registering(Sync::class) {
-    dependsOn(buildArcaneAndroidAppProjection)
-    from("../../dist/android-apps") {
-        include("catalog.json")
-        include("*/arcane-app-content.json")
-        include("*/arcane-app-package.json")
-        include("*/app/**")
-    }
+    dependsOn(rootProject.tasks.named("buildArcaneAndroidDistributionAssets"))
+    from("../../dist/android-build-assets/launcher")
     into(layout.buildDirectory.dir("generated/arcaneAndroidAssets"))
 }
 
@@ -90,7 +54,7 @@ android {
 }
 
 tasks.named("preBuild") {
-    dependsOn(buildArcaneCoreAssets)
+    dependsOn(rootProject.tasks.named("buildArcaneCoreAssets"))
     dependsOn(stageArcaneAndroidAssets)
 }
 

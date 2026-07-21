@@ -83,11 +83,17 @@ test('machine content manifest is deterministic, exact, and excludes only the ho
 test('native host parses the bound manifest from the same retained deny-write handle', async () => {
   const source = await fs.readFile(path.join(root, 'src/hosts/windows/ArcaneHost.cs'), 'utf8');
   const retain = source.indexOf('FileStream retainedManifest = RetainFile(manifestPath, retainedByPath, retained);');
-  const retainDirectories = source.indexOf('RetainDirectoryTree(root, root, retainedDirectoriesByPath, retainedDirectories);');
+  const retainDirectories = source.indexOf('RetainDirectoryTree(root, root, retainedDirectoriesByPath, retainedDirectories, startupBackdrop);');
   const hash = source.indexOf('string manifestHash = HashStream(retainedManifest);');
   const read = source.indexOf('byte[] manifestBytes = ReadRetainedFile(retainedManifest');
   const parse = source.indexOf('Dictionary<string, object> manifest = ParseObject(manifestBytes, manifestName);');
   assert(retainDirectories >= 0 && retainDirectories < retain && retain < hash && hash < read && read < parse);
+  const attestationStart = source.indexOf('internal static string CreateStrictPublisherAttestation');
+  const attestationDirectories = source.indexOf('RetainDirectoryTree(root, root, retainedDirectoriesByPath, retainedDirectories);', attestationStart);
+  const attestationRetain = source.indexOf('FileStream retainedManifest = RetainFile(manifestPath, retainedByPath, retained);', attestationStart);
+  const attestationHash = source.indexOf('string manifestHash = HashStream(retainedManifest);', attestationStart);
+  const attestationParse = source.indexOf('Dictionary<string, object> manifest = ParseObject(ReadRetainedFile(retainedManifest', attestationStart);
+  assert(attestationStart >= 0 && attestationDirectories < attestationRetain && attestationRetain < attestationHash && attestationHash < attestationParse);
   assert.match(source, /FileMode\.Open, FileAccess\.Read, FileShare\.Read/);
   assert.match(source, /FileFlagBackupSemantics \| FileFlagOpenReparsePoint/);
   assert.match(source, /FileReadAttributes \| FileListDirectory/);
@@ -100,14 +106,14 @@ test('native host parses the bound manifest from the same retained deny-write ha
   assert.match(source, /return new ReleaseSecurityResult\([\s\S]+?security\.PublisherTrustSource,[\s\S]+?retainedDirectories\);/);
   assert.doesNotMatch(source, /FileShareDelete/);
   assert.doesNotMatch(source, /File\.ReadAllBytes\(manifestPath\)/);
-  assert.match(source, /RetainAndRecheck\(root, files, excludedHosts, retainedByPath, retained\)/);
+  assert.match(source, /RetainAndRecheck\(root, files, excludedHosts, retainedByPath, retained, startupBackdrop\)/);
   assert.match(source, /if \(releaseSecurity != null\) releaseSecurity\.Dispose\(\)/);
   assert.match(source, /ARCANE_RELEASE_SECURITY_MODE/);
   assert.match(source, /WinVerifyTrust/);
   assert.match(source, /if \(count != 1\).*exactly one matching release content binding/);
 });
 
-test('Windows directory handles deny namespace rebinding and expose reparse identity', { skip: process.platform !== 'win32' }, () => {
+test('Microsoft NT directory handles deny namespace rebinding and expose reparse identity', { skip: process.platform !== 'win32' }, () => {
   const powershell = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
   const script = path.join(root, 'tools/smoke-test-windows-release-directory-locks.ps1');
   const result = spawnSync(powershell, [
@@ -117,7 +123,7 @@ test('Windows directory handles deny namespace rebinding and expose reparse iden
   assert.match(result.stdout, /blocked root\/subdirectory rename and exposed junction reparse identity/);
 });
 
-test('Windows builders bind only finalized content and require timestamps for every signed build', async () => {
+test('Microsoft NT builders bind only finalized content and require timestamps for every signed build', async () => {
   const [target, host, release, verifier, finalizer, signing] = await Promise.all([
     fs.readFile(path.join(root, 'tools/build-windows-target-app.ps1'), 'utf8'),
     fs.readFile(path.join(root, 'tools/build-windows-webview2.ps1'), 'utf8'),
@@ -143,7 +149,7 @@ test('Windows builders bind only finalized content and require timestamps for ev
   assert(release.indexOf('write-release-manifest.mjs') < release.lastIndexOf('Publish-VerifiedArcaneDirectory -Stage'));
 });
 
-test('Windows production and local-test release flavors are explicit and fail closed', async () => {
+test('Microsoft NT and Linux production or local-test release flavors are explicit and fail closed', async () => {
   const [packageJsonText, repositoryPackageJsonText, release, target, appBuilder] = await Promise.all([
     fs.readFile(path.join(root, 'package.json'), 'utf8'),
     fs.readFile(path.resolve(root, '..', '..', 'package.json'), 'utf8'),
@@ -168,15 +174,19 @@ test('Windows production and local-test release flavors are explicit and fail cl
   assert.match(repositoryScripts['signing:bootstrap:dev:windows'], /arcane-os-machine-bundle-v0\.8\.4\/tools\/build-windows-dev-signed\.ps1 -BootstrapOnly$/);
   assert.doesNotMatch(scripts['build:distribution:windows'], /AllowUnsignedLocalRelease/);
   assert.match(scripts['build:distribution:windows:unsigned-local-test'], /-AllowUnsignedLocalRelease$/);
+  assert.equal(scripts['build:linux'], 'npm run build:distribution:linux:unsigned-local-test');
+  assert.match(scripts['build:distribution:linux:unsigned-local-test'], /bash tools\/build-linux-webkitgtk\.sh --unsigned-local-test$/);
   assert.match(scripts['verify:winsecurity'], /-RequireSigned/);
   assert.doesNotMatch(scripts['verify:winsecurity:unsigned-local-test'], /-RequireSigned/);
+  assert.equal(scripts['verify:distribution:linux'], 'npm run verify:distribution:linux:unsigned-local-test');
+  assert.equal(scripts['verify:distribution:linux:unsigned-local-test'], 'node tools/verify-built-release.mjs dist/linux linux');
   assert.match(release, /param\([\s\S]*\[switch\]\$AllowUnsignedLocalRelease/);
-  assert.match(release, /Production Windows distribution requires ARCANE_SIGNING_CERT_THUMBPRINT/);
-  assert.match(release, /Production Windows distribution requires ARCANE_TIMESTAMP_SERVER/);
-  assert.match(release, /Production Windows distribution requires ARCANE_EXPECTED_PUBLISHER_THUMBPRINT/);
+  assert.match(release, /Production Microsoft NT distribution requires ARCANE_SIGNING_CERT_THUMBPRINT/);
+  assert.match(release, /Production Microsoft NT distribution requires ARCANE_TIMESTAMP_SERVER/);
+  assert.match(release, /Production Microsoft NT distribution requires ARCANE_EXPECTED_PUBLISHER_THUMBPRINT/);
   assert.match(release, /ARCANE_SIGNING_CERT_THUMBPRINT must match the independent ARCANE_EXPECTED_PUBLISHER_THUMBPRINT/);
   assert.match(release, /AllowUnsignedLocalRelease conflicts with ARCANE_REQUIRE_SIGNED_RELEASE=1/);
-  assert.match(release, /Production Windows distribution conflicts with ARCANE_REQUIRE_SIGNED_RELEASE=0/);
+  assert.match(release, /Production Microsoft NT distribution conflicts with ARCANE_REQUIRE_SIGNED_RELEASE=0/);
   assert.match(release, /SetEnvironmentVariable\('ARCANE_REQUIRE_SIGNED_RELEASE', \$requiredSigningPolicy, 'Process'\)/);
   assert.match(release, /SetEnvironmentVariable\('ARCANE_REQUIRE_SIGNED_RELEASE', \$previousSigningPolicy, 'Process'\)/);
   assert.match(release, /UNSIGNED LOCAL-TEST ALLOWED/);
@@ -189,7 +199,7 @@ test('Windows production and local-test release flavors are explicit and fail cl
   assert.match(release, /\$appBuildArguments \+= '--allow-unsigned-local-release'/);
 });
 
-test('Windows publication state is stable, locked, recovered, and verified before backup removal', async () => {
+test('Microsoft NT publication state is stable, locked, recovered, and verified before backup removal', async () => {
   const [release, target] = await Promise.all([
     fs.readFile(path.join(root, 'tools/build-windows-release.ps1'), 'utf8'),
     fs.readFile(path.join(root, 'tools/build-windows-target-app.ps1'), 'utf8'),
@@ -204,12 +214,16 @@ test('Windows publication state is stable, locked, recovered, and verified befor
     assert.match(source, /-not \(Test-Path -LiteralPath \$Target\)[\s\S]*Test-Path -LiteralPath \$Backup[\s\S]*Move-Item -LiteralPath \$Backup -Destination \$Target/);
     assert.match(source, /finally \{[\s\S]*Test-Path -LiteralPath \$Stage[\s\S]*Remove-Item -LiteralPath \$Stage/);
   }
-  assert.match(release, /Join-Path \$distRoot '\.windows\.stage'/);
-  assert.match(release, /Join-Path \$distRoot '\.windows\.backup'/);
+  assert.match(release, /Join-Path \$distRoot 'nt'/);
+  assert.match(release, /Join-Path \$distRoot '\.nt\.stage'/);
+  assert.match(release, /Join-Path \$distRoot '\.nt\.backup'/);
+  assert.match(release, /Join-Path \$distRoot '\.windows\.publish\.lock'/,
+    'the NT cutover must retain the legacy publication lock so old and new builders serialize');
+  assert.match(release, /unresolved legacy Microsoft NT publication state/i);
   assert.match(release, /function Assert-ReproducibleUnsignedDistribution/);
   assert.match(release, /Only a complete unsigned reproducible build output may bypass native rollback migration/);
   assert.match(release, /-ReplaceReproducibleTarget \$replaceReproducibleDistribution/);
-  assert.doesNotMatch(release, /\.windows\.(?:stage|backup)-\$PID/);
+  assert.doesNotMatch(release, /\.nt\.(?:stage|backup)-\$PID/);
   assert.match(target, /Join-Path \$targetsRoot "\.\$AppId\.native-stage"/);
   assert.match(target, /Join-Path \$targetsRoot "\.\$AppId\.native-backup"/);
   assert.doesNotMatch(target, /native-(?:stage|backup)-\$PID/);

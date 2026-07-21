@@ -106,6 +106,16 @@
         return url.href;
     }
 
+    function pdfSourceUrl(value,page=null){
+        const url=new URL(sameOriginUrl(value));
+        if(page===null||page===undefined||page==='') return url.href;
+        const resolvedPage=Number(page);
+        if(!Number.isSafeInteger(resolvedPage)||resolvedPage<1) throw new TypeError('PDF page must be a positive integer.');
+        url.searchParams.set('arcane-pdf-page',String(resolvedPage));
+        url.hash=`page=${resolvedPage}`;
+        return url.href;
+    }
+
     function selectView(view='pdf'){
         const available=tabs.filter(tab=>!tab.hidden);
         const selected=available.some(tab=>tab.dataset.view===view)?view:available[0]?.dataset.view;
@@ -212,7 +222,8 @@
         pdfPanel.replaceChildren();
         if(hasPdf){
             try{
-                const frame=document.createElement('iframe'); frame.className='pdf-frame'; frame.title=`Original PDF: ${config.title||'document'}`; frame.referrerPolicy='no-referrer'; frame.src=sameOriginUrl(config.pdfUrl); pdfPanel.append(frame);
+                const resolvedPage=config.pdfPage===null||config.pdfPage===undefined||config.pdfPage===''?null:Number(config.pdfPage);
+                const frame=document.createElement('iframe'); frame.className='pdf-frame'; frame.title=`Original PDF: ${config.title||'document'}${resolvedPage?`, page ${resolvedPage}`:''}`; frame.referrerPolicy='no-referrer'; frame.src=pdfSourceUrl(config.pdfUrl,resolvedPage); pdfPanel.append(frame);
             }catch(error){showSurfaceMessage(pdfPanel,error.message,'error');}
         }
         rawMarkdown=''; renderedMarkdown=''; markdownMessage=null;

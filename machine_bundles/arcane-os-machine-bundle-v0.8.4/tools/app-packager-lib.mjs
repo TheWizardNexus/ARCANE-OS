@@ -46,8 +46,8 @@ const PRESENTATION_CONTROL_PATTERN = /[\p{Cc}\p{Cf}\p{Cs}\u2028\u2029]/u;
 const PRESENTATION_MARKUP_PATTERN = /[<>]|&(?:#(?:x[0-9a-f]+|[0-9]+)|[a-z][a-z0-9]+);/i;
 const PACKAGE_ORIGIN = 'https://arcane.local';
 const RUNTIME_SCRIPT_TAG = '    <script src="/arcane-runtime/arcane-api.js" data-arcane-runtime="arcane/1"></script>';
-const COMPONENT_SCRIPT_PREFIX = '(async function(){';
-const COMPONENT_SCRIPT_SUFFIX = "}).call((()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const host=registry instanceof Map&&token?registry.get(token):null;if(!host)throw new Error('HTML import host binding is unavailable.');return host;})())";
+const COMPONENT_SCRIPT_PREFIX = "(()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const binding=registry instanceof Map&&token?registry.get(token):null;if(!binding?.host)throw new Error('HTML import host binding is unavailable.');binding.promise=(async function(){";
+const COMPONENT_SCRIPT_SUFFIX = '}).call(binding.host);})()';
 const PERMISSIONS_POLICY_DENY = Object.freeze([
   'accelerometer=()',
   'ambient-light-sensor=()',
@@ -681,7 +681,7 @@ async function securePackagedHtml(stagingRoot, app, bundledAppIds = []) {
     await fs.writeFile(file.source, secured, 'utf8');
   }
   if (new Set(navigationEntries.map((entry) => entry.toLowerCase())).size !== navigationEntries.length) {
-    fail(`apps.${app.id} contains navigation entries that collide on Windows.`);
+      fail(`apps.${app.id} contains navigation entries that collide on Microsoft NT.`);
   }
   if (securedDocuments === 0) fail(`apps.${app.id} does not contain a complete HTML document with a head element.`);
   navigationEntries.sort(compareText);

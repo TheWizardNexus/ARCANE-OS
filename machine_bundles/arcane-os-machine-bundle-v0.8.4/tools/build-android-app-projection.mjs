@@ -421,14 +421,19 @@ function selectedAppIds(registry, requested) {
   return selected.sort((left, right) => registry.apps[left].order - registry.apps[right].order || compareText(left, right));
 }
 
-export async function publishAndroidAppProjection({ bundleRoot, appIds } = {}) {
+export async function publishAndroidAppProjection({ bundleRoot, appIds, targetsRoot: requestedTargetsRoot } = {}) {
   if (typeof bundleRoot !== 'string' || bundleRoot.length === 0) fail('bundleRoot is required.');
   const absoluteBundleRoot = path.resolve(bundleRoot);
   await requireRegularDirectory(absoluteBundleRoot, 'bundle root');
   const dist = path.join(absoluteBundleRoot, 'dist');
-  const targetsRoot = path.join(dist, 'targets');
+  const canonicalTargetsRoot = path.join(dist, 'targets');
+  const targetsRoot = requestedTargetsRoot === undefined
+    ? canonicalTargetsRoot
+    : path.resolve(absoluteBundleRoot, requestedTargetsRoot);
   await requireRegularDirectory(dist, 'bundle dist directory');
-  await requireRegularDirectory(targetsRoot, 'dist/targets');
+  await requireRegularDirectory(canonicalTargetsRoot, 'dist/targets');
+  if (!isInside(canonicalTargetsRoot, targetsRoot)) fail('targetsRoot must remain inside dist/targets.');
+  await requireRegularDirectory(targetsRoot, 'Android portable targets root');
 
   const [registry, bundleData, expectedApiData] = await Promise.all([
     loadAppRegistry(absoluteBundleRoot),
@@ -493,14 +498,16 @@ const invokedAsCli = process.argv[1]
 if (invokedAsCli) {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
-    console.log('Usage: node tools/build-android-app-projection.mjs');
-  } else if (args.length !== 0) {
-    console.error('Usage: node tools/build-android-app-projection.mjs');
+    console.log('Usage: node tools/build-android-app-projection.mjs [--targets-root=dist/targets/.android-portable]');
+  } else if (args.length > 1 || (args.length === 1 && !args[0].startsWith('--targets-root='))) {
+    console.error('Usage: node tools/build-android-app-projection.mjs [--targets-root=dist/targets/.android-portable]');
     process.exitCode = 2;
   } else {
     const bundleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     try {
-      const result = await publishAndroidAppProjection({ bundleRoot });
+      const targetsRoot = args.length === 1 ? args[0].slice('--targets-root='.length) : undefined;
+      if (targetsRoot !== undefined && targetsRoot.length === 0) fail('targetsRoot is empty.');
+      const result = await publishAndroidAppProjection({ bundleRoot, targetsRoot });
       console.log(`Published ${result.catalog.apps.length} verified Android app packages at ${path.relative(bundleRoot, result.target)}.`);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));

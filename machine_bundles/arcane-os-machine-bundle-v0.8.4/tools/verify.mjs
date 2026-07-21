@@ -7,14 +7,32 @@ import { readMethodContracts, renderAndroidMethodContracts, renderCoreMethodCont
 import { readMethodPolicies, renderAndroidApplicationRegistry, renderAndroidCapabilityRegistry, renderCoreMethodPolicies } from './method-policies.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
+const nativeThemeFiles = [
+  'css/theme.css',
+  'entities/Preference.js',
+  'entities/Theme.js',
+  'modules/AppDataScope.js',
+  'modules/AppearancePreferences.js',
+  'modules/PreferenceStore.js',
+  'modules/SystemAppearance.js',
+  'modules/ThemeBootstrap.js',
+  'modules/ThemeManager.js',
+];
 const required = [
-  'runtime/arcane-core.cjs','dist/app/shared/arcane-api.js','dist/app/shared/Arcane-20B.Modelfile','dist/app/shared/Arcane-120B.Modelfile','dist/app/provisioner/index.html','dist/app/shell/index.html',
+  'runtime/arcane-core.cjs','dist/app/shared/arcane-api.js','dist/app/shared/SystemPlatformPresentation.js','dist/app/shared/Arcane-20B.Modelfile','dist/app/shared/Arcane-120B.Modelfile','dist/app/provisioner/index.html','dist/app/shell/index.html',
+  ...nativeThemeFiles.map((relativePath) => `dist/app/arcane/${relativePath}`),
   'src/api/method-contracts.json','src/api/method-policies.json','src/api/shared-method-contract-fixtures.json','src/hosts/windows/ArcaneHost.cs','src/hosts/windows/ArcaneHost.manifest','src/hosts/linux/arcane_host.c','src/hosts/android/AndroidBridgeProtocol.kt','src/hosts/android/ArcaneAndroidHostSession.kt','src/hosts/android/ArcaneAndroidSystemAdapter.kt','src/hosts/android/ArcaneWebViewBridge.kt','src/hosts/android/ArcaneWebViewHostController.kt','src/hosts/android/GeneratedAndroidApplicationRegistry.kt','src/hosts/android/GeneratedAndroidCapabilityRegistry.kt','src/hosts/android/GeneratedAndroidMethodContracts.kt','src/native/windows.cjs','src/native/linux.cjs','src/native/platform-adapters.cjs',
   'package-lock.json','VALIDATION.md'
 ];
 for (const relative of required) await fs.access(path.join(root, relative));
 new vm.Script(await fs.readFile(path.join(root, 'runtime/arcane-core.cjs'),'utf8'), { filename:'arcane-core.cjs' });
 new vm.Script(await fs.readFile(path.join(root, 'dist/app/shared/arcane-api.js'),'utf8'), { filename:'arcane-api.js' });
+new vm.Script(await fs.readFile(path.join(root, 'dist/app/shared/SystemPlatformPresentation.js'),'utf8'), { filename:'SystemPlatformPresentation.js' });
+for (const relativePath of nativeThemeFiles) {
+  const source = await fs.readFile(path.resolve(root, '../../arcane', ...relativePath.split('/')));
+  const built = await fs.readFile(path.join(root, 'dist/app/arcane', ...relativePath.split('/')));
+  if (!source.equals(built)) throw new Error(`Generated native theme dependency drifted from arcane/${relativePath}.`);
+}
 for (const app of ['provisioner','shell']) {
   const html = await fs.readFile(path.join(root, `dist/app/${app}/index.html`),'utf8');
   for (const [index, match] of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].entries()) new vm.Script(match[1], { filename:`${app}-${index}.js` });
@@ -49,13 +67,13 @@ if (!coreText.includes('Content-Length: ${body.length}\\r\\n\\r\\n')) throw new 
 if (!coreText.includes('arcane-privileged-')) throw new Error('Privileged pipe/socket broker is missing.');
 
 const windowsHost = await fs.readFile(path.join(root, 'src/hosts/windows/ArcaneHost.cs'), 'utf8');
-if (!windowsHost.includes('internal ArcaneBridge(ArcaneCoreProcess coreProcess)')) throw new Error('Windows host accessibility regression: ArcaneBridge constructor must be internal.');
-if (windowsHost.includes('public ArcaneBridge(ArcaneCoreProcess coreProcess)')) throw new Error('Windows host would fail with CS0051 because a public constructor exposes ArcaneCoreProcess.');
+if (!windowsHost.includes('internal ArcaneBridge(ArcaneCoreProcess coreProcess)')) throw new Error('Microsoft NT host accessibility regression: ArcaneBridge constructor must be internal.');
+if (windowsHost.includes('public ArcaneBridge(ArcaneCoreProcess coreProcess)')) throw new Error('Microsoft NT host would fail with CS0051 because a public constructor exposes ArcaneCoreProcess.');
 for (const token of ['SetCurrentProcessExplicitAppUserModelID','AddHostObjectToScript("arcaneBridge"','PostWebMessageAsJson','SetVirtualHostNameToFolderMapping']) {
-  if (!windowsHost.includes(token)) throw new Error(`Windows WebView2 host feature missing: ${token}`);
+  if (!windowsHost.includes(token)) throw new Error(`Microsoft NT WebView2 host feature missing: ${token}`);
 }
-if (!windowsHost.includes('public string Send(string requestJson)')) throw new Error('Windows bridge must expose Send through COM.');
-if (windowsHost.includes('public string Invoke(string requestJson)')) throw new Error('Windows bridge uses COM-reserved method name Invoke.');
+if (!windowsHost.includes('public string Send(string requestJson)')) throw new Error('Microsoft NT bridge must expose Send through COM.');
+if (windowsHost.includes('public string Invoke(string requestJson)')) throw new Error('Microsoft NT bridge uses COM-reserved method name Invoke.');
 const linuxHost = await fs.readFile(path.join(root, 'src/hosts/linux/arcane_host.c'), 'utf8');
 const posixFeatureDeclaration = linuxHost.indexOf('#define _POSIX_C_SOURCE 200809L');
 const firstLinuxHostInclude = linuxHost.indexOf('#include ');
@@ -101,7 +119,13 @@ for (const [method, policy] of Object.entries(methodPolicies)) {
 
 for (const launcher of ['start-provisioner.bat','start-provisioner-debug.bat','start-shell.bat']) {
   const launcherText = await fs.readFile(path.join(root, launcher), 'utf8');
-  if (!launcherText.includes('dist\\windows\\bin\\Arcane')) throw new Error(`${launcher} does not target the sealed Windows bin directory.`);
+  if (!launcherText.includes('dist\\nt\\bin\\Arcane')) throw new Error(`${launcher} does not target the sealed Microsoft NT bin directory.`);
+}
+if (!windowsNative.includes("const candidates = [root, ctx.path.join(root, 'dist', 'nt')];")) throw new Error('The Microsoft NT adapter must discover only a release root or the canonical dist/nt release.');
+if (windowsNative.includes("ctx.path.join(root, 'dist', 'windows')")) throw new Error('The Microsoft NT adapter must not silently fall back to a stale dist/windows release.');
+for (const launcher of ['start-provisioner.sh','start-shell.sh']) {
+  const launcherText = await fs.readFile(path.join(root, launcher), 'utf8');
+  if (!launcherText.includes('dist/linux/Arcane')) throw new Error(`${launcher} does not target the isolated Linux release directory.`);
 }
 for (const launcher of ['start-provisioner-simulation.bat','start-provisioner-simulation.sh','start-shell-simulation.bat','start-shell-simulation.sh']) {
   try {

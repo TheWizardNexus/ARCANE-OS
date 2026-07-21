@@ -39,6 +39,7 @@ function currentInstallation(overrides = {}) {
 async function runEnsure({ states, requirements, installResult = { version: '0.8.2' } }) {
   const queue = states.map((state) => structuredClone(state));
   let installs = 0;
+  let modelEnsures = 0;
   const context = vm.createContext({
     VERSION: '0.8.2',
     installationState() {
@@ -46,7 +47,7 @@ async function runEnsure({ states, requirements, installResult = { version: '0.8
       return queue.shift();
     },
     async ensureRequirements() {},
-    async ensureManagedArcaneModel() { return { model: 'arcane:latest', created: false, modelsRoot: 'simulated' }; },
+    async ensureManagedArcaneModel() { modelEnsures += 1; return { model: 'arcane:latest', created: false, modelsRoot: 'simulated' }; },
     checkRequirements() { return structuredClone(requirements); },
     async installArcaneGlobally() { installs += 1; return structuredClone(installResult); },
     actionStep() {},
@@ -59,6 +60,7 @@ async function runEnsure({ states, requirements, installResult = { version: '0.8
   return {
     promise: context.ensureArcaneInstallation({ id: 'postcondition-test' }),
     installs: () => installs,
+    modelEnsures: () => modelEnsures,
     remaining: () => queue.length,
   };
 }
@@ -77,7 +79,44 @@ async function runEnsure({ states, requirements, installResult = { version: '0.8
   assert.equal(result.installation.action, 'current');
   assert.equal(result.requirements.length, 2);
   assert.equal(test.installs(), 0, 'a healthy equal-version install must not be replaced');
+  assert.equal(test.modelEnsures(), 1, 'Microsoft NT-compatible readiness must preserve managed-model setup');
   assert.equal(test.remaining(), 0);
+}
+
+{
+  const ready = currentInstallation({ payload: { mode: 'linux-webkitgtk', releaseReady: true } });
+  const test = await runEnsure({
+    states: [ready, ready, ready],
+    requirements: [
+      { id: 'ollama', required: false, status: 'missing' },
+      { id: 'renderer', required: true, status: 'ready' },
+      { id: 'session-control', required: true, status: 'ready' },
+    ],
+  });
+  const result = await test.promise;
+  assert.equal(result.installation.disposition, 'current');
+  assert.equal(result.model.status, 'deferred');
+  assert.equal(result.model.reason, 'ollama-not-ready');
+  assert.equal(result.model.requiredBefore, 'local-ai');
+  assert.equal(test.modelEnsures(), 0,
+    'base Linux installation must not start managed-model setup while optional Ollama is unavailable');
+}
+
+{
+  const ready = currentInstallation({ payload: { mode: 'linux-webkitgtk', releaseReady: true } });
+  const test = await runEnsure({
+    states: [ready, ready, ready],
+    requirements: [
+      { id: 'ollama', required: false, status: 'ready' },
+      { id: 'renderer', required: true, status: 'ready' },
+      { id: 'session-control', required: true, status: 'ready' },
+    ],
+  });
+  const result = await test.promise;
+  assert.equal(result.model.status, 'deferred');
+  assert.equal(result.model.reason, 'base-install-local-ai-decoupled');
+  assert.equal(test.modelEnsures(), 0,
+    'base Linux installation must remain independent of model download/build work even when Ollama is healthy');
 }
 
 {

@@ -1,0 +1,109 @@
+1
+00:00:00,000 --> 00:00:01,520
+Welcome to ARCANE OS.
+
+2
+00:00:01,520 --> 00:00:05,540
+ARCANE stands for Adaptive Runtime for
+Cognitive AI Native Environments.
+
+3
+00:00:05,780 --> 00:00:10,220
+It is an AI-native operating environment designed
+around what a person is trying to accomplish,
+
+4
+00:00:10,640 --> 00:00:13,800
+not around finding the right app, file,
+or sequence of menus.
+
+5
+00:00:14,360 --> 00:00:18,800
+Under ARCANE, intent, context, memory, policy,
+and capabilities work together.
+
+6
+00:00:19,060 --> 00:00:20,040
+You express a goal.
+
+7
+00:00:20,440 --> 00:00:24,760
+ARCANE helps assemble the approved tools and
+information needed to move that goal forward,
+
+8
+00:00:24,760 --> 00:00:29,700
+while keeping important actions visible and governed
+by the permissions of the person and the device.
+
+9
+00:00:30,240 --> 00:00:32,680
+ARCANE is not a chatbot pasted onto a desktop.
+
+10
+00:00:33,020 --> 00:00:36,980
+It is the environment through which people and
+intelligent systems work with the computer.
+
+11
+00:00:37,420 --> 00:00:42,160
+The familiar shell, settings, documents, and
+specialized applications remain available,
+
+12
+00:00:42,380 --> 00:00:45,540
+but they are connected through a shared runtime
+and capability boundary.
+
+13
+00:00:46,400 --> 00:00:50,140
+ARCANE currently runs on both Microsoft NT
+and the Linux kernel.
+
+14
+00:00:50,340 --> 00:00:55,320
+That makes it adaptable to the controls of a regulated
+workplace and to the needs of a personal device.
+
+15
+00:00:55,500 --> 00:01:00,860
+The underlying platform supplies drivers, identity,
+processes, and hardware access.
+
+16
+00:01:01,400 --> 00:01:05,000
+ARCANE supplies the consistent experience
+and governed collaboration layer.
+
+17
+00:01:05,560 --> 00:01:07,600
+Android support is currently under development.
+
+18
+00:01:07,980 --> 00:01:12,940
+The result is one environment that can serve engineers,
+operators, families, security teams,
+
+19
+00:01:13,120 --> 00:01:17,580
+and mission-focused organizations without asking
+every user to become a systems expert.
+
+20
+00:01:18,140 --> 00:01:19,880
+ARCANE asks a different question.
+
+21
+00:01:20,140 --> 00:01:22,620
+How should humans and intelligent systems
+work together?
+
+22
+00:01:22,620 --> 00:01:27,460
+Explore the shell, open an application, and begin
+with the outcome you want to achieve.
+
+23
+00:01:27,760 --> 00:01:28,880
+Welcome to ARCANE.
+

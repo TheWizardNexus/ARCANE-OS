@@ -41,7 +41,17 @@ export const PLATFORM_REQUIRED_FILES = Object.freeze({
 });
 
 export const REQUIRED_APPLICATION_FILES = Object.freeze([
+  'app/arcane/css/theme.css',
+  'app/arcane/entities/Preference.js',
+  'app/arcane/entities/Theme.js',
+  'app/arcane/modules/AppDataScope.js',
+  'app/arcane/modules/AppearancePreferences.js',
+  'app/arcane/modules/PreferenceStore.js',
+  'app/arcane/modules/SystemAppearance.js',
+  'app/arcane/modules/ThemeBootstrap.js',
+  'app/arcane/modules/ThemeManager.js',
   'app/shared/arcane-api.js',
+  'app/shared/SystemPlatformPresentation.js',
   'app/shared/arcane-sigil.svg',
   'app/shared/arcane-sigil-512.png',
   'app/shared/arcane-sigil.ico',
@@ -67,7 +77,7 @@ function exactNames(actual, expected) {
 
 async function assertWindowsDistributionLayout(dist) {
   const rootStat = await fs.lstat(dist);
-  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error('Windows release root must be a regular directory.');
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error('Microsoft NT release root must be a regular directory.');
   const entries = await fs.readdir(dist, { withFileTypes: true });
   const expectedRoot = [
     ...WINDOWS_RELEASE_ROOT_DIRECTORIES,
@@ -75,7 +85,7 @@ async function assertWindowsDistributionLayout(dist) {
   ];
   if (entries.some((entry) => entry.name === 'arcane-release.json')) expectedRoot.push('arcane-release.json');
   if (!exactNames(entries.map((entry) => entry.name), expectedRoot)) {
-    throw new Error('Windows release root must contain exactly app, apps, bin, arcane-bundle.json, arcane-machine-content.json, and optional arcane-release.json.');
+    throw new Error('Microsoft NT release root must contain exactly app, apps, bin, arcane-bundle.json, arcane-machine-content.json, and optional arcane-release.json.');
   }
   for (const entry of entries) {
     const absolute = path.join(dist, entry.name);
@@ -83,19 +93,19 @@ async function assertWindowsDistributionLayout(dist) {
     if (stat.isSymbolicLink()) throw new Error(`Release payload cannot contain a symbolic link: ${entry.name}.`);
     const directory = WINDOWS_RELEASE_ROOT_DIRECTORIES.includes(entry.name);
     if (directory ? !(entry.isDirectory() && stat.isDirectory()) : !(entry.isFile() && stat.isFile())) {
-      throw new Error(`Windows release root contains an invalid entry: ${entry.name}.`);
+    throw new Error(`Microsoft NT release root contains an invalid entry: ${entry.name}.`);
     }
   }
 
   const bin = path.join(dist, 'bin');
   const binEntries = await fs.readdir(bin, { withFileTypes: true });
   if (!exactNames(binEntries.map((entry) => entry.name), WINDOWS_RELEASE_BIN_FILES)) {
-    throw new Error('Windows release bin must contain exactly the four Arcane executables and three pinned WebView2 DLLs.');
+    throw new Error('Microsoft NT release bin must contain exactly the four Arcane executables and three pinned WebView2 DLLs.');
   }
   for (const entry of binEntries) {
     const stat = await fs.lstat(path.join(bin, entry.name));
     if (!entry.isFile() || !stat.isFile() || stat.isSymbolicLink()) {
-      throw new Error(`Windows release bin contains a non-regular file: ${entry.name}.`);
+    throw new Error(`Microsoft NT release bin contains a non-regular file: ${entry.name}.`);
     }
   }
 }

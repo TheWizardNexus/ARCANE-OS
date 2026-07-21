@@ -1,6 +1,7 @@
 package os.arcane.host.android
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 
 internal class ArcaneAndroidHostSession private constructor(
@@ -40,6 +41,7 @@ internal class ArcaneAndroidHostSession private constructor(
         "${descriptor.id}.arcane.invalid"
     } ?: "appassets.androidplatform.net"
     internal val webViewProfileName: String = "arcane-app-${applicationDescriptor.id}"
+    internal val networkAccessAllowed: Boolean = currentNetworkAccessPolicy(applicationContext)
     internal val navigationEntries: Set<String> = launchDescriptor?.navigationEntries?.toSet()
         ?: setOf(entry)
 
@@ -64,15 +66,19 @@ internal class ArcaneAndroidHostSession private constructor(
     }
 
     internal companion object {
+        private const val NETWORK_ALLOWED_METADATA = "os.arcane.NETWORK_ALLOWED"
+
         internal fun createShell(context: Context): ArcaneAndroidHostSession {
-            val snapshot = ArcaneAndroidApplicationCatalog(context).readSnapshot()
+            val snapshot = ArcaneAndroidApplicationCatalog(context).readInstalledSnapshot()
             return ArcaneAndroidHostSession(context, snapshot, null)
         }
 
         internal fun createApplication(context: Context, id: String): ArcaneAndroidHostSession {
-            val snapshot = ArcaneAndroidApplicationCatalog(context).readSnapshot()
-            val descriptor = snapshot.requireLaunchDescriptor(id)
-            return ArcaneAndroidHostSession(context, snapshot, descriptor)
+            val catalog = ArcaneAndroidApplicationCatalog(context)
+            val packagedSnapshot = catalog.readSnapshot()
+            val descriptor = packagedSnapshot.requireLaunchDescriptor(id)
+            val installedSnapshot = catalog.readInstalledSnapshot()
+            return ArcaneAndroidHostSession(context, installedSnapshot, descriptor)
         }
     }
 
@@ -141,6 +147,15 @@ internal class ArcaneAndroidHostSession private constructor(
         return validated
     }
 
+    @Suppress("DEPRECATION")
+    private fun currentNetworkAccessPolicy(context: Context): Boolean {
+        val applicationInfo = context.packageManager.getApplicationInfo(
+            context.packageName,
+            PackageManager.GET_META_DATA
+        )
+        return applicationInfo.metaData?.getBoolean(NETWORK_ALLOWED_METADATA, false) == true
+    }
+
     private fun validatedStatus(value: String, field: String): String {
         if (value.isEmpty() || value.length > Limits.MAX_STATUS_LENGTH) {
             throw IllegalArgumentException("$field is invalid.")
@@ -156,4 +171,5 @@ internal class ArcaneAndroidHostSession private constructor(
     private object Limits {
         const val MAX_STATUS_LENGTH = 256
     }
+
 }

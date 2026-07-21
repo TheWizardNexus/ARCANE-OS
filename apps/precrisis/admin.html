@@ -330,6 +330,20 @@
                 </label>
             </section>
 
+            <section class="speech-preference">
+                <h1>Conversation Audio</h1>
+                <label for="initialSpeechMuted">
+                    <input
+                        type="checkbox"
+                        id="initialSpeechMuted"
+                        name="initialSpeechMuted"
+                        aria-describedby="initialSpeechMutedHelp"
+                    >
+                    Start conversations with AI voice muted
+                </label>
+                <p id="initialSpeechMutedHelp">You can still mute or unmute the AI voice during a conversation.</p>
+            </section>
+
             <section>
             
             <!-- Add new color palette table section -->
@@ -644,6 +658,7 @@
                         AI_personality: AI_personality.value || '',
                         religion: religion.value || '',
                         AI_voice: document.querySelector('[name="audio"]:checked')?.value || '',
+                        initialSpeechMuted:document.getElementById('initialSpeechMuted').checked,
                         skin: document.querySelector('[name="theme"]:checked')?.value || 'default', // Save selected skin
                         developer:document.getElementById('developer').checked,
                         prefersLocal:isLocalChecked,
@@ -669,6 +684,7 @@
                     contact_6.value = user.contact_6 || '';
                     religion.value = user.religion || '';
                     AI_personality.value = user.AI_personality || '';
+                    document.getElementById('initialSpeechMuted').checked = user.initialSpeechMuted;
 
                     // Need preferred models so it gets populated in multiple check boxes
                     const preferredModelElements = document.querySelectorAll("section#Model_preferences select");

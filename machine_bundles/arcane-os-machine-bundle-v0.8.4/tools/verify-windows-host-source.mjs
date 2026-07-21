@@ -11,6 +11,10 @@ const frontend = await fs.readFile(frontendPath, 'utf8');
 const windowsBuilder = await fs.readFile(path.join(root, 'tools/build-windows-webview2.ps1'), 'utf8');
 const coreBuilder = await fs.readFile(path.join(root, 'tools/build-core.mjs'), 'utf8');
 
+if (!windowsBuilder.includes("Join-Path $root 'dist\\nt'")) {
+  throw new Error('The direct Microsoft NT host build must default to the canonical dist/nt release.');
+}
+
 if (!source.includes('public sealed class ArcaneBridge')) {
   throw new Error('ArcaneBridge must remain public so WebView2 can project it into JavaScript.');
 }
@@ -18,10 +22,10 @@ if (!source.includes('internal ArcaneBridge(ArcaneCoreProcess coreProcess)')) {
   throw new Error('ArcaneBridge constructor must be internal because ArcaneCoreProcess is an internal host implementation type.');
 }
 if (source.includes('public ArcaneBridge(ArcaneCoreProcess coreProcess)')) {
-  throw new Error('Windows host would fail with CS0051: public ArcaneBridge constructor exposes internal ArcaneCoreProcess.');
+  throw new Error('Microsoft NT host would fail with CS0051: public ArcaneBridge constructor exposes internal ArcaneCoreProcess.');
 }
 if (!source.includes('internal sealed class ArcaneCoreProcess')) {
-  throw new Error('ArcaneCoreProcess should remain internal to the native Windows host.');
+  throw new Error('ArcaneCoreProcess should remain internal to the native Microsoft NT host.');
 }
 const coreProcessStart = source.indexOf('internal sealed class ArcaneCoreProcess');
 const coreProcessSource = source.slice(coreProcessStart);
@@ -37,17 +41,17 @@ for (const startupFrameContract of [
   'handler(json);',
 ]) {
   if (!coreProcessSource.includes(startupFrameContract)) {
-    throw new Error(`Windows Core startup-frame queue contract is missing: ${startupFrameContract}`);
+    throw new Error(`Microsoft NT Core startup-frame queue contract is missing: ${startupFrameContract}`);
   }
 }
 if (coreProcessSource.includes('public event Action<string> MessageReceived;')
     || coreProcessSource.includes('Action<string> handler = MessageReceived;')) {
-  throw new Error('Windows Core frames must pass through the bounded startup queue instead of being dropped before subscription.');
+  throw new Error('Microsoft NT Core frames must pass through the bounded startup queue instead of being dropped before subscription.');
 }
 const queueCall = coreProcessSource.indexOf('PublishMessage(json);');
 const directDelivery = coreProcessSource.indexOf('handler(json);');
 if (queueCall < 0 || directDelivery < queueCall) {
-  throw new Error('Windows Core frames must be queued before their ordered delivery path is used.');
+  throw new Error('Microsoft NT Core frames must be queued before their ordered delivery path is used.');
 }
 if (!source.includes('public string Send(string requestJson)')) {
   throw new Error('ArcaneBridge must expose Send so WebView2 can resolve it through COM IDispatch.');
@@ -65,10 +69,10 @@ if (source.includes('DownloadFileTaskAsync') || source.includes('Verb = "runas"'
   throw new Error('The renderer host must not download and elevate an installer before its native trust policy is available.');
 }
 if (!source.includes('Environment.GetFolderPath(Environment.SpecialFolder.Windows)') || !source.includes('Path.Combine(windows, "explorer.exe")')) {
-  throw new Error('The shell emergency desktop must resolve Explorer from the trusted absolute Windows directory.');
+  throw new Error('The shell emergency desktop must resolve Explorer from the trusted absolute Microsoft NT system directory.');
 }
 if (!source.includes('if (Program.AppMode == "shell") EmergencyDesktop.TryStart();')) {
-  throw new Error('Shell fatal startup paths must activate the emergency Windows desktop.');
+  throw new Error('Shell fatal startup paths must activate the emergency Microsoft NT desktop.');
 }
 for (const firstBootContract of [
   'FirstBoot.Run(releaseSecurity.ReleaseRoot, startupBackdrop);',
@@ -85,13 +89,13 @@ for (const firstBootContract of [
   'LockScreen.SetImageFileAsync(image).AsTask().GetAwaiter().GetResult();',
   'Path.Combine(folder, "first-boot.log")',
 ]) {
-  if (!source.includes(firstBootContract)) throw new Error(`Windows per-user first-boot contract is missing: ${firstBootContract}`);
+if (!source.includes(firstBootContract)) throw new Error(`Microsoft NT per-user first-boot contract is missing: ${firstBootContract}`);
 }
 const releaseVerification = source.indexOf('releaseSecurity = ReleaseSecurityVerifier.Verify(args, startupBackdrop);');
 const firstBootRun = source.indexOf('FirstBoot.Run(releaseSecurity.ReleaseRoot, startupBackdrop);');
 const applicationRun = source.indexOf('Application.Run(form);');
 if (releaseVerification < 0 || firstBootRun <= releaseVerification || applicationRun <= firstBootRun) {
-  throw new Error('Windows first-boot steps must run from the Shell only after release verification and before the Shell UI starts.');
+  throw new Error('Microsoft NT first-boot steps must run from the Shell only after release verification and before the Shell UI starts.');
 }
 const backdropShow = source.indexOf('if (AppMode == "shell") startupBackdrop = StartupBackdrop.ShowNow();');
 const backdropStart = source.indexOf('internal sealed class StartupBackdrop');
@@ -124,7 +128,7 @@ for (const progressContract of [
   'startupBackdrop.BeginStage("webview"',
   'startupBackdrop.BeginStage("navigate"',
 ]) {
-  if (!source.includes(progressContract)) throw new Error(`Windows startup progress is not wired to the real operation boundary: ${progressContract}`);
+if (!source.includes(progressContract)) throw new Error(`Microsoft NT startup progress is not wired to the real operation boundary: ${progressContract}`);
 }
 for (const buildContract of [
   'arcane-lock-screen-v1.png',
@@ -136,7 +140,7 @@ for (const buildContract of [
   '"/reference:$systemRuntimeFacade"',
 ]) {
   const buildSource = buildContract === 'arcane-lock-screen-v1.png' ? coreBuilder : windowsBuilder;
-  if (!buildSource.includes(buildContract)) throw new Error(`Windows first-boot build contract is missing: ${buildContract}`);
+  if (!buildSource.includes(buildContract)) throw new Error(`Microsoft NT first-boot build contract is missing: ${buildContract}`);
 }
 for (const trustContract of [
   '[In, Out] WinTrustData data',
@@ -159,7 +163,7 @@ for (const trustContract of [
   'releaseSecurity.RemainingDegradedLifetime(DateTimeOffset.UtcNow)',
   'CapDegradedRetryDelay(',
 ]) {
-  if (!source.includes(trustContract)) throw new Error(`Windows publisher trust contract is missing: ${trustContract}`);
+if (!source.includes(trustContract)) throw new Error(`Microsoft NT publisher trust contract is missing: ${trustContract}`);
 }
 const authenticodeProbeDispatch = source.indexOf('if (AuthenticodeProbe.TryRun(args)) return;');
 const publisherProbeDispatch = source.indexOf('if (PublisherAttestationProbe.TryRun(args)) return;');
@@ -239,7 +243,7 @@ if (firstTrustCall < 0 || closePreparation <= firstTrustCall || closeTrustCall <
 }
 if (!source.includes('eventArgs.CloseReason != CloseReason.WindowsShutDown')) {
   if (!source.includes('eventArgs.CloseReason == CloseReason.WindowsShutDown) ShellWatchdog.Disarm();')) {
-    throw new Error('The shell watchdog and emergency desktop must stay disabled during an intentional Windows shutdown or logout.');
+  throw new Error('The shell watchdog and emergency desktop must stay disabled during an intentional Microsoft NT shutdown or logout.');
   }
 }
 if (source.includes('Process.Start("explorer.exe")')) {
@@ -272,7 +276,7 @@ for (const watchdogContract of [
   'else Interlocked.Exchange(ref started, 0);',
   'if (Volatile.Read(ref disarmed) == 0) EmergencyDesktop.TryStart();',
 ]) {
-  if (!source.includes(watchdogContract)) throw new Error(`Windows shell watchdog contract is missing: ${watchdogContract}`);
+  if (!source.includes(watchdogContract)) throw new Error(`Microsoft NT shell watchdog contract is missing: ${watchdogContract}`);
 }
 if (!source.includes('Regex.IsMatch(value, @"^Local\\\\Arcane[.]OS[.]Shell[.]Watchdog[.][a-f0-9]{32}[.](Disarm|Ready|Heartbeat|UiReady)$"')) {
   throw new Error('The external shell watchdog must accept only its randomized, local synchronization event names.');
@@ -281,7 +285,7 @@ const formStart = source.indexOf('public ArcaneForm(');
 const applicationDataLayoutStart = source.indexOf('internal static class ApplicationDataLayout');
 const applicationDataLayoutEnd = source.indexOf('internal sealed class ArcaneForm', applicationDataLayoutStart);
 if (applicationDataLayoutStart < 0 || applicationDataLayoutEnd <= applicationDataLayoutStart) {
-  throw new Error('The Windows host must own a reusable application-data layout boundary.');
+  throw new Error('The Microsoft NT host must own a reusable application-data layout boundary.');
 }
 const applicationDataLayout = source.slice(applicationDataLayoutStart, applicationDataLayoutEnd);
 for (const profileIsolationContract of [
@@ -302,11 +306,11 @@ for (const profileIsolationContract of [
   'child.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)',
 ]) {
   if (!applicationDataLayout.includes(profileIsolationContract)) {
-    throw new Error(`Windows app-scoped WebView2 profile contract is missing: ${profileIsolationContract}`);
+  throw new Error(`Microsoft NT app-scoped WebView2 profile contract is missing: ${profileIsolationContract}`);
   }
 }
 if (applicationDataLayout.includes('Directory.Delete(')) {
-  throw new Error('Windows WebView2 profile migration must preserve legacy data and never delete a profile directory.');
+  throw new Error('Microsoft NT WebView2 profile migration must preserve legacy data and never delete a profile directory.');
 }
 const profileCollisionCheck = applicationDataLayout.indexOf('if (targetExists && legacyExists)');
 const profileTargetRecheck = applicationDataLayout.indexOf('if (InspectRegularDirectory(targetProfile, "Arcane application WebView2 profile"))', profileCollisionCheck);
@@ -314,22 +318,22 @@ const legacyProfileMove = applicationDataLayout.indexOf('Directory.Move(legacyPr
 const migratedProfileCheck = applicationDataLayout.indexOf('InspectRequiredRegularDirectory(targetProfile, "Arcane application WebView2 profile");', legacyProfileMove);
 if (profileCollisionCheck < 0 || profileTargetRecheck <= profileCollisionCheck
     || legacyProfileMove <= profileTargetRecheck || migratedProfileCheck <= legacyProfileMove) {
-  throw new Error('Windows WebView2 profile migration must reject collisions, recheck the destination, move once, and verify the result in that order.');
+  throw new Error('Microsoft NT WebView2 profile migration must reject collisions, recheck the destination, move once, and verify the result in that order.');
 }
 if (source.includes('"Arcane OS", "WebView2", Program.AppMode')) {
-  throw new Error('The Windows host must not place an active WebView2 profile in the legacy cross-app layout.');
+  throw new Error('The Microsoft NT host must not place an active WebView2 profile in the legacy cross-app layout.');
 }
 const profilePreparation = source.indexOf('ApplicationDataLayout.PrepareWebView2Profile(Program.AppMode);', formStart);
 const webViewEnvironmentCreation = source.indexOf('CoreWebView2Environment.CreateAsync(null, userData);', formStart);
 if (profilePreparation < formStart || webViewEnvironmentCreation <= profilePreparation) {
-  throw new Error('The Windows host must prepare the app-scoped WebView2 profile before creating its WebView2 environment.');
+  throw new Error('The Microsoft NT host must prepare the app-scoped WebView2 profile before creating its WebView2 environment.');
 }
 const formBackground = source.indexOf('BackColor = Program.StartupBackgroundColor;', formStart);
 const viewBackground = source.indexOf('BackColor = Program.StartupBackgroundColor,', formBackground + 1);
 const controlsAdd = source.indexOf('Controls.Add(webView);', formStart);
 if (!source.includes('Color.FromArgb(3, 5, 10)') || formBackground < formStart
     || viewBackground < formBackground || controlsAdd < viewBackground) {
-  throw new Error('The Windows host must paint the configured Arcane startup surface before adding WebView2.');
+  throw new Error('The Microsoft NT host must paint the configured Arcane startup surface before adding WebView2.');
 }
 for (const nativeThemeContract of [
   'internal static class NativeWindowTheme',
@@ -340,7 +344,7 @@ for (const nativeThemeContract of [
   'NativeWindowTheme.AppearanceChangedEvent();',
   '\\\"event\\\":\\\"appearance.changed\\\"',
 ]) {
-  if (!source.includes(nativeThemeContract)) throw new Error(`The Windows native appearance contract is missing: ${nativeThemeContract}`);
+if (!source.includes(nativeThemeContract)) throw new Error(`The Microsoft NT native appearance contract is missing: ${nativeThemeContract}`);
 }
 const controllerOptions = source.indexOf('CoreWebView2ControllerOptions controllerOptions = environment.CreateCoreWebView2ControllerOptions();', formStart);
 const controllerBackground = source.indexOf('controllerOptions.DefaultBackgroundColor = Program.StartupBackgroundColor;', controllerOptions);
@@ -375,4 +379,4 @@ if (recovery.indexOf('EmergencyDesktop.TryStart()') < 0 || recovery.indexOf('par
   throw new Error('The watchdog must launch Explorer before terminating the hung fullscreen Shell.');
 }
 
-console.log('Windows WebView2 host source and bridge contract preflight passed.');
+console.log('Microsoft NT WebView2 host source and bridge contract preflight passed.');

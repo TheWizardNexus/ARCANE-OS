@@ -1,0 +1,9 @@
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-TARGETDURATION:100
+#EXTINF:91.240,What is ARCANE OS — ARCANE Presence Executive
+01 - What is ARCANE OS - ARCANE Presence Executive.mp4
+#EXTINF:99.760,Provision and Activate an ARCANE User — ARCANE Presence Executive
+02 - Provision and Activate an ARCANE User - ARCANE Presence Executive.mp4
+#EXT-X-ENDLIST

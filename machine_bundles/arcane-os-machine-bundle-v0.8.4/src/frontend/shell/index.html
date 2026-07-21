@@ -7,6 +7,8 @@
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#03050a">
+  <link rel="stylesheet" href="../arcane/css/theme.css?v=1">
+  <script type="module" src="../arcane/modules/ThemeBootstrap.js?v=1"></script>
   <link rel="icon" type="image/x-icon" href="../shared/arcane-sigil.ico">
   <link rel="icon" type="image/png" sizes="512x512" href="../shared/arcane-sigil-512.png">
   <link rel="apple-touch-icon" href="../shared/arcane-sigil-512.png">
@@ -94,6 +96,7 @@
   <div class="toast" id="toast">Copied ✓</div>
 
   <script src="../shared/arcane-api.js"></script>
+  <script src="../shared/SystemPlatformPresentation.js"></script>
   <script>
     'use strict';
     const $ = (selector) => document.querySelector(selector);
@@ -198,9 +201,9 @@
       warning.textContent = mode === 'unsigned-local-test'
         ? 'Unsigned local test mode is active. Application integrity is still checked, but this Arcane release is not publisher-signed and must not be treated as a production installation.'
         : firstUsePinPending
-        ? 'Windows validated this signature, but Arcane has no administrator policy or prior installed signer pin. Use Provisioner with administrator approval to establish publisher continuity before treating this as production.'
+        ? 'Microsoft NT validated this signature, but Arcane has no administrator policy or prior installed signer pin. Use Provisioner with administrator approval to establish publisher continuity before treating this as production.'
         : revocationDegraded
-        ? 'Arcane is using a recent protected offline publisher attestation and is retrying strict revocation verification. A revoked or invalid refresh will close this Shell and open the Windows desktop.'
+        ? 'Arcane is using a recent protected offline publisher attestation and is retrying strict revocation verification. A revoked or invalid refresh will close this Shell and open the Microsoft NT desktop.'
         : 'Arcane has not verified this release as publisher-signed. Do not treat this session as a production installation.';
     }
 
@@ -351,10 +354,12 @@
           ]
         );
         setSecurityMode(application.securityMode, application.publisherTrustSource, application.revocationStatus);
+        const system = platform.os || platform;
+        const systemPresentation = ArcaneSystemPlatformPresentation.apply(system);
         $('#version').textContent = 'v' + (version.version || version);
         $('#identity').textContent = user.accountName || user.username || user.displayName;
         $('#userValue').textContent = user.displayName || user.username;
-        $('#osValue').textContent = platform.os && platform.os.displayName || platform.displayName || platform.platform;
+        $('#osValue').textContent = systemPresentation.displayName;
         $('#hostValue').textContent = platform.os && platform.os.hostname || platform.hostname || 'Local machine';
         $('#status').textContent = 'Arcane host connected';
         await loadApplications();

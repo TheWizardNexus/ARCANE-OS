@@ -12,13 +12,76 @@ import {
 
 const TEST_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DOCS_ROOT = path.join(TEST_ROOT, 'apps', 'docs');
+const EXPECTED_SCREENSHOTS = Object.freeze([
+    Object.freeze({
+        source: 'example/_example_assets/htmlimportExample.png',
+        output: 'htmlimportExample.png'
+    }),
+    Object.freeze({
+        source: 'example/_example_assets/modalExample.png',
+        output: 'modalExample.png'
+    }),
+    Object.freeze({
+        source: 'example/_example_assets/navExample.png',
+        output: 'navExample.png'
+    }),
+    Object.freeze({
+        source: 'example/_example_assets/navExampleMobile.png',
+        output: 'navExampleMobile.png'
+    }),
+    Object.freeze({
+        source: 'example/_example_assets/chatExample.png',
+        output: 'chatExample.png'
+    }),
+    Object.freeze({
+        source: 'example/_example_assets/dbopfsExample.png',
+        output: 'dbopfsExample.png'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/windows-add-arcane-user.jpg',
+        output: 'windows-add-arcane-user.jpg'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/windows-account-awaiting-activation.jpg',
+        output: 'windows-account-awaiting-activation.jpg'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/windows-account-activated.jpg',
+        output: 'windows-account-activated.jpg'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/windows-arcane-shell.jpg',
+        output: 'windows-arcane-shell.jpg'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/linux-add-arcane-user.png',
+        output: 'linux-add-arcane-user.png'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/linux-account-awaiting-activation.png',
+        output: 'linux-account-awaiting-activation.png'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/linux-account-activated.png',
+        output: 'linux-account-activated.png'
+    }),
+    Object.freeze({
+        source: 'apps/docs/guides/images/linux-arcane-shell.png',
+        output: 'linux-arcane-shell.png'
+    })
+]);
+const GALLERY_SCREENSHOT_OUTPUTS = new Set(
+    EXPECTED_SCREENSHOTS
+        .filter(item => item.source.startsWith('example/_example_assets/'))
+        .map(item => item.output)
+);
 
 async function removeDirectory(directory) {
     await rm(directory, {force: true, recursive: true});
 }
 
 test(
-    'materializes the reviewed Docs catalog and all six screenshots',
+    'materializes the reviewed Docs catalog and explicit screenshot inventory',
     async function materializesDocsPublication(t) {
         const temporaryRoot = await mkdtemp(
             path.join(os.tmpdir(), 'arcane-docs-package-')
@@ -76,12 +139,27 @@ test(
             path.join(DOCS_ROOT, 'modules', 'DocsApp.js'),
             'utf8'
         );
+        const walkthroughSource = (
+            await Promise.all(
+                [
+                    'provision-user-windows.md',
+                    'provision-user-linux.md'
+                ].map(
+                    file => readFile(
+                        path.join(DOCS_ROOT, 'guides', file),
+                        'utf8'
+                    )
+                )
+            )
+        ).join('\n');
 
         assert.equal(built.documentCount, policy.documents.length);
         assert.equal(built.sourceCount, policy.sources.length);
-        assert.equal(built.screenshotCount, 6);
+        assert.deepEqual(policy.screenshots, EXPECTED_SCREENSHOTS);
+        assert.equal(built.screenshotCount, EXPECTED_SCREENSHOTS.length);
         assert.equal(verified.verified, true);
         assert.equal(verified.sourceCount, policy.sources.length);
+        assert.equal(verified.screenshotCount, EXPECTED_SCREENSHOTS.length);
         assert.equal(verified.version, built.version);
         assert.equal(
             manifest.documents.length,
@@ -121,7 +199,12 @@ test(
             );
 
             assert.deepEqual(published, source);
-            assert.match(docsAppSource, new RegExp(screenshot.output.replace('.', '\\.')));
+            assert.match(
+                GALLERY_SCREENSHOT_OUTPUTS.has(screenshot.output)
+                    ? docsAppSource
+                    : walkthroughSource,
+                new RegExp(screenshot.output.replaceAll('.', '\\.'))
+            );
         }
     }
 );

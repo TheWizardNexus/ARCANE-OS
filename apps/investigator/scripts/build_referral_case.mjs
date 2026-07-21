@@ -277,6 +277,98 @@ const candidates=[
   }
 ];
 
+function packetSource(source,use,pages=[source.page],note=''){
+  if(!['candidate','context'].includes(use)) throw new Error(`Unsupported packet source use ${use}`);
+  return {sourceId:source.id,use,pages:[...pages],note};
+}
+
+function packetAttachment(id,title,recordId,candidateIds,purpose,sourceReviews){
+  return {id,title,recordId,candidateIds:[...candidateIds],purpose,sourceReviews};
+}
+
+// This is a human-curated page allowlist, not a query over the full referral source table.
+// Pages 5, 6, and 8 of F0267 and page 5 of F0172 are explicit reviewed spillovers.
+// They are not inferred by the report generator from OCR or Markdown line ranges.
+const packetPlan={
+  schemaVersion:1,
+  status:'human-curated-page-allowlist',
+  selectionPolicy:'Include every support/contrary source row selected by the five referral candidates, explicit reviewed spillover pages, and only the listed non-contact context pages. Deduplicate physical PDF pages. Do not infer adjacent pages.',
+  highlightMode:'guide-only-callouts',
+  highlightPolicy:'Exact extracted passages appear in yellow divider callouts labeled for verification. Original source-page content is scaled only and receives no evidentiary rectangle because OCR coordinates have not been independently verified.',
+  expectedSourcePageCount:36,
+  attachments:[
+    packetAttachment('ATT-01','Sworn conviction assertion and same-filing portal','F0003',['RC-01'],'Compare the challenged wording, penalty-of-perjury context, and attached active-case portal in the same filed PDF.',[
+      packetSource(sources.convictionStatement,'candidate'),
+      packetSource(sources.convictionOath,'candidate'),
+      packetSource(sources.activeDocket,'candidate')
+    ]),
+    packetAttachment('ATT-02','Respondent denial and later clerk-search context','F0142',['RC-01'],'Preserve the opposing sworn account and the later clerk certificate as qualified context; neither reconstructs the complete November 2024 disposition by itself.',[
+      packetSource(sources.brandonNoFilings,'candidate'),
+      packetSource(sources.brandonNoFilingsOath,'candidate'),
+      packetSource(sources.clerkSearch,'context')
+    ]),
+    packetAttachment('ATT-03','Audiotape 2 reporter transcript and facial certificate','F0144',['RC-02'],'Show the reporter identity, attributed statements, and the facially unsigned/undated certificate together so authentication limits remain visible.',[
+      packetSource(sources.reporterContact,'context'),
+      packetSource(sources.audioP2,'candidate'),
+      packetSource(sources.audioP3,'candidate'),
+      packetSource(sources.audioP4,'candidate'),
+      packetSource(sources.audioCertificate,'candidate')
+    ]),
+    packetAttachment('ATT-04','Verified admissions responses and reviewed spillovers','F0267',['RC-02','RC-03','RC-05'],'Compare the quoted Audiotape 2 requests, the physical-contact denial, the Suzie-email response, and the shared verification. Pages 5, 6, and 8 are explicitly reviewed spillovers.',[
+      packetSource(sources.audioRfa,'candidate',[4,5,6,7],'The cited passage begins on page 4 and was reviewed through page 7.'),
+      packetSource(sources.strikeDenial,'candidate',[7,8],'The cited passage begins on page 7 and continues onto page 8.'),
+      packetSource(sources.suzieDenial,'candidate'),
+      packetSource(sources.rfaVerification,'candidate')
+    ]),
+    packetAttachment('ATT-05','Jon Caton declaration excerpts and oath','F0133',['RC-03'],'Keep the dated reported incidents, counselor-observation/admission account, and declaration oath in one source sequence.',[
+      packetSource(sources.catonMarch,'candidate'),
+      packetSource(sources.catonApril,'candidate'),
+      packetSource(sources.catonJune,'candidate'),
+      packetSource(sources.catonAdmission,'candidate'),
+      packetSource(sources.catonOath,'candidate')
+    ]),
+    packetAttachment('ATT-06','Filed MPD YG2202018 excerpts','F0170',['RC-03'],'Preserve the filed police-report copy containing the neighbor call, party accounts, and body-worn-camera reference; obtain native/certified agency records separately.',[
+      packetSource(sources.policeMay28Summary,'candidate'),
+      packetSource(sources.policeMay28Neighbor,'candidate')
+    ]),
+    packetAttachment('ATT-07','Audiotape 3 account and phone-access discussion','F0158',['RC-04'],'Show the account-removal discussion, conditional access language, contrary key-return context, and facial certificate limitation together.',[
+      packetSource(sources.phoneAccount,'candidate'),
+      packetSource(sources.phoneCondition,'candidate'),
+      packetSource(sources.keysProvided,'candidate'),
+      packetSource(sources.phoneCertificate,'candidate')
+    ]),
+    packetAttachment('ATT-08','Underlying media filename and device still','F0068',['RC-04'],'Tie the transcript lead to the filed declaration passage identifying the media date and the device/account still without treating either as forensic proof.',[
+      packetSource(sources.phoneFileDate,'candidate'),
+      packetSource(sources.phoneStill,'candidate')
+    ]),
+    packetAttachment('ATT-09','Temporary-order disposition and Suzie email image','F0245',['RC-05'],'Keep the procedural temporary-order denial visible as context and the filed email screenshot as the challenged wording source.',[
+      packetSource(sources.temporaryOrderDenied,'context'),
+      packetSource(sources.suzieEmail,'candidate')
+    ]),
+    packetAttachment('ATT-10','Visitation-only communication clause','F0233',['RC-05'],'Show the operative clause limiting the cited communication restriction to visitation-related communications.',[
+      packetSource(sources.visitationOnlyOrder,'candidate')
+    ]),
+    packetAttachment('ATT-11','Account-session and mobile-association context','F0043',['RC-04'],'Provide the dated Google session and T-Mobile association screenshots as preservation context, not proof of a particular user or unauthorized access.',[
+      packetSource(sources.googleSession,'context'),
+      packetSource(sources.mobileAssociation,'context')
+    ]),
+    packetAttachment('ATT-12','Later last-access account with reviewed spillover','F0172',['RC-04'],'Preserve the later party declaration giving a different last-access date; page 5 is an explicitly reviewed spillover.',[
+      packetSource(sources.laterAccessDate,'context',[4,5],'The cited passage begins on page 4 and spans extracted pages 4-5.')
+    ])
+  ],
+  contactOnlySourceIdsExcludedFromEvidenceSelection:[
+    sources.brandonContact.id,
+    sources.johannaContact.id,
+    sources.terukoContact.id,
+    sources.terukoEmail.id,
+    sources.catonContact.id,
+    sources.reporterContact.id,
+    sources.mayberryContact.id,
+    sources.johannaPhone.id
+  ],
+  contactPolicy:'Eight contact-only source rows (seven physical page keys) are excluded from candidate-evidence selection and remain available on request. F0144 page 1 is separately allowlisted only as reporter/transcript identity context; its contact details are not an evidentiary proposition.'
+};
+
 const motives=[
   {id:'M-01',candidateId:'RC-01',actor:'Teruko Miller',status:'hypothesis-only',trigger:'DVRO and custody litigation',incentive:'Present Brandon as a proven violent offender',anticipatedBenefit:'Stronger dangerousness and credibility position',supportingSourceIds:[sources.convictionStatement.id,sources.convictionOath.id],contrary:'A genuine safety concern or nontechnical use of "convicted" may explain the wording without criminal intent.'},
   {id:'M-02',candidateId:'RC-02',actor:'Teruko Miller',status:'hypothesis-only',trigger:'Formal discovery seeking admissions to hostile statements',incentive:'Avoid admissions harmful to credibility or family-court positioning',anticipatedBenefit:'Preserve litigation position',supportingSourceIds:[sources.audioRfa.id,sources.rfaVerification.id],contrary:'The transcript was allegedly vague or unattached and memory/authentication could justify a good-faith denial.'},
@@ -366,11 +458,15 @@ const referral={
     contested:'A legal, factual, privilege, venue, or limitations dispute must be resolved.',
     'not-supported':'The current source affirmatively does not fit this proposed theory.'
   },
+  packetPlan,
   sources:uniqueSources,
   reports:{
     actionReport:{label:'Police / DA Action Report',path:'Reports/Police/Police-DA-Action-Report.pdf'},
     actionReportMarkdown:{label:'Police / DA Action Report - Markdown',path:'Reports/Police/Police-DA-Action-Report.md'},
     sourceIndex:{label:'Police / DA Source Index',path:'Reports/Police/Police-DA-Source-Index.csv'},
+    evidencePacket:{label:'Police / DA Evidence Packet',path:'Reports/Police/Police-DA-Evidence-Packet.pdf'},
+    evidencePacketHighlightGuide:{label:'Evidence Packet Highlight Guide',path:'Reports/Police/Police-DA-Evidence-Packet-Highlight-Guide.md'},
+    evidencePacketIndex:{label:'Evidence Packet Machine Index',path:'Reports/Police/Police-DA-Evidence-Packet-Index.json'},
     manifest:{label:'Report hash manifest',path:'Reports/Police/Police-DA-Report-Manifest.json'}
   },
   reviewHistory:[]

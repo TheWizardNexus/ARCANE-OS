@@ -184,20 +184,24 @@ function Publish-VerifiedArcaneDirectory(
 
 $root = Split-Path -Parent $PSScriptRoot
 $distRoot = Join-Path $root 'dist'
-$target = Join-Path $distRoot 'windows'
-$stage = Join-Path $distRoot '.windows.stage'
-$backup = Join-Path $distRoot '.windows.backup'
+$target = Join-Path $distRoot 'nt'
+$stage = Join-Path $distRoot '.nt.stage'
+$backup = Join-Path $distRoot '.nt.backup'
 $rejected = "$target.rejected"
 $partialRollback = "$backup.partial"
 $lockPath = Join-Path $distRoot '.windows.publish.lock'
-$pkg = Join-Path $root 'node_modules\.bin\pkg.cmd'
+$legacyStage = Join-Path $distRoot '.windows.stage'
+$legacyBackup = Join-Path $distRoot '.windows.backup'
+$legacyRejected = Join-Path $distRoot 'windows.rejected'
+$legacyPartialRollback = "$legacyBackup.partial"
+$pkg = Join-Path $root 'node_modules\@yao-pkg\pkg\lib-es5\bin.js'
 $runtime = Join-Path $root 'runtime\arcane-core.cjs'
 $generatedApp = Join-Path $distRoot 'app'
 $generatedBundle = Join-Path $distRoot 'arcane-bundle.json'
 $generatedApps = Join-Path $distRoot 'apps'
 
 $expectedParent = [IO.Path]::GetFullPath($distRoot).TrimEnd('\')
-foreach ($candidate in @($target, $stage, $backup, $rejected, $partialRollback, $lockPath)) {
+foreach ($candidate in @($target, $stage, $backup, $rejected, $partialRollback, $lockPath, $legacyStage, $legacyBackup, $legacyRejected, $legacyPartialRollback)) {
   $resolved = [IO.Path]::GetFullPath($candidate)
   $resolvedParent = [IO.Path]::GetFullPath((Split-Path -Parent $resolved)).TrimEnd('\')
   if ($resolvedParent -ne $expectedParent) { throw "Refusing to build outside $expectedParent." }
@@ -214,7 +218,7 @@ if ($AllowUnsignedLocalRelease) {
   $requireSignedRelease = $false
   $releaseFlavor = 'UNSIGNED LOCAL-TEST ALLOWED'
 } else {
-  if ($signingPolicy -eq '0') { throw 'Production Windows distribution conflicts with ARCANE_REQUIRE_SIGNED_RELEASE=0.' }
+  if ($signingPolicy -eq '0') { throw 'Production Microsoft NT distribution conflicts with ARCANE_REQUIRE_SIGNED_RELEASE=0.' }
   $requiredSigningPolicy = '1'
   $requireSignedRelease = $true
   $releaseFlavor = 'PRODUCTION SIGNED'
@@ -222,7 +226,7 @@ if ($AllowUnsignedLocalRelease) {
 
 function Assert-WindowsDistribution([string]$ReleaseRoot, [bool]$RequireSigned) {
   & node (Join-Path $root 'tools\verify-built-release.mjs') $ReleaseRoot
-  if ($LASTEXITCODE -ne 0) { throw "Windows distribution exact verification failed for $ReleaseRoot." }
+  if ($LASTEXITCODE -ne 0) { throw "Microsoft NT distribution exact verification failed for $ReleaseRoot." }
   $bundle = Get-Content -Raw -LiteralPath (Join-Path $ReleaseRoot 'arcane-bundle.json') | ConvertFrom-Json
   $contentHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $ReleaseRoot 'arcane-machine-content.json')).Hash.ToLowerInvariant()
   $binding = "ARCANE-MACHINE-BINDING|1|$($bundle.version)|$contentHash"
@@ -236,13 +240,13 @@ $verifyDistribution = {
 
 function Assert-ReproducibleUnsignedDistribution([string]$ReleaseRoot) {
   & node (Join-Path $root 'tools\verify-built-release.mjs') $ReleaseRoot
-  if ($LASTEXITCODE -ne 0) { throw 'The existing Windows build is not an exact reproducible Arcane distribution.' }
+  if ($LASTEXITCODE -ne 0) { throw 'The existing Microsoft NT build is not an exact reproducible Arcane distribution.' }
   $bundle = Get-Content -Raw -LiteralPath (Join-Path $ReleaseRoot 'arcane-bundle.json') | ConvertFrom-Json
   $contentHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $ReleaseRoot 'arcane-machine-content.json')).Hash.ToLowerInvariant()
   & node (Join-Path $root 'tools\verify-content-bindings.mjs') machine $ReleaseRoot ([string]$bundle.version) $contentHash
-  if ($LASTEXITCODE -ne 0) { throw 'The existing Windows build does not retain its exact native content binding.' }
+  if ($LASTEXITCODE -ne 0) { throw 'The existing Microsoft NT build does not retain its exact native content binding.' }
   $executables = @(Get-ChildItem -LiteralPath $ReleaseRoot -Recurse -File -Filter '*.exe')
-  if (-not $executables.Count) { throw 'The existing Windows build contains no executables.' }
+  if (-not $executables.Count) { throw 'The existing Microsoft NT build contains no executables.' }
   $nonLocal = @($executables | Where-Object { (Get-AuthenticodeSignature -LiteralPath $_.FullName).Status -ne 'NotSigned' })
   if ($nonLocal.Count) { throw 'Only a complete unsigned reproducible build output may bypass native rollback migration.' }
 }
@@ -258,23 +262,28 @@ try {
   try {
     $lockStream = [IO.File]::Open($lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
   } catch [IO.IOException] {
-    throw 'Another Arcane Windows distribution build is already publishing in this workspace.'
+    throw 'Another Arcane Microsoft NT distribution build is already publishing in this workspace.'
+  }
+  $legacyPublicationState = @($legacyStage, $legacyBackup, $legacyRejected, $legacyPartialRollback) |
+    Where-Object { Test-Path -LiteralPath $_ }
+  if ($legacyPublicationState.Count) {
+    throw "Arcane found unresolved legacy Microsoft NT publication state: $($legacyPublicationState -join ', '). Finish recovery with the pre-cutover builder or review the preserved paths before building dist\nt."
   }
   [Environment]::SetEnvironmentVariable('ARCANE_REQUIRE_SIGNED_RELEASE', $requiredSigningPolicy, 'Process')
-  Write-Host "Arcane Windows distribution flavor: $releaseFlavor."
+  Write-Host "Arcane Microsoft NT distribution flavor: $releaseFlavor."
 
   Recover-ArcanePublication -Target $target -Stage $stage -Backup $backup -Verify $verifyDistribution -RequireSigned $requireSignedRelease
 
   if ($requireSignedRelease -and [string]::IsNullOrWhiteSpace([string]$env:ARCANE_SIGNING_CERT_THUMBPRINT)) {
-    throw 'Production Windows distribution requires ARCANE_SIGNING_CERT_THUMBPRINT. Use the explicit unsigned-local-test build only for local verification.'
+    throw 'Production Microsoft NT distribution requires ARCANE_SIGNING_CERT_THUMBPRINT. Use the explicit unsigned-local-test build only for local verification.'
   }
   if ($requireSignedRelease -and [string]::IsNullOrWhiteSpace([string]$env:ARCANE_TIMESTAMP_SERVER)) {
-    throw 'Production Windows distribution requires ARCANE_TIMESTAMP_SERVER.'
+    throw 'Production Microsoft NT distribution requires ARCANE_TIMESTAMP_SERVER.'
   }
   $configuredSigningThumbprint = ([string]$env:ARCANE_SIGNING_CERT_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
   $configuredExpectedPublisher = ([string]$env:ARCANE_EXPECTED_PUBLISHER_THUMBPRINT).Replace(' ', '').ToUpperInvariant()
   if ($requireSignedRelease -and [string]::IsNullOrWhiteSpace($configuredExpectedPublisher)) {
-    throw 'Production Windows distribution requires ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.'
+    throw 'Production Microsoft NT distribution requires ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.'
   }
   if ($requireSignedRelease -and $configuredSigningThumbprint -cne $configuredExpectedPublisher) {
     throw 'ARCANE_SIGNING_CERT_THUMBPRINT must match the independent ARCANE_EXPECTED_PUBLISHER_THUMBPRINT trust anchor.'
@@ -283,7 +292,7 @@ try {
     throw 'Unsigned local-test builds conflict with ARCANE_EXPECTED_PUBLISHER_THUMBPRINT.'
   }
 
-  if (-not (Test-Path -LiteralPath $pkg -PathType Leaf)) { throw 'The pinned pkg build tool is missing. Run npm ci first.' }
+  if (-not (Test-Path -LiteralPath $pkg -PathType Leaf)) { throw 'The pinned pkg JavaScript entry point is missing. Run npm ci first.' }
   if (-not (Test-Path -LiteralPath $runtime -PathType Leaf)) { throw 'The generated Arcane Core is missing. Run npm run build first.' }
   if (-not (Test-Path -LiteralPath $generatedApp -PathType Container) -or -not (Test-Path -LiteralPath $generatedBundle -PathType Leaf)) {
     throw 'The generated Arcane application payload is missing. Run npm run build first.'
@@ -294,25 +303,25 @@ try {
   $appBuildArguments = @((Join-Path $root 'tools\build-app.mjs'), '--all', '--platform=windows')
   if ($AllowUnsignedLocalRelease) { $appBuildArguments += '--allow-unsigned-local-release' }
   & node @appBuildArguments
-  if ($LASTEXITCODE -ne 0) { throw 'Building the bound Windows application targets failed.' }
-  if (-not (Test-Path -LiteralPath (Join-Path $generatedApps 'catalog.json') -PathType Leaf)) { throw 'The verified Windows app projection is missing.' }
+  if ($LASTEXITCODE -ne 0) { throw 'Building the bound Microsoft NT application targets failed.' }
+  if (-not (Test-Path -LiteralPath (Join-Path $generatedApps 'catalog.json') -PathType Leaf)) { throw 'The verified Microsoft NT app projection is missing.' }
 
   New-Item -ItemType Directory -Path (Join-Path $stage 'bin') -Force | Out-Null
   Copy-Item -LiteralPath $generatedApp -Destination (Join-Path $stage 'app') -Recurse
   Copy-Item -LiteralPath $generatedApps -Destination (Join-Path $stage 'apps') -Recurse
   Copy-Item -LiteralPath $generatedBundle -Destination (Join-Path $stage 'arcane-bundle.json')
 
-  & $pkg $runtime '--targets' 'node22-win-x64' '--output' (Join-Path $stage 'bin\ArcaneCore.exe')
+  & node $pkg $runtime '--targets' 'node22-win-x64' '--output' (Join-Path $stage 'bin\ArcaneCore.exe')
   if ($LASTEXITCODE -ne 0) { throw "Packaging ArcaneCore.exe failed with exit code $LASTEXITCODE." }
 
   & (Join-Path $root 'tools\build-windows-webview2.ps1') -Dist $stage
   if ($LASTEXITCODE -ne 0) { throw "Building the bound WebView2 hosts failed with exit code $LASTEXITCODE." }
 
   & node (Join-Path $root 'tools\write-release-manifest.mjs') windows $stage
-  if ($LASTEXITCODE -ne 0) { throw 'Writing the outer Windows release manifest failed.' }
+  if ($LASTEXITCODE -ne 0) { throw 'Writing the outer Microsoft NT release manifest failed.' }
 
   Publish-VerifiedArcaneDirectory -Stage $stage -Target $target -Backup $backup -Verify $verifyDistribution -RequireSigned $requireSignedRelease -ReplaceReproducibleTarget $replaceReproducibleDistribution
-  Write-Host "Published $releaseFlavor bound Windows distribution to $target"
+  Write-Host "Published $releaseFlavor bound Microsoft NT distribution to $target"
 } finally {
   if (Test-Path -LiteralPath $stage) {
     try { Remove-Item -LiteralPath $stage -Recurse -Force }

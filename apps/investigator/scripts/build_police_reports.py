@@ -47,9 +47,21 @@ except ImportError as exc:  # pragma: no cover - exercised only on an incomplete
 
 
 APP_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = APP_ROOT.parents[1]
+SHARED_BUILD_ROOT = REPOSITORY_ROOT / "arcane" / "build"
+if str(SHARED_BUILD_ROOT) not in sys.path:
+    sys.path.insert(0, str(SHARED_BUILD_ROOT))
+
+try:
+    from PdfSourcePacket import BUILDER_VERSION as PACKET_BUILDER_VERSION
+    from PdfSourcePacket import PacketBuildError, build_source_packet
+except ImportError as exc:  # pragma: no cover - repository/runtime setup failure
+    raise SystemExit(f"Shared PDF packet builder is unavailable: {SHARED_BUILD_ROOT}") from exc
+
 DEFAULT_CASE_ID = "24FL001068"
 DEFAULT_CASE_ROOT = APP_ROOT / "data" / "cases" / DEFAULT_CASE_ID
-GENERATOR_VERSION = "1.1.0"
+GENERATOR_VERSION = "1.2.0"
+PRIVATE_PACKET_NOTICE = "PRIVATE-PARTY REFERRAL - UNVERIFIED - NOT AN AGENCY RECORD"
 
 
 def clean_text(value: Any) -> str:
@@ -102,6 +114,38 @@ def write_atomic(path: Path, payload: str | bytes) -> None:
     os.replace(temporary, path)
 
 
+def is_link_or_junction(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    is_junction = getattr(os.path, "isjunction", None)
+    return bool(is_junction and is_junction(path))
+
+
+def resolve_case_file(case_root: Path, relative_value: Any, *, suffix: str = "") -> Path:
+    """Resolve a referral-owned path without permitting traversal or link indirection."""
+    relative = clean_text(relative_value)
+    candidate = Path(relative)
+    if not relative or candidate.is_absolute() or candidate.drive or ".." in candidate.parts:
+        raise SystemExit(f"Unsafe case-relative path in referral: {relative or '<blank>'}")
+    try:
+        resolved = (case_root / candidate).resolve(strict=True)
+        resolved.relative_to(case_root)
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"Referral path does not resolve inside the case root: {relative}") from exc
+    current = resolved
+    while current != case_root:
+        if is_link_or_junction(current):
+            raise SystemExit(f"Referral path crosses a link or junction: {relative}")
+        if current.parent == current:
+            raise SystemExit(f"Referral path escaped the case root: {relative}")
+        current = current.parent
+    if not resolved.is_file():
+        raise SystemExit(f"Referral path is not a regular file: {relative}")
+    if suffix and resolved.suffix.lower() != suffix.lower():
+        raise SystemExit(f"Referral path has the wrong file type: {relative}")
+    return resolved
+
+
 def read_referral(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -110,7 +154,7 @@ def read_referral(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Referral dataset is not valid JSON: {path}: {exc}") from exc
 
-    required = ("case", "theory", "contacts", "candidates", "chronology", "requests", "sources")
+    required = ("case", "theory", "contacts", "candidates", "chronology", "requests", "sources", "packetPlan")
     missing = [key for key in required if key not in data]
     if missing:
         raise SystemExit(f"Referral dataset is missing required keys: {', '.join(missing)}")
@@ -320,6 +364,454 @@ def build_source_index_csv(referral: dict[str, Any]) -> str:
             }
         )
     return output.getvalue()
+
+
+def prepare_packet_plan(
+    referral: dict[str, Any],
+    sources: dict[str, dict[str, Any]],
+    case_root: Path,
+) -> dict[str, Any]:
+    """Validate and map the app-specific allowlist into the shared packet contract."""
+    plan = referral.get("packetPlan")
+    if not isinstance(plan, dict) or plan.get("schemaVersion") != 1:
+        raise SystemExit("Referral packetPlan schemaVersion 1 is required.")
+    if plan.get("status") != "human-curated-page-allowlist":
+        raise SystemExit("Referral packetPlan must be an explicit human-curated page allowlist.")
+    if plan.get("highlightMode") != "guide-only-callouts":
+        raise SystemExit("Only guide-only packet callouts are supported without verified PDF coordinates.")
+    raw_attachments = plan.get("attachments")
+    if not isinstance(raw_attachments, list) or not raw_attachments:
+        raise SystemExit("Referral packetPlan.attachments must be a non-empty array.")
+
+    candidate_ids = {clean_text(item.get("id")) for item in referral.get("candidates", [])}
+    expected_candidate_source_ids: set[str] = set()
+    for candidate in referral.get("candidates", []):
+        expected_candidate_source_ids.update(candidate.get("sourceIds", []))
+        expected_candidate_source_ids.update(candidate.get("contrarySourceIds", []))
+        for proof in candidate.get("elements", []):
+            expected_candidate_source_ids.update(proof.get("sourceIds", []))
+
+    contact_source_ids = {
+        source_id
+        for contact in referral.get("contacts", [])
+        for source_id in contact.get("sourceIds", [])
+    }
+    expected_contact_only = contact_source_ids - expected_candidate_source_ids
+    excluded_contact_source_ids = plan.get("contactOnlySourceIdsExcludedFromEvidenceSelection")
+    if not isinstance(excluded_contact_source_ids, list):
+        raise SystemExit("packetPlan contact exclusion list is required.")
+    if len(excluded_contact_source_ids) != len(set(excluded_contact_source_ids)):
+        raise SystemExit("packetPlan contact exclusion list contains duplicate source ids.")
+    if set(excluded_contact_source_ids) != expected_contact_only:
+        missing = sorted(expected_contact_only - set(excluded_contact_source_ids))
+        extra = sorted(set(excluded_contact_source_ids) - expected_contact_only)
+        raise SystemExit(
+            "packetPlan contact-only exclusion mismatch. "
+            f"Missing: {', '.join(missing) or 'none'}; extra: {', '.join(extra) or 'none'}."
+        )
+
+    shared_attachments: list[dict[str, Any]] = []
+    indexed_attachments: list[dict[str, Any]] = []
+    selected_candidate_source_ids: set[str] = set()
+    selected_context_source_ids: set[str] = set()
+    selected_source_ids: set[str] = set()
+    selected_physical_pages: set[tuple[str, int]] = set()
+    highlight_counter = 0
+    attachment_ids: set[str] = set()
+
+    for attachment_index, attachment in enumerate(raw_attachments):
+        if not isinstance(attachment, dict):
+            raise SystemExit(f"packetPlan attachment {attachment_index} must be an object.")
+        attachment_id = clean_text(attachment.get("id"))
+        if not attachment_id or attachment_id in attachment_ids:
+            raise SystemExit(f"packetPlan attachment id is missing or duplicated: {attachment_id}")
+        attachment_ids.add(attachment_id)
+        record_id = clean_text(attachment.get("recordId"))
+        if not re.fullmatch(r"F\d{4}", record_id):
+            raise SystemExit(f"{attachment_id} has an invalid recordId: {record_id}")
+        title = clean_text(attachment.get("title"))
+        purpose = clean_text(attachment.get("purpose"))
+        attachment_candidate_ids = attachment.get("candidateIds")
+        if not isinstance(attachment_candidate_ids, list) or any(
+            item not in candidate_ids for item in attachment_candidate_ids
+        ):
+            raise SystemExit(f"{attachment_id} has an unresolved candidate id.")
+        source_reviews = attachment.get("sourceReviews")
+        if not isinstance(source_reviews, list) or not source_reviews:
+            raise SystemExit(f"{attachment_id} must contain sourceReviews.")
+
+        attachment_source_ids: list[str] = []
+        attachment_pages: set[int] = set()
+        callouts: list[dict[str, str]] = []
+        indexed_reviews: list[dict[str, Any]] = []
+        attachment_pdf_path = ""
+        attachment_filename = ""
+        attachment_source_path: Path | None = None
+        for review_index, review in enumerate(source_reviews):
+            if not isinstance(review, dict):
+                raise SystemExit(f"{attachment_id} source review {review_index} must be an object.")
+            source_id = clean_text(review.get("sourceId"))
+            source = sources.get(source_id)
+            if not source:
+                raise SystemExit(f"{attachment_id} references unknown packet source {source_id}.")
+            if source_id in selected_source_ids:
+                raise SystemExit(f"Packet source {source_id} is allowlisted more than once.")
+            if clean_text(source.get("recordId")) != record_id:
+                raise SystemExit(f"{attachment_id} source {source_id} does not belong to {record_id}.")
+            use = clean_text(review.get("use"))
+            if use not in {"candidate", "context"}:
+                raise SystemExit(f"{attachment_id} source {source_id} has unsupported use {use}.")
+            review_pages = review.get("pages")
+            if (
+                not isinstance(review_pages, list)
+                or not review_pages
+                or any(isinstance(page, bool) or not isinstance(page, int) or page < 1 for page in review_pages)
+                or review_pages != sorted(set(review_pages))
+            ):
+                raise SystemExit(f"{attachment_id} source {source_id} has invalid reviewed pages.")
+            if source.get("page") not in review_pages:
+                raise SystemExit(
+                    f"{attachment_id} source {source_id} does not include its cited page {source.get('page')}."
+                )
+            if use == "candidate":
+                selected_candidate_source_ids.add(source_id)
+            else:
+                if source_id in expected_candidate_source_ids:
+                    raise SystemExit(f"Candidate source {source_id} may not be downgraded to packet context.")
+                selected_context_source_ids.add(source_id)
+            selected_source_ids.add(source_id)
+            attachment_source_ids.append(source_id)
+            attachment_pages.update(review_pages)
+
+            pdf_path = clean_text(source.get("pdfPath"))
+            filename = clean_text(source.get("filename"))
+            if not attachment_pdf_path:
+                attachment_pdf_path = pdf_path
+                attachment_filename = filename
+                attachment_source_path = resolve_case_file(case_root, pdf_path, suffix=".pdf")
+            elif pdf_path != attachment_pdf_path or filename != attachment_filename:
+                raise SystemExit(f"{attachment_id} mixes different source PDFs.")
+
+            highlight_counter += 1
+            highlight_id = f"H{highlight_counter:03d}"
+            role = clean_text(source.get("role") or use)
+            mode = "context" if use == "context" else "limitation" if role == "limitation" else "guide-only"
+            limitation_parts = [clean_text(review.get("note")), clean_text(source.get("note"))]
+            if use == "context":
+                limitation_parts.append("Context only; this source is not independent proof of a candidate element.")
+            limitation = " ".join(part for part in limitation_parts if part)
+            callout = {
+                "id": highlight_id,
+                "source_id": source_id,
+                "label": f"{source_id} | {record_id} | {role} | cited source p.{source.get('page')}",
+                "excerpt": clipped_excerpt(source, 390),
+                "relevance": purpose[:480],
+                "limitation": limitation[:480],
+                "mode": mode,
+            }
+            callouts.append(callout)
+            indexed_reviews.append(
+                {
+                    "highlightId": highlight_id,
+                    "sourceId": source_id,
+                    "use": use,
+                    "role": role,
+                    "citedSourcePage": source.get("page"),
+                    "reviewedSourcePages": list(review_pages),
+                    "excerpt": clean_text(source.get("excerpt")),
+                    "relevance": purpose,
+                    "limitation": limitation,
+                }
+            )
+
+        if attachment_source_path is None:
+            raise SystemExit(f"{attachment_id} has no source PDF.")
+        pages = sorted(attachment_pages)
+        for page in pages:
+            key = (attachment_pdf_path, page)
+            if key in selected_physical_pages:
+                raise SystemExit(f"Physical source page is allowlisted more than once: {attachment_pdf_path} p.{page}")
+            selected_physical_pages.add(key)
+
+        shared_attachments.append(
+            {
+                "id": attachment_id,
+                "title": title,
+                "source_path": str(attachment_source_path),
+                "source_filename": attachment_filename,
+                "pages": pages,
+                "source_ids": attachment_source_ids,
+                "candidate_ids": attachment_candidate_ids,
+                "purpose": purpose,
+                "callouts": callouts,
+            }
+        )
+        indexed_attachments.append(
+            {
+                "id": attachment_id,
+                "title": title,
+                "recordId": record_id,
+                "candidateIds": list(attachment_candidate_ids),
+                "purpose": purpose,
+                "pdfPath": attachment_pdf_path,
+                "filename": attachment_filename,
+                "sourcePath": attachment_source_path,
+                "sourcePages": pages,
+                "sourceIds": attachment_source_ids,
+                "reviews": indexed_reviews,
+            }
+        )
+
+    if selected_candidate_source_ids != expected_candidate_source_ids:
+        missing = sorted(expected_candidate_source_ids - selected_candidate_source_ids)
+        extra = sorted(selected_candidate_source_ids - expected_candidate_source_ids)
+        raise SystemExit(
+            "packetPlan candidate source allowlist mismatch. "
+            f"Missing: {', '.join(missing) or 'none'}; extra: {', '.join(extra) or 'none'}."
+        )
+    expected_page_count = plan.get("expectedSourcePageCount")
+    if expected_page_count != len(selected_physical_pages):
+        raise SystemExit(
+            f"packetPlan expected {expected_page_count} physical pages but selected "
+            f"{len(selected_physical_pages)}."
+        )
+
+    source_inputs: list[dict[str, Any]] = []
+    for attachment in indexed_attachments:
+        source_path = attachment["sourcePath"]
+        source_inputs.append(
+            {
+                "path": source_path.relative_to(case_root).as_posix(),
+                "filename": attachment["filename"],
+                "recordId": attachment["recordId"],
+                "byteLength": source_path.stat().st_size,
+                "sha256": sha256_file(source_path),
+                "pages": attachment["sourcePages"],
+                "attachmentIds": [attachment["id"]],
+            }
+        )
+
+    return {
+        "plan": plan,
+        "sharedAttachments": shared_attachments,
+        "attachments": indexed_attachments,
+        "candidateSourceIds": sorted(selected_candidate_source_ids),
+        "contextSourceIds": sorted(selected_context_source_ids),
+        "excludedContactSourceIds": list(excluded_contact_source_ids),
+        "sourceInputs": source_inputs,
+        "sourcePageCount": len(selected_physical_pages),
+    }
+
+
+def build_packet_highlight_guide(
+    referral: dict[str, Any],
+    sources: dict[str, dict[str, Any]],
+    packet_context: dict[str, Any],
+    packet_result: dict[str, Any],
+    packet_path: Path,
+    generated_at: str,
+) -> str:
+    packet_pages = packet_result["pages"]
+    divider_by_attachment = {
+        page["attachmentId"]: page["packetPage"]
+        for page in packet_pages
+        if page["kind"] == "divider"
+    }
+    source_page_lookup = {
+        (page["attachmentId"], page["originalPage"]): page["packetPage"]
+        for page in packet_pages
+        if page["kind"] == "source-page"
+    }
+    lines = [
+        "# Police / DA Evidence Packet - Highlight Guide",
+        "",
+        f"**Case:** {clean_text(referral.get('case', {}).get('id'))}  ",
+        f"**Related case:** {clean_text(referral.get('case', {}).get('relatedCase'))}  ",
+        f"**Referral snapshot:** {generated_at}  ",
+        f"**Packet SHA-256:** `{sha256_file(packet_path)}`",
+        "",
+        f"> **{PRIVATE_PACKET_NOTICE}.** This guide and its yellow divider callouts are private-party derivative work product. They are not agency evidence, findings of guilt, or substitutes for the complete originals, certified records, native media, or independent review.",
+        "",
+        "## How to use this guide",
+        "",
+        "- Each attachment divider identifies an exact allowlisted PDF and reviewed source pages.",
+        "- Yellow boxes contain narrow extracted passages for orientation only. Verify the wording against the immediately following original source page or pages.",
+        "- Original source-page content is unmarked and scaled only into reserved header/footer space. No OCR-derived highlight rectangle is drawn over source content.",
+        "- A context entry or contrary source is not independent proof of a candidate element. Preserve limitations, defenses, and the full surrounding record.",
+        "",
+        "## Packet attachment index",
+        "",
+        "| Attachment | Candidates | Source PDF | Source pages | Packet divider | Purpose |",
+        "|---|---|---|---|---|---|",
+    ]
+    for attachment in packet_context["attachments"]:
+        pages = ", ".join(str(page) for page in attachment["sourcePages"])
+        candidates = ", ".join(attachment["candidateIds"]) or "Context only"
+        lines.append(
+            f"| {md_escape(attachment['id'])} | {md_escape(candidates)} | "
+            f"{md_escape(attachment['filename'])} | {pages} | "
+            f"Packet p. {divider_by_attachment[attachment['id']]} | {md_escape(attachment['purpose'])} |"
+        )
+
+    lines.extend(["", "## Guide-only factual callouts", ""])
+    for attachment in packet_context["attachments"]:
+        for review in attachment["reviews"]:
+            source = sources[review["sourceId"]]
+            packet_source_pages = [
+                source_page_lookup[(attachment["id"], page)]
+                for page in review["reviewedSourcePages"]
+            ]
+            lines.extend(
+                [
+                    f"### {review['highlightId']} - {review['sourceId']}",
+                    "",
+                    f"- **Use:** {clean_text(review['use'])}; source role `{clean_text(review['role'])}`.",
+                    f"- **Source:** `{clean_text(source.get('filename'))}`, cited PDF p. {source.get('page')}; reviewed source pp. {', '.join(str(page) for page in review['reviewedSourcePages'])}.",
+                    f"- **Packet location:** divider p. {divider_by_attachment[attachment['id']]}; original source content on packet pp. {', '.join(str(page) for page in packet_source_pages)}.",
+                    f"- **Why indexed:** {clean_text(review['relevance'])}",
+                ]
+            )
+            if review["limitation"]:
+                lines.append(f"- **Limit / verification note:** {clean_text(review['limitation'])}")
+            lines.extend(["", "**Exact extracted passage (verify against original):**", ""])
+            excerpt_lines = clean_text(review["excerpt"]).splitlines() or [""]
+            lines.extend(f"> {line}" for line in excerpt_lines)
+            lines.append("")
+
+    lines.extend(
+        [
+            "## Contact-only source rows available on request",
+            "",
+            clean_text(packet_context["plan"].get("contactPolicy")),
+            "",
+            "These rows are excluded from candidate-evidence selection to avoid reproducing contact material unnecessarily. F0144 page 1 is separately included only for reporter/transcript identity context.",
+            "",
+        ]
+    )
+    for source_id in packet_context["excludedContactSourceIds"]:
+        source = sources[source_id]
+        lines.append(
+            f"- `{source_id}` - `{clean_text(source.get('filename'))}`, PDF p. {source.get('page')} (contact-directory source; available from the app-owned corpus)."
+        )
+    lines.extend(
+        [
+            "",
+            "## Integrity and handling",
+            "",
+            f"- Packet: `{packet_path.name}`; {packet_result['pageCount']} packet pages ({packet_result['dividerPageCount']} dividers and {packet_result['sourcePageCount']} source pages).",
+            f"- Packet builder: shared Arcane PdfSourcePacket {PACKET_BUILDER_VERSION}; source-page selection remains Investigator-specific.",
+            "- The companion machine index maps every packet page to its attachment, callout/source IDs, original PDF/page, and full-original SHA-256.",
+            "- The report manifest hashes this guide, packet, machine index, referral input, and every distinct source PDF used.",
+            "- Use approved agency evidence-handling channels. Obtain certified/native records and preserve original devices/media rather than treating this derivative packet as chain-of-custody evidence.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def build_packet_index(
+    referral: dict[str, Any],
+    packet_context: dict[str, Any],
+    packet_result: dict[str, Any],
+    packet_path: Path,
+    case_root: Path,
+    generated_at: str,
+) -> dict[str, Any]:
+    source_input_by_path = {item["path"]: item for item in packet_context["sourceInputs"]}
+    attachment_by_id = {item["id"]: item for item in packet_context["attachments"]}
+    page_records: list[dict[str, Any]] = []
+    divider_by_attachment: dict[str, int] = {}
+    source_page_lookup: dict[tuple[str, int], int] = {}
+    for raw_page in packet_result["pages"]:
+        attachment = attachment_by_id[raw_page["attachmentId"]]
+        input_record = source_input_by_path[attachment["pdfPath"]]
+        original_page = raw_page["originalPage"]
+        relevant_reviews = attachment["reviews"] if original_page is None else [
+            review for review in attachment["reviews"] if original_page in review["reviewedSourcePages"]
+        ]
+        record = {
+            "packetPage": raw_page["packetPage"],
+            "kind": raw_page["kind"],
+            "attachmentId": attachment["id"],
+            "highlightIds": [review["highlightId"] for review in relevant_reviews],
+            "sourceIds": [review["sourceId"] for review in relevant_reviews],
+            "originalPdf": attachment["filename"],
+            "originalPdfPath": attachment["pdfPath"],
+            "originalPage": original_page,
+            "originalPages": attachment["sourcePages"] if original_page is None else [original_page],
+            "inputByteLength": input_record["byteLength"],
+            "inputSha256": input_record["sha256"],
+        }
+        page_records.append(record)
+        if raw_page["kind"] == "divider":
+            divider_by_attachment[attachment["id"]] = raw_page["packetPage"]
+        else:
+            source_page_lookup[(attachment["id"], original_page)] = raw_page["packetPage"]
+
+    highlight_records: list[dict[str, Any]] = []
+    attachment_records: list[dict[str, Any]] = []
+    for attachment in packet_context["attachments"]:
+        attachment_records.append(
+            {
+                "id": attachment["id"],
+                "title": attachment["title"],
+                "recordId": attachment["recordId"],
+                "candidateIds": attachment["candidateIds"],
+                "purpose": attachment["purpose"],
+                "sourceIds": attachment["sourceIds"],
+                "sourcePages": attachment["sourcePages"],
+                "dividerPacketPage": divider_by_attachment[attachment["id"]],
+                "sourcePacketPages": [
+                    source_page_lookup[(attachment["id"], page)] for page in attachment["sourcePages"]
+                ],
+            }
+        )
+        for review in attachment["reviews"]:
+            highlight_records.append(
+                {
+                    **review,
+                    "mode": "guide-only-callout",
+                    "attachmentId": attachment["id"],
+                    "dividerPacketPage": divider_by_attachment[attachment["id"]],
+                    "sourcePacketPages": [
+                        source_page_lookup[(attachment["id"], page)]
+                        for page in review["reviewedSourcePages"]
+                    ],
+                }
+            )
+
+    return {
+        "schemaVersion": 1,
+        "generatedAt": generated_at,
+        "caseId": clean_text(referral.get("case", {}).get("id")),
+        "relatedCase": clean_text(referral.get("case", {}).get("relatedCase")),
+        "notice": PRIVATE_PACKET_NOTICE,
+        "selection": {
+            "status": packet_context["plan"].get("status"),
+            "policy": packet_context["plan"].get("selectionPolicy"),
+            "highlightMode": packet_context["plan"].get("highlightMode"),
+            "highlightPolicy": packet_context["plan"].get("highlightPolicy"),
+            "candidateIds": [item.get("id") for item in sorted_candidates(referral)],
+            "candidateSourceIds": packet_context["candidateSourceIds"],
+            "contextSourceIds": packet_context["contextSourceIds"],
+            "contactOnlySourceIdsExcludedFromEvidenceSelection": packet_context["excludedContactSourceIds"],
+            "sourcePageCount": packet_context["sourcePageCount"],
+        },
+        "packet": {
+            "path": packet_path.relative_to(case_root).as_posix(),
+            "byteLength": packet_path.stat().st_size,
+            "sha256": sha256_file(packet_path),
+            "pageCount": packet_result["pageCount"],
+            "dividerPageCount": packet_result["dividerPageCount"],
+            "sourcePageCount": packet_result["sourcePageCount"],
+            "sourceContentMarkup": "none",
+            "activePdfFeatures": "removed-by-fresh-page-assembly",
+        },
+        "sourceInputs": packet_context["sourceInputs"],
+        "attachments": attachment_records,
+        "highlights": highlight_records,
+        "pages": page_records,
+    }
 
 
 def build_markdown(referral: dict[str, Any], sources: dict[str, dict[str, Any]], generated_at: str) -> str:
@@ -1094,6 +1586,7 @@ def build_manifest(
     outputs: list[Path],
     generated_at: str,
     case_id: str,
+    source_inputs: list[dict[str, Any]],
 ) -> dict[str, Any]:
     def relative(path: Path) -> str:
         return path.relative_to(case_root).as_posix()
@@ -1112,6 +1605,7 @@ def build_manifest(
             "byteLength": referral_path.stat().st_size,
             "sha256": sha256_file(referral_path),
         },
+        "sourceInputs": source_inputs,
         "outputs": [
             {
                 "path": relative(path),
@@ -1120,7 +1614,7 @@ def build_manifest(
             }
             for path in outputs
         ],
-        "manifestNote": "This manifest hashes the input and the three generated report artifacts. It does not self-hash.",
+        "manifestNote": "This manifest hashes the referral input, every distinct source PDF used by the evidence packet, and every generated report/packet artifact. It does not self-hash.",
     }
 
 
@@ -1149,21 +1643,72 @@ def main(argv: list[str] | None = None) -> int:
     if not case_id:
         raise SystemExit("Referral case.id is required.")
 
-    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    generated_at = clean_text(referral.get("generatedAt"))
+    try:
+        datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise SystemExit("Referral generatedAt must be a valid ISO-8601 timestamp.") from exc
     markdown_path = output_root / "Police-DA-Action-Report.md"
     pdf_path = output_root / "Police-DA-Action-Report.pdf"
     source_index_path = output_root / "Police-DA-Source-Index.csv"
+    packet_path = output_root / "Police-DA-Evidence-Packet.pdf"
+    highlight_guide_path = output_root / "Police-DA-Evidence-Packet-Highlight-Guide.md"
+    packet_index_path = output_root / "Police-DA-Evidence-Packet-Index.json"
     manifest_path = output_root / "Police-DA-Report-Manifest.json"
 
     write_atomic(markdown_path, build_markdown(referral, sources, generated_at) + "\n")
     write_atomic(source_index_path, build_source_index_csv(referral))
     build_pdf(pdf_path, referral, sources, generated_at)
+    packet_context = prepare_packet_plan(referral, sources, case_root)
+    try:
+        packet_result = build_source_packet(
+            packet_path,
+            packet_context["sharedAttachments"],
+            allowed_source_root=case_root,
+            allowed_output_root=output_root,
+            packet_title=f"Police / DA Evidence Packet - Case {case_id}",
+            footer_label=f"Police / DA Evidence Packet | Case {case_id}",
+            notice=PRIVATE_PACKET_NOTICE,
+            author="Arcane Investigator",
+            subject="Private-party source-page packet for law-enforcement and prosecutor screening",
+        )
+    except PacketBuildError as exc:
+        raise SystemExit(f"Evidence packet build failed closed: {exc}") from exc
+    write_atomic(
+        highlight_guide_path,
+        build_packet_highlight_guide(
+            referral,
+            sources,
+            packet_context,
+            packet_result,
+            packet_path,
+            generated_at,
+        )
+        + "\n",
+    )
+    packet_index = build_packet_index(
+        referral,
+        packet_context,
+        packet_result,
+        packet_path,
+        case_root,
+        generated_at,
+    )
+    write_atomic(packet_index_path, json.dumps(packet_index, indent=2, ensure_ascii=False) + "\n")
     manifest = build_manifest(
         referral_path=referral_path,
         case_root=case_root,
-        outputs=[markdown_path, pdf_path, source_index_path],
+        outputs=[
+            markdown_path,
+            pdf_path,
+            source_index_path,
+            packet_path,
+            highlight_guide_path,
+            packet_index_path,
+        ],
         generated_at=generated_at,
         case_id=case_id,
+        source_inputs=packet_context["sourceInputs"],
     )
     write_atomic(manifest_path, json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
 
@@ -1173,7 +1718,15 @@ def main(argv: list[str] | None = None) -> int:
         f"{len(referral.get('sources', []))} sources, "
         f"{len(referral.get('requests', []))} actions."
     )
-    for path in (markdown_path, pdf_path, source_index_path, manifest_path):
+    for path in (
+        markdown_path,
+        pdf_path,
+        source_index_path,
+        packet_path,
+        highlight_guide_path,
+        packet_index_path,
+        manifest_path,
+    ):
         print(f"- {path.relative_to(case_root).as_posix()} ({path.stat().st_size} bytes)")
     return 0
 

@@ -66,6 +66,7 @@ const EMAIL_REGEX =
  * @property {string} AI_personality
  * @property {string} religion
  * @property {string} AI_voice
+ * @property {boolean} initialSpeechMuted
  * @property {string|number} skin
  * @property {boolean} preferrsLocal
  * @property {boolean} developer
@@ -112,6 +113,7 @@ class UserEntity {
             'AI_personality',
             'religion',
             'AI_voice',
+            'initialSpeechMuted',
             'skin',
             'developer',
             'prefersLocal',
@@ -139,6 +141,7 @@ class UserEntity {
     #AI_personality = '';
     #religion = '';
     #AI_voice = '';
+    #initialSpeechMuted = true;
     #skin = 'default';
     #developer = false;
     #prefersLocal = false;
@@ -445,6 +448,24 @@ class UserEntity {
         }
 
         this.#AI_voice = v;
+
+        this.#persist();
+    }
+
+
+
+    /** @returns {boolean} */
+    get initialSpeechMuted(){
+        return this.#initialSpeechMuted;
+    }
+
+    /** @param {boolean} v */
+    set initialSpeechMuted(v){
+        if(!is.boolean(v)){
+            throw new Error('initialSpeechMuted must be boolean');
+        }
+
+        this.#initialSpeechMuted = v;
 
         this.#persist();
     }

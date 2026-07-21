@@ -325,7 +325,7 @@ namespace ArcaneOS
                         WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory
                     };
                     child = Process.Start(start);
-                    if (child == null) throw new InvalidOperationException("Windows did not start the Arcane shell watchdog.");
+                    if (child == null) throw new InvalidOperationException("Microsoft NT did not start the Arcane shell watchdog.");
                     if (!ready.WaitOne(TimeSpan.FromSeconds(5)) || child.HasExited)
                         throw new InvalidOperationException("The Arcane shell watchdog did not confirm that it is monitoring this shell.");
 
@@ -1058,7 +1058,7 @@ namespace ArcaneOS
             if (length == 0) throw new Win32Exception(Marshal.GetLastWin32Error(), "Arcane could not resolve a retained release-directory handle.");
             if (length >= buffer.Capacity)
             {
-                if (length > 32767) throw new InvalidDataException("Arcane retained directory path exceeds the Windows maximum.");
+                if (length > 32767) throw new InvalidDataException("Arcane retained directory path exceeds the Microsoft NT maximum.");
                 buffer = new StringBuilder((int)length + 1);
                 length = GetFinalPathNameByHandle(handle, buffer, (uint)buffer.Capacity, 0);
                 if (length == 0 || length >= buffer.Capacity)
@@ -2215,7 +2215,7 @@ namespace ArcaneOS
             try
             {
                 child = Process.Start(start);
-                if (child == null) throw new InvalidOperationException("Windows did not start the Arcane Authenticode worker.");
+                if (child == null) throw new InvalidOperationException("Microsoft NT did not start the Arcane Authenticode worker.");
                 int processId = child.Id;
                 Task<string> output = Task.Factory.StartNew(
                     delegate { return ReadBounded(child.StandardOutput, MaximumProbeOutput); },
@@ -2237,7 +2237,7 @@ namespace ArcaneOS
                 if ((timedOut || output.IsFaulted || error.IsFaulted) && !child.HasExited)
                 {
                     child.Kill();
-                    if (!child.WaitForExit(5000)) throw new InvalidOperationException("Windows did not reap the timed-out Arcane Authenticode worker.");
+                    if (!child.WaitForExit(5000)) throw new InvalidOperationException("Microsoft NT did not reap the timed-out Arcane Authenticode worker.");
                 }
                 child.WaitForExit();
                 if (!Task.WaitAll(new Task[] { output, error }, 5000))
@@ -2507,7 +2507,7 @@ namespace ArcaneOS
             CertChainPolicyStatus status = new CertChainPolicyStatus();
             status.StructureSize = (uint)Marshal.SizeOf(typeof(CertChainPolicyStatus));
             if (!CertVerifyCertificateChainPolicy(policy, chainContext, ref parameters, ref status) || status.Error != 0)
-                throw new InvalidDataException("Windows certificate-chain policy rejected the provider signer.");
+                throw new InvalidDataException("Microsoft NT certificate-chain policy rejected the provider signer.");
         }
 
         private static string ProviderLeafThumbprint(IntPtr certificateChain)
@@ -2845,7 +2845,7 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
 <li id=""stage-walk"" class=""step""><span class=""name"">Walk the release directory</span><span id=""state-walk"" class=""state"">Pending</span><span id=""detail-walk"" class=""detail"">Waiting to inspect the release boundary.</span></li>
 <li id=""stage-handles"" class=""step""><span class=""name"">Retain protected directory and file handles</span><span id=""state-handles"" class=""state"">Pending</span><span id=""detail-handles"" class=""detail"">Waiting to bind verified objects to this process.</span></li>
 <li id=""stage-hash"" class=""step""><span class=""name"">Verify SHA-256 content hashes</span><span id=""state-hash"" class=""state"">Pending</span><span id=""detail-hash"" class=""detail"">Waiting for the signed content manifest.</span></li>
-<li id=""stage-authenticode"" class=""step""><span class=""name"">Authenticate native executables</span><span id=""state-authenticode"" class=""state"">Pending</span><span id=""detail-authenticode"" class=""detail"">Waiting to start bounded Windows trust workers.</span></li>
+<li id=""stage-authenticode"" class=""step""><span class=""name"">Authenticate native executables</span><span id=""state-authenticode"" class=""state"">Pending</span><span id=""detail-authenticode"" class=""detail"">Waiting to start bounded Microsoft NT trust workers.</span></li>
 <li id=""stage-firstboot"" class=""step""><span class=""name"">Apply first-boot user setup</span><span id=""state-firstboot"" class=""state"">Pending</span><span id=""detail-firstboot"" class=""detail"">Runs only when an idempotent setup step is required.</span></li>
 <li id=""stage-form"" class=""step""><span class=""name"">Construct the trusted shell window</span><span id=""state-form"" class=""state"">Pending</span><span id=""detail-form"" class=""detail"">Waiting for security verification.</span></li>
 <li id=""stage-core"" class=""step""><span class=""name"">Start Arcane Core</span><span id=""state-core"" class=""state"">Pending</span><span id=""detail-core"" class=""detail"">Waiting to establish the local protocol bridge.</span></li>
@@ -2960,7 +2960,7 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
 
         internal void BeginAuthenticodeVerification(int executableCount)
         {
-            BeginStage("authenticode", "Preparing " + executableCount.ToString(CultureInfo.InvariantCulture) + " bounded Windows trust checks.");
+            BeginStage("authenticode", "Preparing " + executableCount.ToString(CultureInfo.InvariantCulture) + " bounded Microsoft NT trust checks.");
         }
 
         internal void ReportAuthenticodeProgress(int current, int total, string fileName, bool complete)
@@ -3397,8 +3397,9 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
 
         private static void TryOpenExternalUri(string value)
         {
+            if (!Program.AllowExternalOpen) return;
             Uri uri;
-            if (!Program.AllowExternalOpen || !Uri.TryCreate(value, UriKind.Absolute, out uri)
+            if (!Uri.TryCreate(value, UriKind.Absolute, out uri)
                 || !String.Equals(uri.Scheme, "mailto", StringComparison.OrdinalIgnoreCase)) return;
             try
             {
@@ -3575,7 +3576,7 @@ h1{font-size:40px;font-weight:300;letter-spacing:7px;margin:12px 0 6px;text-tran
                 start.EnvironmentVariables["ARCANE_RELEASE_TIMESTAMP_VERIFIED"] = releaseSecurity.TimestampVerified ? "1" : "0";
             }
             Process child = Process.Start(start);
-            if (child == null) throw new InvalidOperationException("Windows did not start Arcane Core.");
+            if (child == null) throw new InvalidOperationException("Microsoft NT did not start Arcane Core.");
             return new ArcaneCoreProcess(child);
         }
 

@@ -13,10 +13,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = await fs.readFile(path.join(root, 'src/native/windows.cjs'), 'utf8');
 const coreSource = await fs.readFile(path.join(root, 'src/core/arcane-core.template.cjs'), 'utf8');
 const nativeCapabilityBlock = source.match(/const SAFE_APP_CAPABILITIES = new Set\(\[([\s\S]*?)\]\);/);
-assert(nativeCapabilityBlock, 'Windows installed-app capability policy must be declared');
+assert(nativeCapabilityBlock, 'Microsoft NT installed-app capability policy must be declared');
 const nativeCapabilities = [...nativeCapabilityBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
 assert.deepEqual(nativeCapabilities, [...new Set(PACKAGED_APP_CAPABILITIES)].sort(),
-  'Windows verification must accept exactly the capabilities approved by the app packager');
+  'Microsoft NT verification must accept exactly the capabilities approved by the app packager');
 assert.match(coreSource,/stage = simulate \? null : `\$\{PATHS\.installRoot\}\.stage-\$\{process\.pid\}-\$\{crypto\.randomBytes\(24\)\.toString\('hex'\)\}`/,
   'simulation must not receive an install-stage path and real stages must use an unpredictable 192-bit name');
 assert.match(coreSource,/if \(!simulate\) \{[\s\S]*?await native\.writeLaunchers\(stage, payload\);[\s\S]*?await writeFile\(path\.join\(stage, 'arcane-install\.json'\)/,
@@ -27,6 +27,8 @@ assert.match(coreSource,/status = user\.present \? 'global-install-required' : '
   'a per-user Ollama copy must produce an explicit global-install-required state');
 assert.match(coreSource,/requiredFor: \['arcane-user'\].*requiredScope: 'machine'/,
   'Ollama must remain a machine-scoped Arcane-user requirement');
+assert.match(coreSource,/REQUIREMENT_DEFINITIONS\.filter\(\(item\) => item\.required\)/,
+  'base installation must select only requirements marked required for the active platform');
 assert.doesNotMatch(source,/fsp\.rm\(paths\.ollamaRoot/,
   'Ollama update must never remove the live installation tree before the service is quiesced');
 assert.match(source,/mkdtemp\(`\$\{paths\.ollamaRoot\}\.stage-`\)[\s\S]*?waitForOllamaService\([^)]*'stopped'[\s\S]*?fsp\.rename\(stage, paths\.ollamaRoot\)/,
@@ -37,7 +39,7 @@ assert.match(source,/OLLAMA_SERVICE_NOT_OWNED[\s\S]*if \(!existingService[.]pres
   'Ollama service repair must refuse unowned services and create only when absent');
 assert.doesNotMatch(source,/\['config', 'ArcaneOllama'/,
   'Ollama update must not mutate an existing service configuration it cannot restore exactly');
-assert.match(source,/ArcaneOllamaService[.]exe/,'Ollama must be hosted by the Arcane Windows service wrapper');
+assert.match(source,/ArcaneOllamaService[.]exe/,'Ollama must be hosted by the Arcane Microsoft NT service wrapper');
 assert.match(source,/NT AUTHORITY\\\\LocalService/,'the Ollama service must run as LocalService rather than LocalSystem');
 assert.match(source,/Promoted the prior Ollama download into the protected verified cache/,
   'a prior download must be reusable only after promotion and digest verification');
@@ -56,6 +58,27 @@ function coreFunctionSource(start,end){
   assert.notEqual(to,-1,`Missing Core boundary ${end}`);
   return coreSource.slice(from,to);
 }
+
+function requirementDefinitionsFor(platform){
+  const context={
+    platform,
+    BUNDLE_MANIFEST:{requirements:{ollama:{minimumVersion:'0.30.0'}}},
+  };
+  vm.runInNewContext(`${coreFunctionSource('const REQUIREMENT_DEFINITIONS', 'function checkOllamaRequirement(definition)')}\nglobalThis.requirements=REQUIREMENT_DEFINITIONS;`,context);
+  return context.requirements;
+}
+
+const ntRequirements=requirementDefinitionsFor('win32');
+const linuxRequirements=requirementDefinitionsFor('linux');
+const ntOllamaDefinition=ntRequirements.find((item)=>item.id==='ollama');
+const linuxOllamaDefinition=linuxRequirements.find((item)=>item.id==='ollama');
+assert.equal(ntOllamaDefinition.required,true,'Ollama must remain a base installation requirement on Microsoft NT');
+assert.equal(linuxOllamaDefinition.required,false,'Ollama must not block base Arcane OS installation on Linux');
+assert.deepEqual([...linuxOllamaDefinition.requiredFor],['arcane-user'],
+  'Linux decoupling must preserve the machine-scoped Arcane-user requirement declaration');
+assert.equal(linuxOllamaDefinition.requiredScope,'machine');
+assert(ntRequirements.filter((item)=>item.required).some((item)=>item.id==='ollama'));
+assert.equal(linuxRequirements.filter((item)=>item.required).some((item)=>item.id==='ollama'),false);
 
 const queries=[];
 const adapter=sandbox.createAdapter({
@@ -80,6 +103,23 @@ assert.equal(
   queries[0].args[1],
   'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
 );
+
+{
+  const releaseProbes=[];
+  const pathAdapter=sandbox.createAdapter({
+    simulate:false,
+    path:path.win32,
+    fs:{
+      existsSync(candidate){ releaseProbes.push(path.win32.normalize(candidate)); return false; },
+    },
+  });
+  const payload=pathAdapter.installPayload('C:\\arcane-bundle');
+  assert.equal(payload.releaseReady,false);
+  assert(releaseProbes.some((candidate)=>candidate.toLowerCase()==='c:\\arcane-bundle\\dist\\nt\\arcane-release.json'),
+    'the Microsoft NT adapter must probe the canonical dist/nt release');
+  assert.equal(releaseProbes.some((candidate)=>candidate.toLowerCase().includes('\\dist\\windows\\')),false,
+    'the Microsoft NT adapter must never fall back to a stale dist/windows release');
+}
 
 {
   const permissionQueries=[];
@@ -528,7 +568,7 @@ assert.match(provisionCall.script,/Remove-LocalUser/);
 assert.match(provisionCall.script,/could not release the temporary Arcane registry hive/);
 assert.ok(provisionCall.script.includes('Windows\\CurrentVersion\\Policies\\System'));
 assert.ok(provisionCall.script.includes('Windows NT\\CurrentVersion\\Winlogon'));
-assert.match(provisionCall.script,/could not compensate both Windows shell bindings/);
+assert.match(provisionCall.script,/could not compensate both Microsoft NT shell bindings/);
 assert.match(provisionCall.script,/policy verification failed/);
 assert.match(provisionCall.script,/legacy verification failed/);
 assert.doesNotMatch(provisionCall.script,/secret-password/);
@@ -537,7 +577,7 @@ const restoreCall=scripts.find(entry=>entry.options.purpose==='restore-arcane-us
 assert.match(restoreCall.script,/ARCANE_PREPARE_/);
 assert.match(restoreCall.script,/\$policyAllowed/);
 assert.match(restoreCall.script,/\$legacyAllowed/);
-assert.match(restoreCall.script,/could not compensate both Windows shell bindings after restoration failed/);
+assert.match(restoreCall.script,/could not compensate both Microsoft NT shell bindings after restoration failed/);
 const activationCall=scripts.find(entry=>entry.options.purpose==='activate-staged-arcane-user');
 assert.match(activationCall.script,/SID\.Value -ne \$expectedSid/);
 assert.match(activationCall.script,/\$policyMatches/);
@@ -554,7 +594,7 @@ assert.match(aclCall.script,/recovery state changed while its ACL was being lock
 assert.match(aclCall.script,/SetAccessRuleProtection\(\$true,\$false\)/);
 assert.match(aclCall.script,/will not adopt pre-existing recovery state from a directory that was not already administrator-owned/);
 const installAclCall=scripts.find(entry=>entry.options.purpose==='protect-arcane-installation');
-assert(installAclCall,'Windows installation protection must use the deterministic ACL script');
+assert(installAclCall,'Microsoft NT installation protection must use the deterministic ACL script');
 assert.match(installAclCall.script,/New-ArcaneInstallAcl/);
 assert.match(installAclCall.script,/SecurityIdentifier\('S-1-5-18'\)/);
 assert.match(installAclCall.script,/SecurityIdentifier\('S-1-5-32-544'\)/);
@@ -568,13 +608,13 @@ assert.match(installAclCall.script,/Arcane installation grants write access to a
 assert.doesNotMatch(installAclCall.script,/SYSTEM:\(OI\)|Administrators:\(OI\)|Users:\(OI\)/,
   'installation ACLs must not depend on localized account names or ambiguous icacls inheritance');
 const listUsersCall=scripts.find(entry=>entry.options.purpose==='list-arcane-users');
-assert(listUsersCall, 'Windows user discovery must query the effective per-user shell.');
+assert(listUsersCall, 'Microsoft NT user discovery must query the effective per-user shell.');
 assert.match(source, /USER_DISCOVERY_FAILED[\s\S]*will not substitute cached recovery names/,
-  'failed Windows user discovery must not return stale recovery records as live accounts');
+  'failed Microsoft NT user discovery must not return stale recovery records as live accounts');
 assert.match(source, /USER_DISCOVERY_FAILED[\s\S]*diagnosticDetails:\s*\{ cause \}/,
-  'failed Windows user discovery must retain the underlying command failure');
+  'failed Microsoft NT user discovery must retain the underlying command failure');
 assert.doesNotMatch(source, /source: 'arcane-state'/,
-  'the Windows user list must never fabricate live rows from Arcane recovery state');
+  'the Microsoft NT user list must never fabricate live rows from Arcane recovery state');
 assert.match(
   listUsersCall.script,
   /elseif\(\$isAdmin -and \(\$recorded -contains \$user\.Name\) -and \$profilePath/,
@@ -804,7 +844,7 @@ if (process.platform === 'win32') {
   const policyAssignmentLine=listUsersCall.script.split(/\r?\n/).find((line)=>line.trim().startsWith('$policyAssigned='));
   const legacyAssignmentLine=listUsersCall.script.split(/\r?\n/).find((line)=>line.trim().startsWith('$legacyAssigned='));
   const assignmentLine=listUsersCall.script.split(/\r?\n/).find((line)=>line.trim().startsWith('$assigned='));
-  assert(policyAssignmentLine && legacyAssignmentLine && assignmentLine, 'Windows user discovery must contain both exact shell-identity decisions.');
+  assert(policyAssignmentLine && legacyAssignmentLine && assignmentLine, 'Microsoft NT user discovery must contain both exact shell-identity decisions.');
   const identityCases=[
     {name:'exact-dual',policy:expectedShell,legacy:expectedShell,expected:true},
     {name:'policy-only',policy:expectedShell,legacy:null,expected:false},
@@ -833,4 +873,4 @@ if (process.platform === 'win32') {
   }
 }
 
-console.log('Arcane Windows native adapter smoke test passed.');
+console.log('Arcane Microsoft NT native adapter smoke test passed.');

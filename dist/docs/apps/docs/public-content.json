@@ -26,6 +26,38 @@
     {
       "source": "example/_example_assets/dbopfsExample.png",
       "output": "dbopfsExample.png"
+    },
+    {
+      "source": "apps/docs/guides/images/windows-add-arcane-user.jpg",
+      "output": "windows-add-arcane-user.jpg"
+    },
+    {
+      "source": "apps/docs/guides/images/windows-account-awaiting-activation.jpg",
+      "output": "windows-account-awaiting-activation.jpg"
+    },
+    {
+      "source": "apps/docs/guides/images/windows-account-activated.jpg",
+      "output": "windows-account-activated.jpg"
+    },
+    {
+      "source": "apps/docs/guides/images/windows-arcane-shell.jpg",
+      "output": "windows-arcane-shell.jpg"
+    },
+    {
+      "source": "apps/docs/guides/images/linux-add-arcane-user.png",
+      "output": "linux-add-arcane-user.png"
+    },
+    {
+      "source": "apps/docs/guides/images/linux-account-awaiting-activation.png",
+      "output": "linux-account-awaiting-activation.png"
+    },
+    {
+      "source": "apps/docs/guides/images/linux-account-activated.png",
+      "output": "linux-account-activated.png"
+    },
+    {
+      "source": "apps/docs/guides/images/linux-arcane-shell.png",
+      "output": "linux-arcane-shell.png"
     }
   ],
   "sources": [
@@ -288,9 +320,25 @@
       "id": "provision-user",
       "source": "apps/docs/guides/provision-user.md",
       "title": "Provision an Arcane OS user",
-      "summary": "Safely stage, save credentials for, activate, verify, and recover an Arcane user on Microsoft NT.",
+      "summary": "Choose the Windows or experimental unsigned-local Linux walkthrough for staging, activating, signing in, and recovering an Arcane user.",
       "category": "Get started",
-      "tags": ["provisioning", "account", "microsoft-nt", "onboarding"]
+      "tags": ["provisioning", "account", "windows", "linux", "onboarding"]
+    },
+    {
+      "id": "provision-user-windows",
+      "source": "apps/docs/guides/provision-user-windows.md",
+      "title": "Provision your first Arcane OS user on Windows",
+      "summary": "Use Arcane Provisioner to stage and activate a Windows account, then complete the first sign-in and open Arcane Shell.",
+      "category": "Get started",
+      "tags": ["provisioning", "account", "windows", "first-sign-in", "onboarding"]
+    },
+    {
+      "id": "provision-user-linux",
+      "source": "apps/docs/guides/provision-user-linux.md",
+      "title": "Provision your first Arcane OS user on Linux",
+      "summary": "Build and verify the unsigned-local release, use an already-root Provisioner to stage and activate a standard Linux account, then complete native or WSLg sign-in.",
+      "category": "Get started",
+      "tags": ["linux", "unsigned-local", "provisioning", "first-sign-in", "shell", "onboarding"]
     },
     {
       "id": "developer-setup",

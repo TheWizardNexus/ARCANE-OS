@@ -1,0 +1,11 @@
+Welcome to ARCANE OS. ARCANE stands for Adaptive Runtime for Cognitive AI Native Environments. It is an AI-native operating environment designed around what a person is trying to accomplish—not around finding the right app, file, or sequence of menus.
+
+Under ARCANE, intent, context, memory, policy, and capabilities work together. You express a goal. ARCANE helps assemble the approved tools and information needed to move that goal forward, while keeping important actions visible and governed by the permissions of the person and the device.
+
+ARCANE is not a chatbot pasted onto a desktop. It is the environment through which people and intelligent systems work with the computer. The familiar shell, settings, documents, and specialized applications remain available, but they are connected through a shared runtime and capability boundary.
+
+ARCANE currently runs on both Microsoft NT and the Linux kernel. That makes it adaptable to the controls of a regulated workplace and to the needs of a personal device. The underlying platform supplies drivers, identity, processes, and hardware access; ARCANE supplies the consistent experience and governed collaboration layer. Android support is currently under development.
+
+The result is one environment that can serve engineers, operators, families, security teams, and mission-focused organizations without asking every user to become a systems expert.
+
+ARCANE asks a different question: how should humans and intelligent systems work together? Explore the shell, open an application, and begin with the outcome you want to achieve. Welcome to ARCANE.

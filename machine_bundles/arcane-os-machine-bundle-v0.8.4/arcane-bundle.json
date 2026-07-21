@@ -2,10 +2,16 @@
   "name": "Arcane OS Machine Bundle",
   "version": "0.8.4",
   "protocolVersion": "arcane/1",
-  "description": "Native WebView Arcane shell and machine provisioner for Windows and Linux.",
+  "description": "Native WebView Arcane shell and machine provisioner for Microsoft NT and Linux.",
   "build": {
     "webview2SdkVersion": "1.0.4078.44",
     "webview2SdkSha256": "dc4d1d9168df26b830398303e50210b6e1729f6ce5a7ac69d2c766852f489962"
+  },
+  "installation": {
+    "linux": {
+      "defaultTarget": "graphical.target",
+      "sessionType": "x11"
+    }
   },
   "apps": {
     "provisioner": {
@@ -57,7 +63,7 @@
     },
     "ollama": {
       "minimumVersion": "0.30.0",
-      "installPolicy": "required globally for Arcane users; on Windows the Provisioner may install or repair the verified official archive as the automatic ArcaneOllama machine service; Linux remains manual"
+      "installPolicy": "required before provisioning Arcane users on Microsoft NT and before local-AI use on every platform; base Arcane OS installation and account staging on Linux or WSL do not require it; on Microsoft NT the Provisioner may install or repair the verified official archive as the automatic ArcaneOllama machine service; Linux installation remains manual"
     },
     "renderer": {
       "minimumVersion": null,
@@ -66,7 +72,7 @@
     },
     "session-control": {
       "minimumVersion": null,
-      "installPolicy": "native Windows session control or supported Linux desktop/login manager"
+      "installPolicy": "native Microsoft NT session control or supported Linux desktop/login manager"
     }
   }
 }

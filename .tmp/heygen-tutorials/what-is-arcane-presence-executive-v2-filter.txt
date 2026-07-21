@@ -1,0 +1,31 @@
+[0:v]format=yuv420p[base];
+
+[1:v]scale=1920:1080:flags=lanczos,drawbox=x=58:y=42:w=520:h=58:color=0x050912@0.82:t=fill,drawbox=x=58:y=42:w=7:h=58:color=0xa873ff@0.96:t=fill,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='CONCEPT ARCHITECTURE | IDEATION':fontcolor=white:fontsize=27:x=86:y=56,format=rgba,fade=t=in:st=14.20:d=0.50:alpha=1,fade=t=out:st=29.55:d=0.50:alpha=1[concept];
+
+[2:v]scale=1680:946:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:100:color=0x050b14,drawbox=x=120:y=24:w=424:h=54:color=0x0c1726@0.96:t=fill,drawbox=x=120:y=24:w=7:h=54:color=0x67dcff@0.96:t=fill,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='SETTINGS | APP CAPTURE':fontcolor=white:fontsize=25:x=150:y=37,format=rgba,fade=t=in:st=30.15:d=0.45:alpha=1,fade=t=out:st=36.40:d=0.45:alpha=1[settings];
+
+[3:v]scale=1680:946:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:100:color=0x050b14,drawbox=x=120:y=24:w=520:h=54:color=0x0c1726@0.96:t=fill,drawbox=x=120:y=24:w=7:h=54:color=0xe4b651@0.96:t=fill,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='BOSS LIBRARIES | APP CAPTURE':fontcolor=white:fontsize=25:x=150:y=37,format=rgba,fade=t=in:st=36.72:d=0.45:alpha=1,fade=t=out:st=41.90:d=0.45:alpha=1[boss];
+
+[4:v]scale=1680:946:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:100:color=0x050b14,drawbox=x=120:y=24:w=492:h=54:color=0x0c1726@0.96:t=fill,drawbox=x=120:y=24:w=7:h=54:color=0xb6c9ff@0.96:t=fill,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='REDRESS | APP CAPTURE':fontcolor=white:fontsize=25:x=150:y=37,format=rgba,fade=t=in:st=42.18:d=0.45:alpha=1,fade=t=out:st=45.75:d=0.45:alpha=1[redress];
+
+[5:v]scale=1920:1080:flags=lanczos,drawbox=x=350:y=817:w=1220:h=196:color=0x03070e@0.78:t=fill,drawbox=x=350:y=817:w=1220:h=5:color=0xa873ff@0.95:t=fill,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='MICROSOFT NT + LINUX KERNEL':fontcolor=white:fontsize=46:x=(w-text_w)/2:y=852,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='ANDROID | IN DEVELOPMENT':fontcolor=0xa9ebff:fontsize=31:x=(w-text_w)/2:y=929,format=rgba,fade=t=in:st=46.18:d=0.50:alpha=1,fade=t=out:st=55.00:d=0.50:alpha=1[vision];
+
+color=c=black:s=1920x1080:r=25:d=92,format=rgba,colorchannelmixer=aa=0,drawbox=x=978:y=330:w=830:h=330:color=0x050912@0.70:t=fill:replace=1,drawbox=x=978:y=330:w=8:h=330:color=0xa873ff@0.95:t=fill:replace=1,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='ARCANE OS':fontcolor=white:fontsize=78:x=1030:y=374,drawtext=fontfile='C\:/Windows/Fonts/segoeui.ttf':text='Adaptive Runtime for':fontcolor=0xdce8ff:fontsize=34:x=1034:y=490,drawtext=fontfile='C\:/Windows/Fonts/segoeui.ttf':text='Cognitive AI Native Environments':fontcolor=0xdce8ff:fontsize=34:x=1034:y=538,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='INTRODUCTION':fontcolor=0x9feaff:fontsize=25:x=1034:y=614,fade=t=in:st=0.25:d=0.50:alpha=1,fade=t=out:st=6.90:d=0.50:alpha=1[title];
+
+color=c=black:s=1920x1080:r=25:d=92,format=rgba,colorchannelmixer=aa=0,drawbox=x=1012:y=330:w=760:h=330:color=0x050912@0.72:t=fill:replace=1,drawbox=x=1012:y=330:w=8:h=330:color=0x67dcff@0.95:t=fill:replace=1,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='RUNS ABOVE':fontcolor=0xa9ebff:fontsize=25:x=1060:y=376,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='MICROSOFT NT':fontcolor=white:fontsize=48:x=1060:y=430,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='+ LINUX KERNEL':fontcolor=white:fontsize=48:x=1060:y=489,drawtext=fontfile='C\:/Windows/Fonts/segoeui.ttf':text='Android support is under development.':fontcolor=0xdce8ff:fontsize=29:x=1060:y=575,fade=t=in:st=55.35:d=0.50:alpha=1,fade=t=out:st=67.45:d=0.50:alpha=1[platform];
+
+color=c=black:s=1920x1080:r=25:d=92,format=rgba,colorchannelmixer=aa=0,drawbox=x=1000:y=286:w=790:h=430:color=0x050912@0.72:t=fill:replace=1,drawbox=x=1000:y=286:w=8:h=430:color=0xe4b651@0.96:t=fill:replace=1,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='ONE ENVIRONMENT':fontcolor=0xffdfa0:fontsize=28:x=1048:y=330,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='ENGINEERS  |  OPERATORS':fontcolor=white:fontsize=36:x=1048:y=402,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='FAMILIES  |  SECURITY TEAMS':fontcolor=white:fontsize=33:x=1048:y=467,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='MISSION-FOCUSED ORGANIZATIONS':fontcolor=white:fontsize=29:x=1048:y=530,drawtext=fontfile='C\:/Windows/Fonts/segoeui.ttf':text='Without asking every user to become a systems expert.':fontcolor=0xdce8ff:fontsize=27:x=1048:y=619,fade=t=in:st=67.72:d=0.50:alpha=1,fade=t=out:st=77.40:d=0.50:alpha=1[audiences];
+
+color=c=black:s=1920x1080:r=25:d=92,format=rgba,colorchannelmixer=aa=0,drawbox=x=992:y=330:w=800:h=330:color=0x050912@0.72:t=fill:replace=1,drawbox=x=992:y=330:w=8:h=330:color=0xa873ff@0.96:t=fill:replace=1,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='BEGIN WITH THE OUTCOME':fontcolor=white:fontsize=46:x=1040:y=386,drawtext=fontfile='C\:/Windows/Fonts/segoeui.ttf':text='Explore the shell. Open an application.':fontcolor=0xdce8ff:fontsize=29:x=1040:y=487,drawtext=fontfile='C\:/Windows/Fonts/segoeui.ttf':text='Express the goal you want to achieve.':fontcolor=0xdce8ff:fontsize=29:x=1040:y=535,drawtext=fontfile='C\:/Windows/Fonts/seguisb.ttf':text='WELCOME TO ARCANE':fontcolor=0xa9ebff:fontsize=25:x=1040:y=607,fade=t=in:st=77.82:d=0.50:alpha=1[outro];
+
+[base][concept]overlay=0:0:eof_action=pass[v1];
+[v1][settings]overlay=0:0:eof_action=pass[v2];
+[v2][boss]overlay=0:0:eof_action=pass[v3];
+[v3][redress]overlay=0:0:eof_action=pass[v4];
+[v4][vision]overlay=0:0:eof_action=pass[v5];
+[v5][title]overlay=0:0:eof_action=pass[v6];
+[v6][platform]overlay=0:0:eof_action=pass[v7];
+[v7][audiences]overlay=0:0:eof_action=pass[v8];
+[v8][outro]overlay=0:0:eof_action=pass[v9];
+[v9]tpad=stop_mode=clone:stop_duration=2,fade=t=out:st=90.24:d=1,format=yuv420p[vout];
+[0:a]apad=pad_dur=2,atrim=duration=91.24,afade=t=out:st=90.24:d=1[aout]

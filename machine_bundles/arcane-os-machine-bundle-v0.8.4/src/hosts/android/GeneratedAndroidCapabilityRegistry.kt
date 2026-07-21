@@ -13,11 +13,23 @@ internal object GeneratedAndroidCapabilityRegistry {
     internal const val PLATFORM_STATUS_METHOD = "platform.status"
     internal const val PLATFORM_STATUS_CAPABILITY = "system.read"
     internal const val SYSTEM_PING_METHOD = "system.ping"
+    internal const val TERMINAL_CLOSE_METHOD = "terminal.close"
+    internal const val TERMINAL_CLOSE_CAPABILITY = "terminal.execute"
+    internal const val TERMINAL_LIST_METHOD = "terminal.list"
+    internal const val TERMINAL_LIST_CAPABILITY = "terminal.execute"
+    internal const val TERMINAL_RESIZE_METHOD = "terminal.resize"
+    internal const val TERMINAL_RESIZE_CAPABILITY = "terminal.execute"
+    internal const val TERMINAL_SIGNAL_METHOD = "terminal.signal"
+    internal const val TERMINAL_SIGNAL_CAPABILITY = "terminal.execute"
+    internal const val TERMINAL_START_METHOD = "terminal.start"
+    internal const val TERMINAL_START_CAPABILITY = "terminal.execute"
+    internal const val TERMINAL_WRITE_METHOD = "terminal.write"
+    internal const val TERMINAL_WRITE_CAPABILITY = "terminal.execute"
     internal const val USER_CURRENT_METHOD = "user.current"
     internal const val USER_CURRENT_CAPABILITY = "identity.read"
     internal const val VERSION_CURRENT_METHOD = "version.current"
-    internal val grants = listOf(APPS_LAUNCH_CAPABILITY, APPS_LIST_CAPABILITY, EXTERNAL_OPEN_CAPABILITY, NETWORK_STATUS_CAPABILITY, PLATFORM_STATUS_CAPABILITY, USER_CURRENT_CAPABILITY)
-    internal val methods = listOf(APP_CURRENT_METHOD, APPS_LAUNCH_METHOD, APPS_LIST_METHOD, EXTERNAL_OPEN_METHOD, NETWORK_STATUS_METHOD, PLATFORM_STATUS_METHOD, SYSTEM_PING_METHOD, USER_CURRENT_METHOD, VERSION_CURRENT_METHOD)
+    internal val grants = listOf(APPS_LAUNCH_CAPABILITY, APPS_LIST_CAPABILITY, EXTERNAL_OPEN_CAPABILITY, NETWORK_STATUS_CAPABILITY, PLATFORM_STATUS_CAPABILITY, TERMINAL_CLOSE_CAPABILITY, TERMINAL_LIST_CAPABILITY, TERMINAL_RESIZE_CAPABILITY, TERMINAL_SIGNAL_CAPABILITY, TERMINAL_START_CAPABILITY, TERMINAL_WRITE_CAPABILITY, USER_CURRENT_CAPABILITY)
+    internal val methods = listOf(APP_CURRENT_METHOD, APPS_LAUNCH_METHOD, APPS_LIST_METHOD, EXTERNAL_OPEN_METHOD, NETWORK_STATUS_METHOD, PLATFORM_STATUS_METHOD, SYSTEM_PING_METHOD, TERMINAL_CLOSE_METHOD, TERMINAL_LIST_METHOD, TERMINAL_RESIZE_METHOD, TERMINAL_SIGNAL_METHOD, TERMINAL_START_METHOD, TERMINAL_WRITE_METHOD, USER_CURRENT_METHOD, VERSION_CURRENT_METHOD)
 
     internal fun isSupported(method: String): Boolean {
         return methods.contains(method)
@@ -29,6 +41,12 @@ internal object GeneratedAndroidCapabilityRegistry {
         if (method == EXTERNAL_OPEN_METHOD) return EXTERNAL_OPEN_CAPABILITY
         if (method == NETWORK_STATUS_METHOD) return NETWORK_STATUS_CAPABILITY
         if (method == PLATFORM_STATUS_METHOD) return PLATFORM_STATUS_CAPABILITY
+        if (method == TERMINAL_CLOSE_METHOD) return TERMINAL_CLOSE_CAPABILITY
+        if (method == TERMINAL_LIST_METHOD) return TERMINAL_LIST_CAPABILITY
+        if (method == TERMINAL_RESIZE_METHOD) return TERMINAL_RESIZE_CAPABILITY
+        if (method == TERMINAL_SIGNAL_METHOD) return TERMINAL_SIGNAL_CAPABILITY
+        if (method == TERMINAL_START_METHOD) return TERMINAL_START_CAPABILITY
+        if (method == TERMINAL_WRITE_METHOD) return TERMINAL_WRITE_CAPABILITY
         if (method == USER_CURRENT_METHOD) return USER_CURRENT_CAPABILITY
         return null
     }
@@ -36,6 +54,12 @@ internal object GeneratedAndroidCapabilityRegistry {
     internal fun isAllowedForApplication(method: String, applicationId: String, applicationType: String): Boolean {
         if (method == APPS_LAUNCH_METHOD) return applicationId in setOf("shell", "terminal")
         if (method == APPS_LIST_METHOD) return applicationId in setOf("shell", "terminal")
+        if (method == TERMINAL_CLOSE_METHOD) return applicationId in setOf("terminal")
+        if (method == TERMINAL_LIST_METHOD) return applicationId in setOf("terminal")
+        if (method == TERMINAL_RESIZE_METHOD) return applicationId in setOf("terminal")
+        if (method == TERMINAL_SIGNAL_METHOD) return applicationId in setOf("terminal")
+        if (method == TERMINAL_START_METHOD) return applicationId in setOf("terminal")
+        if (method == TERMINAL_WRITE_METHOD) return applicationId in setOf("terminal")
         return isSupported(method)
     }
 }

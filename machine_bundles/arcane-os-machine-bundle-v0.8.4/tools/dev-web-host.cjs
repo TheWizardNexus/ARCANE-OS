@@ -9,7 +9,38 @@ const root = path.resolve(__dirname, '..');
 const argv = process.argv.slice(2);
 const app = (argv.find(v => v.startsWith('--app=')) || '--app=provisioner').slice(6);
 const noOpen = argv.includes('--no-open');
+const simulationArguments = argv.filter(value => value === '--simulate');
+const simulatedPlatformArguments = argv.filter(value => value.startsWith('--simulate-platform='));
+const unsignedReleaseArguments = argv.filter(value => value === '--allow-unsigned-local-release');
+if (simulationArguments.length > 1) {
+  throw new Error('Arcane development host accepts --simulate at most once.');
+}
+if (simulatedPlatformArguments.length > 1) {
+  throw new Error('Arcane development host accepts at most one simulated platform.');
+}
+if (unsignedReleaseArguments.length > 1) {
+  throw new Error('Arcane development host accepts --allow-unsigned-local-release at most once.');
+}
+const simulate = simulationArguments.length === 1;
+const simulatedPlatform = simulatedPlatformArguments.length === 1
+  ? simulatedPlatformArguments[0].slice('--simulate-platform='.length)
+  : null;
+const allowUnsignedLocalRelease = unsignedReleaseArguments.length === 1;
+if (simulatedPlatform !== null && !simulate) {
+  throw new Error('Arcane development host requires --simulate before selecting a simulated platform.');
+}
+if (simulatedPlatform !== null && simulatedPlatform !== 'linux' && simulatedPlatform !== 'win32') {
+  throw new Error('Arcane development host accepts only linux or win32 as a simulated platform.');
+}
+if (allowUnsignedLocalRelease && !simulate) {
+  throw new Error('Arcane development host requires --simulate before allowing an unsigned local release.');
+}
 const coreArgs = [path.join(root, 'runtime/arcane-core.cjs'), `--app=${app}`, `--bundle-root=${root}`];
+if (simulate) {
+  coreArgs.push('--simulate');
+  if (simulatedPlatform !== null) coreArgs.push(`--simulate-platform=${simulatedPlatform}`);
+  if (allowUnsignedLocalRelease) coreArgs.push('--allow-unsigned-local-release');
+}
 const core = spawn(process.execPath, coreArgs, { stdio:['pipe','pipe','inherit'] });
 const pending = new Map();
 const eventClients = new Set();

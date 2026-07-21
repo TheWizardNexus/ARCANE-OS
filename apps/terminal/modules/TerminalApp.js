@@ -27,13 +27,20 @@ const client=new TerminalClient();
 let values=store.defaults();
 const commands=createArcaneTerminalCommands({onClear:()=>workspace.clear(),onTheme:changeTheme});
 
-await Promise.all([ready(workspace,'terminal-workspace-ready'),ready(preferences,'preferences-form-ready')]);
-values=await store.load();
-workspace.configure({prompt:values.prompt,completions:[...commands.completions(''),'arcane status','arcane apps','arcane models','arcane metrics','arcane network','arcane user','arcane diagnostics','arcane capabilities','arcane ping','app list','app package','native-app list','native-app build','tool app-package','tool native-app-build'],theme:themeValues(values)});
-preferences.configure({title:'Appearance & behavior',description:'Settings are stored per Arcane user and apply immediately.',schema:store.schema,values});
-bind();
-await identifyPlatform();
-await newSession();
+try{
+    await Promise.all([ready(workspace,'terminal-workspace-ready'),ready(preferences,'preferences-form-ready')]);
+    values=await store.load();
+    workspace.configure({prompt:values.prompt,completions:[...commands.completions(''),'arcane status','arcane apps','arcane models','arcane metrics','arcane network','arcane user','arcane diagnostics','arcane capabilities','arcane ping','app list','app package','native-app list','native-app build','tool app-package','tool native-app-build'],theme:themeValues(values)});
+    preferences.configure({title:'Appearance & behavior',description:'Settings are stored per Arcane user and apply immediately.',schema:store.schema,values});
+    bind();
+    await identifyPlatform();
+    await newSession();
+}catch(error){
+    await ready(workspace,'terminal-workspace-ready');
+    const id=`startup-error-${Date.now()}`;
+    workspace.addSession({id,title:'Terminal startup failed',shell:'sh',state:'error'});
+    workspace.append(`${error.code?`${error.code}: `:''}${error.message||error}\n${error.resolution?`${error.resolution}\n`:''}`,'error',id);
+}
 
 function bind(){
     workspace.addEventListener('terminal-submit',submit);
@@ -54,7 +61,11 @@ function bind(){
 async function newSession(){
     if(!client.available){const id=`local-${Date.now()}`;workspace.addSession({id,title:'Arcane commands',shell:'local',state:'error'});workspace.append('Native terminal access is unavailable in this browser preview. Open Arcane Terminal from the installed Arcane OS shell to run operating-system commands. Arcane commands remain discoverable with help.\n\n','system',id);if(values.welcome)workspace.append(welcome(),'system',id);return;}
     try{const session=await client.start({shell:values.shell,cwd:values.workingDirectory,columns:120,rows:32});workspace.addSession(session);if(values.welcome)workspace.append(welcome(),'system',session.id);}
-    catch(error){showError(error);}
+    catch(error){
+        const id=`error-${Date.now()}`;
+        workspace.addSession({id,title:'Terminal unavailable',shell:'sh',state:'error'});
+        workspace.append(`${error.code?`${error.code}: `:''}${error.message||error}\n${error.resolution?`${error.resolution}\n`:''}`,'error',id);
+    }
 }
 
 async function closeSession(id){
@@ -77,4 +88,19 @@ function changeTheme(name){if(!themes[name])return `Unknown theme. Choose: ${Obj
 function welcome(){return 'Arcane Terminal ready.\n  help                          built-in command guide\n  tools                         registered system tools\n  app package terminal          build the Terminal distribution package\n  native-app build terminal     build its portable native host target\n  arcane status                  platform and application status\n  arcane capabilities            granted native methods\n  theme midnight                 switch appearance\n  All other input runs in the native shell.\n\n';}
 function showError(error){workspace.append(`${error.message||error}\n`,'error');}
 async function identifyPlatform(){try{const status=await globalThis.Arcane?.platform?.status?.();document.querySelector('#platformLabel').textContent=status?.platform||status?.os?.name||'Arcane native';}catch{document.querySelector('#platformLabel').textContent='Browser preview';}}
-function ready(element,eventName){if(element.ready)return Promise.resolve();return new Promise(resolve=>element.addEventListener(eventName,resolve,{once:true}));}
+function ready(element,eventName){
+    if(element.ready)return Promise.resolve();
+    return new Promise(resolve=>{
+        let settled=false;
+        const finish=()=>{
+            if(settled)return;
+            settled=true;
+            element.removeEventListener(eventName,finish);
+            element.removeEventListener('html-import-ready',finish);
+            resolve();
+        };
+        element.addEventListener(eventName,finish,{once:true});
+        element.addEventListener('html-import-ready',finish,{once:true});
+        if(element.ready)finish();
+    });
+}

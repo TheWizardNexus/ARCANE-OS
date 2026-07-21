@@ -61,7 +61,7 @@ class HTMLImport extends HTMLElement {
     const html = await response.text();
     this.shadowRoot.innerHTML = html;
 
-    this.#executeScripts();
+    await this.#executeScripts();
 
     this.ready=true;
     this.dispatchEvent(new CustomEvent('html-import-ready',{
@@ -72,10 +72,9 @@ class HTMLImport extends HTMLElement {
     return true;
   }
 
-  #executeScripts() {
-    const scripts = this.shadowRoot.querySelectorAll('script');
-    scripts.forEach(
-      script => {
+  async #executeScripts() {
+    const scripts = Array.from(this.shadowRoot.querySelectorAll('script'));
+    for(const script of scripts){
         if (script.src) {
           console.error('ONLY INLINE SCRIPTS SUPPORTED AT THIS TIME FOR SECURITY REASONS');
           console.warn('script src path will need to be limited to ./{text}.js, ../{text}.js), or acceptable sub folders. This can be complex.');
@@ -93,19 +92,20 @@ class HTMLImport extends HTMLElement {
         const hostToken=`html-import-${Date.now()}-${htmlImportScriptId++}`;
 
         executable.dataset.arcaneHostToken=hostToken;
-        executable.textContent=`(async function(){${source}}).call((()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const host=registry instanceof Map&&token?registry.get(token):null;if(!host)throw new Error('HTML import host binding is unavailable.');return host;})())`;
+        executable.textContent=`(()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const binding=registry instanceof Map&&token?registry.get(token):null;if(!binding?.host)throw new Error('HTML import host binding is unavailable.');binding.promise=(async function(){${source}}).call(binding.host);})()`;
         script.parentNode.removeChild(script);
 
-        htmlImportHostRegistry.set(hostToken,this);
+        const binding={host:this,promise:null};
+        htmlImportHostRegistry.set(hostToken,binding);
         try{
           document.head.appendChild(executable);
+          await binding.promise;
         }finally{
           executable.remove();
           htmlImportHostRegistry.delete(hostToken);
           delete executable.dataset.arcaneHostToken;
         }
-      }
-    );
+    }
   }
 }
   

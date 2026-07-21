@@ -16,7 +16,8 @@ import { replaceTemplateTokenExactlyOnce } from './exact-template-replacement.mj
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const bundleRoot = path.resolve(here, '..');
-const componentScriptSuffix = "}).call((()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const host=registry instanceof Map&&token?registry.get(token):null;if(!host)throw new Error('HTML import host binding is unavailable.');return host;})())";
+const componentScriptPrefix = "(()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const binding=registry instanceof Map&&token?registry.get(token):null;if(!binding?.host)throw new Error('HTML import host binding is unavailable.');binding.promise=(async function(){";
+const componentScriptSuffix = '}).call(binding.host);})()';
 
 test('template replacement preserves JavaScript replacement metacharacters byte-for-byte', () => {
   const injected = ['$&', '$`', "$'", '$1', String.raw`C:\\Arcane\\$&\\$1`].join('|');
@@ -104,7 +105,7 @@ async function assertSecurityMetadata(target, appId, microphone, frameSources = 
   const component = await fs.readFile(path.join(target, 'app/arcane/components/chat.html'), 'utf8');
   const componentSource = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/i.exec(component)?.[1];
   assert(componentSource, 'shared chat component must contain its behavior script');
-  const wrapperHash = sha256Source(`(async function(){${componentSource}${componentScriptSuffix}`);
+  const wrapperHash = sha256Source(`${componentScriptPrefix}${componentSource}${componentScriptSuffix}`);
   assert(manifest.app.security.contentSecurityPolicy.includes(wrapperHash), `${appId} CSP omits approved component wrapper`);
 }
 
@@ -465,14 +466,16 @@ test('HTML component execution uses a deterministic CSP wrapper and cleans up ho
   assert(!/\beval\s*\(/.test(source));
   assert.match(source, /document\.createElement\('script'\)/);
   assert(source.includes('executable.dataset.arcaneHostToken=hostToken;'));
-  assert(source.includes(`executable.textContent=\`(async function(){\${source}${componentScriptSuffix}\`;`));
+  assert(source.includes('binding.promise=(async function(){${source}}).call(binding.host);'));
   assert(!source.includes('get(${JSON.stringify(hostToken)})'));
-  assert(componentScriptSuffix.includes("if(!host)throw new Error('HTML import host binding is unavailable.')"));
-  assert(source.includes('htmlImportHostRegistry.set(hostToken,this);'));
+  assert(source.includes("if(!binding?.host)throw new Error('HTML import host binding is unavailable.')"));
+  assert(source.includes('const binding={host:this,promise:null};'));
+  assert(source.includes('htmlImportHostRegistry.set(hostToken,binding);'));
+  assert(source.includes('await binding.promise;'));
   assert(source.includes('htmlImportHostRegistry.delete(hostToken);'));
   assert(source.includes('delete executable.dataset.arcaneHostToken;'));
   assert(
-    source.indexOf('htmlImportHostRegistry.set(hostToken,this);')
+    source.indexOf('htmlImportHostRegistry.set(hostToken,binding);')
       < source.indexOf('document.head.appendChild(executable);'),
     'host token must be registered before component execution',
   );
@@ -483,7 +486,7 @@ test('HTML component execution uses a deterministic CSP wrapper and cleans up ho
   );
 });
 
-test('Windows target generator embeds the validated navigation allowlist', async () => {
+test('Microsoft NT target generator embeds the validated navigation allowlist', async () => {
   const source = await fs.readFile(path.join(bundleRoot, 'tools/build-windows-target-app.ps1'), 'utf8');
   assert.match(source, /\$AppId\.Length -gt 64/);
   assert.match(source, /\[a-z0-9\]\*\(\?:-\[a-z0-9\]\+\)\*/);

@@ -16,6 +16,17 @@ const appId = 'boss';
 const launcherName = 'ArcaneApp-boss.exe';
 const signerThumbprint = 'A'.repeat(40);
 const verifiedAt = new Date().toISOString();
+const nativeThemeFiles = [
+  'app/arcane/css/theme.css',
+  'app/arcane/entities/Preference.js',
+  'app/arcane/entities/Theme.js',
+  'app/arcane/modules/AppDataScope.js',
+  'app/arcane/modules/AppearancePreferences.js',
+  'app/arcane/modules/PreferenceStore.js',
+  'app/arcane/modules/SystemAppearance.js',
+  'app/arcane/modules/ThemeBootstrap.js',
+  'app/arcane/modules/ThemeManager.js',
+];
 const machineExclusions = new Set([
   'arcane-install.json',
   'arcane-machine-content.json',
@@ -147,7 +158,9 @@ async function buildFixture(name, options = {}) {
     },
   };
   await writeJson(root, 'arcane-bundle.json', machineBundle);
+  for (const relativePath of nativeThemeFiles) await write(root, relativePath, `fixture:${relativePath}\n`);
   await write(root, 'app/shared/arcane-api.js', 'globalThis.arcane={};\n');
+  await write(root, 'app/shared/SystemPlatformPresentation.js', 'globalThis.ArcaneSystemPlatformPresentation={};\n');
   await write(root, 'app/shared/arcane-sigil.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>\n');
   await write(root, 'app/shared/arcane-sigil-512.png', Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   await write(root, 'app/shared/arcane-sigil.ico', Buffer.from([0, 0, 1, 0]));
@@ -968,4 +981,4 @@ try {
   await fs.rm(temporaryRoot, { recursive: true, force: true });
 }
 
-console.log('Arcane Windows installed-app adapter smoke test passed.');
+console.log('Arcane Microsoft NT installed-app adapter smoke test passed.');

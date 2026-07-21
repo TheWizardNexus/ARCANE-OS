@@ -1,0 +1,107 @@
+WEBVTT
+
+00:00.000 --> 00:03.020
+Here is how to provision and activate an Arcane user.
+
+00:03.680 --> 00:07.340
+Arcane, adaptive runtime for cognitive AI native environments,
+
+00:07.640 --> 00:10.300
+runs on Microsoft NT and the Linux kernel
+
+00:10.300 --> 00:12.840
+for regulated environments and personal devices.
+
+00:13.320 --> 00:15.240
+Android support is under development.
+
+00:15.640 --> 00:18.880
+This demonstration shows the Microsoft NT Provisioner.
+
+00:19.300 --> 00:21.720
+On Linux, follow host-specific instructions.
+
+00:22.120 --> 00:24.100
+Identity and privilege steps can differ.
+
+00:24.700 --> 00:26.700
+Sign in as an authorized administrator.
+
+00:26.900 --> 00:29.680
+Open the trusted provisioner, refresh status,
+
+00:29.680 --> 00:31.360
+and review its readiness checks.
+
+00:31.660 --> 00:33.980
+Complete the verified machine baseline first.
+
+00:34.580 --> 00:37.560
+Under Create Arcane Users, enter the intended account name.
+
+00:37.720 --> 00:40.480
+Do not choose the administrator account running the provisioner.
+
+00:40.660 --> 00:42.360
+Select Create Arcane User.
+
+00:42.620 --> 00:46.440
+A new Microsoft NT account is staged as a disabled standard user,
+
+00:46.840 --> 00:49.660
+assigned Arcane Shell, and given a temporary password.
+
+00:49.940 --> 00:53.180
+An existing standard account keeps its password and memberships.
+
+00:53.560 --> 00:56.700
+Save any new credential privately for the intended user.
+
+00:56.700 --> 01:01.260
+Never place it in chat, email, documentation, logs, or source control,
+
+01:01.460 --> 01:03.100
+and never show it in a recording.
+
+01:03.480 --> 01:07.040
+Once the credential is secure, select Activate this account.
+
+01:07.540 --> 01:09.560
+Activation is a separate privilege step.
+
+01:09.840 --> 01:12.180
+Creation does not silently enable the account.
+
+01:12.620 --> 01:14.380
+Sign out of the administrator's session.
+
+01:14.380 --> 01:18.320
+Let the user sign in, change the temporary password when prompted,
+
+01:18.540 --> 01:20.600
+and verify Arcane Shell opens.
+
+01:20.860 --> 01:24.200
+Check Settings, Logout, and the documented recovery path.
+
+01:24.540 --> 01:29.460
+If activation is interrupted, leave the account staged and retry in the provisioner.
+
+01:29.660 --> 01:31.740
+Follow the target host's release guidance.
+
+01:32.160 --> 01:34.240
+Provisioning and activation are complete.
+
+01:34.240 --> 01:39.200
+The new user can begin in Arcane, with a clear handoff and a recoverable path forward.
+
+01:39.200 --> 01:39.280
+The new user can begin in Arcane, with a clear handoff and a recoverable path forward.
+
+01:39.280 --> 01:39.460
+The new user can begin in Arcane, with a clear handoff and a recoverable path forward.
+
+01:39.540 --> 01:39.660
+The new user can begin in, with a clear handoff and a farewell pattern.
+

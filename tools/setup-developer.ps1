@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
 if ([string]$env:OS -cne 'Windows_NT') {
-  throw 'The unified Arcane OS developer setup currently supports Windows only.'
+  throw 'The unified Arcane OS developer setup currently supports Microsoft NT only.'
 }
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -114,7 +114,7 @@ function Preserve-IncompatiblePnpmTree {
   New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
   $safeLabel = $Label -replace '[^a-zA-Z0-9.-]', '-'
   $backup = Join-Path $backupRoot "$safeLabel-$([DateTime]::UtcNow.ToString('yyyyMMddHHmmssfff'))"
-  Write-Warning "$Label uses a pnpm hardlinked dependency tree that npm cannot reliably clean on Windows. Preserving it at $backup before npm ci."
+  Write-Warning "$Label uses a pnpm hardlinked dependency tree that npm cannot reliably clean on Microsoft NT. Preserving it at $backup before npm ci."
   Move-Item -LiteralPath $nodeModules -Destination $backup
 }
 
@@ -138,7 +138,7 @@ function Remove-UntrackedVendoredDependencyFiles {
   }
 }
 
-Write-Host 'Arcane OS unified Windows developer setup' -ForegroundColor Green
+Write-Host 'Arcane OS unified Microsoft NT developer setup' -ForegroundColor Green
 Write-Host "Repository: $root"
 
 $git = Resolve-CommandPath 'git.exe'
@@ -167,7 +167,7 @@ if (-not (Test-WindowsSdk)) {
 if (-not (Test-WindowsSdk)) { throw 'The Windows SDK installation completed but required build tools are still unavailable.' }
 
 if (-not (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) -and -not $SkipSigning) {
-  throw 'Windows PKI support with New-SelfSignedCertificate is required for development signing.'
+  throw 'Microsoft NT PKI support with New-SelfSignedCertificate is required for development signing.'
 }
 
 Invoke-External -Label 'Verifying public package-lock registries' -FilePath $node `
@@ -188,17 +188,17 @@ if (-not $SkipChecks) {
 }
 
 if (-not $SkipSigning) {
-  Write-Warning 'The next step creates or reuses a non-exportable per-user development certificate and trusts only that development leaf certificate for the current Windows user.'
-  Invoke-External -Label 'Initializing local Windows development signing' -FilePath $npm `
+  Write-Warning 'The next step creates or reuses a non-exportable per-user development certificate and trusts only that development leaf certificate for the current Microsoft NT user.'
+  Invoke-External -Label 'Initializing local Microsoft NT development signing' -FilePath $npm `
     -Arguments @('run', 'signing:bootstrap:dev:windows') -WorkingDirectory $root
 }
 
 if (-not $SkipBuild) {
   if ($SkipSigning) {
-    Invoke-External -Label 'Building the unsigned local-test Windows distribution' -FilePath $npm `
+    Invoke-External -Label 'Building the unsigned local-test Microsoft NT distribution' -FilePath $npm `
       -Arguments @('run', 'build:distribution:windows:unsigned-local-test') -WorkingDirectory $bundle
   } else {
-    Invoke-External -Label 'Building the development-signed Windows distribution' -FilePath $npm `
+    Invoke-External -Label 'Building the development-signed Microsoft NT distribution' -FilePath $npm `
       -Arguments @('run', 'build:dev:windows') -WorkingDirectory $root
   }
 }
@@ -209,6 +209,6 @@ Write-Host "npm:          $(& $npm '--version')"
 Write-Host "Git:          $(& $git '--version')"
 Write-Host "Windows SDK:  $(Find-WindowsSdkSignTool)"
 if (-not $SkipBuild) {
-  Write-Host "Distribution: $(Join-Path $bundle 'dist\windows')"
+  Write-Host "Microsoft NT distribution: $(Join-Path $bundle 'dist\nt')"
 }
 Write-Host 'Production signing material was not created, read, or modified.'

@@ -1,0 +1,71 @@
+WEBVTT
+
+00:00.000 --> 00:05.540
+Welcome to Arcane OS Arcane stands for Adaptive Runtime for Cognitive AI Native Environments.
+
+00:05.780 --> 00:10.220
+It is an AI Native operating environment designed around what a person is trying to accomplish,
+
+00:10.640 --> 00:13.800
+not around finding the right app, file, or sequence of menus.
+
+00:14.360 --> 00:18.800
+Under Arcane, Intent, Context, Memory, Policy, and Capabilities work together.
+
+00:19.060 --> 00:20.040
+You express a goal.
+
+00:20.440 --> 00:24.760
+Arcane helps assemble the approved tools and information needed to move that goal forward,
+
+00:24.760 --> 00:29.700
+while keeping important actions visible and governed by the permissions of the person and the device.
+
+00:30.240 --> 00:32.680
+Arcane is not a chatbot pasted onto a desktop.
+
+00:33.020 --> 00:36.980
+It is the environment through which people and intelligent systems work with the computer.
+
+00:37.420 --> 00:42.160
+The familiar shell, settings, documents, and specialized applications remain available,
+
+00:42.380 --> 00:45.540
+but they are connected through a shared runtime and capability boundary.
+
+00:46.400 --> 00:50.140
+Arcane currently runs on both Microsoft NT and the Linux kernel.
+
+00:50.340 --> 00:53.500
+That makes it adaptable to the controls of a regulated workplace
+
+00:53.500 --> 00:55.320
+and to the needs of a personal device.
+
+00:55.500 --> 01:00.860
+The underlying platform supplies drivers, identity, processes, and hardware access.
+
+01:01.400 --> 01:05.000
+Arcane supplies the consistent experience and governed collaboration layer.
+
+01:05.560 --> 01:07.600
+Android support is currently under development.
+
+01:07.980 --> 01:12.940
+The result is one environment that can serve engineers, operators, families, security teams,
+
+01:13.120 --> 01:17.580
+and mission-focused organizations without asking every user to become a systems expert.
+
+01:18.140 --> 01:19.880
+Arcane asks a different question.
+
+01:20.140 --> 01:22.620
+How should humans and intelligent systems work together?
+
+01:22.620 --> 01:27.460
+Explore the shell, open an application, and begin with the outcome you want to achieve.
+
+01:27.760 --> 01:28.880
+Welcome to Arcane.
+

@@ -25,7 +25,7 @@ Arcane OS development uses a normal Git checkout, locked public dependencies, th
    .\setup-developer.bat -SkipPrerequisiteInstall
    ```
 
-4. Open the development-signed Provisioner from `dist\windows\bin\ArcaneProvisioner.exe`. Local development trust belongs only to the Windows user who created it and is never a production signing claim.
+4. Open the development-signed Provisioner from `dist\nt\bin\ArcaneProvisioner.exe`. Local development trust belongs only to the Microsoft NT user who created it and is never a production signing claim.
 
 ## Manual, browser-runtime-only setup
 

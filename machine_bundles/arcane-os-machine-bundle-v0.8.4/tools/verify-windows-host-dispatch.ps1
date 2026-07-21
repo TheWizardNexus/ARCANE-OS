@@ -1,5 +1,5 @@
 param(
-  [string]$Dist = (Join-Path (Split-Path -Parent $PSScriptRoot) 'dist\windows'),
+  [string]$Dist = (Join-Path (Split-Path -Parent $PSScriptRoot) 'dist\nt\bin'),
   [string[]]$Files = @('ArcaneProvisioner.exe', 'ArcaneShell.exe')
 )
 
@@ -129,7 +129,7 @@ function Format-UtcTimestamp([DateTimeOffset]$value) {
 foreach ($fileName in $Files) {
   $path = Join-Path $Dist $fileName
   if (-not (Test-Path -LiteralPath $path)) {
-    throw "$fileName is missing. Build the Windows hosts before checking their COM dispatch surface."
+    throw "$fileName is missing. Build the Microsoft NT hosts before checking their COM dispatch surface."
   }
 
   $assembly = [Reflection.Assembly]::LoadFrom((Resolve-Path -LiteralPath $path))
@@ -390,4 +390,4 @@ foreach ($fileName in $Files) {
   Write-Host "$fileName exposes ArcaneBridge.Send through IDispatch (DISPID $dispatchId)."
 }
 
-Write-Host 'Windows WebView2 bridge COM dispatch verification passed.'
+Write-Host 'Microsoft NT WebView2 bridge COM dispatch verification passed.'

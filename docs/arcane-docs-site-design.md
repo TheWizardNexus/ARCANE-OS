@@ -64,11 +64,11 @@ Dependencies flow from `apps/docs` to `arcane/` and `tools/`. Shared code does n
 
 ### Provision an Arcane OS user
 
-The guide is grounded in the machine-bundle README and security/accessibility contracts. It covers the supported Microsoft NT provisioner, prerequisite readiness, disabled-account staging, private temporary-credential capture, separate activation, first sign-in, password-reset prepare/apply separation, shell restoration, and failure/recovery boundaries. It does not display or collect credentials and clearly states that real Linux account provisioning is unavailable in the current release.
+The platform-specific guides are grounded in the machine-bundle README and security/accessibility contracts. The Microsoft NT guide covers the supported Microsoft NT Provisioner, prerequisite readiness, disabled-account staging, private temporary-credential capture, separate activation, first sign-in, password-reset prepare/apply separation, shell restoration, and failure/recovery boundaries. The Linux guide covers the experimental unsigned-local build and verification path, separately authorized root launch, locked-and-expired staging, separate activation, native X11 sign-in, console/SSH fallback, WSLg manual launch, existing-password preservation, and shell recovery. Neither guide displays or collects credentials, and the Linux guide explicitly distinguishes controlled simulation evidence from unfinished real clean-host acceptance.
 
 ### Set up as an Arcane developer
 
-The guide is grounded in the root README, build/release SOP, and developer command reference. It identifies `setup-developer.bat` as the normal Windows entry point, explains public locked dependencies and development-only signing, distinguishes focused checks from complete gates, and separates development-signed or unsigned-local verification from production publication.
+The guide is grounded in the root README, build/release SOP, and developer command reference. It identifies `setup-developer.bat` as the normal Microsoft NT entry point, explains public locked dependencies and development-only signing, distinguishes focused checks from complete gates, and separates development-signed or unsigned-local verification from production publication.
 
 ## Security and privacy review scope
 

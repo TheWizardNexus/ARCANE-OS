@@ -8,12 +8,18 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const version=JSON.parse(await fs.readFile(path.join(root,'arcane-bundle.json'),'utf8')).version;
+const nativeAdapter=process.platform==='win32'?'windows':'linux';
 const installRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-installed-integrity-'));
 const stateRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-installed-state-'));
+const bundleRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'arcane-installed-bundle-'));
 const payloadPath = path.join(installRoot, 'bin', 'ArcaneShell.exe');
 const originalPayload = Buffer.from('ARCANE-INTEGRITY-FIXTURE');
 const bundlePayload = Buffer.from(JSON.stringify({ name:'Arcane OS',version }, null, 2));
 const releasePayload = Buffer.from(JSON.stringify({ name:'Arcane OS',version }, null, 2));
+
+// Keep this smoke test independent from any distribution already built in the
+// repository while still giving Arcane Core an explicit bundle root.
+await fs.writeFile(path.join(bundleRoot, 'arcane-bundle.json'), bundlePayload);
 
 function digest(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -44,7 +50,7 @@ await fs.writeFile(path.join(installRoot, 'arcane-install.json'), JSON.stringify
 const child = spawn(process.execPath, [
   path.join(root, 'runtime/arcane-core.cjs'),
   '--app=provisioner',
-  `--bundle-root=${root}`,
+  `--bundle-root=${bundleRoot}`,
 ], {
   stdio: ['pipe', 'pipe', 'pipe'],
   env: { ...process.env, ARCANE_INSTALL_ROOT: installRoot, ARCANE_STATE_ROOT: stateRoot },
@@ -148,9 +154,9 @@ try {
     ...manifest,
     name: 'Arcane OS',
     version: '0.7.0',
-    nativeAdapter: 'windows',
-    payloadMode: 'windows-executable',
-    platform: { platform: 'windows' },
+    nativeAdapter,
+    payloadMode: `${nativeAdapter}-executable`,
+    platform: { platform: nativeAdapter },
   };
   delete legacyManifest.integrity;
   await fs.rm(path.join(installRoot, 'arcane-bundle.json'));
@@ -233,4 +239,5 @@ try {
   child.kill();
   await fs.rm(installRoot, { recursive: true, force: true });
   await fs.rm(stateRoot, { recursive: true, force: true });
+  await fs.rm(bundleRoot, { recursive: true, force: true });
 }

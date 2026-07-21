@@ -7,7 +7,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-if ([string]$env:OS -cne 'Windows_NT') { throw 'Arcane local development signing is available only on Windows.' }
+if ([string]$env:OS -cne 'Windows_NT') { throw 'Arcane local development signing is available only on Microsoft NT.' }
 
 $root = Split-Path -Parent $PSScriptRoot
 $subject = 'CN=The Wizard Nexus Development'

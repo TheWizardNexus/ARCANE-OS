@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const shell=await fs.readFile(path.join(root,'src','frontend','shell','index.html'),'utf8');
+const platformPresentationSource=await fs.readFile(path.resolve(root,'../../arcane/modules/SystemPlatformPresentation.js'),'utf8');
 assert.match(shell,/id="operationNotice"[\s\S]*?<progress id="operationNoticeProgress"/,'the Shell must show asynchronous model progress in an accessible notification');
 assert.match(shell,/Arcane\.events\.on\('operation\.started', showOperationNotice\)/,'the Shell notification must open for the boot model operation');
 const scriptMatches=[...shell.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].filter((match)=>!(/\bsrc\s*=/i.test(match[0])));
@@ -113,6 +114,7 @@ function shellHarness(){
   document.createElement=(tagName)=>new FakeElement(tagName,document);
   document.querySelector=(selector)=>selector.startsWith('#')?document.elements.get(selector.slice(1))||null:null;
   document.execCommand=()=>true;
+  document.documentElement=new FakeElement('html',document,'documentElement');
   document.body=new FakeElement('body',document,'body');
   for(const id of ids)document.elements.set(id,new FakeElement(id==='logoutDialog'?'dialog':'div',document,id));
 
@@ -122,7 +124,7 @@ function shellHarness(){
   const lockCalls=[];
   const selectionCalls=[];
   const Arcane={
-    events:{on(){}},
+    events:{on(){},when(){return ()=>{};}},
     system:{ping:async()=>({ok:true}),lock:async()=>{lockCalls.push(true);return {simulated:true};}},
     version:{current:async()=>({version:'0.8.2'})},
     user:{current:async()=>({username:'arcane-test',displayName:'Arcane Test'})},
@@ -139,6 +141,7 @@ function shellHarness(){
   const location={origin:'https://arcane.local',href:'https://arcane.local/shell/index.html',reload(){}};
   const window={document,Arcane,location,addEventListener(){}};
   const context=vm.createContext({window,document,Arcane,location,navigator:{},URL,console,setTimeout,clearTimeout,setInterval(){return 0;},Date,Error,Promise,JSON});
+  vm.runInContext(platformPresentationSource,context,{filename:'SystemPlatformPresentation.js'});
   vm.runInContext(scriptMatches[0][1],context,{filename:'shell.behavior.js'});
   return {document,launchCalls,resolveLaunch,lockCalls,selectionCalls};
 }
@@ -148,6 +151,8 @@ const behavior=shellHarness();
 await flushTasks();
 const grid=behavior.document.elements.get('appGrid');
 assert.equal(grid.children.length,1,'a verified app must render as one launch button');
+assert.equal(behavior.document.elements.get('osValue').textContent,'Microsoft NT','the Shell must present win32 as Microsoft NT');
+assert.equal(behavior.document.documentElement.classList.contains('arcane-kernel-nt'),true,'the Shell must expose the shared NT presentation marker');
 const appButton=grid.children[0];
 assert.equal(appButton.getAttribute('aria-label'),'Open BOSS');
 assert.equal(behavior.document.elements.get('securityWarning').hidden,false,'unsigned local test warning must remain visible');

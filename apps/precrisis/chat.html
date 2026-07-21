@@ -69,7 +69,7 @@
                 data-dirs="chats"
                 href="./arcane/components/data-view.html?v=4"
             ></html-import>
-            <html-import id="chat" class="chat" href="./arcane/components/chat.html?v=3"></html-import>
+            <html-import id="chat" class="chat" href="./arcane/components/chat.html?v=4"></html-import>
             <div id="uploadStatus" class="hidden"></div>
         </main>
         <html-import id="progressModal" class="modal" href="./arcane/components/modal.html?v=13"></html-import>
@@ -279,6 +279,8 @@
 
             initStarted=true;
 
+            configureInitialSpeechMute();
+
             const memories=await dbopfs.getAll('memories');
             console.log(memories);
         
@@ -313,6 +315,28 @@ ${JSON.stringify(memories)}`
                 },
                 2222
             );
+        }
+
+        function configureInitialSpeechMute(){
+            const speech=chat.shadowRoot?.querySelector('#speech');
+
+            if(!speech){
+                return;
+            }
+
+            const initialMuted=user.initialSpeechMuted;
+            const configure=()=>speech.configure?.({
+                initialMuted
+            });
+
+            speech.initialMuted=initialMuted;
+
+            if(speech.componentReady){
+                configure();
+                return;
+            }
+
+            speech.addEventListener('speech-ready',configure,{once:true});
         }
 
         // Check if Ollama is installed or running on system via health check on backend server

@@ -20,3 +20,8 @@ dist/boss/apps/boss/originals/**/*.ppt filter=lfs diff=lfs merge=lfs -text
 dist/boss/apps/boss/originals/**/*.pptx filter=lfs diff=lfs merge=lfs -text
 dist/boss/apps/boss/originals/**/*.odp filter=lfs diff=lfs merge=lfs -text
 dist/boss/apps/boss/originals/**/*.docx filter=lfs diff=lfs merge=lfs -text
+.tmp/heygen-tutorials/*.mp4 filter=lfs diff=lfs merge=lfs -text
+.tmp/heygen-tutorials/*.srt whitespace=-blank-at-eof
+.tmp/heygen-tutorials/*.vtt whitespace=-blank-at-eof
+.tmp/heygen-tutorials/*-raw.txt whitespace=-blank-at-eof
+.tmp/heygen-tutorials/*.tsv whitespace=-blank-at-eol

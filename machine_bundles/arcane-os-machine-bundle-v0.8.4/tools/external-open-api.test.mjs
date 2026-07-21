@@ -102,6 +102,7 @@ test('core and native adapters enforce the mailto-only external-open contract', 
     assert.match(linux, /EXTERNAL_OPEN_SIMULATED/);
     assert.match(packager, /'external\.open'/);
     assert.match(host, /Program\.AllowExternalOpen/);
+    assert.match(host, /if \(!Program\.AllowExternalOpen\) return;\s+Uri uri;\s+if \(!Uri\.TryCreate/);
     assert.match(host, /String\.Equals\(uri\.Scheme, "mailto"/);
     assert.match(host, /UseShellExecute = true/);
     assert.match(targetBuild, /-contains 'external\.open'/);

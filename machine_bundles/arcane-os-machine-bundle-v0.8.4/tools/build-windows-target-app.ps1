@@ -190,7 +190,7 @@ $targetsRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist\targets')).TrimEnd(
 $sourcePath = [IO.Path]::GetFullPath($Source)
 $targetPath = [IO.Path]::GetFullPath($Target)
 if ($AppId.Length -gt 64 -or $AppId -cnotmatch '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$' -or $AppId -cmatch '^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$') {
-  throw 'Invalid or Windows-reserved Arcane target app id.'
+  throw 'Invalid or Microsoft NT-reserved Arcane target app id.'
 }
 foreach ($candidate in @($sourcePath, $targetPath)) {
   if (-not $candidate.StartsWith($targetsRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Refusing to build an app outside dist\targets.' }
@@ -210,7 +210,7 @@ $sdkVersion = [string]$bundle.build.webview2SdkVersion
 $expectedPackageHash = ([string]$bundle.build.webview2SdkSha256).ToLowerInvariant()
 $package = Join-Path $cache "microsoft.web.webview2.$sdkVersion.nupkg"
 $sdkRoot = Join-Path $cache ".app-build-$sdkVersion-$PID"
-$pkg = Join-Path $root 'node_modules\.bin\pkg.cmd'
+$pkg = Join-Path $root 'node_modules\@yao-pkg\pkg\lib-es5\bin.js'
 $hostSource = Join-Path $root 'src\hosts\windows\ArcaneHost.cs'
 $hostManifest = Join-Path $root 'src\hosts\windows\ArcaneHost.manifest'
 $pipeGuardSource = Join-Path $root 'src\hosts\windows\ArcanePipeGuard.cs'
@@ -356,7 +356,7 @@ try {
   Recover-ArcanePublication -Target $targetPath -Stage $stage -Backup $backup -Verify $verifyTargetPackage -RequireSigned $requireSignedRelease
 
   if (Test-Path -LiteralPath $sdkRoot) { Remove-Item -LiteralPath $sdkRoot -Recurse -Force }
-  if (-not (Test-Path -LiteralPath $pkg -PathType Leaf)) { throw 'The pinned pkg build tool is missing. Run npm ci first.' }
+  if (-not (Test-Path -LiteralPath $pkg -PathType Leaf)) { throw 'The pinned pkg JavaScript entry point is missing. Run npm ci first.' }
   New-Item -ItemType Directory -Path $cache -Force | Out-Null
   if (-not (Test-Path -LiteralPath $package -PathType Leaf)) {
     $url = "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/$sdkVersion/microsoft.web.webview2.$sdkVersion.nupkg"
@@ -421,7 +421,7 @@ try {
   Copy-Item -LiteralPath $formsDll -Destination (Join-Path $stage 'Microsoft.Web.WebView2.WinForms.dll') -Force
   Copy-Item -LiteralPath $loaderDll -Destination (Join-Path $stage 'WebView2Loader.dll') -Force
 
-  & $pkg (Join-Path $stage 'runtime\arcane-core.cjs') '--targets' 'node22-win-x64' '--output' (Join-Path $stage 'ArcaneCore.exe')
+  & node $pkg (Join-Path $stage 'runtime\arcane-core.cjs') '--targets' 'node22-win-x64' '--output' (Join-Path $stage 'ArcaneCore.exe')
   if ($LASTEXITCODE -ne 0) { throw "Packaging target ArcaneCore.exe failed with exit code $LASTEXITCODE." }
   $runtimeSource = Join-Path $stage 'runtime'
   if (Test-Path -LiteralPath $runtimeSource) { Remove-Item -LiteralPath $runtimeSource -Recurse -Force }
@@ -436,7 +436,7 @@ try {
   if (-not $csc) { throw 'The .NET Framework C# compiler was not found.' }
   function Escape-CSharp([string]$value) { return $value.Replace('\','\\').Replace('"','\"').Replace("`r",'').Replace("`n",' ') }
   $numericVersion = "$($bundle.version).0"
-  if ($numericVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Arcane bundle version cannot be embedded in a Windows assembly.' }
+if ($numericVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Arcane bundle version cannot be embedded in a Microsoft NT assembly.' }
   $utf8 = New-Object Text.UTF8Encoding($false)
 
   $pipeGuardAssemblyInfo = Join-Path $sdkRoot 'ArcanePipeGuardAssemblyInfo.cs'
@@ -445,7 +445,7 @@ using System.Reflection;
 [assembly: AssemblyTitle("Arcane Pipe Guard")]
 [assembly: AssemblyProduct("Arcane OS")]
 [assembly: AssemblyCompany("Arcane OS")]
-[assembly: AssemblyDescription("Kernel-bound Windows named-pipe peer verifier")]
+[assembly: AssemblyDescription("Kernel-bound Microsoft NT named-pipe peer verifier")]
 [assembly: AssemblyVersion("$numericVersion")]
 [assembly: AssemblyFileVersion("$numericVersion")]
 [assembly: AssemblyInformationalVersion("$($bundle.version)")]

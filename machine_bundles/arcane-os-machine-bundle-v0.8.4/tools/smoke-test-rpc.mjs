@@ -6,7 +6,8 @@ import crypto from 'node:crypto';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const manifest = JSON.parse(await fs.readFile(path.join(root, 'arcane-bundle.json'), 'utf8'));
-const simulatedPlatform = process.platform === 'win32' ? 'win32' : 'linux';
+// This suite verifies Microsoft NT account staging, shell binding, and recovery semantics.
+const simulatedPlatform = 'win32';
 const child = spawn(process.execPath, [path.join(root, 'runtime/arcane-core.cjs'), '--app=provisioner', '--simulate', `--simulate-platform=${simulatedPlatform}`, `--bundle-root=${root}`], { stdio: ['pipe','pipe','pipe'] });
 let buffer = Buffer.alloc(0);
 let expected = null;
@@ -142,7 +143,7 @@ try {
   await call('users.restoreShell', { username: 'arcane-test' });
   const duplicateNames = simulatedPlatform === 'win32' ? ['Arcane-Dupe', 'arcane-dupe'] : ['arcane-dupe', 'arcane-dupe'];
   const duplicateCase = await call('users.add', { usernames: duplicateNames });
-  if (duplicateCase.users.length !== 1 || duplicateCase.credentials.length !== 1) throw new Error('Windows case-insensitive account deduplication failed');
+if (duplicateCase.users.length !== 1 || duplicateCase.credentials.length !== 1) throw new Error('Microsoft NT case-insensitive account deduplication failed');
   await call('users.activate', { username: duplicateNames[0] });
   await call('users.restoreShell', { username: duplicateNames[0] });
   if (!events.some(event => event.event === 'operation.completed')) throw new Error('Progress events missing');

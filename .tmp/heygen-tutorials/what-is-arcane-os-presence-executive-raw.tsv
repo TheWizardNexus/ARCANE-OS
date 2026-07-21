@@ -1,0 +1,24 @@
+start	end	text
+0	5540	Welcome to Arcane OS Arcane stands for Adaptive Runtime for Cognitive AI Native Environments.
+5780	10220	It is an AI Native operating environment designed around what a person is trying to accomplish,
+10640	13800	not around finding the right app, file, or sequence of menus.
+14360	18800	Under Arcane, Intent, Context, Memory, Policy, and Capabilities work together.
+19060	20040	You express a goal.
+20440	24760	Arcane helps assemble the approved tools and information needed to move that goal forward,
+24760	29700	while keeping important actions visible and governed by the permissions of the person and the device.
+30240	32680	Arcane is not a chatbot pasted onto a desktop.
+33020	36980	It is the environment through which people and intelligent systems work with the computer.
+37420	42160	The familiar shell, settings, documents, and specialized applications remain available,
+42380	45540	but they are connected through a shared runtime and capability boundary.
+46400	50140	Arcane currently runs on both Microsoft NT and the Linux kernel.
+50340	53500	That makes it adaptable to the controls of a regulated workplace
+53500	55320	and to the needs of a personal device.
+55500	60860	The underlying platform supplies drivers, identity, processes, and hardware access.
+61400	65000	Arcane supplies the consistent experience and governed collaboration layer.
+65560	67600	Android support is currently under development.
+67980	72940	The result is one environment that can serve engineers, operators, families, security teams,
+73120	77580	and mission-focused organizations without asking every user to become a systems expert.
+78140	79880	Arcane asks a different question.
+80140	82620	How should humans and intelligent systems work together?
+82620	87460	Explore the shell, open an application, and begin with the outcome you want to achieve.
+87760	88880	Welcome to Arcane.

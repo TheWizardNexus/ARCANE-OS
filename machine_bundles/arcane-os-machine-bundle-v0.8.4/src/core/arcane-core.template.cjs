@@ -165,6 +165,7 @@ function validatedHostReleaseClaims() {
   const timestampVerified = workerClaims ? timestampClaim === true : String(timestampClaim || '') === '1';
   const hasPublisherEvidence = Boolean(contentBinding || signerThumbprint || verifiedAt || revocationStatus || trustSource || timestampVerified);
   if (mode === 'publisher-verified') {
+    if (platform !== 'win32') throw new Error('Arcane Core does not accept publisher-verified claims from a host without a native platform verifier.');
     const bindingValid = /^ARCANE-(?:MACHINE|TARGET)-BINDING\|1\|[^|\r\n]{1,128}\|[a-f0-9]{64}$/.test(contentBinding);
     const time = new Date(verifiedAt);
     if (!bindingValid || !/^[A-F0-9]{40,128}$/.test(signerThumbprint)
@@ -181,7 +182,7 @@ function validatedHostReleaseClaims() {
     return Object.freeze({ mode, contentBinding: '', signerThumbprint: '', verifiedAt: '', revocationStatus: '', trustSource: '', timestampVerified: false });
   }
   if (hasPublisherEvidence || (productionPackaged && platform === 'win32')) {
-    throw new Error('Arcane Core requires a complete release-security claim from its native Windows host.');
+    throw new Error('Arcane Core requires a complete release-security claim from its native Microsoft NT host.');
   }
   return Object.freeze({ mode: '', contentBinding: '', signerThumbprint: '', verifiedAt: '', revocationStatus: '', trustSource: '', timestampVerified: false });
 }
@@ -199,6 +200,7 @@ const recentErrors = [];
 const bridgeToken = '';
 const nativeContext = {
   platform,
+  hostPlatform,
   appMode,
   simulate,
   simulatedPlatform,
@@ -571,7 +573,7 @@ function publicCurrentIdentity() {
     source:String(identity.source || ''),
   };
 }
-function osInfo() { return native.osInfo(simulatedPlatform); }
+function osInfo() { return native.osInfo(simulate); }
 function protectedProvisioningUsernames() { return native.protectedUsernames(elevationProtectedUsername); }
 function protectedProvisioningUsername() { return protectedProvisioningUsernames()[0] || currentIdentity().username; }
 function permissionStatus(refresh) {
@@ -895,7 +897,7 @@ async function durableWriteFile(file, contents, mode) {
     try {
       const directory = await fsp.open(path.dirname(file), 'r');
       try { await directory.sync(); } finally { await directory.close(); }
-    } catch (_) { /* Directory fsync is not available on every Windows filesystem. */ }
+    } catch (_) { /* Directory fsync is not available on every Microsoft NT filesystem. */ }
   } catch (error) {
     if (handle) await handle.close().catch(() => {});
     await fsp.rm(temporary, { force: true }).catch(() => {});
@@ -1121,8 +1123,16 @@ function shellRecoveryDescriptor(record, phaseOverride) {
     assignmentMode: source.assignmentMode || (native.id === 'windows' ? 'windows-legacy' : 'linux-login-shell'),
     shellMutationPhase: phaseOverride || source.shellMutationPhase || 'assigned',
     shell: typeof source.shell === 'string' && source.shell ? source.shell : null,
+    sid: typeof source.sid === 'string' && source.sid ? source.sid : null,
+    uid: Number.isSafeInteger(source.uid) && source.uid >= 0 ? source.uid : null,
     securityMode: ['publisher-verified','unsigned-local-test'].includes(source.securityMode) ? source.securityMode : null,
   };
+}
+function hasStableAccountIdentity(record) {
+  if (!record || typeof record !== 'object') return false;
+  if (native.id === 'windows') return typeof record.sid === 'string' && Boolean(record.sid);
+  if (native.id === 'linux') return Number.isSafeInteger(record.uid) && record.uid >= 0;
+  return false;
 }
 function isCompleteWindowsDualBackup(backup) {
   return Boolean(backup && Number(backup.shellBindingVersion) === 2 && backup.assignmentMode === 'windows-dual');
@@ -1413,6 +1423,18 @@ function run(command, commandArgs, options) {
       }
       resolve({ code, stdout, stderr, command, args: diagnosticArgs });
     });
+  });
+}
+function boundedSpawnSync(command, commandArgs, options) {
+  const opts = options || {};
+  return spawnSync(command, commandArgs || [], {
+    cwd: opts.cwd || safeSubprocessCwd,
+    env: opts.env || safeSubprocessEnvironment,
+    encoding: opts.encoding || 'utf8',
+    windowsHide: opts.windowsHide !== false,
+    shell: false,
+    timeout: Math.min(30000, Math.max(1000, Number(opts.timeout || 10000))),
+    maxBuffer: Math.min(4 * 1024 * 1024, Math.max(64 * 1024, Number(opts.maxBuffer || 1024 * 1024))),
   });
 }
 function powershell(script, options) {
@@ -2273,7 +2295,7 @@ function developmentDependencyReady(root,relative){
 }
 
 function developmentSigningReady(){
-  if(platform!=='win32')return { available:false,ready:false,message:'Windows development signing is available only on Windows.' };
+  if(platform!=='win32')return { available:false,ready:false,message:'Microsoft NT development signing is available only on Microsoft NT.' };
   const script=`$subject='CN=The Wizard Nexus Development'
 $friendly='Arcane OS Local Development Code Signing'
 $minimum=(Get-Date).AddDays(30)
@@ -2334,7 +2356,7 @@ function inspectDevelopmentWorkspace(parameters){
     { id:'root-dependencies',label:'Root dependencies',available:nodeTool.available&&npmTool.available,ready:developmentDependencyReady(workspace.root,'node_modules/strong-type/package.json'),message:'Install the root lockfile with npm ci.' },
     { id:'machine-dependencies',label:'Machine bundle dependencies',available:nodeTool.available&&npmTool.available,ready:developmentDependencyReady(workspace.bundleRoot,'node_modules/@yao-pkg/pkg/package.json'),message:'Install the current machine bundle lockfile with npm ci.' },
     { id:'git-hooks',label:'Git hooks',available:nodeTool.available&&npmTool.available&&gitTool.available,ready:hooksProbe.ok&&hooksProbe.stdout.trim().replace(/\\/g,'/').replace(/^\.\//,'')==='.githooks',message:'Configure the checkout to use its versioned Git hooks.' },
-    { id:'windows-signing',label:'Windows development signing',available:signing.available&&nodeTool.available&&npmTool.available,ready:signing.ready,message:signing.message },
+    { id:'windows-signing',label:'Microsoft NT development signing',available:signing.available&&nodeTool.available&&npmTool.available,ready:signing.ready,message:signing.message },
   ];
   const applicableTasks=tasks.filter((task)=>task.id!=='windows-signing'||platform==='win32');
   return {
@@ -2463,7 +2485,7 @@ function developmentContext(parameters){
 async function installDevelopmentNode(action,parameters){
   developmentRequest(parameters,[]);
   if(platform!=='win32'){
-    throw arcaneError('DEVELOPMENT_NODE_INSTALL_UNAVAILABLE','Arcane Developer can install Node.js automatically only on Windows.','Install Node.js 22 or newer through your operating system’s trusted package channel.',409);
+    throw arcaneError('DEVELOPMENT_NODE_INSTALL_UNAVAILABLE','Arcane Developer can install Node.js automatically only on Microsoft NT.','Install Node.js 22 or newer through your operating system’s trusted package channel.',409);
   }
   actionStep(action,5,'Installing the verified Node.js runtime…');
   await installNode(action);
@@ -2482,7 +2504,7 @@ async function setupDevelopmentWorkspace(action,parameters){
     throw arcaneError('DEVELOPMENT_SETUP_TASK_INVALID','Arcane rejected an unknown development setup task.','Choose one of the setup tasks reported by Arcane.development.inspect().',400,{ allowedTaskIds:DEVELOPMENT_SETUP_TASK_IDS });
   }
   if(taskId==='windows-signing'&&platform!=='win32'){
-    throw arcaneError('DEVELOPMENT_SETUP_UNAVAILABLE','Windows development signing is available only on Windows.','Choose a setup task supported by this operating system.',409);
+    throw arcaneError('DEVELOPMENT_SETUP_UNAVAILABLE','Microsoft NT development signing is available only on Microsoft NT.','Choose a setup task supported by this operating system.',409);
   }
   const workspace=validateDevelopmentWorkspace(request.root);
   const nodeTool=developmentNodeTool();
@@ -2498,7 +2520,7 @@ async function setupDevelopmentWorkspace(action,parameters){
     'root-dependencies':{ cwd:workspace.root,args:['ci','--no-audit','--no-fund'],label:'Installing root dependencies' },
     'machine-dependencies':{ cwd:workspace.bundleRoot,args:['ci','--no-audit','--no-fund'],label:'Installing machine bundle dependencies' },
     'git-hooks':{ cwd:workspace.root,args:['run','hooks:install'],label:'Configuring repository Git hooks' },
-    'windows-signing':{ cwd:workspace.root,args:['run','signing:bootstrap:dev:windows'],label:'Initializing local Windows development signing' },
+    'windows-signing':{ cwd:workspace.root,args:['run','signing:bootstrap:dev:windows'],label:'Initializing local Microsoft NT development signing' },
   };
   const definition=definitions[taskId];
   actionStep(action,10,`${definition.label}…`);
@@ -2534,6 +2556,7 @@ Object.assign(nativeContext, {
   arcaneError,
   cleanPowerShellError,
   run,
+  boundedSpawnSync,
   powershell,
   ensureDir,
   writeFile,
@@ -2571,11 +2594,12 @@ if (selfTestOutput) {
 
 
 const REQUIREMENT_DEFINITIONS = Object.freeze([
-  { id: 'ollama', name: 'Ollama', minimumVersion: BUNDLE_MANIFEST.requirements.ollama.minimumVersion, required: true, requiredFor: ['arcane-user'], requiredScope: 'machine', installable: false, description: 'Machine-wide local model runtime and ArcaneOllama service required by provisioned Arcane users.' },
-  { id: 'renderer', name: 'Native web renderer', minimumVersion: null, required: true, installable: false, description: 'WebView2 on Windows or WebKitGTK on Linux; install it from the operating-system/vendor channel before launching Arcane.' },
+  { id: 'ollama', name: 'Ollama', minimumVersion: BUNDLE_MANIFEST.requirements.ollama.minimumVersion, required: platform === 'win32', requiredFor: ['arcane-user'], requiredScope: 'machine', installable: false, description: platform === 'win32' ? 'Machine-wide local model runtime and ArcaneOllama service required by provisioned Arcane users.' : 'Optional for base Arcane OS installation on Linux; a machine-wide Ollama service is required before using local AI.' },
+  { id: 'renderer', name: 'Native web renderer', minimumVersion: null, required: true, installable: false, description: 'WebView2 on Microsoft NT or WebKitGTK on Linux; install it from the operating-system/vendor channel before launching Arcane.' },
   { id: 'session-control', name: 'Session control', minimumVersion: null, required: true, installable: false, description: 'Native logout and lock capability.' },
 ]);
 function checkOllamaRequirement(definition) {
+  const serviceLabel = platform === 'win32' ? 'ArcaneOllama service' : 'machine-wide Ollama service';
   let detected;
   if (typeof native.ollamaStatus === 'function') {
     detected = native.ollamaStatus();
@@ -2615,23 +2639,27 @@ function checkOllamaRequirement(definition) {
   let message;
   if (!executable) {
     status = user.present ? 'global-install-required' : 'missing';
-    message = user.present
+    message = platform === 'win32' && user.present
       ? 'A user-scoped Ollama copy is present, but Arcane users require the machine-wide ArcaneOllama service. Exit the user-scoped Ollama tray application before installing globally.'
-      : 'Ollama is not installed globally. Arcane users require the machine-wide ArcaneOllama service.';
+      : platform === 'win32'
+      ? 'Ollama is not installed globally. Arcane users require the machine-wide ArcaneOllama service.'
+      : 'Ollama is not installed globally.';
   } else if (!version || compareVersions(version, definition.minimumVersion) < 0) {
     status = 'update-required';
     message = `The global Ollama version ${version || 'unknown'} is below minimum ${definition.minimumVersion}.`;
   } else if (!service.ready) {
     status = 'repair-required';
     message = service.present
-      ? `Global Ollama ${version} is installed, but the ArcaneOllama service is ${service.state || 'not ready'} or misconfigured.`
-      : `Global Ollama ${version} is installed, but the ArcaneOllama service is missing.`;
-    if (user.present && service.state !== 'running') {
+      ? `Global Ollama ${version} is installed, but the ${serviceLabel} is ${service.state || 'not ready'} or misconfigured.`
+      : `Global Ollama ${version} is installed, but the ${serviceLabel} is missing.`;
+    if (platform === 'win32' && user.present && service.state !== 'running') {
       message += ' Exit the user-scoped Ollama tray application so it releases the local Ollama port, then retry the global service repair.';
     }
   } else {
     status = 'ready';
-    message = `Globally installed Ollama ${version}; ArcaneOllama is running and available to Arcane users.`;
+    message = platform === 'win32'
+      ? `Globally installed Ollama ${version}; ArcaneOllama is running and available to Arcane users.`
+      : `Globally installed Ollama ${version}; the machine-wide Ollama service is running and available for local AI.`;
   }
 
   const ready = status === 'ready';
@@ -2652,13 +2680,16 @@ function checkOllamaRequirement(definition) {
     message += available
       ? ` A verified global ${action} action is available in Arcane Provisioner.`
       : ` ${globalInstall.reason || 'A machine administrator must install or repair Ollama globally.'}`;
+    if (!definition.required) {
+      message += ' This does not block base Arcane OS installation on Linux; complete it before using local AI.';
+    }
   }
 
   return {
     ...definition,
     installable: available,
     ready,
-    blocking: !ready,
+    blocking: Boolean(definition.required && !ready),
     status,
     version,
     executable,
@@ -2814,27 +2845,35 @@ async function installArcaneGlobally(action) {
     actionLog(action, 'info', `Installing Arcane ${VERSION} globally from ${root}.`, { payloadMode: payload.mode });
     stage = simulate ? null : `${PATHS.installRoot}.stage-${process.pid}-${crypto.randomBytes(24).toString('hex')}`;
     if (!simulate) {
-      await fsp.mkdir(stage, { recursive: false });
+      await fsp.mkdir(stage, { recursive: false, ...(platform === 'linux' ? { mode: 0o700 } : {}) });
+      if (typeof native.prepareInstallStage === 'function') await native.prepareInstallStage(stage, action);
       if (typeof native.captureInstallStageOwnership === 'function') {
         stageOwnership = native.captureInstallStageOwnership(stage);
-      } else if (platform === 'win32') {
+      } else if (platform === 'win32' || platform === 'linux') {
         throw new Error('The native adapter cannot bind an installation stage to its filesystem identity.');
       }
-      for (const file of payload.files) {
-        const installPath = normalizeIntegrityPath(file.installPath || `bin/${file.destinationName}`);
-        const sourceStat = fs.lstatSync(file.source);
-        if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) throw new Error(`Arcane refused an unsafe release source for ${installPath}.`);
-        const destination = integrityFilePath(stage, installPath);
-        await ensureDir(path.dirname(destination));
-        await fsp.copyFile(file.source, destination);
-        if (file.executable) await fsp.chmod(destination, 0o755);
-      }
-      if (payload.mode !== 'windows-webview2') {
-        for (const directory of payload.directories || []) await copyTree(directory.source, path.join(stage, directory.destinationName));
-        const bundleManifestSource = payload.bundleManifestSource || path.join(root, 'arcane-bundle.json');
-        if (fs.existsSync(bundleManifestSource)) await fsp.copyFile(bundleManifestSource, path.join(stage, 'arcane-bundle.json'));
+      if (payload.integrity && typeof native.materializeInstallStage === 'function') {
+        await native.materializeInstallStage(stage, payload, action);
+      } else {
+        for (const file of payload.files) {
+          const installPath = normalizeIntegrityPath(file.installPath || `bin/${file.destinationName}`);
+          const sourceStat = fs.lstatSync(file.source);
+          if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) throw new Error(`Arcane refused an unsafe release source for ${installPath}.`);
+          const destination = integrityFilePath(stage, installPath);
+          await ensureDir(path.dirname(destination));
+          await fsp.copyFile(file.source, destination);
+          if (file.executable) await fsp.chmod(destination, 0o755);
+        }
+        if (payload.mode !== 'windows-webview2') {
+          for (const directory of payload.directories || []) await copyTree(directory.source, path.join(stage, directory.destinationName));
+          const bundleManifestSource = payload.bundleManifestSource || path.join(root, 'arcane-bundle.json');
+          if (fs.existsSync(bundleManifestSource)) await fsp.copyFile(bundleManifestSource, path.join(stage, 'arcane-bundle.json'));
+        }
       }
       await native.writeLaunchers(stage, payload);
+      if (payload.integrity && typeof native.finalizeInstallStage === 'function') {
+        await native.finalizeInstallStage(stage, payload, action);
+      }
       if (payload.integrity) {
         verifyIntegrityEntries(stage, payload.integrity.files, true);
         if (native.verifyStagedInstallation) native.verifyStagedInstallation(stage, false);
@@ -2852,6 +2891,13 @@ async function installArcaneGlobally(action) {
     if (payload.securityMode && payload.securityMode !== installationSecurityMode) {
       throw new Error('The verified installation payload security mode does not match the active native host proof.');
     }
+    let preservedPlatformConfiguration = null;
+    if (!simulate && native.preservePlatformConfiguration && fs.existsSync(path.join(PATHS.installRoot, 'arcane-install.json'))) {
+      try {
+        const existingManifest = readJsonFile(path.join(PATHS.installRoot, 'arcane-install.json'));
+        preservedPlatformConfiguration = native.preservePlatformConfiguration(existingManifest && existingManifest.platformConfiguration);
+      } catch (_) {}
+    }
     const manifest = {
       name: 'Arcane OS',
       version: VERSION,
@@ -2863,6 +2909,7 @@ async function installArcaneGlobally(action) {
       securityMode: installationSecurityMode,
       sourceBundle: root,
       requirements: BUNDLE_MANIFEST.requirements,
+      ...(preservedPlatformConfiguration ? { platformConfiguration: preservedPlatformConfiguration } : {}),
       ...(publisherAttestation ? { publisherAttestation } : {}),
       integrity: simulate ? { schemaVersion: 2, hashAlgorithm: 'sha256', scope: 'simulation', files: [] } : createInstalledIntegrity(stage),
     };
@@ -2886,6 +2933,8 @@ async function installArcaneGlobally(action) {
         }
       }
       let activated = false;
+      let installIntegration = null;
+      let graphicalConfiguration = null;
       try {
         try {
           await fsp.rename(stage, PATHS.installRoot);
@@ -2893,7 +2942,7 @@ async function installArcaneGlobally(action) {
           const activatedOwnership = stageOwnership && typeof native.installStageOwnershipStatus === 'function'
             ? native.installStageOwnershipStatus(stageOwnership, PATHS.installRoot)
             : null;
-          if (platform === 'win32' && (!activatedOwnership || activatedOwnership.state !== 'owned')) {
+          if (stageOwnership && (!activatedOwnership || activatedOwnership.state !== 'owned')) {
             throw arcaneError(
               'INSTALL_STAGE_IDENTITY_LOST',
               'Arcane could not prove that the activated installation is the exact verified stage it created.',
@@ -2912,9 +2961,18 @@ async function installArcaneGlobally(action) {
         const installedVerification = verifyInstalledIntegrity(manifest);
         if (!installedVerification.ok) throw new Error(`Arcane rejected the activated installation: ${installedVerification.reason}`);
         if (native.verifyStagedInstallation) native.verifyStagedInstallation(PATHS.installRoot, true);
-        await native.applyInstallPermissions(action);
+        installIntegration = await native.applyInstallPermissions(action);
         await ensureDir(PATHS.stateRoot);
         if (native.applyStatePermissions) await native.applyStatePermissions(action);
+        if (!movedExisting && native.configureGraphicalTarget) {
+          const linuxPolicy = BUNDLE_MANIFEST.installation && BUNDLE_MANIFEST.installation.linux;
+          graphicalConfiguration = await native.configureGraphicalTarget(action, linuxPolicy);
+          manifest.platformConfiguration = { linux: graphicalConfiguration };
+          await durableWriteFile(path.join(PATHS.installRoot, 'arcane-install.json'), JSON.stringify(manifest, null, 2), 0o644);
+          const configuredVerification = verifyInstalledIntegrity(manifest);
+          if (!configuredVerification.ok) throw new Error(`Arcane rejected the configured installation: ${configuredVerification.reason}`);
+          if (native.verifyStagedInstallation) native.verifyStagedInstallation(PATHS.installRoot, true);
+        }
         try {
           await durableWriteFile(path.join(PATHS.stateRoot, 'install.json'), JSON.stringify(manifest, null, 2), 0o600);
           if (native.applyStatePermissions) await native.applyStatePermissions(action);
@@ -2939,6 +2997,12 @@ async function installArcaneGlobally(action) {
       } catch (error) {
         const failed = `${PATHS.installRoot}.failed-${Date.now()}`;
         try {
+          if (graphicalConfiguration && native.rollbackGraphicalTarget) {
+            await native.rollbackGraphicalTarget(graphicalConfiguration, action);
+          }
+          if (installIntegration && native.rollbackInstallIntegration) {
+            await native.rollbackInstallIntegration(installIntegration, action);
+          }
           let failedOwnershipVerified = false;
           if (activated && fs.existsSync(PATHS.installRoot)) {
             await fsp.rename(PATHS.installRoot, failed);
@@ -3023,7 +3087,17 @@ async function ensureArcaneInstallation(action) {
     actionStep(action, 72, `Arcane OS ${state.installedVersion || VERSION} is already installed.`);
     actionLog(action, 'info', `Arcane OS ${state.installedVersion || VERSION} is current; no replacement was required.`);
   }
-  const model = await ensureManagedArcaneModel(action);
+  const modelRequirement = checkRequirements(['ollama']).find((requirement) => requirement.id === 'ollama') || null;
+  let model;
+  if (modelRequirement && modelRequirement.required === false) {
+    actionLog(action, 'info', 'Deferred Arcane local-model setup so base Linux installation remains independent of Ollama.', {
+      requirementStatus: modelRequirement.status,
+      requiredBefore: 'local-ai',
+    });
+    model = Object.freeze({ status: 'deferred', reason: modelRequirement.status === 'ready' ? 'base-install-local-ai-decoupled' : 'ollama-not-ready', requiredBefore: 'local-ai', created: false });
+  } else {
+    model = await ensureManagedArcaneModel(action);
+  }
   const installation = installationState();
   const requirements = checkRequirements();
   const failedRequirements = requirements.filter((requirement) => requirement.required !== false && requirement.status !== 'ready');
@@ -3087,7 +3161,7 @@ async function provisionUsers(usernames, action) {
     throw arcaneError(
       'USER_PROVISIONING_UNAVAILABLE',
       'Arcane user-shell provisioning is not available on this platform build.',
-      'Use the supported Windows provisioner, or install a display-manager-safe Arcane desktop session before enabling Linux account integration.',
+      'Use the supported Microsoft NT provisioner, or install a display-manager-safe Arcane desktop session before enabling Linux account integration.',
       409
     );
   }
@@ -3102,10 +3176,10 @@ async function provisionUsers(usernames, action) {
   const changed = [];
   const assignedShell = native.shellCommand();
   const assignedSecurityMode = simulate ? 'simulation' : installedReleaseSecurityMode();
-  if (native.id === 'windows' && !simulate) {
-    const unsignedCommand = assignedShell.endsWith(' --allow-unsigned-local-release');
+  if (['windows','linux'].includes(native.id) && !simulate) {
+    const unsignedCommand = native.id === 'windows' && assignedShell.endsWith(' --allow-unsigned-local-release');
     if (!['publisher-verified','unsigned-local-test'].includes(assignedSecurityMode)
-      || unsignedCommand !== (assignedSecurityMode === 'unsigned-local-test')) {
+      || (native.id === 'windows' && unsignedCommand !== (assignedSecurityMode === 'unsigned-local-test'))) {
       throw arcaneError(
         'RELEASE_SECURITY_UNVERIFIED',
         'Arcane refused to assign a login shell without a verified release security mode.',
@@ -3134,7 +3208,7 @@ async function provisionUsers(usernames, action) {
       const incompleteNewAccountPhases = new Set(['prepared', 'activation-pending']);
       if (priorRecord && priorRecord.accountExistedBefore === false && incompleteNewAccountPhases.has(priorRecord.accountMutationPhase)) {
         if (native.userExists(username)) {
-          if (!priorRecord.sid) {
+          if (!hasStableAccountIdentity(priorRecord)) {
             await updateArcaneUserRecord(username, {
               createdByArcane: false,
               passwordStatus: 'unavailable-disabled',
@@ -3145,7 +3219,7 @@ async function provisionUsers(usernames, action) {
             });
             throw arcaneError(
               'PARTIAL_ACCOUNT_RECOVERY_REQUIRED',
-              `Arcane found “${username}” after an interrupted account creation, but no trusted security identifier was durably recorded.`,
+              `Arcane found “${username}” after an interrupted account creation, but no trusted operating-system identity was durably recorded.`,
               'The account was staged disabled. Verify and remove it as an administrator before trying again; Arcane will not delete an account using its name alone.',
               409,
               { username }
@@ -3156,6 +3230,7 @@ async function provisionUsers(usernames, action) {
             username,
             created: true,
             sid: priorRecord.sid,
+            uid: priorRecord.uid,
             profile: priorRecord.profile || null,
             shell: priorRecord.shell || native.shellCommand(),
           }, action);
@@ -3283,7 +3358,7 @@ async function provisionUsers(usernames, action) {
           throw arcaneError(
             'SHELL_CHANGED_EXTERNALLY',
             'Arcane refused to migrate the recorded login-shell command because the current bindings no longer match it exactly.',
-            'Review both protected per-user Windows shell bindings before retrying.',
+            'Review both protected per-user Microsoft NT shell bindings before retrying.',
             409,
             { username }
           );
@@ -3321,7 +3396,7 @@ async function provisionUsers(usernames, action) {
       if (native.id === 'windows' && !isCompleteWindowsDualBackup(backup)) {
         throw arcaneError(
           'WINDOWS_SHELL_BACKUP_INCOMPLETE',
-          `Arcane could not capture both Windows shell bindings for “${username}”.`,
+          `Arcane could not capture both Microsoft NT shell bindings for “${username}”.`,
           'No shell change was made. Sign the account out, confirm its profile is available, and retry from an administrator session.',
           409,
           { username }
@@ -3494,7 +3569,7 @@ async function activateStagedArcaneUser(username, action) {
   const normalized = validateProvisioningUsername(username);
   if (native.applyStatePermissions) await native.applyStatePermissions(action);
   const record = readArcaneUsersState().users[String(normalized).toLowerCase()] || null;
-  if (!record || record.accountExistedBefore !== false || record.accountMutationPhase !== 'activation-pending' || !record.sid) {
+  if (!record || record.accountExistedBefore !== false || record.accountMutationPhase !== 'activation-pending' || !hasStableAccountIdentity(record)) {
     throw arcaneError(
       'STAGED_ACCOUNT_NOT_FOUND',
       `Arcane has no disabled staged account ready to activate for “${normalized}”.`,
@@ -3509,6 +3584,7 @@ async function activateStagedArcaneUser(username, action) {
     username: normalized,
     created: true,
     sid: record.sid,
+    uid: record.uid,
     profile: record.profile || null,
     shell: record.shell || native.shellCommand(),
     previousShell: record.previousShell ?? null,
@@ -3580,7 +3656,7 @@ async function applyArcaneUserPassword(username, passwordInput, action) {
     nativeContext.simulatedUserFailureTriggered = true;
     const injected = arcaneError(
       'SIMULATED_USER_TRANSACTION_FAILURE',
-      'Simulated process loss after Windows accepted the saved temporary password.',
+      'Simulated process loss after the operating system accepted the saved temporary password.',
       'The operator already saved this credential; retry the same password application to reconcile Arcane state.',
       500
     );
@@ -3654,16 +3730,20 @@ async function verifyArcaneUserShell(username, action) {
   const users = await listArcaneUsers();
   const target = users.find((item) => String(item.username || '').toLowerCase() === normalized.toLowerCase());
   if (!target) {
-    throw arcaneError('USER_NOT_FOUND', `The account “${normalized}” no longer exists.`, 'Refresh the Arcane user list after confirming the Windows account was intentionally deleted.', 404, { username: normalized });
+    throw arcaneError('USER_NOT_FOUND', `The account “${normalized}” no longer exists.`, 'Refresh the Arcane user list after confirming the operating-system account was intentionally deleted.', 404, { username: normalized });
   }
   const verified = {
     ...target,
     administratorVerified: true,
     administratorVerifiedAt: stamp(),
   };
-  actionLog(action, target.shellAssigned ? 'info' : 'warn', target.shellAssigned
-    ? `Both protected Windows shell bindings for ${normalized} match the exact Arcane command.`
-    : `Administrator verification found that ${normalized} does not have both exact Arcane shell bindings.`, verified);
+  const verifiedMessage = native.id === 'windows'
+    ? `Both protected Microsoft NT shell bindings for ${normalized} match the exact Arcane command.`
+    : `The protected Linux login-shell field for ${normalized} matches the exact installed Arcane launcher.`;
+  const mismatchMessage = native.id === 'windows'
+    ? `Administrator verification found that ${normalized} does not have both exact Arcane shell bindings.`
+    : `Administrator verification found that ${normalized} does not have the exact installed Arcane login shell.`;
+  actionLog(action, target.shellAssigned ? 'info' : 'warn', target.shellAssigned ? verifiedMessage : mismatchMessage, verified);
   return verified;
 }
 function provisioningPlan(usernames) {
@@ -4084,6 +4164,222 @@ function validatePlatformStatusV1(result, shape) {
   return result;
 }
 
+function isTerminalContractText(value, maximumLength, allowEmpty) {
+  return typeof value==='string'
+    &&value.length<=maximumLength
+    &&(allowEmpty||value.length>0)
+    &&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value);
+}
+
+function isTerminalContractSessionId(value, shape) {
+  return typeof value==='string'&&value.length<=shape.maxSessionIdLength&&TERMINAL_ID_PATTERN.test(value);
+}
+
+function hasTerminalContractDimensions(value, shape) {
+  return Number.isSafeInteger(value.columns)
+    &&value.columns>=shape.minColumns
+    &&value.columns<=shape.maxColumns
+    &&Number.isSafeInteger(value.rows)
+    &&value.rows>=shape.minRows
+    &&value.rows<=shape.maxRows;
+}
+
+function validateTerminalStartV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','cwd','rows','shell'],[])
+    &&isTerminalContractText(parameters.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(parameters.cwd,shape.maxCwdLength,true)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSessionIdV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape) ? parameters : null;
+}
+
+function validateTerminalWriteV1(parameters, shape) {
+  return isExactDataRecord(parameters,['data','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&typeof parameters.data==='string'
+    &&Buffer.byteLength(parameters.data,'utf8')>=1
+    &&Buffer.byteLength(parameters.data,'utf8')<=shape.maxDataBytes ? parameters : null;
+}
+
+function validateTerminalResizeV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','rows','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSignalV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId','signal'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&['interrupt','terminate'].includes(parameters.signal) ? parameters : null;
+}
+
+function validateTerminalSessionV1(result, shape) {
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  return isExactDataRecord(result,['columns','createdAt','cwd','id','rows','shell','title'],[])
+    &&isTerminalContractSessionId(result.id,{maxSessionIdLength:shape.maxSessionIdLength})
+    &&isTerminalContractText(result.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(result.cwd,shape.maxCwdLength,false)
+    &&isTerminalContractText(result.title,shape.maxTitleLength,false)
+    &&isTerminalContractText(result.createdAt,shape.maxTimestampLength,false)
+    &&hasTerminalContractDimensions(result,dimensions) ? result : null;
+}
+
+function validateTerminalListV1(result, shape) {
+  if(!isExactDataRecord(result,['sessions'],[])||!Array.isArray(result.sessions)||result.sessions.length>shape.maxSessions)return null;
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  for(const session of result.sessions){
+    if(!isExactDataRecord(session,['columns','createdAt','cwd','id','rows','shell','state'],[])
+      ||!isTerminalContractSessionId(session.id,{maxSessionIdLength:shape.maxSessionIdLength})
+      ||!isTerminalContractText(session.shell,shape.maxShellLength,false)
+      ||!isTerminalContractText(session.cwd,shape.maxCwdLength,false)
+      ||!isTerminalContractText(session.createdAt,shape.maxTimestampLength,false)
+      ||!['starting','running','exited','closed'].includes(session.state)
+      ||!hasTerminalContractDimensions(session,dimensions))return null;
+  }
+  return result;
+}
+
+function validateTerminalWriteResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','bytes','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&Number.isSafeInteger(result.bytes)
+    &&result.bytes>=1
+    &&result.bytes<=shape.maxDataBytes ? result : null;
+}
+
+function validateTerminalResizeResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','columns','emulated','rows','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&result.emulated===true
+    &&hasTerminalContractDimensions(result,shape) ? result : null;
+}
+
+function validateTerminalSignalResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId','signal'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&['interrupt','terminate'].includes(result.signal)
+    &&typeof result.accepted==='boolean' ? result : null;
+}
+
+function validateTerminalCloseResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true ? result : null;
+}
+
+function isTerminalContractText(value, maximumLength, allowEmpty) {
+  return typeof value==='string'
+    &&value.length<=maximumLength
+    &&(allowEmpty||value.length>0)
+    &&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(value);
+}
+
+function isTerminalContractSessionId(value, shape) {
+  return typeof value==='string'&&value.length<=shape.maxSessionIdLength&&TERMINAL_ID_PATTERN.test(value);
+}
+
+function hasTerminalContractDimensions(value, shape) {
+  return Number.isSafeInteger(value.columns)
+    &&value.columns>=shape.minColumns
+    &&value.columns<=shape.maxColumns
+    &&Number.isSafeInteger(value.rows)
+    &&value.rows>=shape.minRows
+    &&value.rows<=shape.maxRows;
+}
+
+function validateTerminalStartV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','cwd','rows','shell'],[])
+    &&isTerminalContractText(parameters.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(parameters.cwd,shape.maxCwdLength,true)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSessionIdV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape) ? parameters : null;
+}
+
+function validateTerminalWriteV1(parameters, shape) {
+  return isExactDataRecord(parameters,['data','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&typeof parameters.data==='string'
+    &&Buffer.byteLength(parameters.data,'utf8')>=1
+    &&Buffer.byteLength(parameters.data,'utf8')<=shape.maxDataBytes ? parameters : null;
+}
+
+function validateTerminalResizeV1(parameters, shape) {
+  return isExactDataRecord(parameters,['columns','rows','sessionId'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&hasTerminalContractDimensions(parameters,shape) ? parameters : null;
+}
+
+function validateTerminalSignalV1(parameters, shape) {
+  return isExactDataRecord(parameters,['sessionId','signal'],[])
+    &&isTerminalContractSessionId(parameters.sessionId,shape)
+    &&['interrupt','terminate'].includes(parameters.signal) ? parameters : null;
+}
+
+function validateTerminalSessionV1(result, shape) {
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  return isExactDataRecord(result,['columns','createdAt','cwd','id','rows','shell','title'],[])
+    &&isTerminalContractSessionId(result.id,{maxSessionIdLength:shape.maxSessionIdLength})
+    &&isTerminalContractText(result.shell,shape.maxShellLength,false)
+    &&isTerminalContractText(result.cwd,shape.maxCwdLength,false)
+    &&isTerminalContractText(result.title,shape.maxTitleLength,false)
+    &&isTerminalContractText(result.createdAt,shape.maxTimestampLength,false)
+    &&hasTerminalContractDimensions(result,dimensions) ? result : null;
+}
+
+function validateTerminalListV1(result, shape) {
+  if(!isExactDataRecord(result,['sessions'],[])||!Array.isArray(result.sessions)||result.sessions.length>shape.maxSessions)return null;
+  const dimensions=METHOD_CONTRACTS['terminal.start'].input;
+  for(const session of result.sessions){
+    if(!isExactDataRecord(session,['columns','createdAt','cwd','id','rows','shell','state'],[])
+      ||!isTerminalContractSessionId(session.id,{maxSessionIdLength:shape.maxSessionIdLength})
+      ||!isTerminalContractText(session.shell,shape.maxShellLength,false)
+      ||!isTerminalContractText(session.cwd,shape.maxCwdLength,false)
+      ||!isTerminalContractText(session.createdAt,shape.maxTimestampLength,false)
+      ||!['starting','running','exited','closed'].includes(session.state)
+      ||!hasTerminalContractDimensions(session,dimensions))return null;
+  }
+  return result;
+}
+
+function validateTerminalWriteResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','bytes','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&Number.isSafeInteger(result.bytes)
+    &&result.bytes>=1
+    &&result.bytes<=shape.maxDataBytes ? result : null;
+}
+
+function validateTerminalResizeResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','columns','emulated','rows','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true
+    &&result.emulated===true
+    &&hasTerminalContractDimensions(result,shape) ? result : null;
+}
+
+function validateTerminalSignalResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId','signal'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&['interrupt','terminate'].includes(result.signal)
+    &&typeof result.accepted==='boolean' ? result : null;
+}
+
+function validateTerminalCloseResultV1(result, shape) {
+  return isExactDataRecord(result,['accepted','sessionId'],[])
+    &&isTerminalContractSessionId(result.sessionId,shape)
+    &&result.accepted===true ? result : null;
+}
+
 function validateMethodContractInput(method, parameters) {
   const contract=METHOD_CONTRACTS[method];
   if(!contract)return parameters;
@@ -4091,6 +4387,16 @@ function validateMethodContractInput(method, parameters) {
   if(contract.input.kind==='empty-object-v1')validated=validateEmptyObjectV1(parameters);
   else if(contract.input.kind==='application-launch-v1')validated=validateApplicationLaunchV1(parameters,contract.input);
   else if(contract.input.kind==='external-open-v1')validated=validateExternalOpenV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-resize-v1')validated=validateTerminalResizeV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-session-id-v1')validated=validateTerminalSessionIdV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-signal-v1')validated=validateTerminalSignalV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-start-v1')validated=validateTerminalStartV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-write-v1')validated=validateTerminalWriteV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-resize-v1')validated=validateTerminalResizeV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-session-id-v1')validated=validateTerminalSessionIdV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-signal-v1')validated=validateTerminalSignalV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-start-v1')validated=validateTerminalStartV1(parameters,contract.input);
+  else if(contract.input.kind==='terminal-write-v1')validated=validateTerminalWriteV1(parameters,contract.input);
   else contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected an unknown method input contract.',500);
   if(!validated)contractFailure('METHOD_CONTRACT_INPUT_INVALID','Arcane rejected a request that did not match the method contract.',400);
   return validated;
@@ -4107,6 +4413,18 @@ function validateMethodContractOutput(method, result) {
   else if(contract.output.kind==='network-status-v1')validated=validateNetworkStatusV1(result,contract.output);
   else if(contract.output.kind==='platform-status-v1')validated=validatePlatformStatusV1(result,contract.output);
   else if(contract.output.kind==='system-ping-result-v1')validated=validateSystemPingResultV1(result);
+  else if(contract.output.kind==='terminal-close-result-v1')validated=validateTerminalCloseResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-list-v1')validated=validateTerminalListV1(result,contract.output);
+  else if(contract.output.kind==='terminal-resize-result-v1')validated=validateTerminalResizeResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-session-v1')validated=validateTerminalSessionV1(result,contract.output);
+  else if(contract.output.kind==='terminal-signal-result-v1')validated=validateTerminalSignalResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-write-result-v1')validated=validateTerminalWriteResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-close-result-v1')validated=validateTerminalCloseResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-list-v1')validated=validateTerminalListV1(result,contract.output);
+  else if(contract.output.kind==='terminal-resize-result-v1')validated=validateTerminalResizeResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-session-v1')validated=validateTerminalSessionV1(result,contract.output);
+  else if(contract.output.kind==='terminal-signal-result-v1')validated=validateTerminalSignalResultV1(result,contract.output);
+  else if(contract.output.kind==='terminal-write-result-v1')validated=validateTerminalWriteResultV1(result,contract.output);
   else if(contract.output.kind==='user-identity-v1')validated=validateUserIdentityV1(result,contract.output);
   else if(contract.output.kind==='version-string-v1')validated=validateVersionStringV1(result,contract.output);
   else contractFailure('METHOD_CONTRACT_OUTPUT_INVALID','Arcane rejected an unknown method output contract.',500);
@@ -4308,14 +4626,6 @@ function publicApplicationRecord(input) {
 }
 
 function assertApplicationAdapter(method) {
-  if(hostPlatform!=='win32'||platform!=='win32'){
-    throw arcaneError(
-      'APPLICATIONS_UNAVAILABLE',
-      'Installed Arcane applications are not available on this operating system.',
-      'Use a supported Windows Arcane installation.',
-      501
-    );
-  }
   if(typeof native[method]!=='function'){
     throw arcaneError(
       'APPLICATION_ADAPTER_UNAVAILABLE',
@@ -4700,10 +5010,10 @@ function terminalShellSpec(shellInput) {
     if (shell === 'auto' || shell === 'powershell') return { shell: 'powershell', executable: windowsPowerShell, args: ['-NoLogo'] };
     if (shell === 'cmd') return { shell: 'cmd', executable: path.join(windowsSystem32, 'cmd.exe'), args: ['/Q', '/D'] };
     if (shell === 'bash') return { shell: 'bash', executable: 'bash.exe', args: [] };
-    throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'The POSIX sh shell is not available on this Windows host.', 'Choose PowerShell, Command Prompt, or an installed Bash shell.', 400);
+    throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'The POSIX sh shell is not available on this Microsoft NT host.', 'Choose PowerShell, Command Prompt, or an installed Bash shell.', 400);
   }
   if (shell === 'powershell') return { shell: 'powershell', executable: 'pwsh', args: ['-NoLogo'] };
-  if (shell === 'cmd') throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'Command Prompt is available only on Windows.', 'Choose Bash, sh, or the system default shell.', 400);
+  if (shell === 'cmd') throw arcaneError('TERMINAL_SHELL_UNAVAILABLE', 'Command Prompt is available only on Microsoft NT.', 'Choose Bash, sh, or the system default shell.', 400);
   if (shell === 'sh') return { shell: 'sh', executable: '/bin/sh', args: [] };
   return { shell: 'bash', executable: '/bin/bash', args: [] };
 }
@@ -4997,10 +5307,10 @@ function workerEndpoint() {
 function windowsPipeGuardName(endpoint) {
   const prefix = '\\\\.\\pipe\\';
   const value = String(endpoint || '');
-  if (!value.startsWith(prefix)) throw new Error('Arcane generated an invalid Windows privilege pipe endpoint.');
+  if (!value.startsWith(prefix)) throw new Error('Arcane generated an invalid Microsoft NT privilege pipe endpoint.');
   const name = value.slice(prefix.length);
   if (!/^arcane-privileged-[A-Za-z0-9-]{16,180}$/.test(name)) {
-    throw new Error('Arcane generated an invalid Windows privilege pipe name.');
+    throw new Error('Arcane generated an invalid Microsoft NT privilege pipe name.');
   }
   return name;
 }
@@ -5018,7 +5328,7 @@ function windowsPipeGuardExecutable() {
   }
   throw arcaneError(
     'PRIVILEGE_PIPE_GUARD_UNAVAILABLE',
-    'Arcane cannot safely request administrator access because its Windows pipe guard is missing.',
+    'Arcane cannot safely request administrator access because its Microsoft NT pipe guard is missing.',
     'Repair or reinstall Arcane OS from a verified release, then try again.',
     503
   );
@@ -5464,7 +5774,7 @@ async function runPrivilegedProxy(request) {
             if (typeof incoming.setTimeout === 'function') incoming.setTimeout(0);
             resolveAuthorized();
             if (kernelGuarded) {
-              actionLog(launchAction, 'info', 'Windows verified the privileged worker through its kernel-reported named-pipe client PID.', {
+              actionLog(launchAction, 'info', 'Microsoft NT verified the privileged worker through its kernel-reported named-pipe client PID.', {
                 verifiedPid: kernelVerifiedPid,
               });
             }
@@ -5597,7 +5907,7 @@ async function runPrivilegedProxy(request) {
       const pipeName = windowsPipeGuardName(endpoint);
       const guardExecutable = windowsPipeGuardExecutable();
       if (typeof native.verifyPrivilegePipeGuardTrust !== 'function') {
-        throw new Error('The Windows native adapter cannot verify ArcanePipeGuard trust.');
+        throw new Error('The Microsoft NT native adapter cannot verify ArcanePipeGuard trust.');
       }
       const guardTrust = await native.verifyPrivilegePipeGuardTrust(
         guardExecutable,
@@ -5664,7 +5974,7 @@ async function runPrivilegedProxy(request) {
       const bound = await boundSignal;
       const kernelPid = Number(bound.slice('ARCANE_PIPE_GUARD_BOUND '.length));
       if (!Number.isSafeInteger(kernelPid) || kernelPid !== expectedWorkerPid) {
-        throw new Error('ArcanePipeGuard authenticated a different Windows process than the UAC launch returned.');
+        throw new Error('ArcanePipeGuard authenticated a different Microsoft NT process than the UAC launch returned.');
       }
       guardTransport = Duplex.from({ readable: guardProcess.stdout, writable: guardProcess.stdin });
       acceptIncoming(guardTransport, kernelPid);

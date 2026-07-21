@@ -13,7 +13,7 @@ const [setup, launcher, verifier, manifest, bundleManifest] = await Promise.all(
   fs.readFile(path.join(root, 'machine_bundles', 'arcane-os-machine-bundle-v0.8.4', 'package.json'), 'utf8').then(JSON.parse),
 ]);
 
-test('developer setup owns one fail-closed Windows bootstrap contract', () => {
+test('developer setup owns one fail-closed Microsoft NT bootstrap contract', () => {
   for (const token of [
     'Git.Git',
     'OpenJS.NodeJS.22',
@@ -30,6 +30,8 @@ test('developer setup owns one fail-closed Windows bootstrap contract', () => {
     "@('run', 'signing:bootstrap:dev:windows')",
     "@('run', 'build:dev:windows')",
     "@('run', 'build:distribution:windows:unsigned-local-test')",
+    "Join-Path $bundle 'dist\\nt'",
+    'Microsoft NT distribution:',
     'if ($exitCode -ne 0)',
   ]) assert.ok(setup.includes(token), `developer setup is missing ${token}`);
 
@@ -39,8 +41,8 @@ test('developer setup owns one fail-closed Windows bootstrap contract', () => {
     'Installing machine-bundle dependencies',
     'Installing repository Git hooks',
     'Running Arcane repository checks',
-    'Initializing local Windows development signing',
-    'Building the development-signed Windows distribution',
+    'Initializing local Microsoft NT development signing',
+    'Building the development-signed Microsoft NT distribution',
   ].map((token) => setup.indexOf(token));
   assert.ok(ordered.every((index) => index >= 0));
   assert.deepEqual(ordered, [...ordered].sort((left, right) => left - right));
@@ -57,7 +59,7 @@ test('developer setup is exposed through one root launcher and npm command', () 
   );
 });
 
-test('developer setup uses deterministic lockfiles and permits one-time Windows trust confirmation', () => {
+test('developer setup uses deterministic lockfiles and permits one-time Microsoft NT trust confirmation', () => {
   assert.match(verifier, /'package-lock[.]json'/);
   assert.match(verifier, /'machine_bundles[/][*][/]package-lock[.]json'/);
   assert.doesNotMatch(verifier, /'[*]package-lock[.]json'/);

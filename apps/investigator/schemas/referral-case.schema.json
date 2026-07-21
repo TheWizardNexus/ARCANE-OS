@@ -3,7 +3,7 @@
   "$id":"https://arcane.local/schemas/investigator-referral-case.schema.json",
   "title":"Arcane Investigator curated referral case",
   "type":"object",
-  "required":["schemaVersion","generatedAt","case","theory","contacts","candidates","motives","chronology","requests","reliefTracks","sources","reports"],
+  "required":["schemaVersion","generatedAt","case","theory","contacts","candidates","motives","chronology","requests","reliefTracks","packetPlan","sources","reports"],
   "properties":{
     "schemaVersion":{"const":1},
     "generatedAt":{"type":"string","format":"date-time"},
@@ -15,8 +15,41 @@
     "chronology":{"type":"array","items":{"type":"object","required":["id","datePrecision","filedDate","candidateIds","classification","title","sourceIds"]}},
     "requests":{"type":"array","items":{"type":"object","required":["id","priority","candidateIds","action","target","status"]}},
     "reliefTracks":{"type":"object","required":["criminalReferral","familyCourt"]},
+    "packetPlan":{
+      "type":"object",
+      "required":["schemaVersion","status","selectionPolicy","highlightMode","highlightPolicy","expectedSourcePageCount","attachments","contactOnlySourceIdsExcludedFromEvidenceSelection","contactPolicy"],
+      "properties":{
+        "schemaVersion":{"const":1},
+        "status":{"const":"human-curated-page-allowlist"},
+        "highlightMode":{"const":"guide-only-callouts"},
+        "expectedSourcePageCount":{"const":36},
+        "attachments":{
+          "type":"array",
+          "minItems":1,
+          "items":{
+            "type":"object",
+            "required":["id","title","recordId","candidateIds","purpose","sourceReviews"],
+            "properties":{
+              "sourceReviews":{
+                "type":"array",
+                "minItems":1,
+                "items":{
+                  "type":"object",
+                  "required":["sourceId","use","pages","note"],
+                  "properties":{
+                    "use":{"enum":["candidate","context"]},
+                    "pages":{"type":"array","minItems":1,"items":{"type":"integer","minimum":1}}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "contactOnlySourceIdsExcludedFromEvidenceSelection":{"type":"array","minItems":8,"maxItems":8,"items":{"type":"string"}}
+      }
+    },
     "sources":{"type":"array","items":{"type":"object","required":["id","recordId","filename","pdfPath","markdownPath","page","lineStart","lineEnd","excerpt","role"]}},
-    "reports":{"type":"object","required":["actionReport","actionReportMarkdown","sourceIndex","manifest"]},
+    "reports":{"type":"object","required":["actionReport","actionReportMarkdown","sourceIndex","evidencePacket","evidencePacketHighlightGuide","evidencePacketIndex","manifest"]},
     "reviewHistory":{"type":"array"}
   },
   "additionalProperties":true

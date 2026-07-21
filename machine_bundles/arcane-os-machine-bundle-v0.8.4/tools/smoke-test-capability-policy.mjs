@@ -6,13 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const simulatedPlatform=process.platform==='win32'?'win32':'linux';
+const expectedPlatform=simulatedPlatform==='win32'?'windows':'linux';
 
 function createClient(app,options={}){
   const platform=options.platform||simulatedPlatform;
   const child=spawn(
     process.execPath,
     [path.join(root,'runtime/arcane-core.cjs'),`--app=${app}`,'--simulate',`--simulate-platform=${platform}`,`--bundle-root=${root}`,...(options.extraArgs||[])],
-    { stdio:['pipe','pipe','pipe'] }
+    { stdio:['pipe','pipe','pipe'],env:{...process.env,...(options.env||{})} }
   );
   let buffer=Buffer.alloc(0);
   let expected=null;
@@ -86,15 +87,15 @@ try{
   assert(capabilities.methods.includes('apps.launch'));
   await assert.rejects(
     shell.call('apps.list',{ path:'C:\\untrusted' }),
-    error=>error.code==='INVALID_APPLICATION_REQUEST'
+    error=>error.code==='METHOD_CONTRACT_INPUT_INVALID'
   );
   await assert.rejects(
     shell.call('apps.launch',{ id:'boss',args:['--unsafe'],env:{PATH:'untrusted'} }),
-    error=>error.code==='INVALID_APPLICATION_REQUEST'
+    error=>error.code==='METHOD_CONTRACT_INPUT_INVALID'
   );
   await assert.rejects(
     shell.call('apps.launch',{ id:'../boss' }),
-    error=>error.code==='INVALID_APPLICATION_ID'
+    error=>error.code==='METHOD_CONTRACT_INPUT_INVALID'
   );
   const saved=await shell.call('storage.set',{ key:'dashboard.chart.config',value:{ title:'Cases',series:['open','closed'] } });
   assert.equal(saved.value.title,'Cases');
@@ -109,20 +110,26 @@ try{
     shell.call('storage.set',{ key:'../escape',value:true }),
     error=>error.code==='INVALID_STORAGE_KEY'
   );
-  assert.equal((await shell.call('appearance.current')).platform,'windows');
+  assert.equal((await shell.call('appearance.current')).platform,expectedPlatform);
   const lightAppearance=await shell.call('appearance.apply',{
     scheme:'light',captionColor:'rgb(255, 255, 255)',textColor:'rgb(23, 34, 56)'
   });
-  assert.equal(lightAppearance.scheme,'light');
-  assert.equal(lightAppearance.effectiveScheme,'light');
+  assert.equal(lightAppearance.scheme,expectedPlatform==='windows'?'light':'system');
+  assert.equal(lightAppearance.effectiveScheme,expectedPlatform==='windows'?'light':'system');
+  if(expectedPlatform==='linux')assert.equal(lightAppearance.supported,false);
   const darkAppearance=await shell.call('appearance.apply',{
     scheme:'dark',captionColor:'rgb(21, 28, 45)',textColor:'rgb(237, 241, 250)'
   });
-  assert.equal(darkAppearance.effectiveScheme,'dark');
-  await assert.rejects(
-    shell.call('appearance.apply',{scheme:'dark',captionColor:'white'}),
-    error=>/RGB color/.test(error.message)
-  );
+  assert.equal(darkAppearance.effectiveScheme,expectedPlatform==='windows'?'dark':'system');
+  if(expectedPlatform==='windows'){
+    await assert.rejects(
+      shell.call('appearance.apply',{scheme:'dark',captionColor:'white'}),
+      error=>/RGB color/.test(error.message)
+    );
+  }else{
+    const unsupportedAppearance=await shell.call('appearance.apply',{scheme:'dark',captionColor:'white'});
+    assert.equal(unsupportedAppearance.supported,false);
+  }
   const logout=await shell.call('session.logout');
   assert.equal(logout.simulated,true);
   const locked=await shell.call('system.lock');
@@ -221,11 +228,25 @@ const linuxShell=createClient('shell',{ platform:'linux' });
 try{
   await assert.rejects(
     linuxShell.call('apps.list',{}),
-    error=>error.code==='APPLICATIONS_UNAVAILABLE',
-    'the Linux application adapter must fail closed'
+    error=>error.code==='APPLICATION_CATALOG_UNAVAILABLE',
+    'the Linux application catalog must fail closed without an exact unsigned-local host claim'
   );
 }finally{
   linuxShell.close();
+}
+
+const trustedLinuxShell=createClient('shell',{
+  platform:'linux',
+  extraArgs:['--allow-unsigned-local-release'],
+  env:{ ARCANE_RELEASE_SECURITY_MODE:'unsigned-local-test' },
+});
+try{
+  const catalog=await trustedLinuxShell.call('apps.list',{});
+  assert.equal(catalog.verified,true);
+  assert.equal(catalog.securityMode,'unsigned-local-test');
+  assert.deepEqual(catalog.applications,[]);
+}finally{
+  trustedLinuxShell.close();
 }
 
 console.log('Arcane per-application capability policy smoke test passed.');

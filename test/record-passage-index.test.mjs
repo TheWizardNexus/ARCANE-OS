@@ -29,6 +29,28 @@ test('extracts day, numeric, and range dates without overlapping duplicates',()=
   assert.equal(dates[1].endDate,'2024-12-31');
 });
 
+test('keeps passage and date provenance aligned for Windows CRLF records',()=>{
+  const windowsRecord=[
+    '# Windows record',
+    '',
+    '## Page 3',
+    '',
+    'Person: Example',
+    'Date of birth: October 18, 1984',
+    'Treatment began on February 1, 2023.',
+    'The witness reported a false statement.'
+  ].join('\r\n');
+  const dates=extractDateMentions(windowsRecord,{recordId:'F0002',contextLines:0});
+  assert.deepEqual(dates.map(item=>[item.isoDate,item.page,item.lineStart,item.excerpt]),[
+    ['1984-10-18',3,6,'Date of birth: October 18, 1984'],
+    ['2023-02-01',3,7,'Treatment began on February 1, 2023.']
+  ]);
+  const passages=findRulePassages(windowsRecord,[{id:'credibility',pattern:/false statement/i,contextLines:0}],{recordId:'F0002'});
+  assert.equal(passages[0].page,3);
+  assert.equal(passages[0].lineStart,8);
+  assert.equal(passages[0].excerpt,'The witness reported a false statement.');
+});
+
 test('indexes extractor-style Text Page headings as PDF page markers',()=>{
   const passages=findRulePassages(extractedRecord,[{id:'certificate',pattern:/Reporter certificate/}],{recordId:'F0144'});
   assert.equal(passages.length,1);

@@ -13,7 +13,7 @@ function commandPositions(command, expected) {
   return Object.fromEntries(expected.map((operation) => [operation, operations.indexOf(operation)]));
 }
 
-test('the mandatory machine checks build portable apps and one unified Windows distribution', async () => {
+test('the mandatory machine checks build portable apps and one unified Microsoft NT distribution', async () => {
   const packageJson = JSON.parse(await fs.readFile(path.join(bundleRoot, 'package.json'), 'utf8'));
   const scripts = packageJson.scripts || {};
 
@@ -25,7 +25,7 @@ test('the mandatory machine checks build portable apps and one unified Windows d
   assert.equal(
     scripts['build:apps:windows'],
     'node tools/build-app.mjs --all --platform=windows',
-    'native Windows app packaging must remain an explicit operation',
+    'native Microsoft NT app packaging must remain an explicit operation',
   );
   assert.equal(
     scripts['build:apps:windows:unsigned-local-test'],
@@ -53,13 +53,13 @@ test('the mandatory machine checks build portable apps and one unified Windows d
   );
   assert.equal(
     scripts['verify:windispatch'],
-    'powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify-windows-host-dispatch.ps1 -Dist dist/windows/bin',
+    'powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify-windows-host-dispatch.ps1 -Dist dist/nt/bin',
   );
   assert.match(scripts['test:content-binding'] || '', /content-binding\.test\.mjs/);
   assert.match(scripts['test:content-binding'] || '', /windows-publication-recovery\.test\.mjs/);
   assert.match(scripts['smoke:windows:release-directory-locks'] || '', /smoke-test-windows-release-directory-locks\.ps1/);
   assert.match(scripts['smoke:windows:installed-apps'] || '', /smoke-test-windows-installed-apps\.mjs/);
-  assert.match(scripts['verify:distribution:windows'] || '', /verify-built-release\.mjs dist\/windows/);
+  assert.match(scripts['verify:distribution:windows'] || '', /verify-built-release\.mjs dist\/nt/);
   assert.match(scripts['verify:distribution:windows'] || '', /npm run verify:winsecurity/);
   assert.match(scripts['verify:distribution:windows:unsigned-local-test'] || '', /npm run verify:winsecurity:unsigned-local-test/);
   assert.match(scripts['verify:winsecurity'] || '', /verify-windows-release-security\.ps1/);
@@ -82,7 +82,7 @@ test('the mandatory machine checks build portable apps and one unified Windows d
   assert.equal(
     windowsCheck.split('npm run build:distribution:windows:unsigned-local-test').length - 1,
     1,
-    'check:windows must build the unified Windows distribution exactly once',
+    'check:windows must build the unified Microsoft NT distribution exactly once',
   );
   assert.doesNotMatch(
     windowsCheck,
@@ -98,7 +98,7 @@ test('the mandatory machine checks build portable apps and one unified Windows d
   }
 });
 
-test('Windows CI runs the portable gate before the unified Windows distribution gate', async () => {
+test('Microsoft NT CI runs the portable gate before the unified Microsoft NT distribution gate', async () => {
   const workflow = await fs.readFile(path.join(repositoryRoot, '.github/workflows/arcane-check.yml'), 'utf8');
   const portableCheck = workflow.indexOf('run: npm run check');
   const windowsCheck = workflow.indexOf(`run: npm run check:windows --prefix ${bundlePath}`);
@@ -106,9 +106,9 @@ test('Windows CI runs the portable gate before the unified Windows distribution 
   for (const [label, position] of Object.entries({ portableCheck, windowsCheck })) {
     assert.notEqual(position, -1, `workflow is missing ${label}`);
   }
-  assert(portableCheck < windowsCheck, 'portable checks must finish before Windows release work');
-  assert.doesNotMatch(workflow, /run: npm run build:apps:windows/, 'CI must not rebuild apps after sealing the Windows distribution');
-  assert.doesNotMatch(workflow, /run: npm run build:win --prefix/, 'CI must enter Windows release work through check:windows');
+  assert(portableCheck < windowsCheck, 'portable checks must finish before Microsoft NT release work');
+  assert.doesNotMatch(workflow, /run: npm run build:apps:windows/, 'CI must not rebuild apps after sealing the Microsoft NT distribution');
+  assert.doesNotMatch(workflow, /run: npm run build:win --prefix/, 'CI must enter Microsoft NT release work through check:windows');
 });
 
 test('pre-push stays fast while the explicit release gate retains all checks', async () => {
@@ -132,7 +132,7 @@ test('pre-push stays fast while the explicit release gate retains all checks', a
     assert.notEqual(rootCheckPositions[operation], -1, `root check is missing ${operation}`);
   }
   assert(rootCheckPositions['npm run check:public-apps'] < rootCheckPositions['npm run test:machine']);
-  assert.doesNotMatch(rootCheck, /check:windows/, 'the portable root check must not duplicate the long Windows gate');
+  assert.doesNotMatch(rootCheck, /check:windows/, 'the portable root check must not duplicate the long Microsoft NT gate');
   assert.equal(rootPackage.scripts.prepush, 'npm test');
   assert.equal(rootPackage.scripts['release:check'], 'npm run check && npm run check:windows');
   assert.match(hook, /exec npm run prepush/);

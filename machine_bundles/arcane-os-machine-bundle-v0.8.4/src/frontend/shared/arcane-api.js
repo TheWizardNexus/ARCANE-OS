@@ -92,7 +92,7 @@
       } catch (error) {
         throw new ArcaneError({
           code: 'ARCANE_BRIDGE_CALL_FAILED',
-          message: 'Arcane could not communicate with its Windows host.',
+          message: 'Arcane could not communicate with its native host.',
           resolution: 'Close Arcane, reopen the provisioner, and try again. If this continues, reinstall the complete Arcane bundle so the executable and app files match.',
           technicalMessage: error && error.message || String(error),
           hresult: hresultFrom(error && error.message || error),

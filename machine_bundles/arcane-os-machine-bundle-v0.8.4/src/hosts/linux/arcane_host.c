@@ -34,7 +34,11 @@ typedef struct {
   gchar *web_cache_dir;
   gboolean web_ready;
   GQueue *pending_messages;
-  gchar **host_argv;
+  gboolean exact_source_option;
+  gboolean exact_unsigned_local_option;
+  gboolean invalid_control_option;
+  gboolean allow_source_install;
+  gboolean allow_unsigned_local_release;
 } ArcaneHost;
 
 #define ARCANE_MAX_BRIDGE_REQUEST_BYTES (1024 * 1024)
@@ -264,7 +268,34 @@ static gchar *locate_bundle_root(void) {
   gchar *parent = g_path_get_dirname(exe_dir);
   gchar *cwd = g_get_current_dir();
   const gchar *env = g_getenv("ARCANE_BUNDLE_ROOT");
-  gchar *candidates[] = { (gchar *)env, parent, exe_dir, cwd, NULL };
+  gchar *external_manifest = g_build_filename(exe_dir, "arcane-bundle.json", NULL);
+  gchar *external_release = g_build_filename(exe_dir, "arcane-release.json", NULL);
+  gchar *external_app = g_build_filename(exe_dir, "app", NULL);
+  gchar *external_core = g_build_filename(exe_dir, "ArcaneCore", NULL);
+  gboolean packaged_external = g_file_test(external_manifest, G_FILE_TEST_IS_REGULAR)
+    && g_file_test(external_release, G_FILE_TEST_IS_REGULAR)
+    && g_file_test(external_app, G_FILE_TEST_IS_DIR)
+    && g_file_test(external_core, G_FILE_TEST_IS_EXECUTABLE);
+  g_free(external_manifest); g_free(external_release); g_free(external_app);
+  if (packaged_external) {
+    gchar *result = g_canonicalize_filename(exe_dir, NULL);
+    g_free(external_core); g_free(exe_dir); g_free(parent); g_free(cwd);
+    return result;
+  }
+  gchar *installed_manifest = g_build_filename(parent, "arcane-bundle.json", NULL);
+  gchar *installed_record = g_build_filename(parent, "arcane-install.json", NULL);
+  gchar *installed_app = g_build_filename(parent, "app", NULL);
+  gboolean packaged_installed = g_file_test(external_core, G_FILE_TEST_IS_EXECUTABLE)
+    && g_file_test(installed_manifest, G_FILE_TEST_IS_REGULAR)
+    && g_file_test(installed_record, G_FILE_TEST_IS_REGULAR)
+    && g_file_test(installed_app, G_FILE_TEST_IS_DIR);
+  g_free(external_core); g_free(installed_manifest); g_free(installed_record); g_free(installed_app);
+  if (packaged_installed) {
+    gchar *result = g_canonicalize_filename(parent, NULL);
+    g_free(exe_dir); g_free(parent); g_free(cwd);
+    return result;
+  }
+  gchar *candidates[] = { (gchar *)env, cwd, parent, exe_dir, NULL };
   for (guint index = 0; index < G_N_ELEMENTS(candidates); index++) {
     if (!candidates[index] || !*candidates[index]) continue;
     gchar *manifest = g_build_filename(candidates[index], "arcane-bundle.json", NULL);
@@ -283,13 +314,54 @@ static gchar *locate_bundle_root(void) {
   return NULL;
 }
 
-static gboolean arg_allowed_for_core(const gchar *arg) {
-  return g_strcmp0(arg, "--allow-source-install") == 0;
+static void capture_exact_main_option_tokens(ArcaneHost *host, gint argc, gchar **argv) {
+  for (gint index = 1; index < argc && argv && argv[index]; ++index) {
+    const gchar *argument = argv[index];
+    if (g_strcmp0(argument, "--") == 0) break;
+    if (g_strcmp0(argument, "--allow-source-install") == 0) {
+      host->exact_source_option = TRUE;
+    } else if (g_strcmp0(argument, "--allow-unsigned-local-release") == 0) {
+      host->exact_unsigned_local_option = TRUE;
+    } else if (g_str_has_prefix(argument, "--allow-")) {
+      host->invalid_control_option = TRUE;
+    }
+  }
+}
+
+static gint capture_local_options(GApplication *application, GVariantDict *options, gpointer user_data) {
+  (void)application;
+  ArcaneHost *host = user_data;
+  gboolean enabled = FALSE;
+  gboolean parsed_source_option = g_variant_dict_lookup(options, "allow-source-install", "b", &enabled) && enabled;
+  enabled = FALSE;
+  gboolean parsed_unsigned_local_option = g_variant_dict_lookup(options, "allow-unsigned-local-release", "b", &enabled) && enabled;
+  if (host->invalid_control_option
+      || parsed_source_option != host->exact_source_option
+      || parsed_unsigned_local_option != host->exact_unsigned_local_option) {
+    g_printerr("Arcane accepts its local-test controls only as exact standalone options.\n");
+    return 2;
+  }
+  host->allow_source_install = parsed_source_option;
+  host->allow_unsigned_local_release = parsed_unsigned_local_option;
+  return -1;
+}
+
+static void register_main_options(GApplication *application, ArcaneHost *host) {
+  g_application_add_main_option(application, "allow-source-install", 0, G_OPTION_FLAG_HIDDEN,
+    G_OPTION_ARG_NONE, "Allow an explicitly requested development source install", NULL);
+  g_application_add_main_option(application, "allow-unsigned-local-release", 0, G_OPTION_FLAG_HIDDEN,
+    G_OPTION_ARG_NONE, "Allow this explicitly requested unsigned local-test release", NULL);
+  g_signal_connect(application, "handle-local-options", G_CALLBACK(capture_local_options), host);
 }
 
 static gboolean start_core(ArcaneHost *host, GError **error) {
   gchar *exe_dir = executable_directory();
   gchar *packaged = g_build_filename(exe_dir, "ArcaneCore", NULL);
+  gchar *release_manifest = g_build_filename(host->bundle_root, "arcane-release.json", NULL);
+  gchar *installed_manifest = g_build_filename(host->bundle_root, "arcane-install.json", NULL);
+  gboolean packaged_release_root = g_file_test(packaged, G_FILE_TEST_IS_EXECUTABLE)
+    && (g_file_test(release_manifest, G_FILE_TEST_IS_REGULAR) || g_file_test(installed_manifest, G_FILE_TEST_IS_REGULAR));
+  g_free(release_manifest); g_free(installed_manifest);
   GPtrArray *arguments = g_ptr_array_new_with_free_func(g_free);
   if (g_file_test(packaged, G_FILE_TEST_IS_EXECUTABLE)) {
     g_ptr_array_add(arguments, g_strdup(packaged));
@@ -311,13 +383,23 @@ static gboolean start_core(ArcaneHost *host, GError **error) {
   }
   g_ptr_array_add(arguments, g_strdup_printf("--app=%s", ARCANE_APP));
   g_ptr_array_add(arguments, g_strdup_printf("--bundle-root=%s", host->bundle_root));
-  for (guint index = 1; host->host_argv && host->host_argv[index]; index++)
-    if (arg_allowed_for_core(host->host_argv[index])) g_ptr_array_add(arguments, g_strdup(host->host_argv[index]));
+  if (host->allow_source_install) g_ptr_array_add(arguments, g_strdup("--allow-source-install"));
+  if (host->allow_unsigned_local_release) g_ptr_array_add(arguments, g_strdup("--allow-unsigned-local-release"));
   g_ptr_array_add(arguments, NULL);
 
-  host->core = g_subprocess_newv((const gchar * const *)arguments->pdata,
-    G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-    error);
+  GSubprocessFlags flags = G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE;
+  GSubprocessLauncher *launcher = g_subprocess_launcher_new(flags);
+  const gchar *release_claim_names[] = {
+    "ARCANE_RELEASE_SECURITY_MODE", "ARCANE_RELEASE_CONTENT_BINDING", "ARCANE_RELEASE_SIGNER_THUMBPRINT",
+    "ARCANE_RELEASE_VERIFIED_AT", "ARCANE_RELEASE_REVOCATION_STATUS", "ARCANE_RELEASE_TRUST_SOURCE",
+    "ARCANE_RELEASE_TIMESTAMP_VERIFIED", NULL
+  };
+  for (guint index = 0; release_claim_names[index]; index++)
+    g_subprocess_launcher_unsetenv(launcher, release_claim_names[index]);
+  if (packaged_release_root && host->allow_unsigned_local_release)
+    g_subprocess_launcher_setenv(launcher, "ARCANE_RELEASE_SECURITY_MODE", "unsigned-local-test", TRUE);
+  host->core = g_subprocess_launcher_spawnv(launcher, (const gchar * const *)arguments->pdata, error);
+  g_object_unref(launcher);
   g_ptr_array_unref(arguments);
   g_free(packaged); g_free(exe_dir);
   if (!host->core) return FALSE;
@@ -479,11 +561,12 @@ static void shutdown_host(GApplication *application, gpointer user_data) {
 
 int main(int argc, char **argv) {
   ArcaneHost host = {0};
-  host.host_argv = argv;
+  capture_exact_main_option_tokens(&host, argc, argv);
   host.pending_messages = g_queue_new();
   g_mutex_init(&host.write_mutex);
   const gchar *application_id = g_strcmp0(ARCANE_APP, "shell") == 0 ? "org.arcane.os.shell" : "org.arcane.os.provisioner";
   GtkApplication *application = gtk_application_new(application_id, G_APPLICATION_DEFAULT_FLAGS);
+  register_main_options(G_APPLICATION(application), &host);
   g_signal_connect(application, "activate", G_CALLBACK(activate), &host);
   g_signal_connect(application, "shutdown", G_CALLBACK(shutdown_host), &host);
   int status = g_application_run(G_APPLICATION(application), argc, argv);

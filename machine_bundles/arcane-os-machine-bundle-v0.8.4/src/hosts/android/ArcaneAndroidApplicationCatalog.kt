@@ -2,6 +2,7 @@ package os.arcane.host.android
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import java.security.MessageDigest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -16,7 +17,8 @@ internal class ArcaneAndroidApplicationCatalog(context: Context) {
         val entry: String,
         val assetRoot: String,
         val navigationEntries: Set<String>,
-        val requestedCapabilities: Set<String>
+        val requestedCapabilities: Set<String>,
+        val packageName: String? = null
     )
 
     internal data class Snapshot(
@@ -46,8 +48,65 @@ internal class ArcaneAndroidApplicationCatalog(context: Context) {
         val sha256: String
     )
 
+    private data class InstalledCatalogEntry(
+        val id: String,
+        val displayName: String,
+        val description: String,
+        val icon: String,
+        val order: Int,
+        val version: String,
+        val packageName: String
+    )
+
     internal fun read(): ArcaneWebViewBridge.ApplicationCatalog {
         return readSnapshot().publicCatalog
+    }
+
+    internal fun readInstalledSnapshot(): Snapshot {
+        val root = JSONObject(readAssetText(LAUNCHER_CATALOG_ASSET))
+        requireExactKeys(root, setOf("schemaVersion", "protocolVersion", "bundleVersion", "apps"))
+        require(root.getInt("schemaVersion") == 1)
+        require(root.getString("protocolVersion") == PROTOCOL)
+        require(root.getString("bundleVersion") == GeneratedAndroidApplicationRegistry.BUNDLE_VERSION)
+        val entries = validatedInstalledCatalogEntries(root.getJSONArray("apps"))
+        val debugBuild = applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val descriptors = LinkedHashMap<String, LaunchDescriptor>()
+        val applications = mutableListOf<ArcaneWebViewBridge.ApplicationCatalogRecord>()
+        for (entry in entries) {
+            if (!isInstalledLaunchablePackage(entry)) continue
+            verifyAsset(entry.icon, null)
+            descriptors[entry.id] = LaunchDescriptor(
+                id = entry.id,
+                displayName = entry.displayName,
+                type = "app",
+                entry = "${entry.id}/index.html",
+                assetRoot = "",
+                navigationEntries = emptySet(),
+                requestedCapabilities = emptySet(),
+                packageName = entry.packageName
+            )
+            applications.add(
+                ArcaneWebViewBridge.ApplicationCatalogRecord(
+                    id = entry.id,
+                    displayName = entry.displayName,
+                    description = entry.description,
+                    iconUrl = "/arcane/${entry.icon}",
+                    version = entry.version,
+                    order = entry.order,
+                    verified = debugBuild
+                )
+            )
+        }
+        return Snapshot(
+            ArcaneWebViewBridge.ApplicationCatalog(
+                verified = debugBuild,
+                securityMode = if (debugBuild) "unsigned-local-test" else "unverified",
+                publisherTrustSource = null,
+                revocationStatus = null,
+                applications = applications.toList()
+            ),
+            descriptors.toMap()
+        )
     }
 
     internal fun readSnapshot(): Snapshot {
@@ -138,6 +197,52 @@ internal class ArcaneAndroidApplicationCatalog(context: Context) {
             previousOrder = order
         }
         return applications.toList()
+    }
+
+    private fun validatedInstalledCatalogEntries(entries: JSONArray): List<InstalledCatalogEntry> {
+        require(entries.length() in 0..MAX_APPLICATIONS)
+        val applications = mutableListOf<InstalledCatalogEntry>()
+        val identifiers = mutableSetOf<String>()
+        val packageNames = mutableSetOf<String>()
+        var previousOrder = -1
+        for (index in 0 until entries.length()) {
+            val entry = entries.getJSONObject(index)
+            requireExactKeys(
+                entry,
+                setOf("id", "displayName", "description", "icon", "order", "version", "packageName")
+            )
+            val id = entry.getString("id")
+            val displayName = entry.getString("displayName")
+            val description = entry.getString("description")
+            val icon = canonicalRelativePath(entry.getString("icon"))
+            val order = entry.getInt("order")
+            val version = entry.getString("version")
+            val packageName = entry.getString("packageName")
+            require(APPLICATION_ID.matches(id) && identifiers.add(id))
+            require(displayName.isNotEmpty() && displayName.length <= 80)
+            require(description.length <= 240)
+            require(icon.startsWith("launcher-icons/$id."))
+            require(order > previousOrder)
+            require(version == GeneratedAndroidApplicationRegistry.BUNDLE_VERSION)
+            require(ANDROID_PACKAGE.matches(packageName) && packageNames.add(packageName))
+            applications.add(InstalledCatalogEntry(id, displayName, description, icon, order, version, packageName))
+            previousOrder = order
+        }
+        return applications.toList()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isInstalledLaunchablePackage(entry: InstalledCatalogEntry): Boolean {
+        val packageInfo = try {
+            applicationContext.packageManager.getPackageInfo(entry.packageName, 0)
+        } catch (_: PackageManager.NameNotFoundException) {
+            return false
+        }
+        if (packageInfo.versionName != entry.version || packageInfo.applicationInfo?.enabled != true) return false
+        val launchIntent = applicationContext.packageManager.getLaunchIntentForPackage(entry.packageName) ?: return false
+        val resolved = applicationContext.packageManager.resolveActivity(launchIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            ?: return false
+        return resolved.activityInfo?.exported == true && resolved.activityInfo?.packageName == entry.packageName
     }
 
     private fun validatedLaunchDescriptor(entry: CatalogEntry): LaunchDescriptor {
@@ -263,10 +368,12 @@ internal class ArcaneAndroidApplicationCatalog(context: Context) {
         return files.toMap()
     }
 
-    private fun verifyAsset(assetPath: String, expected: ContentFile) {
+    private fun verifyAsset(assetPath: String, expected: ContentFile?) {
         val bytes = readAssetBytes(assetPath)
-        require(bytes.size.toLong() == expected.size)
-        require(sha256(bytes) == expected.sha256)
+        if (expected != null) {
+            require(bytes.size.toLong() == expected.size)
+            require(sha256(bytes) == expected.sha256)
+        }
     }
 
     private fun validatedCapabilities(capabilities: JSONArray): List<String> {
@@ -324,6 +431,7 @@ internal class ArcaneAndroidApplicationCatalog(context: Context) {
 
     private companion object {
         const val CATALOG_ASSET = "catalog.json"
+        const val LAUNCHER_CATALOG_ASSET = "launcher-catalog.json"
         const val PACKAGE_MANIFEST = "arcane-app-package.json"
         const val CONTENT_MANIFEST = "arcane-app-content.json"
         const val MAX_APPLICATIONS = 256
@@ -335,6 +443,7 @@ internal class ArcaneAndroidApplicationCatalog(context: Context) {
         const val APP_FILE_PREFIX = "app/"
         const val HEX = "0123456789abcdef"
         val APPLICATION_ID = Regex("^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+        val ANDROID_PACKAGE = Regex("^os\\.arcane\\.app\\.[a-z][a-z0-9_]{0,62}$")
         val ASSET_PATH = Regex("^[A-Za-z0-9._/ -]+$")
         val CAPABILITY = Regex("^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+$")
         val SHA256 = Regex("^[a-f0-9]{64}$")

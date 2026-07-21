@@ -28,6 +28,33 @@ for (const forbidden of ['NODE_OPTIONS', 'NODE_PATH', 'DOTNET_STARTUP_HOOKS', 'C
   assert(!windowsHostSource.includes(`start.EnvironmentVariables["${forbidden}"]`));
 }
 
+{
+  const checkStart=coreSource.indexOf('function checkOllamaRequirement(definition)');
+  const checkEnd=coreSource.indexOf('function checkRequirements(ids)',checkStart);
+  assert(checkStart>=0&&checkEnd>checkStart,'Core Ollama requirement functions must be present');
+  const requirementContext=vm.createContext({
+    native:{
+      id:'linux',
+      ollamaStatus(){return {machine:{present:false,executable:null,service:null},user:{present:false,executable:null}};},
+      ollamaGlobalInstallAvailability(){return {available:false,status:'manual-only',requiresElevation:true,provider:null,reason:'Install and enable a machine-wide Ollama systemd service from a trusted distribution or official package.'};},
+    },
+    simulate:false,
+    platform:'linux',
+    versionFromCommand(){throw new Error('A missing Linux Ollama executable must not be launched.');},
+    compareVersions(){return 0;},
+    osInfo(){return {platform:'linux'};},
+  });
+  vm.runInContext(coreSource.slice(checkStart,checkEnd),requirementContext);
+  const requirement=requirementContext.checkRequirement({
+    id:'ollama',name:'Ollama',minimumVersion:'0.30.0',required:false,requiredFor:['arcane-user'],requiredScope:'machine',installable:false,description:'test',
+  });
+  assert.equal(requirement.ready,false);
+  assert.equal(requirement.blocking,false,'missing Ollama must be explicitly nonblocking for a base Linux installation');
+  assert.equal(requirement.status,'missing');
+  assert.match(requirement.message,/does not block base Arcane OS installation on Linux/);
+  assert.match(requirement.message,/before using local AI/);
+}
+
 const spawned = [];
 const sandbox = {
   process: {

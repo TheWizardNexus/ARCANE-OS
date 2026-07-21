@@ -338,6 +338,7 @@ test('Kotlin host bounds requests and allows only reviewed Android methods', asy
     assert.doesNotMatch(protocolSource, /request\.optString\("(?:protocol|type|id|method|sentAt)"/);
     assert.match(protocolSource, /method == GeneratedAndroidCapabilityRegistry\.PLATFORM_STATUS_METHOD/);
     assert.match(protocolSource, /method == GeneratedAndroidCapabilityRegistry\.EXTERNAL_OPEN_METHOD/);
+    assert.match(protocolSource, /if \(GeneratedAndroidCapabilityRegistry\.isSupported\(method\)\) return null/);
     assert.match(protocolSource, /hasExactKeys\(parameters, setOf\("uri"\)\)/);
     assert.match(bridgeSource, /fun interface CapabilityGrantProvider/);
     assert.match(bridgeSource, /val grantedCapabilities = readGrantedCapabilities\(\)/);
@@ -651,7 +652,7 @@ test('Kotlin host disables direct file and content access and exposes no legacy 
     }
 });
 
-test('Android host controller serves only packaged assets from the reserved HTTPS origin', async function testAndroidAssetLoader() {
+test('Android host controller serves packaged assets and gates reviewed subframe networking', async function testAndroidAssetLoader() {
     const source = await bundleSource('src/hosts/android/ArcaneWebViewHostController.kt');
 
     assert.match(source, /WebViewAssetLoader\.Builder\(\)/);
@@ -660,7 +661,7 @@ test('Android host controller serves only packaged assets from the reserved HTTP
     assert.match(source, /\.setDomain\(hostSession\.originHost\)/);
     assert.match(source, /ASSET_PREFIX = "\/arcane\/"/);
     assert.match(source, /assetLoader\.shouldInterceptRequest\(uri\) \?: forbiddenResponse\(\)/);
-    assert.match(source, /if \(!isTrustedAssetUri\(uri\) \|\| !isInsideSessionAssetRoot\(uri\)\) \{\s*return forbiddenResponse\(\)/);
+    assert.match(source, /if \(!isTrustedAssetUri\(uri\) \|\| !isInsideSessionAssetRoot\(uri\)\) \{[\s\S]*hostSession\.networkAccessAllowed[\s\S]*!request\.isForMainFrame[\s\S]*request\.method == "GET"[\s\S]*return null[\s\S]*return forbiddenResponse\(\)/);
     assert.match(source, /mapOf\("Cache-Control" to "no-store"\)/);
     assert.match(source, /403,/);
     assert.match(source, /ScopedAssetsPathHandler\(hostSession\.applicationContext, hostSession\.assetRoot\)/);
@@ -720,7 +721,7 @@ test('Android controller hardens WebView before enabling JavaScript and loading 
     assert.match(source, /WebViewCompat\.getProfile\(webView\)\.name != hostSession\.webViewProfileName/);
     assert.match(source, /"WEBVIEW_PROFILE_ASSIGNMENT_FAILED"/);
     assert.match(source, /WebViewCompat\.getProfile\(webView\)\.serviceWorkerController\.serviceWorkerWebSettings/);
-    assert.match(source, /private fun hardenServiceWorkers\(webView: WebView\)[\s\S]*settings\.allowFileAccess = false[\s\S]*settings\.allowContentAccess = false[\s\S]*settings\.blockNetworkLoads = true/);
+    assert.match(source, /private fun hardenServiceWorkers\(webView: WebView\)[\s\S]*settings\.allowFileAccess = false[\s\S]*settings\.allowContentAccess = false[\s\S]*settings\.blockNetworkLoads = !hostSession\.networkAccessAllowed/);
     assert.doesNotMatch(source, /ServiceWorkerController\.getInstance\(\)/);
     assert.doesNotMatch(source, /require\s*\([^\r\n]*\)\s*\{/);
 });
@@ -789,16 +790,21 @@ test('Android controller rolls back partial bridge installation through retryabl
     assert.match(source, /private fun resetUninstalled\(\)/);
 });
 
-test('Android application launch uses packaged descriptors and a fresh non-exported Activity session', async function testAndroidApplicationLaunchBoundary() {
+test('Android application launch routes to separately installed application APKs', async function testAndroidApplicationLaunchBoundary() {
     const protocolSource = await bundleSource('src/hosts/android/AndroidBridgeProtocol.kt');
     const bridgeSource = await bundleSource('src/hosts/android/ArcaneWebViewBridge.kt');
     const catalogSource = await bundleSource('src/hosts/android/ArcaneAndroidApplicationCatalog.kt');
     const sessionSource = await bundleSource('src/hosts/android/ArcaneAndroidHostSession.kt');
     const controllerSource = await bundleSource('src/hosts/android/ArcaneWebViewHostController.kt');
-    const activitySource = await bundleSource('android/app/src/main/java/os/arcane/host/android/ArcaneApplicationActivity.kt');
-    const hostSource = await bundleSource('android/app/src/main/java/os/arcane/host/android/ArcaneActivityHost.kt');
-    const manifestSource = await bundleSource('android/app/src/main/AndroidManifest.xml');
-    const gradleSource = await bundleSource('android/app/build.gradle.kts');
+    const activitySource = await bundleSource('android/apphost/src/main/java/os/arcane/host/android/ArcanePackagedApplicationActivity.kt');
+    const hostSource = await bundleSource('src/hosts/android/ArcaneActivityHost.kt');
+    const launcherManifestSource = await bundleSource('android/app/src/main/AndroidManifest.xml');
+    const appManifestSource = await bundleSource('android/apphost/src/main/AndroidManifest.xml');
+    const noNetworkManifestSource = await bundleSource('android/apphost/src/noNetwork/AndroidManifest.xml');
+    const rootGradleSource = await bundleSource('android/build.gradle.kts');
+    const launcherGradleSource = await bundleSource('android/app/build.gradle.kts');
+    const appGradleSource = await bundleSource('android/apphost/build.gradle.kts');
+    const distributionAssetsSource = await bundleSource('tools/build-android-distribution-assets.mjs');
 
     assert.match(protocolSource, /method == GeneratedAndroidCapabilityRegistry\.APPS_LAUNCH_METHOD/);
     assert.match(protocolSource, /hasExactKeys\(parameters, setOf\("id"\)\)/);
@@ -820,19 +826,44 @@ test('Android application launch uses packaged descriptors and a fresh non-expor
     assert.match(sessionSource, /requestedCapabilities\.filterTo\(linkedSetOf\(\)\)/);
     assert.match(sessionSource, /"\$\{descriptor\.id\}\.arcane\.invalid"/);
     assert.match(controllerSource, /\.setDomain\(hostSession\.originHost\)/);
-    assert.match(activitySource, /ArcaneAndroidHostSession\.createApplication\(this, applicationId\)/);
-    assert.match(hostSource, /Intent\(activity, ArcaneApplicationActivity::class\.java\)/);
+    assert.match(activitySource, /ArcaneAndroidHostSession\.createApplication\(this, BuildConfig\.ARCANE_APP_ID\)/);
+    assert.match(hostSource, /getLaunchIntentForPackage\(packageName\)/);
     assert.match(hostSource, /activity\.startActivity\(intent\)/);
-    assert.match(manifestSource, /android:name="\.ArcaneApplicationActivity"\s+android:exported="false"/);
-    assert.match(gradleSource, /val buildArcanePortableApps by tasks\.registering\(Exec::class\)[\s\S]*?commandLine\(\s*arcaneNodeExecutable,\s*"tools\/build-app\.mjs",\s*"--all",\s*"--platform=portable"/);
-    assert.match(gradleSource, /val buildArcaneAndroidAppProjection by tasks\.registering\(Exec::class\)[\s\S]*?commandLine\(\s*arcaneNodeExecutable,\s*"tools\/build-android-app-projection\.mjs"/);
-    assert.equal((gradleSource.match(/outputs\.upToDateWhen \{ false \}/g) || []).length, 2);
-    assert.match(gradleSource, /dependsOn\(buildArcanePortableApps\)/);
-    assert.match(gradleSource, /dependsOn\(buildArcaneAndroidAppProjection\)/);
-    assert.match(gradleSource, /from\("\.\.\/\.\.\/dist\/android-apps"\)/);
-    assert.doesNotMatch(gradleSource, /from\("\.\.\/\.\.\/dist\/apps"\)/);
-    assert.match(gradleSource, /include\("\*\/arcane-app-content\.json"\)/);
-    assert.match(gradleSource, /include\("\*\/arcane-app-package\.json"\)/);
-    assert.match(gradleSource, /include\("\*\/app\/\*\*"\)/);
+    assert.doesNotMatch(launcherManifestSource, /ArcaneApplicationActivity/);
+    assert.match(appManifestSource, /android:name="\.ArcanePackagedApplicationActivity"/);
+    assert.match(appManifestSource, /android\.intent\.category\.LAUNCHER/);
+    assert.match(appManifestSource, /android\.permission\.INTERNET/);
+    assert.match(noNetworkManifestSource, /tools:node="remove"/);
+    assert.match(appGradleSource, /applicationId = application\.packageName/);
+    assert.match(appGradleSource, /listOf\("connectOrigins", "frameOrigins", "mediaOrigins"\)\.any/);
+    assert.doesNotMatch(appGradleSource, /id == "weather"/);
+    assert.match(distributionAssetsSource, /\['connectOrigins', 'frameOrigins', 'mediaOrigins'\]/);
+    assert.match(distributionAssetsSource, /networkAccess: networkAccessFor\(descriptor\)/);
+    assert.match(appGradleSource, /buildConfigField\("String", "ARCANE_APP_ID", quoted\(application\.id\)\)/);
+    assert.match(appGradleSource, /assets\.srcDir\("\.\.\/\.\.\/dist\/android-build-assets\/apps\/\$\{application\.flavor\}"\)/);
+    assert.match(launcherGradleSource, /from\("\.\.\/\.\.\/dist\/android-build-assets\/launcher"\)/);
+    assert.doesNotMatch(launcherGradleSource, /dist\/android-apps/);
+    assert.match(rootGradleSource, /"tools\/build-android-portable-apps\.mjs"/);
+    assert.match(rootGradleSource, /"--targets-root=dist\/targets\/\.android-portable"/);
+    assert.equal((rootGradleSource.match(/val buildArcaneAndroidAppProjection/g) || []).length, 1);
+    assert.doesNotMatch(rootGradleSource, /tools\/build-app\.mjs/);
     assert.doesNotMatch(hostSource, /putExtra\([^,]+,\s*(?:entry|capabilities|grants|origin)/);
+});
+
+test('Android shell is eligible for both explicit launch and the system HOME role', async function testAndroidHomeRoleContract() {
+    const manifestSource = await bundleSource('android/app/src/main/AndroidManifest.xml');
+    const launcherActivity = manifestSource.match(
+        /<activity\s+android:name="\.ArcaneLauncherActivity"[\s\S]*?<\/activity>/
+    );
+
+    assert.notEqual(launcherActivity, null);
+    assert.match(launcherActivity[0], /android:exported="true"/);
+    assert.match(
+        launcherActivity[0],
+        /<intent-filter>[\s\S]*?<action android:name="android\.intent\.action\.MAIN" \/>[\s\S]*?<category android:name="android\.intent\.category\.LAUNCHER" \/>[\s\S]*?<\/intent-filter>/
+    );
+    assert.match(
+        launcherActivity[0],
+        /<intent-filter>[\s\S]*?<action android:name="android\.intent\.action\.MAIN" \/>[\s\S]*?<category android:name="android\.intent\.category\.HOME" \/>[\s\S]*?<category android:name="android\.intent\.category\.DEFAULT" \/>[\s\S]*?<\/intent-filter>/
+    );
 });

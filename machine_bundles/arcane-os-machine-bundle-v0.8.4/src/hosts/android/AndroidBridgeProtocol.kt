@@ -19,7 +19,29 @@ internal object AndroidBridgeProtocol {
         val id: String,
         val method: String,
         val externalUri: String?,
-        val applicationId: String? = null
+        val applicationId: String? = null,
+        val terminal: TerminalParameters? = null
+    )
+
+    internal data class TerminalParameters(
+        val sessionId: String? = null,
+        val data: String? = null,
+        val shell: String? = null,
+        val cwd: String? = null,
+        val columns: Int? = null,
+        val rows: Int? = null,
+        val signal: String? = null
+    )
+
+    internal data class TerminalSession(
+        val id: String,
+        val shell: String,
+        val cwd: String,
+        val title: String,
+        val columns: Int,
+        val rows: Int,
+        val createdAt: String,
+        val state: String
     )
 
     internal data class Status(
@@ -80,6 +102,7 @@ internal object AndroidBridgeProtocol {
         }
         var externalUri: String? = null
         var applicationId: String? = null
+        var terminal: TerminalParameters? = null
         if (method == GeneratedAndroidCapabilityRegistry.SYSTEM_PING_METHOD
             || method == GeneratedAndroidCapabilityRegistry.VERSION_CURRENT_METHOD
             || method == GeneratedAndroidCapabilityRegistry.APP_CURRENT_METHOD
@@ -97,10 +120,114 @@ internal object AndroidBridgeProtocol {
             if (!hasExactKeys(parameters, setOf("uri"))) return null
             val candidate = parameters.opt("uri") as? String ?: return null
             externalUri = canonicalMailtoUri(candidate) ?: return null
+        } else if (method == GeneratedAndroidCapabilityRegistry.TERMINAL_START_METHOD) {
+            if (!hasExactKeys(parameters, setOf("shell", "cwd", "columns", "rows"))) return null
+            val shell = parameters.opt("shell") as? String ?: return null
+            val cwd = parameters.opt("cwd") as? String ?: return null
+            val columns = exactInt(parameters.opt("columns")) ?: return null
+            val rows = exactInt(parameters.opt("rows")) ?: return null
+            if (shell.isEmpty() || shell.length > GeneratedAndroidMethodContracts.TERMINAL_START_INPUT_MAX_SHELL_LENGTH
+                || cwd.length > GeneratedAndroidMethodContracts.TERMINAL_START_INPUT_MAX_CWD_LENGTH
+                || columns !in GeneratedAndroidMethodContracts.TERMINAL_START_INPUT_MIN_COLUMNS..GeneratedAndroidMethodContracts.TERMINAL_START_INPUT_MAX_COLUMNS
+                || rows !in GeneratedAndroidMethodContracts.TERMINAL_START_INPUT_MIN_ROWS..GeneratedAndroidMethodContracts.TERMINAL_START_INPUT_MAX_ROWS) return null
+            terminal = TerminalParameters(shell = shell, cwd = cwd, columns = columns, rows = rows)
+        } else if (method == GeneratedAndroidCapabilityRegistry.TERMINAL_LIST_METHOD) {
+            if (parameters.keys().hasNext()) return null
+            terminal = TerminalParameters()
+        } else if (method == GeneratedAndroidCapabilityRegistry.TERMINAL_WRITE_METHOD) {
+            if (!hasExactKeys(parameters, setOf("sessionId", "data"))) return null
+            val sessionId = validTerminalSessionId(parameters.opt("sessionId") as? String ?: return null) ?: return null
+            val data = parameters.opt("data") as? String ?: return null
+            val bytes = data.toByteArray(StandardCharsets.UTF_8).size
+            if (bytes !in 1..GeneratedAndroidMethodContracts.TERMINAL_WRITE_INPUT_MAX_DATA_BYTES) return null
+            terminal = TerminalParameters(sessionId = sessionId, data = data)
+        } else if (method == GeneratedAndroidCapabilityRegistry.TERMINAL_RESIZE_METHOD) {
+            if (!hasExactKeys(parameters, setOf("sessionId", "columns", "rows"))) return null
+            val sessionId = validTerminalSessionId(parameters.opt("sessionId") as? String ?: return null) ?: return null
+            val columns = exactInt(parameters.opt("columns")) ?: return null
+            val rows = exactInt(parameters.opt("rows")) ?: return null
+            if (columns !in GeneratedAndroidMethodContracts.TERMINAL_RESIZE_INPUT_MIN_COLUMNS..GeneratedAndroidMethodContracts.TERMINAL_RESIZE_INPUT_MAX_COLUMNS
+                || rows !in GeneratedAndroidMethodContracts.TERMINAL_RESIZE_INPUT_MIN_ROWS..GeneratedAndroidMethodContracts.TERMINAL_RESIZE_INPUT_MAX_ROWS) return null
+            terminal = TerminalParameters(sessionId = sessionId, columns = columns, rows = rows)
+        } else if (method == GeneratedAndroidCapabilityRegistry.TERMINAL_SIGNAL_METHOD) {
+            if (!hasExactKeys(parameters, setOf("sessionId", "signal"))) return null
+            val sessionId = validTerminalSessionId(parameters.opt("sessionId") as? String ?: return null) ?: return null
+            val signal = parameters.opt("signal") as? String ?: return null
+            if (signal !in setOf("interrupt", "terminate")) return null
+            terminal = TerminalParameters(sessionId = sessionId, signal = signal)
+        } else if (method == GeneratedAndroidCapabilityRegistry.TERMINAL_CLOSE_METHOD) {
+            if (!hasExactKeys(parameters, setOf("sessionId"))) return null
+            val sessionId = validTerminalSessionId(parameters.opt("sessionId") as? String ?: return null) ?: return null
+            terminal = TerminalParameters(sessionId = sessionId)
         } else {
-            return null
+            if (GeneratedAndroidCapabilityRegistry.isSupported(method)) return null
         }
-        return Request(id, method, externalUri, applicationId)
+        return Request(id, method, externalUri, applicationId, terminal)
+    }
+
+    internal fun terminalStartResponse(request: Request, session: TerminalSession): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.TERMINAL_START_METHOD || !isValidTerminalSession(session)) {
+            return errorResponse(request.id, "METHOD_CONTRACT_OUTPUT_INVALID", "Android returned an invalid terminal session.")
+        }
+        return successResponse(request.id, terminalSessionJson(session, includeState = false))
+    }
+
+    internal fun terminalListResponse(request: Request, sessions: List<TerminalSession>): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.TERMINAL_LIST_METHOD
+            || sessions.size > GeneratedAndroidMethodContracts.TERMINAL_LIST_OUTPUT_MAX_SESSIONS
+            || sessions.any { !isValidTerminalSession(it) }) {
+            return errorResponse(request.id, "METHOD_CONTRACT_OUTPUT_INVALID", "Android returned an invalid terminal session list.")
+        }
+        return successResponse(
+            request.id,
+            JSONObject().put("sessions", JSONArray().apply {
+                for (session in sessions) put(terminalSessionJson(session, includeState = true))
+            })
+        )
+    }
+
+    internal fun terminalWriteResponse(request: Request, sessionId: String, bytes: Int): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.TERMINAL_WRITE_METHOD
+            || validTerminalSessionId(sessionId) == null
+            || bytes !in 1..GeneratedAndroidMethodContracts.TERMINAL_WRITE_OUTPUT_MAX_DATA_BYTES) {
+            return errorResponse(request.id, "METHOD_CONTRACT_OUTPUT_INVALID", "Android returned an invalid terminal write result.")
+        }
+        return successResponse(request.id, JSONObject().put("sessionId", sessionId).put("accepted", true).put("bytes", bytes))
+    }
+
+    internal fun terminalResizeResponse(request: Request, sessionId: String, columns: Int, rows: Int): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.TERMINAL_RESIZE_METHOD
+            || validTerminalSessionId(sessionId) == null
+            || columns !in GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MIN_COLUMNS..GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MAX_COLUMNS
+            || rows !in GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MIN_ROWS..GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MAX_ROWS) {
+            return errorResponse(request.id, "METHOD_CONTRACT_OUTPUT_INVALID", "Android returned an invalid terminal resize result.")
+        }
+        return successResponse(request.id, JSONObject().put("sessionId", sessionId).put("columns", columns).put("rows", rows).put("accepted", true).put("emulated", true))
+    }
+
+    internal fun terminalSignalResponse(request: Request, sessionId: String, signal: String, accepted: Boolean): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.TERMINAL_SIGNAL_METHOD
+            || validTerminalSessionId(sessionId) == null || signal !in setOf("interrupt", "terminate")) {
+            return errorResponse(request.id, "METHOD_CONTRACT_OUTPUT_INVALID", "Android returned an invalid terminal signal result.")
+        }
+        return successResponse(request.id, JSONObject().put("sessionId", sessionId).put("signal", signal).put("accepted", accepted))
+    }
+
+    internal fun terminalCloseResponse(request: Request, sessionId: String): String {
+        if (request.method != GeneratedAndroidCapabilityRegistry.TERMINAL_CLOSE_METHOD || validTerminalSessionId(sessionId) == null) {
+            return errorResponse(request.id, "METHOD_CONTRACT_OUTPUT_INVALID", "Android returned an invalid terminal close result.")
+        }
+        return successResponse(request.id, JSONObject().put("sessionId", sessionId).put("accepted", true))
+    }
+
+    internal fun terminalEvent(event: String, data: JSONObject): String {
+        require(event in setOf("terminal.output", "terminal.exit", "terminal.error"))
+        return JSONObject()
+            .put("protocol", PROTOCOL)
+            .put("type", "event")
+            .put("event", event)
+            .put("data", data)
+            .toString()
     }
 
     internal fun applicationLaunchResponse(request: Request, applicationId: String): String {
@@ -333,8 +460,48 @@ internal object AndroidBridgeProtocol {
         return actual == expected
     }
 
+    private fun exactInt(value: Any?): Int? {
+        val number = value as? Number ?: return null
+        val integer = number.toInt()
+        return if (number.toDouble() == integer.toDouble()) integer else null
+    }
+
+    private fun validTerminalSessionId(value: String): String? {
+        return if (value.length <= GeneratedAndroidMethodContracts.TERMINAL_START_OUTPUT_MAX_SESSION_ID_LENGTH
+            && requestIdPattern.matches(value)) value else null
+    }
+
+    private fun isValidTerminalSession(session: TerminalSession): Boolean {
+        return validTerminalSessionId(session.id) != null
+            && session.shell.isNotEmpty()
+            && session.shell.length <= GeneratedAndroidMethodContracts.TERMINAL_START_OUTPUT_MAX_SHELL_LENGTH
+            && session.cwd.isNotEmpty()
+            && session.cwd.length <= GeneratedAndroidMethodContracts.TERMINAL_START_OUTPUT_MAX_CWD_LENGTH
+            && session.title.isNotEmpty()
+            && session.title.length <= GeneratedAndroidMethodContracts.TERMINAL_START_OUTPUT_MAX_TITLE_LENGTH
+            && session.createdAt.isNotEmpty()
+            && session.createdAt.length <= GeneratedAndroidMethodContracts.TERMINAL_START_OUTPUT_MAX_TIMESTAMP_LENGTH
+            && session.columns in GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MIN_COLUMNS..GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MAX_COLUMNS
+            && session.rows in GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MIN_ROWS..GeneratedAndroidMethodContracts.TERMINAL_RESIZE_OUTPUT_MAX_ROWS
+            && session.state in setOf("starting", "running", "exited", "closed")
+    }
+
+    private fun terminalSessionJson(session: TerminalSession, includeState: Boolean): JSONObject {
+        val result = JSONObject()
+            .put("id", session.id)
+            .put("shell", session.shell)
+            .put("cwd", session.cwd)
+            .put("columns", session.columns)
+            .put("rows", session.rows)
+            .put("createdAt", session.createdAt)
+        if (includeState) result.put("state", session.state) else result.put("title", session.title)
+        return result
+    }
+
     private fun isSafeCatalogIconUrl(value: String, applicationId: String): Boolean {
-        if (!value.startsWith("/arcane/$applicationId/app/")
+        val packagedIcon = value.startsWith("/arcane/$applicationId/app/")
+        val launcherIcon = value.startsWith("/arcane/launcher-icons/$applicationId.")
+        if ((!packagedIcon && !launcherIcon)
             || value.contains('\\')
             || value.contains('%')
             || value.contains('?')

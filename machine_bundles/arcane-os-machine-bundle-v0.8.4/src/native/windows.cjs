@@ -48,9 +48,9 @@ $effective=if($scheme -eq 'dark'){'dark'}elseif($scheme -eq 'light'){'light'}els
     const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
       encoding:'utf8', windowsHide:true, timeout:10000, env:safeApplicationEnvironment(),
     });
-    if (!result || result.status !== 0) throw new Error('Windows could not read the current Arcane appearance.');
+    if (!result || result.status !== 0) throw new Error('Microsoft NT could not read the current Arcane appearance.');
     try { return JSON.parse(String(result.stdout || '').trim()); }
-    catch (_) { throw new Error('Windows returned an invalid Arcane appearance response.'); }
+    catch (_) { throw new Error('Microsoft NT returned an invalid Arcane appearance response.'); }
   }
 
   async function applyAppearance(input) {
@@ -149,7 +149,7 @@ $response|ConvertTo-Json -Compress`;
     } catch (error) {
       throw ctx.arcaneError(
         'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
-        'Windows could not open the Arcane folder selector.',
+        'Microsoft NT could not open the Arcane folder selector.',
         'Close any other open system dialogs, then choose the folder again.',
         500,
         { technicalMessage:String(error && error.message || error).slice(0,1024) }
@@ -161,7 +161,7 @@ $response|ConvertTo-Json -Compress`;
     catch (_) {
       throw ctx.arcaneError(
         'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
-        'Windows returned an invalid folder-selection result.',
+        'Microsoft NT returned an invalid folder-selection result.',
         'Close Arcane, reopen the application, and choose the folder again.',
         500
       );
@@ -174,7 +174,7 @@ $response|ConvertTo-Json -Compress`;
       || (response.cancelled ? response.path !== null : typeof response.path !== 'string' || !response.path)) {
       throw ctx.arcaneError(
         'FILESYSTEM_DIRECTORY_SELECTION_FAILED',
-        'Windows returned an invalid folder-selection result.',
+        'Microsoft NT returned an invalid folder-selection result.',
         'Close Arcane, reopen the application, and choose the folder again.',
         500
       );
@@ -224,7 +224,7 @@ $response|ConvertTo-Json -Compress`;
       & ${ctx.psQuote(regExe)} unload "HKU\\$hive" | Out-Null
       if($LASTEXITCODE -eq 0){$arcaneHiveReleased=$true;break}
     }
-    if(-not $arcaneHiveReleased){throw "Windows could not release the temporary Arcane registry hive after ${context}. The profile remains locked and requires administrator recovery."}`;
+    if(-not $arcaneHiveReleased){throw "Microsoft NT could not release the temporary Arcane registry hive after ${context}. The profile remains locked and requires administrator recovery."}`;
   }
   const paths = Object.freeze({
     installRoot: !ctx.production && env.ARCANE_INSTALL_ROOT || ctx.path.join(programFiles, 'Arcane OS'),
@@ -429,7 +429,7 @@ $response|ConvertTo-Json -Compress`;
       if (!segment || segment === '.' || segment === '..' || segment.endsWith('.') || segment.endsWith(' ') || segment.includes(':')) {
         throw new Error(`${label || 'path'} contains an unsafe segment.`);
       }
-      if (WINDOWS_RESERVED_NAME.test(segment)) throw new Error(`${label || 'path'} contains a Windows reserved segment.`);
+      if (WINDOWS_RESERVED_NAME.test(segment)) throw new Error(`${label || 'path'} contains a Microsoft NT-reserved segment.`);
     }
     return value;
   }
@@ -531,9 +531,9 @@ $response|ConvertTo-Json -Compress`;
     const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
       encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
     });
-    if (!result || result.status !== 0) throw new Error('Windows could not verify the installed tree for reparse points.');
+    if (!result || result.status !== 0) throw new Error('Microsoft NT could not verify the installed tree for reparse points.');
     let entries;
-    try { entries = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid reparse-point verification result.'); }
+    try { entries = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Microsoft NT returned an invalid reparse-point verification result.'); }
     if (!Array.isArray(entries)) entries = [entries];
     if (entries.length) throw new Error(`Installed tree contains a reparse point: ${entries[0]}.`);
   }
@@ -693,7 +693,10 @@ $response|ConvertTo-Json -Compress`;
       'bin/ArcaneShell.exe', 'bin/ArcaneProvisioner.exe', 'bin/ArcaneCore.exe', 'bin/ArcaneOllamaService.exe', 'bin/ArcanePipeGuard.exe',
       'bin/Microsoft.Web.WebView2.Core.dll', 'bin/Microsoft.Web.WebView2.WinForms.dll', 'bin/WebView2Loader.dll',
       'arcane-bundle.json', 'arcane-machine-content.json', 'apps/catalog.json',
-      'app/shared/arcane-api.js', 'app/provisioner/index.html', 'app/shell/index.html',
+      'app/arcane/css/theme.css', 'app/arcane/entities/Preference.js', 'app/arcane/entities/Theme.js',
+      'app/arcane/modules/AppDataScope.js', 'app/arcane/modules/AppearancePreferences.js', 'app/arcane/modules/PreferenceStore.js',
+      'app/arcane/modules/SystemAppearance.js', 'app/arcane/modules/ThemeBootstrap.js', 'app/arcane/modules/ThemeManager.js',
+      'app/shared/arcane-api.js', 'app/shared/SystemPlatformPresentation.js', 'app/provisioner/index.html', 'app/shell/index.html',
     ]) if (!releaseFiles.some((entry) => entry.path === required)) throw new Error(`Arcane release omits required file ${required}.`);
 
     let installManifest = null;
@@ -897,9 +900,9 @@ $response|ConvertTo-Json -Compress`;
     const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
       encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024, env: safeApplicationEnvironment(),
     });
-    if (!result || result.status !== 0) throw new Error('Windows could not inspect Arcane Authenticode signatures.');
+    if (!result || result.status !== 0) throw new Error('Microsoft NT could not inspect Arcane Authenticode signatures.');
     let records;
-    try { records = JSON.parse(String(result.stdout || '').trim()); } catch (_) { throw new Error('Windows returned invalid Arcane signature records.'); }
+    try { records = JSON.parse(String(result.stdout || '').trim()); } catch (_) { throw new Error('Microsoft NT returned invalid Arcane signature records.'); }
     return Array.isArray(records) ? records : [records];
   }
 
@@ -1025,7 +1028,7 @@ $response|ConvertTo-Json -Compress`;
     if (!executables.length) refuseUnsignedPublisherDowngrade('The existing installation has no verifiable executable set.');
     const records = inspectAuthenticode(executables);
     if (!Array.isArray(records) || records.length !== executables.length) {
-      refuseUnsignedPublisherDowngrade('Windows returned incomplete signature evidence for the existing installation.');
+      refuseUnsignedPublisherDowngrade('Microsoft NT returned incomplete signature evidence for the existing installation.');
     }
     const byPath = new Map(records.map((record) => [String(record && record.path || '').toLowerCase(), record]));
     for (const executable of executables) {
@@ -1255,7 +1258,7 @@ $response|ConvertTo-Json -Compress`;
       encoding: 'utf8', windowsHide: true, timeout: 10000, env: safeApplicationEnvironment(),
     });
     if (!result || result.status !== 0 || String(result.stdout || '').trim() !== 'protected') {
-      throw new Error('Windows could not prove that the Arcane installation lease is protected.');
+      throw new Error('Microsoft NT could not prove that the Arcane installation lease is protected.');
     }
   }
 
@@ -1455,13 +1458,13 @@ $response|ConvertTo-Json -Compress`;
       const result = ctx.spawnSync(powershellExe, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
         encoding: 'utf8', windowsHide: true, timeout: 30000, env: safeApplicationEnvironment(),
       });
-      if (!result || result.status !== 0) throw new Error('Windows could not determine whether installed Arcane processes are running.');
-      try { records = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Windows returned an invalid running-process result.'); }
+      if (!result || result.status !== 0) throw new Error('Microsoft NT could not determine whether installed Arcane processes are running.');
+      try { records = JSON.parse(String(result.stdout || '[]').trim() || '[]'); } catch (_) { throw new Error('Microsoft NT returned an invalid running-process result.'); }
     }
     if (!Array.isArray(records)) records = [records];
     return records.map((record) => {
       assertExactKeys(record, new Set(['processId', 'relativePath']), 'running Arcane process');
-      if (!Number.isSafeInteger(record.processId) || record.processId < 1) throw new Error('Windows returned an invalid Arcane process id.');
+      if (!Number.isSafeInteger(record.processId) || record.processId < 1) throw new Error('Microsoft NT returned an invalid Arcane process id.');
       return {
         processId: record.processId,
         relativePath: normalizeInstalledPath(record.relativePath, 'running Arcane process path'),
@@ -1555,7 +1558,7 @@ $response|ConvertTo-Json -Compress`;
     return {
       platform: 'windows',
       rawPlatform: 'win32',
-      displayName: 'Windows',
+      displayName: 'Microsoft NT',
       architecture: process.arch,
       hostname: ctx.os.hostname(),
       release: ctx.os.release(),
@@ -1682,7 +1685,7 @@ $bytes=[Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[Securi
     const script="$v=@((Get-ItemProperty -LiteralPath 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\ArcaneOllama' -Name Environment -ErrorAction SilentlyContinue).Environment);$v|ConvertTo-Json -Compress";
     const result=ctx.spawnSync(powershellExe,['-NoProfile','-NonInteractive','-Command',script],{encoding:'utf8',windowsHide:true,timeout:5000,env:safeApplicationEnvironment()});
     if(result.status!==0)return { ...defaults,supported:false,error:'Arcane could not read the service environment.' };
-    let entries=[];try{const parsed=JSON.parse(String(result.stdout||'[]').trim()||'[]');entries=Array.isArray(parsed)?parsed:[parsed];}catch(_){return { ...defaults,supported:false,error:'Windows returned invalid service settings.' };}
+    let entries=[];try{const parsed=JSON.parse(String(result.stdout||'[]').trim()||'[]');entries=Array.isArray(parsed)?parsed:[parsed];}catch(_){return { ...defaults,supported:false,error:'Microsoft NT returned invalid service settings.' };}
     const values=Object.fromEntries(entries.map(value=>String(value)).filter(value=>value.includes('=')).map(value=>{const at=value.indexOf('=');return [value.slice(0,at),value.slice(at+1)];}));
     return { ...defaults,contextLength:Number(values.OLLAMA_CONTEXT_LENGTH||0)||0,keepAlive:values.OLLAMA_KEEP_ALIVE||'5m',maxLoadedModels:Number(values.OLLAMA_MAX_LOADED_MODELS||0)||0,numParallel:Number(values.OLLAMA_NUM_PARALLEL||1)||1,maxQueue:Number(values.OLLAMA_MAX_QUEUE||512)||512,flashAttention:values.OLLAMA_FLASH_ATTENTION==='1',kvCacheType:values.OLLAMA_KV_CACHE_TYPE||'f16',noCloud:values.OLLAMA_NO_CLOUD!=='0' };
   }
@@ -1722,7 +1725,7 @@ $bytes=[Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[Securi
     const result = ctx.spawnSync(powershellExe, ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
     let devices = [];
     if (result.status === 0 && String(result.stdout || '').trim()) {
-      try { const parsed = JSON.parse(result.stdout); devices = (Array.isArray(parsed) ? parsed : [parsed]).map((device) => ({ name: String(device && device.name || 'Windows display adapter').slice(0, 256), memoryBytes: null })); } catch (_) {}
+      try { const parsed = JSON.parse(result.stdout); devices = (Array.isArray(parsed) ? parsed : [parsed]).map((device) => ({ name: String(device && device.name || 'Microsoft NT display adapter').slice(0, 256), memoryBytes: null })); } catch (_) {}
     }
     return { devices, totalMemoryBytes: null, memoryReliable: false, source: 'windows-cim' };
   }
@@ -1874,7 +1877,7 @@ $bytes=[Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[Securi
     throw ctx.arcaneError(
       'OLLAMA_SERVICE_TIMEOUT',
       `ArcaneOllama did not become ${expectedState} in time.`,
-      `Review the Windows service state and retry.${userHint}`,
+        `Review the Microsoft NT service state and retry.${userHint}`,
       500,
       { expectedState, observed, userExecutable }
     );
@@ -1923,7 +1926,7 @@ $subject=if($signature.SignerCertificate){$signature.SignerCertificate.Subject}e
     if (!signature || signature.status !== 'Valid' || !/\bMicrosoft Corporation\b/i.test(String(signature.subject || ''))) {
       throw ctx.arcaneError(
         'UNTRUSTED_INSTALLER_SIGNATURE',
-        'Windows could not verify this installer as a valid Microsoft-signed file.',
+        'Microsoft NT could not verify this installer as a valid Microsoft-signed file.',
         'The installer was not executed. Install the Microsoft Edge WebView2 Evergreen Runtime manually from Microsoft.',
         409,
         { signature }
@@ -1938,7 +1941,7 @@ $subject=if($signature.SignerCertificate){$signature.SignerCertificate.Subject}e
       if (!ctx.path.isAbsolute(file) || !ctx.fs.existsSync(file) || !ctx.fs.statSync(file).isFile()) {
         throw ctx.arcaneError(
           'PRIVILEGE_PIPE_GUARD_TRUST_FAILED',
-          'Arcane could not verify its Windows privilege boundary executables.',
+          'Arcane could not verify its Microsoft NT privilege boundary executables.',
           'Repair or reinstall Arcane OS from a verified signed release.'
         );
       }
@@ -1966,7 +1969,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
     if (!Array.isArray(signatures) || signatures.length !== 2) {
       throw ctx.arcaneError(
         'PRIVILEGE_PIPE_GUARD_TRUST_FAILED',
-        'Windows did not return valid signature records for the Arcane privilege boundary.',
+        'Microsoft NT did not return valid signature records for the Arcane privilege boundary.',
         'Repair or reinstall Arcane OS from a verified signed release.'
       );
     }
@@ -1996,7 +1999,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
     }
     throw ctx.arcaneError(
       'PRIVILEGE_PIPE_GUARD_TRUST_FAILED',
-      'Arcane refused to start its Windows privilege pipe guard because its Authenticode signer does not match Arcane Core.',
+      'Arcane refused to start its Microsoft NT privilege pipe guard because its Authenticode signer does not match Arcane Core.',
       'Install a distribution-signed Arcane release. For controlled local testing only, launch the unsigned local build with --allow-unsigned-local-release.',
       409,
       {
@@ -2016,7 +2019,7 @@ ConvertTo-Json -InputObject @($records) -Compress`;
     await verifyMicrosoftSignature(setup, action);
     await ctx.run(setup, ['/silent', '/install'], { action, displayCommand: '$ MicrosoftEdgeWebview2Setup.exe /silent /install' });
     const status = rendererStatus();
-    if (!status.available) throw ctx.arcaneError('WEBVIEW2_INSTALL_FAILED', 'Microsoft Edge WebView2 Runtime did not become available after installation.', 'Restart Windows and try again, or install the Evergreen WebView2 Runtime manually from Microsoft.');
+    if (!status.available) throw ctx.arcaneError('WEBVIEW2_INSTALL_FAILED', 'Microsoft Edge WebView2 Runtime did not become available after installation.', 'Restart Microsoft NT and try again, or install the Evergreen WebView2 Runtime manually from Microsoft.');
     ctx.actionLog(action, 'info', `Microsoft Edge WebView2 Runtime ${status.version || ''} is ready.`);
   }
 
@@ -2096,7 +2099,7 @@ $owner=(New-Object Security.Principal.NTAccount($verified.Owner)).Translate([Sec
 if($owner -ne 'S-1-5-32-544' -or -not $verified.AreAccessRulesProtected){throw 'Arcane Ollama cache ACL is not protected.'}
 [Console]::Out.Write('protected')`;
     const result = await ctx.powershell(script, { action, purpose: 'protect-ollama-cache' });
-    if (!result || String(result.stdout || '').trim() !== 'protected') throw new Error('Windows could not protect the verified Ollama archive cache.');
+    if (!result || String(result.stdout || '').trim() !== 'protected') throw new Error('Microsoft NT could not protect the verified Ollama archive cache.');
   }
 
   async function protectOllamaRuntime(action, executable) {
@@ -2167,7 +2170,7 @@ $proof=[ordered]@{
     let proof = null;
     try { proof = JSON.parse(String(result && result.stdout || '').trim()); } catch (_) {}
     if (!proof || proof.status !== 'protected' || proof.localServiceSid !== 'S-1-5-19' || !proof.serviceSid) {
-      throw new Error('Windows could not prove the protected Ollama runtime and service-host ACLs.');
+      throw new Error('Microsoft NT could not prove the protected Ollama runtime and service-host ACLs.');
     }
     return proof;
   }
@@ -2248,14 +2251,14 @@ $proof=[ordered]@{
 
   async function installOllama(action) {
     if (ctx.simulate) {
-      ctx.actionLog(action, 'info', 'Simulation: would install the latest official Ollama Windows package and service.');
+      ctx.actionLog(action, 'info', 'Simulation: would install the latest official Ollama package and service for Microsoft NT.');
       return;
     }
     const release = await ctx.latestOllamaRelease();
     const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
     let asset = release.assets.find((item) => item.name === `ollama-windows-${arch}.zip`);
     if (!asset && arch === 'arm64') asset = release.assets.find((item) => item.name === 'ollama-windows-amd64.zip');
-    if (!asset) throw ctx.arcaneError('OLLAMA_PACKAGE_NOT_FOUND', 'Arcane could not find a compatible official Ollama Windows package.', 'Check the internet connection or install Ollama manually, then choose Check again.');
+    if (!asset) throw ctx.arcaneError('OLLAMA_PACKAGE_NOT_FOUND', 'Arcane could not find a compatible official Ollama package for Microsoft NT.', 'Check the internet connection or install Ollama manually, then choose Check again.');
 
     const digestMatch = /^sha256:([a-f0-9]{64})$/i.exec(String(asset.digest || ''));
     if (!digestMatch) {
@@ -2297,7 +2300,7 @@ $proof=[ordered]@{
       || !Number.isSafeInteger(serviceIntegrity.size) || !SHA256_PATTERN.test(String(serviceIntegrity.sha256 || ''))) {
       throw ctx.arcaneError(
         'OLLAMA_SERVICE_HOST_MISSING',
-        'This Arcane release does not contain an integrity-bound Ollama Windows service host.',
+        'This Arcane release does not contain an integrity-bound Ollama service host for Microsoft NT.',
         'Repair Arcane OS from a complete verified release, then retry the global Ollama installation.',
         409
       );
@@ -2443,7 +2446,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
         throw ctx.arcaneError(
           'OLLAMA_GLOBAL_SERVICE_START_FAILED',
           'Arcane installed Ollama globally, but its managed service did not become healthy.',
-          'The failed service and runtime were preserved. Start ArcaneOllama directly and inspect its Windows service and application events before retrying installation.',
+          'The failed service and runtime were preserved. Start ArcaneOllama directly and inspect its Microsoft NT service and application events before retrying installation.',
           409,
           { diagnosticDetails }
         );
@@ -2516,7 +2519,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
 
   function readInstallPayload(root) {
     const sourceIsInstalled = ctx.path.resolve(root).toLowerCase() === ctx.path.resolve(paths.installRoot).toLowerCase();
-    const candidates = [root, ctx.path.join(root, 'dist', 'windows'), ctx.path.join(root, 'dist')];
+    const candidates = [root, ctx.path.join(root, 'dist', 'nt')];
     const dist = candidates.find((candidate) => (
       ctx.fs.existsSync(ctx.path.join(candidate, 'arcane-release.json'))
       && ctx.fs.existsSync(ctx.path.join(candidate, 'arcane-machine-content.json'))
@@ -2537,7 +2540,17 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
       'arcane-machine-content.json',
       'arcane-release.json',
       'apps/catalog.json',
+      'app/arcane/css/theme.css',
+      'app/arcane/entities/Preference.js',
+      'app/arcane/entities/Theme.js',
+      'app/arcane/modules/AppDataScope.js',
+      'app/arcane/modules/AppearancePreferences.js',
+      'app/arcane/modules/PreferenceStore.js',
+      'app/arcane/modules/SystemAppearance.js',
+      'app/arcane/modules/ThemeBootstrap.js',
+      'app/arcane/modules/ThemeManager.js',
       'app/shared/arcane-api.js',
+      'app/shared/SystemPlatformPresentation.js',
       'app/shared/arcane-sigil.svg',
       'app/shared/arcane-sigil-512.png',
       'app/shared/arcane-sigil.ico',
@@ -2577,7 +2590,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
           sourceManifest: releaseManifestPath,
           files: integrityFiles,
         },
-        description: 'Verified Windows WebView2 hosts, machine content, and installed application catalog are ready for installation.',
+        description: 'Verified Microsoft NT WebView2 hosts, machine content, and installed application catalog are ready for installation.',
         files: integrityFiles.map((entry) => ({
           source: ctx.path.join(dist, ...entry.installPath.split('/')),
           installPath: entry.installPath,
@@ -2592,7 +2605,7 @@ New-ItemProperty -Path $event -Name TypesSupported -PropertyType DWord -Value 7 
       selfHosted: sourceIsInstalled,
       releaseReady: false,
       verified: false,
-      description: releaseProblem || 'The source Arcane Core is available, but a verified Windows WebView2 release has not been built.',
+      description: releaseProblem || 'The source Arcane Core is available, but a verified Microsoft NT WebView2 release has not been built.',
       files: ctx.fs.existsSync(sourceCore) ? [{ source: sourceCore, installPath: 'bin/arcane-core.cjs', destinationName: 'arcane-core.cjs' }] : [],
       directories: [],
       missingRelease: [...new Set(missingRelease)],
@@ -2685,7 +2698,7 @@ foreach($item in $targets){
 [Console]::Out.Write('protected')`;
       const result = await ctx.powershell(script, { action, purpose: 'protect-arcane-installation' });
       if (!result || String(result.stdout || '').trim() !== 'protected') {
-        throw new Error('Windows could not prove that the Arcane installation and publisher attestation are administrator-protected.');
+        throw new Error('Microsoft NT could not prove that the Arcane installation and publisher attestation are administrator-protected.');
       }
     }
     await addMachinePath(ctx.path.join(paths.installRoot, 'bin'), action);
@@ -2883,13 +2896,13 @@ foreach($target in $targets){
       throw error;
     };
     if (!value) fail('Enter a username for the Arcane account.', `Example: ${policy.example}.`, 'empty');
-    if (/\s/.test(value)) fail(`“${value}” cannot be used because local Windows usernames cannot contain spaces.`, `Try “${value.replace(/\s+/g, '-').replace(/[^A-Za-z0-9._-]/g, '') || policy.example}”. ${policy.description}`, 'contains-spaces');
-    if (value.length > policy.maximumLength) fail(`“${value}” is ${value.length} characters long; Windows local usernames can be at most ${policy.maximumLength} characters.`, `Shorten the name. Example: ${policy.example}.`, 'too-long');
-    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) fail(`“${value}” contains a character that Windows cannot use in this local username.`, policy.description, 'invalid-characters');
+    if (/\s/.test(value)) fail(`“${value}” cannot be used because local Microsoft NT usernames cannot contain spaces.`, `Try “${value.replace(/\s+/g, '-').replace(/[^A-Za-z0-9._-]/g, '') || policy.example}”. ${policy.description}`, 'contains-spaces');
+    if (value.length > policy.maximumLength) fail(`“${value}” is ${value.length} characters long; Microsoft NT local usernames can be at most ${policy.maximumLength} characters.`, `Shorten the name. Example: ${policy.example}.`, 'too-long');
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) fail(`“${value}” contains a character that Microsoft NT cannot use in this local username.`, policy.description, 'invalid-characters');
     if (/[.]$/.test(value)) fail(`“${value}” cannot end with a period.`, `Remove the final period. Example: ${policy.example}.`, 'invalid-ending');
     const reserved = ['administrator', 'guest', 'defaultaccount', 'wdagutilityaccount'];
     if (reserved.includes(value.toLowerCase())) {
-      const error = ctx.arcaneError('RESERVED_USERNAME', `“${value}” is a Windows-reserved account name.`, `Choose another name, such as ${policy.example}.`, 409);
+      const error = ctx.arcaneError('RESERVED_USERNAME', `“${value}” is a Microsoft NT-reserved account name.`, `Choose another name, such as ${policy.example}.`, 409);
       error.field = 'username';
       error.input = value;
       error.policy = policy;
@@ -3022,8 +3035,8 @@ foreach($user in (Get-LocalUser -ErrorAction Stop)){
       };
       throw ctx.arcaneError(
         'USER_DISCOVERY_FAILED',
-        'Arcane could not read the current Windows local-user list.',
-        'Retry the user refresh. Arcane will not substitute cached recovery names for live Windows accounts.',
+        'Arcane could not read the current Microsoft NT local-user list.',
+        'Retry the user refresh. Arcane will not substitute cached recovery names for live Microsoft NT accounts.',
         503,
         { diagnosticDetails: { cause } }
       );
@@ -3071,12 +3084,12 @@ $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $temporary=$false
 $hive=$sid
 if(-not $loaded){
-  if(-not $profile){throw "Windows could not locate the user profile for '$name' to back up both shell bindings."}
+  if(-not $profile){throw "Microsoft NT could not locate the user profile for '$name' to back up both shell bindings."}
   $ntUser=Join-Path $profile 'NTUSER.DAT'
-  if(-not (Test-Path -LiteralPath $ntUser)){throw "Windows could not locate NTUSER.DAT for '$name' to back up both shell bindings."}
+  if(-not (Test-Path -LiteralPath $ntUser)){throw "Microsoft NT could not locate NTUSER.DAT for '$name' to back up both shell bindings."}
   $hive='ARCANE_PREPARE_'+($sid -replace '-','_')
   & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-  if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name' to back up its shell." }
+  if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name' to back up its shell." }
   $temporary=$true
 }
 try {
@@ -3098,7 +3111,7 @@ try {
     } catch (error) {
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_SHELL_BACKUP_FAILED' : error.code;
-      error.userMessage = `Windows could not capture the current login shell for “${username}”.`;
+      error.userMessage = `Microsoft NT could not capture the current login shell for “${username}”.`;
       error.resolution = readable
         ? `${readable} No shell change was made.`
         : 'Confirm the account is signed out and retry from an administrator session. No shell change was made.';
@@ -3113,8 +3126,8 @@ try {
     if (!recovery.dual) {
       throw ctx.arcaneError(
         'INVALID_SHELL_BACKUP',
-        'Arcane refused to change a Windows shell without a complete dual-binding recovery record.',
-        'Refresh the account state and retry so Arcane can capture both Windows shell bindings.',
+        'Arcane refused to change a Microsoft NT shell without a complete dual-binding recovery record.',
+        'Refresh the account state and retry so Arcane can capture both Microsoft NT shell bindings.',
         409
       );
     }
@@ -3127,7 +3140,7 @@ try {
       const expectedPolicy = { present: recovery.previousPolicyShellPresent, value: recovery.previousPolicyShell };
       const expectedLegacy = { present: recovery.previousLegacyShellPresent, value: recovery.previousLegacyShell };
       if (created !== !shellBackup.accountExisted || !sameShellValue(currentPolicy, expectedPolicy) || !sameShellValue(currentLegacy, expectedLegacy)) {
-        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `The Windows account or one of its shell bindings changed after Arcane saved its recovery record.`, 'No shell change was made. Refresh the account list and try again.', 409);
+        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `The Microsoft NT account or one of its shell bindings changed after Arcane saved its recovery record.`, 'No shell change was made. Refresh the account list and try again.', 409);
       }
       simulatedAccounts.add(key);
       try {
@@ -3136,7 +3149,7 @@ try {
         if (ctx.simulatedUserFailure === 'crash-after-policy-shell-write' && !ctx.simulatedUserFailureTriggered) {
           ctx.simulatedUserFailureTriggered = true;
           simulatedUsers.set(key, existingBinding);
-          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing the Windows policy shell binding.', 'The next retry must recover the original durable dual-binding baseline.', 500);
+          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing the Microsoft NT policy shell binding.', 'The next retry must recover the original durable dual-binding baseline.', 500);
           error.simulatedCrash = true;
           throw error;
         }
@@ -3146,7 +3159,7 @@ try {
         if (ctx.simulatedUserFailure === 'crash-after-legacy-shell-write' && !ctx.simulatedUserFailureTriggered) {
           ctx.simulatedUserFailureTriggered = true;
           simulatedUsers.set(key, existingBinding);
-          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing both Windows shell bindings.', 'The next retry must recover the original durable dual-binding baseline.', 500);
+          const error = ctx.arcaneError('SIMULATED_USER_TRANSACTION_FAILURE', 'Simulated process loss after writing both Microsoft NT shell bindings.', 'The next retry must recover the original durable dual-binding baseline.', 500);
           error.simulatedCrash = true;
           throw error;
         }
@@ -3278,8 +3291,8 @@ public static class ArcaneProfile {
   if($result -ne 0 -and $result -ne 183 -and $result -ne $alreadyExistsHresult){
     $hex=('0x{0:X8}' -f ($result -band 0xffffffffL))
     $nativeError=[Runtime.InteropServices.Marshal]::GetExceptionForHR($result)
-    $nativeMessage=if($nativeError){$nativeError.Message}else{'Unknown Windows profile error'}
-    throw "Windows could not initialize the profile for '$name' ($hex): $nativeMessage"
+    $nativeMessage=if($nativeError){$nativeError.Message}else{'Unknown Microsoft NT profile error'}
+    throw "Microsoft NT could not initialize the profile for '$name' ($hex): $nativeMessage"
   }
   $profilePath=$buffer.ToString()
   if(-not $profilePath){
@@ -3287,7 +3300,7 @@ public static class ArcaneProfile {
   }
 }
 if(-not $profilePath -or -not (Test-Path -LiteralPath $profilePath)){
-  throw "Windows created the account '$name', but its profile directory was not available."
+  throw "Microsoft NT created the account '$name', but its profile directory was not available."
 }
 if($created){
   $adsi=[ADSI]("WinNT://./"+$name+",user")
@@ -3299,14 +3312,14 @@ for($attempt=0;$attempt -lt 20 -and -not (Test-Path -LiteralPath $ntUser);$attem
   Start-Sleep -Milliseconds 250
 }
 if(-not (Test-Path -LiteralPath $ntUser)){
-  throw "Windows created the profile directory for '$name', but NTUSER.DAT was not created after waiting five seconds."
+  throw "Microsoft NT created the profile directory for '$name', but NTUSER.DAT was not created after waiting five seconds."
 }
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $hive=$sid
 if(-not $loaded){
   $hive='ARCANE_'+($sid -replace '-','_')
   & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-  if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
+  if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name'." }
 }
 try {
   function Get-ArcaneShellValue([string]$Path){
@@ -3331,14 +3344,14 @@ try {
   $previousPolicy=Get-ArcaneShellValue $policyKey
   $previousLegacy=Get-ArcaneShellValue $legacyKey
   if(-not (Test-ArcaneShellValue $policyKey $expectedPolicyPresent $expectedPolicy) -or -not (Test-ArcaneShellValue $legacyKey $expectedLegacyPresent $expectedLegacy)){
-    throw "A Windows shell binding for '$name' changed after Arcane saved its recovery record. No shell change was made."
+    throw "A Microsoft NT shell binding for '$name' changed after Arcane saved its recovery record. No shell change was made."
   }
   $assignmentError=$null
   try {
     Set-ArcaneShellValue $policyKey $true $shell
-    if(-not (Test-ArcaneShellValue $policyKey $true $shell)){throw "Windows did not retain the Arcane policy shell assignment for '$name'."}
+    if(-not (Test-ArcaneShellValue $policyKey $true $shell)){throw "Microsoft NT did not retain the Arcane policy shell assignment for '$name'."}
     Set-ArcaneShellValue $legacyKey $true $shell
-    if(-not (Test-ArcaneShellValue $legacyKey $true $shell)){throw "Windows did not retain the Arcane legacy shell assignment for '$name'."}
+    if(-not (Test-ArcaneShellValue $legacyKey $true $shell)){throw "Microsoft NT did not retain the Arcane legacy shell assignment for '$name'."}
   } catch {
     $assignmentError=$_
     $rollbackErrors=@()
@@ -3347,7 +3360,7 @@ try {
     if(-not (Test-ArcaneShellValue $policyKey ([bool]$previousPolicy.Present) ([string]$previousPolicy.Value))){$rollbackErrors+='policy verification failed'}
     if(-not (Test-ArcaneShellValue $legacyKey ([bool]$previousLegacy.Present) ([string]$previousLegacy.Value))){$rollbackErrors+='legacy verification failed'}
     if($rollbackErrors.Count){
-      throw ("Arcane could not compensate both Windows shell bindings after assignment failed. Original error: "+$assignmentError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))
+      throw ("Arcane could not compensate both Microsoft NT shell bindings after assignment failed. Original error: "+$assignmentError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))
     }
     throw $assignmentError
   }
@@ -3417,8 +3430,8 @@ try {
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_USER_PROVISION_FAILED' : error.code;
       error.userMessage = readable && readable.includes('profile')
-        ? `Windows created or found the account “${username}”, but could not finish initializing its user profile.`
-        : `Windows could not finish adding the Arcane user “${username}”.`;
+        ? `Microsoft NT created or found the account “${username}”, but could not finish initializing its user profile.`
+        : `Microsoft NT could not finish adding the Arcane user “${username}”.`;
       const rollbackComplete = Boolean(error.accountRollback && error.accountRollback.accountRemoved);
       error.resolution = readable
         ? `${readable} ${rollbackComplete ? 'Arcane removed the disabled account created by this failed attempt.' : 'If Arcane created an account during this attempt, it was left disabled and requires administrator recovery.'} The protected provisioning account was not changed.`
@@ -3443,7 +3456,7 @@ try {
       const policy = simulatedShellValue(assigned, 'policyShell');
       const legacy = simulatedShellValue(assigned, 'legacyShell');
       if (!policy.present || policy.value !== expectedShell || !legacy.present || legacy.value !== expectedShell) {
-        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', 'Arcane refused to activate the staged account because both Windows shell bindings were not exact.', 'Repair or retry the staged account transaction.', 409);
+        throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', 'Arcane refused to activate the staged account because both Microsoft NT shell bindings were not exact.', 'Repair or retry the staged account transaction.', 409);
       }
       assigned.enabled = true;
       if (ctx.simulatedUserFailure === 'crash-during-activation' && !ctx.simulatedUserFailureTriggered) {
@@ -3486,7 +3499,7 @@ if(-not (Test-Path "Registry::HKEY_USERS\\$expectedSid")){
   if(-not $temporary){
     $hive='ARCANE_ACTIVATE_'+$suffix
     & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser|Out-Null
-    if($LASTEXITCODE -ne 0){throw "Windows could not verify the staged shell for '$name'."}
+    if($LASTEXITCODE -ne 0){throw "Microsoft NT could not verify the staged shell for '$name'."}
     $temporary=$true
   }
 }
@@ -3497,13 +3510,13 @@ try {
   $legacyProperty=Get-ItemProperty -LiteralPath $legacyKey -Name Shell -ErrorAction SilentlyContinue
   $policyMatches=[bool]($null -ne $policyProperty -and [String]::Equals([string]$policyProperty.Shell,[string]$expectedShell,[StringComparison]::Ordinal))
   $legacyMatches=[bool]($null -ne $legacyProperty -and [String]::Equals([string]$legacyProperty.Shell,[string]$expectedShell,[StringComparison]::Ordinal))
-  if(-not ($policyMatches -and $legacyMatches)){throw "Arcane refused to activate '$name' because both staged Windows shell bindings no longer match Arcane exactly."}
+  if(-not ($policyMatches -and $legacyMatches)){throw "Arcane refused to activate '$name' because both staged Microsoft NT shell bindings no longer match Arcane exactly."}
 } finally {
   if($temporary){${unloadTemporaryHiveScript('staged account activation')}}
 }
 Enable-LocalUser -Name $name -ErrorAction Stop
 $verified=Get-LocalUser -Name $name -ErrorAction Stop
-if(-not $verified.Enabled){throw "Windows did not enable the staged Arcane account '$name'."}
+if(-not $verified.Enabled){throw "Microsoft NT did not enable the staged Arcane account '$name'."}
 [pscustomobject]@{username=$name;sid=$expectedSid;enabled=$true;activated=$true}|ConvertTo-Json -Compress`;
     const result = await ctx.powershell(script, { action, purpose: 'activate-staged-arcane-user', redactArgs: true, displayCommand: '$ powershell.exe [activate staged Arcane user]' });
     return JSON.parse(String(result.stdout || '').trim().split(/\r?\n/).filter(Boolean).pop());
@@ -3566,7 +3579,7 @@ $name=${ctx.psQuote(username)}
 $password=[Console]::In.ReadLine()
 if([string]::IsNullOrEmpty($password)){ throw 'Arcane did not receive the protected temporary password.' }
 $user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
-if(-not $user){ throw "The local Windows account '$name' does not exist." }
+if(-not $user){ throw "The local Microsoft NT account '$name' does not exist." }
 $secure=ConvertTo-SecureString $password -AsPlainText -Force
 Set-LocalUser -Name $name -Password $secure -ErrorAction Stop
 $adsi=[ADSI]("WinNT://./"+$name+",user")
@@ -3590,7 +3603,7 @@ $adsi.SetInfo()
       if (error.message) error.message = String(error.message).split(password).join('[redacted]');
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_PASSWORD_RESET_FAILED' : error.code;
-      error.userMessage = `Windows could not set a temporary password for “${username}”.`;
+      error.userMessage = `Microsoft NT could not set a temporary password for “${username}”.`;
       error.resolution = readable
         ? `${readable} Confirm the account still exists and that administrator approval is active, then try again.`
         : 'Confirm the account exists, approve administrator access, and try again.';
@@ -3620,7 +3633,7 @@ $adsi.SetInfo()
         const policyAllowed = prepared ? policyArcane || sameShellValue(policy, baselinePolicy) : policyArcane;
         const legacyAllowed = prepared ? legacyArcane || sameShellValue(legacy, baselineLegacy) : legacyArcane;
         if (!policyAllowed || !legacyAllowed) {
-          throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `Arcane refused to overwrite a Windows shell binding for “${username}” because it contains an unrecognized value.`, 'Review both per-user shell registry values manually. No change was made.', 409);
+          throw ctx.arcaneError('SHELL_CHANGED_EXTERNALLY', `Arcane refused to overwrite a Microsoft NT shell binding for “${username}” because it contains an unrecognized value.`, 'Review both per-user shell registry values manually. No change was made.', 409);
         }
         binding.policyShell = recovery.previousPolicyShell;
         binding.policyShellPresent = recovery.previousPolicyShellPresent;
@@ -3669,12 +3682,12 @@ $previousPolicyPresent=${recovery.previousPolicyShellPresent ? '$true' : '$false
 $previousLegacy=${ctx.psQuote(recovery.previousLegacyShell === null || recovery.previousLegacyShell === undefined ? '' : recovery.previousLegacyShell)}
 $previousLegacyPresent=${recovery.previousLegacyShellPresent ? '$true' : '$false'}
 $user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
-if(-not $user){ throw "The local Windows account '$name' does not exist." }
+if(-not $user){ throw "The local Microsoft NT account '$name' does not exist." }
 $sid=$user.SID.Value
 $profile=(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue).LocalPath
-if(-not $profile){ throw "Windows could not locate the user profile for '$name'." }
+if(-not $profile){ throw "Microsoft NT could not locate the user profile for '$name'." }
 $ntUser=Join-Path $profile 'NTUSER.DAT'
-if(-not (Test-Path -LiteralPath $ntUser)){ throw "Windows could not locate NTUSER.DAT for '$name'." }
+if(-not (Test-Path -LiteralPath $ntUser)){ throw "Microsoft NT could not locate NTUSER.DAT for '$name'." }
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $hive=$sid
 $temporary=$false
@@ -3687,7 +3700,7 @@ if(-not $loaded){
   if(-not $temporary){
     $hive='ARCANE_RECOVERY_'+$suffix
     & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-    if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
+    if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name'." }
     $temporary=$true
   }
 }
@@ -3722,14 +3735,14 @@ try {
     $legacyAllowed=[bool](Test-ArcaneExpected $legacyKey)
   }
   if(-not ($policyAllowed -and $legacyAllowed)){
-    throw "Arcane refused to overwrite a Windows shell binding for '$name' because it contains a value outside the durable recovery record."
+    throw "Arcane refused to overwrite a Microsoft NT shell binding for '$name' because it contains a value outside the durable recovery record."
   }
   $restoreError=$null
   try {
     Set-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy
-    if(-not (Test-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy)){throw "Windows did not retain the restored policy shell for '$name'."}
+    if(-not (Test-ArcaneShellValue $policyKey $previousPolicyPresent $previousPolicy)){throw "Microsoft NT did not retain the restored policy shell for '$name'."}
     Set-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy
-    if(-not (Test-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy)){throw "Windows did not retain the restored legacy shell for '$name'."}
+    if(-not (Test-ArcaneShellValue $legacyKey $previousLegacyPresent $previousLegacy)){throw "Microsoft NT did not retain the restored legacy shell for '$name'."}
   } catch {
     $restoreError=$_
     $rollbackErrors=@()
@@ -3737,7 +3750,7 @@ try {
     try{Set-ArcaneShellValue $legacyKey ([bool]$currentLegacy.Present) ([string]$currentLegacy.Value)}catch{$rollbackErrors+=('legacy write: '+$_.Exception.Message)}
     if(-not (Test-ArcaneShellValue $policyKey ([bool]$currentPolicy.Present) ([string]$currentPolicy.Value))){$rollbackErrors+='policy verification failed'}
     if(-not (Test-ArcaneShellValue $legacyKey ([bool]$currentLegacy.Present) ([string]$currentLegacy.Value))){$rollbackErrors+='legacy verification failed'}
-    if($rollbackErrors.Count){throw ("Arcane could not compensate both Windows shell bindings after restoration failed. Original error: "+$restoreError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))}
+    if($rollbackErrors.Count){throw ("Arcane could not compensate both Microsoft NT shell bindings after restoration failed. Original error: "+$restoreError.Exception.Message+" Rollback errors: "+($rollbackErrors -join '; '))}
     throw $restoreError
   }
 } finally {
@@ -3756,7 +3769,7 @@ $restoredShell=if($previousLegacyPresent){$previousLegacy}else{$null}
       } catch (error) {
         const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
         error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_SHELL_RESTORE_FAILED' : error.code;
-        error.userMessage = `Windows could not restore the previous login shell bindings for “${username}”.`;
+        error.userMessage = `Microsoft NT could not restore the previous login shell bindings for “${username}”.`;
         error.resolution = readable
           ? `${readable} Confirm the account profile is not in use, then retry from an administrator session.`
           : 'Confirm the account exists, sign it out, approve administrator access, and try again.';
@@ -3771,12 +3784,12 @@ $expected=${ctx.psQuote(expectedShell)}
 $previous=${ctx.psQuote(previousShell === null || previousShell === undefined ? '' : previousShell)}
 $previousPresent=${previousShellPresent ? '$true' : '$false'}
 $user=Get-LocalUser -Name $name -ErrorAction SilentlyContinue
-if(-not $user){ throw "The local Windows account '$name' does not exist." }
+if(-not $user){ throw "The local Microsoft NT account '$name' does not exist." }
 $sid=$user.SID.Value
 $profile=(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'" -ErrorAction SilentlyContinue).LocalPath
-if(-not $profile){ throw "Windows could not locate the user profile for '$name'." }
+if(-not $profile){ throw "Microsoft NT could not locate the user profile for '$name'." }
 $ntUser=Join-Path $profile 'NTUSER.DAT'
-if(-not (Test-Path -LiteralPath $ntUser)){ throw "Windows could not locate NTUSER.DAT for '$name'." }
+if(-not (Test-Path -LiteralPath $ntUser)){ throw "Microsoft NT could not locate NTUSER.DAT for '$name'." }
 $loaded=Test-Path "Registry::HKEY_USERS\\$sid"
 $hive=$sid
 $temporary=$false
@@ -3789,7 +3802,7 @@ if(-not $loaded){
   if(-not $temporary){
     $hive='ARCANE_RECOVERY_'+$suffix
     & ${ctx.psQuote(regExe)} load "HKU\\$hive" $ntUser | Out-Null
-    if($LASTEXITCODE -ne 0){ throw "Windows could not load the registry profile for '$name'." }
+    if($LASTEXITCODE -ne 0){ throw "Microsoft NT could not load the registry profile for '$name'." }
     $temporary=$true
   }
 }
@@ -3803,11 +3816,11 @@ try {
     New-Item -Path $key -Force | Out-Null
     New-ItemProperty -Path $key -Name Shell -PropertyType String -Value $previous -Force | Out-Null
     $verified=(Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop).Shell
-    if(-not [String]::Equals([string]$verified,[string]$previous,[StringComparison]::Ordinal)){ throw "Windows did not retain the restored shell for '$name'." }
+    if(-not [String]::Equals([string]$verified,[string]$previous,[StringComparison]::Ordinal)){ throw "Microsoft NT did not retain the restored shell for '$name'." }
   } else {
     Remove-ItemProperty -LiteralPath $key -Name Shell -ErrorAction Stop
     $remaining=Get-ItemProperty -LiteralPath $key -Name Shell -ErrorAction SilentlyContinue
-    if($null -ne $remaining){ throw "Windows did not remove the Arcane shell override for '$name'." }
+    if($null -ne $remaining){ throw "Microsoft NT did not remove the Arcane shell override for '$name'." }
   }
 } finally {
   if($temporary){
@@ -3827,7 +3840,7 @@ $restoredShell=if($previousPresent){$previous}else{$null}
     } catch (error) {
       const readable = ctx.cleanPowerShellError(error.stderr || error.stdout || '');
       error.code = error.code === 'COMMAND_FAILED' ? 'WINDOWS_SHELL_RESTORE_FAILED' : error.code;
-      error.userMessage = `Windows could not restore the previous login shell for “${username}”.`;
+      error.userMessage = `Microsoft NT could not restore the previous login shell for “${username}”.`;
       error.resolution = readable
         ? `${readable} Confirm the account profile is not in use, then retry from an administrator session.`
         : 'Confirm the account exists, sign it out, approve administrator access, and try again.';
@@ -3958,11 +3971,11 @@ try {
       if (error.exitCode === 1223 || text.includes('canceled') || text.includes('cancelled')) {
         error.code = 'ELEVATION_CANCELLED';
         error.userMessage = 'Administrator approval was cancelled.';
-        error.resolution = 'No machine changes were made. Choose the action again when you are ready to approve the Windows prompt.';
+        error.resolution = 'No machine changes were made. Choose the action again when you are ready to approve the Microsoft NT prompt.';
       } else {
         error.code = error.code === 'COMMAND_FAILED' ? 'ELEVATION_LAUNCH_FAILED' : error.code;
-        error.userMessage = 'Windows could not start the elevated Arcane Provisioner host.';
-        error.resolution = 'Check whether Windows security policy blocked the request, then review the full diagnostics.';
+        error.userMessage = 'Microsoft NT could not start the elevated Arcane Provisioner host.';
+        error.resolution = 'Check whether Microsoft NT security policy blocked the request, then review the full diagnostics.';
       }
       throw error;
     }

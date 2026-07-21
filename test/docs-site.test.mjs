@@ -6,6 +6,69 @@ import {fileURLToPath} from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=relative=>readFile(path.join(root,...relative.split('/')),'utf8');
+const expectedScreenshots=Object.freeze([
+    Object.freeze({
+        source:'example/_example_assets/htmlimportExample.png',
+        output:'htmlimportExample.png'
+    }),
+    Object.freeze({
+        source:'example/_example_assets/modalExample.png',
+        output:'modalExample.png'
+    }),
+    Object.freeze({
+        source:'example/_example_assets/navExample.png',
+        output:'navExample.png'
+    }),
+    Object.freeze({
+        source:'example/_example_assets/navExampleMobile.png',
+        output:'navExampleMobile.png'
+    }),
+    Object.freeze({
+        source:'example/_example_assets/chatExample.png',
+        output:'chatExample.png'
+    }),
+    Object.freeze({
+        source:'example/_example_assets/dbopfsExample.png',
+        output:'dbopfsExample.png'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/windows-add-arcane-user.jpg',
+        output:'windows-add-arcane-user.jpg'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/windows-account-awaiting-activation.jpg',
+        output:'windows-account-awaiting-activation.jpg'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/windows-account-activated.jpg',
+        output:'windows-account-activated.jpg'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/windows-arcane-shell.jpg',
+        output:'windows-arcane-shell.jpg'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/linux-add-arcane-user.png',
+        output:'linux-add-arcane-user.png'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/linux-account-awaiting-activation.png',
+        output:'linux-account-awaiting-activation.png'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/linux-account-activated.png',
+        output:'linux-account-activated.png'
+    }),
+    Object.freeze({
+        source:'apps/docs/guides/images/linux-arcane-shell.png',
+        output:'linux-arcane-shell.png'
+    })
+]);
+const galleryScreenshotOutputs=new Set(
+    expectedScreenshots
+        .filter(item=>item.source.startsWith('example/_example_assets/'))
+        .map(item=>item.output)
+);
 
 const [
     index,
@@ -14,6 +77,8 @@ const [
     packageConfig,
     publication,
     provisionGuide,
+    windowsProvisionGuide,
+    linuxProvisionGuide,
     developerGuide,
     prompt,
     scopedCache,
@@ -27,6 +92,8 @@ const [
     read('apps/docs/arcane-package.json').then(JSON.parse),
     read('apps/docs/public-content.json').then(JSON.parse),
     read('apps/docs/guides/provision-user.md'),
+    read('apps/docs/guides/provision-user-windows.md'),
+    read('apps/docs/guides/provision-user-linux.md'),
     read('apps/docs/guides/developer-setup.md'),
     read('apps/docs/prompts/system.md'),
     read('arcane/modules/ScopedOPFSCache.js'),
@@ -77,7 +144,15 @@ test('Arcane Docs exposes the six semantic product views and onboarding journeys
     }
     assert.match(index,/<main\b[^>]*id="mainContent"/i);
     assert.match(index,/href="\.\/apps\/docs\/index\.html#\/docs\/provision-user"/);
+    assert.match(index,/href="\.\/apps\/docs\/index\.html#\/docs\/provision-user-windows"/);
+    assert.match(index,/href="\.\/apps\/docs\/index\.html#\/docs\/provision-user-linux"/);
     assert.match(index,/href="\.\/apps\/docs\/index\.html#\/docs\/developer-setup"/);
+    assert.match(index,/Open Microsoft NT walkthrough/);
+    assert.match(index,/Open Linux walkthrough/);
+    assert.match(app,/parsed\.documentId\|\|selectedDocumentId\|\|'provision-user'/);
+    assert.match(app,/catalog\.hydrate\('provision-user-windows'/);
+    assert.match(app,/catalog\.hydrate\('provision-user-linux'/);
+    assert.match(app,/Verified the first-user overview and both platform walkthroughs/);
     assert.match(index,/id="documentSearchForm"[^>]*role="search"/);
     assert.match(index,/id="testResults"[^>]*aria-live="polite"/);
     assert.match(index,/<a class="skip-link" href="\.\/apps\/docs\/index\.html#mainContent">/);
@@ -105,6 +180,8 @@ test('the public content policy is a positive, unique, existing source inventory
         await access(path.join(root,...document.source.split('/')));
     }
     assert(ids.has('provision-user'));
+    assert(ids.has('provision-user-windows'));
+    assert(ids.has('provision-user-linux'));
     assert(ids.has('developer-setup'));
 
     for(const source of publication.sources){
@@ -128,13 +205,25 @@ test('the public content policy is a positive, unique, existing source inventory
     );
 });
 
-test('screenshot publication is explicit and matches every gallery image',async()=>{
-    assert.equal(publication.screenshots.length,6);
+test('screenshot publication explicitly covers gallery and first-user walkthrough images',async()=>{
+    assert.deepEqual(publication.screenshots,expectedScreenshots);
     for(const screenshot of publication.screenshots){
-        assert.match(screenshot.source,/^example\/_example_assets\/[A-Za-z0-9._-]+\.png$/);
-        assert.match(screenshot.output,/^[A-Za-z0-9._-]+\.png$/);
         await access(path.join(root,...screenshot.source.split('/')));
-        assert.match(app,new RegExp(screenshot.output.replaceAll('.','\\.')));
+        const outputPattern=new RegExp(screenshot.output.replaceAll('.','\\.'));
+        if(galleryScreenshotOutputs.has(screenshot.output)){
+            assert.match(screenshot.source,/^example\/_example_assets\/[A-Za-z0-9._-]+\.png$/);
+            assert.match(screenshot.output,/^[A-Za-z0-9._-]+\.png$/);
+            assert.match(app,outputPattern);
+            continue;
+        }
+        assert.match(screenshot.source,/^apps\/docs\/guides\/images\/[A-Za-z0-9._-]+\.(?:jpg|png)$/);
+        assert.match(screenshot.output,/^[A-Za-z0-9._-]+\.(?:jpg|png)$/);
+        assert.match(
+            screenshot.output.startsWith('windows-')
+                ?windowsProvisionGuide
+                :linuxProvisionGuide,
+            outputPattern
+        );
     }
 });
 
@@ -195,16 +284,30 @@ test('reviewed source has a searchable route and an inert shared viewer',()=>{
     assert.doesNotMatch(sourceViewerSource,/\.innerHTML\s*=|\beval\s*\(|new Function\b/);
 });
 
-test('provisioning preserves credential delivery, activation, and recovery boundaries',()=>{
-    assert.match(provisionGuide,/trusted native \*\*Arcane Provisioner\*\*/);
-    assert.match(provisionGuide,/disabled standard account/i);
-    assert.match(provisionGuide,/activation-pending/);
-    assert.match(provisionGuide,/Save the temporary password/i);
-    assert.match(provisionGuide,/Activate this account/);
-    assert.match(provisionGuide,/separate privileged request/i);
-    assert.match(provisionGuide,/Restore previous shell/);
-    assert.match(provisionGuide,/disables real account.*Linux/is);
+test('first-user chooser and platform walkthroughs preserve provisioning boundaries',()=>{
+    assert.match(provisionGuide,/provision-user-windows\.md/);
+    assert.match(provisionGuide,/provision-user-linux\.md/);
     assert.match(provisionGuide,/cannot create accounts and never asks for a username or password/i);
+    assert.match(windowsProvisionGuide,/trusted native \*\*Arcane Provisioner\*\*/);
+    assert.match(windowsProvisionGuide,/disabled standard local account/i);
+    assert.match(windowsProvisionGuide,/Save the temporary password/i);
+    assert.match(windowsProvisionGuide,/Activate this account/);
+    assert.match(windowsProvisionGuide,/separate privileged request/i);
+    assert.match(windowsProvisionGuide,/Microsoft NT sign-in screen/i);
+    assert.match(windowsProvisionGuide,/There is no Arcane username or password form/i);
+    assert.match(linuxProvisionGuide,/build:distribution:linux:unsigned-local-test/);
+    assert.match(linuxProvisionGuide,/verify:distribution:linux:unsigned-local-test/);
+    assert.match(linuxProvisionGuide,/separately authorized root session/i);
+    assert.match(linuxProvisionGuide,/locked and expired/i);
+    assert.match(linuxProvisionGuide,/Activate this account/);
+    assert.match(linuxProvisionGuide,/display manager/i);
+    assert.match(linuxProvisionGuide,/console or SSH login/i);
+    assert.match(linuxProvisionGuide,/Existing accounts, password reset, and shell recovery/i);
+    assert.match(linuxProvisionGuide,/preserves its current password and group memberships/i);
+    assert.match(linuxProvisionGuide,/Restore previous POSIX login shell/);
+    assert.match(linuxProvisionGuide,/WSLg is a manual desktop launch/);
+    assert.match(linuxProvisionGuide,/\.\/start-shell\.sh/);
+    assert.match(linuxProvisionGuide,/does not claim real clean-host/i);
 });
 
 test('developer setup uses locked dependencies and the supported package gates',()=>{

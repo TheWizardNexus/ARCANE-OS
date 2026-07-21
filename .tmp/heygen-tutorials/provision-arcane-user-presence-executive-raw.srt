@@ -1,0 +1,152 @@
+1
+00:00:00,000 --> 00:00:02,560
+Here is how to provision and activate an Arcane user.
+
+2
+00:00:03,220 --> 00:00:06,640
+Arcane Adaptive Runtime for Cognitive AI Native Environments
+
+3
+00:00:06,640 --> 00:00:10,080
+currently runs on both Microsoft NT and the Linux kernel,
+
+4
+00:00:10,280 --> 00:00:13,300
+supporting regulated environments as well as personal devices.
+
+5
+00:00:13,700 --> 00:00:15,540
+Android support is under development.
+
+6
+00:00:15,980 --> 00:00:19,060
+This demonstration shows the Microsoft NT Provisioner.
+
+7
+00:00:19,280 --> 00:00:22,060
+On Linux, follow host-specific instructions.
+
+8
+00:00:22,360 --> 00:00:24,180
+Identity and privilege steps can differ.
+
+9
+00:00:24,480 --> 00:00:26,380
+Sign in as an authorized administrator,
+
+10
+00:00:26,680 --> 00:00:29,140
+open the trusted provisioner, refresh status,
+
+11
+00:00:29,140 --> 00:00:31,000
+and review its readiness checks.
+
+12
+00:00:31,300 --> 00:00:33,460
+Complete the verified machine baseline first.
+
+13
+00:00:33,920 --> 00:00:36,860
+Under Create Arcane Users, enter the intended account name.
+
+14
+00:00:37,120 --> 00:00:39,900
+Do not choose the administrator account running the provisioner.
+
+15
+00:00:40,300 --> 00:00:41,800
+Select Create Arcane User.
+
+16
+00:00:42,100 --> 00:00:45,840
+A new Microsoft NT account is staged as a disabled standard user,
+
+17
+00:00:46,240 --> 00:00:49,020
+assigned Arcane Shell, and given a temporary password.
+
+18
+00:00:49,300 --> 00:00:52,320
+An existing standard account keeps its password and memberships.
+
+19
+00:00:52,760 --> 00:00:55,760
+Save any new credential privately for the intended user.
+
+20
+00:00:55,760 --> 00:01:00,580
+Never place it in chat, email, documentation, logs, or source control,
+
+21
+00:01:00,760 --> 00:01:02,300
+and never show it in a recording.
+
+22
+00:01:02,680 --> 00:01:06,320
+Once the credential is secure, select Activate this account.
+
+23
+00:01:06,820 --> 00:01:08,860
+Activation is a separate privilege step.
+
+24
+00:01:09,080 --> 00:01:11,400
+Creation does not silently enable the account.
+
+25
+00:01:11,900 --> 00:01:13,720
+Sign out of the administrator session.
+
+26
+00:01:14,020 --> 00:01:17,640
+Let the user sign in, change the temporary password when prompted,
+
+27
+00:01:17,860 --> 00:01:19,860
+and verify Arcane Shell opens.
+
+28
+00:01:20,080 --> 00:01:23,540
+Check Settings, Logout, and the documented recovery path.
+
+29
+00:01:23,540 --> 00:01:28,200
+If activation is interrupted, leave the account staged and retry in the provisioner.
+
+30
+00:01:28,360 --> 00:01:30,240
+Follow the target host's release guidance.
+
+31
+00:01:30,760 --> 00:01:32,500
+Provisioning and activation are complete.
+
+32
+00:01:32,740 --> 00:01:37,280
+The new user can begin in Arcane with a clear handoff and a recoverable path forward.
+
+33
+00:01:37,280 --> 00:01:37,320
+and see if this plugin is a timeframe.
+
+34
+00:01:37,340 --> 00:01:37,440
+March 22, 2021
+
+35
+00:01:37,440 --> 00:01:37,500
+focus on how will the an adhesive actually destroy anything you use?
+
+36
+00:01:37,500 --> 00:01:37,580
+Step 1, which meansGod androit to escort you as a downwards.
+
+37
+00:01:37,600 --> 00:01:37,680
+Which means he's hastily left.
+
+38
+00:01:37,680 --> 00:01:37,700
+Roma languages can appreciate everyone for you to learn that you may
+

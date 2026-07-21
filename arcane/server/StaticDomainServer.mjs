@@ -20,8 +20,8 @@ const MAX_REQUEST_TARGET_BYTES=4096;
 const MAX_INLINE_HTML_BYTES=4*1024*1024;
 const MAX_PUBLISHED_FILE_BYTES=16*1024*1024;
 const MAX_ACME_RESPONSE_BYTES=1024;
-const COMPONENT_SCRIPT_PREFIX='(async function(){';
-const COMPONENT_SCRIPT_SUFFIX="}).call((()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const host=registry instanceof Map&&token?registry.get(token):null;if(!host)throw new Error('HTML import host binding is unavailable.');return host;})())";
+const COMPONENT_SCRIPT_PREFIX="(()=>{const registry=globalThis[Symbol.for('arcane.html-import.hosts')];const token=document.currentScript&&document.currentScript.dataset.arcaneHostToken;const binding=registry instanceof Map&&token?registry.get(token):null;if(!binding?.host)throw new Error('HTML import host binding is unavailable.');binding.promise=(async function(){";
+const COMPONENT_SCRIPT_SUFFIX='}).call(binding.host);})()';
 
 const MIME_TYPES=Object.freeze({
     '.avif':'image/avif',

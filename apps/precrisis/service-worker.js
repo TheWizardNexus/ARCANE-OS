@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'arcane-precrisis-cache-';
 const LEGACY_CACHE_PREFIX = 'PreCrisis-cache-';
-const CACHE_NAME = `${CACHE_PREFIX}v43`;
+const CACHE_NAME = `${CACHE_PREFIX}v44`;
 const urlsToCache = [
     './',
     './index.html',
@@ -78,7 +78,7 @@ const urlsToCache = [
     '../../arcane/modules/WaitForComponent.js',
     
     '../../arcane/components/chat.html',
-    '../../arcane/components/chat.html?v=3',
+    '../../arcane/components/chat.html?v=4',
     '../../arcane/components/chart.html',
     '../../arcane/components/chart.html?v=1',
     '../../arcane/components/chart.html?v=2',
@@ -147,7 +147,7 @@ const urlsToCache = [
     './components/nav.html?v=4',
     './components/nav.html?v=5',
     '../../arcane/components/speech.html',
-    '../../arcane/components/speech.html?v=1',
+    '../../arcane/components/speech.html?v=2',
     '../../arcane/components/table.html',
     '../../arcane/components/voice-transcription.html',
     '../../arcane/components/voice-transcription.html?v=1',

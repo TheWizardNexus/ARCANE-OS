@@ -20,12 +20,38 @@ function nativeAdapter(){
     return preferences;
 }
 
+function isUnsupportedNativeAdapter(error){
+    return error?.code==='ANDROID_CAPABILITY_UNSUPPORTED';
+}
+
+function preferenceAdapter(){
+    const local=localAdapter('arcane.preferences');
+    if(typeof globalThis.arcaneAndroid?.postMessage==='function') return local;
+    const native=nativeAdapter();
+    if(!native) return local;
+    let active=native;
+    async function call(method,args){
+        try{
+            return await active[method](...args);
+        }catch(error){
+            if(active!==native||!isUnsupportedNativeAdapter(error)) throw error;
+            active=local;
+            return active[method](...args);
+        }
+    }
+    return {
+        get:key=>call('get',[key]),
+        set:(key,value)=>call('set',[key,value]),
+        delete:key=>call('delete',[key])
+    };
+}
+
 export default class PreferenceStore extends EventTarget{
     constructor({namespace='arcane',schema=[],adapter=null}={}){
         super();
         this.namespace=String(namespace||'arcane');
         this.schema=preferenceSchema(schema);
-        this.adapter=adapter||nativeAdapter()||localAdapter('arcane.preferences');
+        this.adapter=adapter||preferenceAdapter();
         this.values=this.defaults();
     }
 

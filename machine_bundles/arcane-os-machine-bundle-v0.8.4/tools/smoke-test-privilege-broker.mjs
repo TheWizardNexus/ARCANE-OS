@@ -1,10 +1,14 @@
 import { spawn } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const simulatedPlatform = process.platform === 'win32' ? 'win32' : 'linux';
-const child = spawn(process.execPath, [path.join(root,'runtime/arcane-core.cjs'),'--app=provisioner','--simulate','--simulate-standard','--simulate-broker-first-client',`--simulate-platform=${simulatedPlatform}`,`--bundle-root=${root}`], {stdio:['pipe','pipe','pipe']});
+const child = spawn(process.execPath, [path.join(root,'runtime/arcane-core.cjs'),'--app=provisioner','--simulate','--simulate-standard','--simulate-broker-first-client',`--simulate-platform=${simulatedPlatform}`,`--bundle-root=${root}`], {
+  stdio:['pipe','pipe','pipe'],
+  env:{...process.env,XDG_RUNTIME_DIR:os.tmpdir()},
+});
 let buffer=Buffer.alloc(0), expected=null; const pending=new Map(); const events=[]; let stderr='';
 child.stderr.on('data',chunk=>{stderr+=chunk.toString();});
 child.stdout.on('data',chunk=>{buffer=Buffer.concat([buffer,chunk]);while(true){if(expected===null){const marker=buffer.indexOf('\r\n\r\n');if(marker<0)return;const match=buffer.subarray(0,marker).toString('ascii').match(/Content-Length:\s*(\d+)/i);if(!match)throw new Error('Invalid frame');expected=Number(match[1]);buffer=buffer.subarray(marker+4);}if(buffer.length<expected)return;const message=JSON.parse(buffer.subarray(0,expected).toString('utf8'));buffer=buffer.subarray(expected);expected=null;if(message.type==='event')events.push(message);else{const entry=pending.get(message.id);if(entry){pending.delete(message.id);message.ok?entry.resolve(message.result):entry.reject(Object.assign(new Error(message.error.message),message.error));}}}});

@@ -195,6 +195,194 @@
       "exact": true
     }
   },
+  "terminal.close": {
+    "version": "1.0.0",
+    "effect": "process-control",
+    "risk": "high",
+    "audit": "metadata",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "application-identity-allowlist",
+      "capability-grant",
+      "process-sandbox"
+    ],
+    "cancellation": "pre-dispatch-only",
+    "reversibility": "not-reversible",
+    "idempotency": "non-idempotent",
+    "dataMovement": "application-to-host",
+    "input": {
+      "kind": "terminal-session-id-v1",
+      "exact": true,
+      "maxSessionIdLength": 128
+    },
+    "output": {
+      "kind": "terminal-close-result-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "acceptedMeaning": "close-request-accepted"
+    }
+  },
+  "terminal.list": {
+    "version": "1.0.0",
+    "effect": "observe",
+    "risk": "high",
+    "audit": "metadata",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "application-identity-allowlist",
+      "capability-grant",
+      "process-sandbox"
+    ],
+    "cancellation": "not-applicable",
+    "reversibility": "not-applicable",
+    "idempotency": "repeatable-read",
+    "dataMovement": "host-to-application",
+    "input": {
+      "kind": "empty-object-v1",
+      "exact": true
+    },
+    "output": {
+      "kind": "terminal-list-v1",
+      "exact": true,
+      "maxSessions": 8,
+      "maxSessionIdLength": 128,
+      "maxShellLength": 16,
+      "maxCwdLength": 4096,
+      "maxTimestampLength": 64
+    }
+  },
+  "terminal.resize": {
+    "version": "1.0.0",
+    "effect": "process-control",
+    "risk": "high",
+    "audit": "metadata",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "application-identity-allowlist",
+      "capability-grant",
+      "process-sandbox"
+    ],
+    "cancellation": "pre-dispatch-only",
+    "reversibility": "not-reversible",
+    "idempotency": "non-idempotent",
+    "dataMovement": "application-to-host",
+    "input": {
+      "kind": "terminal-resize-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "minColumns": 20,
+      "maxColumns": 500,
+      "minRows": 5,
+      "maxRows": 200
+    },
+    "output": {
+      "kind": "terminal-resize-result-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "minColumns": 20,
+      "maxColumns": 500,
+      "minRows": 5,
+      "maxRows": 200
+    }
+  },
+  "terminal.signal": {
+    "version": "1.0.0",
+    "effect": "process-control",
+    "risk": "high",
+    "audit": "metadata",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "application-identity-allowlist",
+      "capability-grant",
+      "process-sandbox"
+    ],
+    "cancellation": "pre-dispatch-only",
+    "reversibility": "not-reversible",
+    "idempotency": "non-idempotent",
+    "dataMovement": "application-to-host",
+    "input": {
+      "kind": "terminal-signal-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "signalMeaning": "interrupt-or-terminate"
+    },
+    "output": {
+      "kind": "terminal-signal-result-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "signalMeaning": "interrupt-or-terminate",
+      "acceptedMeaning": "signal-request-accepted"
+    }
+  },
+  "terminal.start": {
+    "version": "1.0.0",
+    "effect": "process-start",
+    "risk": "high",
+    "audit": "metadata",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "application-identity-allowlist",
+      "capability-grant",
+      "process-sandbox"
+    ],
+    "cancellation": "pre-dispatch-only",
+    "reversibility": "not-reversible",
+    "idempotency": "non-idempotent",
+    "dataMovement": "bidirectional",
+    "input": {
+      "kind": "terminal-start-v1",
+      "exact": true,
+      "maxShellLength": 16,
+      "maxCwdLength": 4096,
+      "minColumns": 20,
+      "maxColumns": 500,
+      "minRows": 5,
+      "maxRows": 200
+    },
+    "output": {
+      "kind": "terminal-session-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "maxShellLength": 16,
+      "maxCwdLength": 4096,
+      "maxTitleLength": 80,
+      "maxTimestampLength": 64
+    }
+  },
+  "terminal.write": {
+    "version": "1.0.0",
+    "effect": "process-input",
+    "risk": "high",
+    "audit": "metadata",
+    "network": "none",
+    "osPermissions": [],
+    "policyHooks": [
+      "application-identity-allowlist",
+      "capability-grant",
+      "process-sandbox"
+    ],
+    "cancellation": "pre-dispatch-only",
+    "reversibility": "not-reversible",
+    "idempotency": "non-idempotent",
+    "dataMovement": "application-to-host",
+    "input": {
+      "kind": "terminal-write-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "maxDataBytes": 65536
+    },
+    "output": {
+      "kind": "terminal-write-result-v1",
+      "exact": true,
+      "maxSessionIdLength": 128,
+      "maxDataBytes": 65536
+    }
+  },
   "user.current": {
     "version": "1.0.0",
     "effect": "observe",

@@ -1,0 +1,141 @@
+1
+00:00:00,000 --> 00:00:02,560
+Here is how to provision and activate an ARCANE user.
+
+2
+00:00:03,220 --> 00:00:06,640
+ARCANE—Adaptive Runtime for
+Cognitive AI Native Environments—
+
+3
+00:00:06,640 --> 00:00:10,080
+currently runs on both Microsoft NT
+and the Linux kernel,
+
+4
+00:00:10,280 --> 00:00:13,300
+supporting regulated environments
+as well as personal devices.
+
+5
+00:00:13,700 --> 00:00:15,540
+Android support is under development.
+
+6
+00:00:15,980 --> 00:00:19,060
+This demonstration shows the
+Microsoft NT Provisioner.
+
+7
+00:00:19,280 --> 00:00:22,060
+On Linux, follow host-specific instructions;
+
+8
+00:00:22,360 --> 00:00:24,180
+identity and privilege steps can differ.
+
+9
+00:00:24,480 --> 00:00:26,380
+Sign in as an authorized administrator.
+
+10
+00:00:26,680 --> 00:00:31,000
+Open the trusted Provisioner, refresh status,
+and review its readiness checks.
+
+11
+00:00:31,300 --> 00:00:33,460
+Complete the verified machine baseline first.
+
+12
+00:00:33,920 --> 00:00:36,860
+Under Create ARCANE users,
+enter the intended account name.
+
+13
+00:00:37,120 --> 00:00:39,900
+Do not choose the administrator account
+running the Provisioner.
+
+14
+00:00:40,300 --> 00:00:41,800
+Select Create ARCANE user.
+
+15
+00:00:42,100 --> 00:00:45,840
+A new Microsoft NT account is staged
+as a disabled standard user,
+
+16
+00:00:46,240 --> 00:00:49,020
+assigned ARCANE Shell,
+and given a temporary password.
+
+17
+00:00:49,300 --> 00:00:52,320
+An existing standard account keeps
+its password and memberships.
+
+18
+00:00:52,760 --> 00:00:55,760
+Save any new credential privately
+for the intended user.
+
+19
+00:00:55,760 --> 00:01:00,580
+Never place it in chat, email, documentation,
+logs, or source control,
+
+20
+00:01:00,760 --> 00:01:02,300
+and never show it in a recording.
+
+21
+00:01:02,680 --> 00:01:06,320
+Once the credential is secure,
+select Activate this account.
+
+22
+00:01:06,820 --> 00:01:08,860
+Activation is a separate privileged step;
+
+23
+00:01:09,080 --> 00:01:11,400
+creation does not silently enable the account.
+
+24
+00:01:11,900 --> 00:01:13,720
+Sign out of the administrator session.
+
+25
+00:01:14,020 --> 00:01:17,640
+Let the user sign in, change the temporary
+password when prompted,
+
+26
+00:01:17,860 --> 00:01:19,860
+and verify ARCANE Shell opens.
+
+27
+00:01:20,080 --> 00:01:23,540
+Check Settings, logout,
+and the documented recovery path.
+
+28
+00:01:23,540 --> 00:01:28,200
+If activation is interrupted, leave the account
+staged and retry in the Provisioner.
+
+29
+00:01:28,360 --> 00:01:30,240
+Follow the target host's release guidance.
+
+30
+00:01:30,760 --> 00:01:32,500
+Provisioning and activation are complete.
+
+31
+00:01:32,740 --> 00:01:37,280
+The new user can begin in ARCANE, with a clear
+handoff and a recoverable path forward.
+

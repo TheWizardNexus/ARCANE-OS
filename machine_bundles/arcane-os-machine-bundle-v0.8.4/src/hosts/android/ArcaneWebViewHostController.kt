@@ -64,7 +64,8 @@ internal class ArcaneWebViewHostController(
         webView: WebView,
         applicationLaunchProvider: ArcaneWebViewBridge.ApplicationLaunchProvider,
         externalOpenProvider: ArcaneWebViewBridge.ExternalOpenProvider,
-        networkStatusProvider: ArcaneWebViewBridge.NetworkStatusProvider
+        networkStatusProvider: ArcaneWebViewBridge.NetworkStatusProvider,
+        terminalProvider: ArcaneWebViewBridge.TerminalProvider? = null
     ): InstallResult {
         if (lifecycle != Lifecycle.NEW) {
             return InstallResult(false, lifecycle != Lifecycle.CLOSED, null, "CONTROLLER_ALREADY_USED")
@@ -106,7 +107,8 @@ internal class ArcaneWebViewHostController(
                 hostSession,
                 applicationLaunchProvider,
                 externalOpenProvider,
-                networkStatusProvider
+                networkStatusProvider,
+                terminalProvider
             )
         } catch (_: Exception) {
             val closeResult = close(webView)
@@ -228,7 +230,7 @@ internal class ArcaneWebViewHostController(
         val settings = WebViewCompat.getProfile(webView).serviceWorkerController.serviceWorkerWebSettings
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        settings.blockNetworkLoads = true
+        settings.blockNetworkLoads = !hostSession.networkAccessAllowed
     }
 
     private inner class Client : WebViewClientCompat() {
@@ -240,6 +242,12 @@ internal class ArcaneWebViewHostController(
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             val uri = request.url
             if (!isTrustedAssetUri(uri) || !isInsideSessionAssetRoot(uri)) {
+                if (hostSession.networkAccessAllowed
+                    && !request.isForMainFrame
+                    && request.method == "GET"
+                    && (uri.scheme == "https" || uri.scheme == "http")) {
+                    return null
+                }
                 return forbiddenResponse()
             }
             if (!request.method.equals("GET", ignoreCase = false) || !hasSafeAssetPath(uri)) {

@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +12,7 @@ const manifest = JSON.parse(await fs.readFile(path.join(root, 'arcane-bundle.jso
 const platform = process.platform === 'win32' ? 'win32' : 'linux';
 const endpoint = platform === 'win32'
   ? `\\\\.\\pipe\\arcane-signature-test-${process.pid}-${crypto.randomBytes(12).toString('hex')}`
-  : path.join(process.env.XDG_RUNTIME_DIR || '/tmp', `arcane-signature-test-${process.pid}-${crypto.randomBytes(12).toString('hex')}.sock`);
+  : path.join(os.tmpdir(), `arcane-signature-test-${process.pid}-${crypto.randomBytes(12).toString('hex')}.sock`);
 const token = crypto.randomBytes(32).toString('base64url');
 const session = crypto.randomBytes(24).toString('base64url');
 const publicKey = crypto.generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }).toString('base64url');
